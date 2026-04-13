@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 40 33% 98%;
+    --foreground: 215 28% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+
+    --primary: 215 28% 17%;
+    --primary-foreground: 40 33% 98%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 215 28% 17%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 13% 50%;
+
+    --accent: 37 90% 51%;
+    --accent-foreground: 215 28% 17%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 215 28% 17%;
+
+    --radius: 0.625rem;
+
+    --success: 152 56% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 215 28% 17%;
+    --info: 210 92% 55%;
+    --info-foreground: 0 0% 100%;
+
+    --gold: 37 90% 51%;
+    --gold-light: 40 85% 95%;
+
+    --sidebar-background: 215 28% 17%;
+    --sidebar-foreground: 215 15% 75%;
+    --sidebar-primary: 37 90% 51%;
+    --sidebar-primary-foreground: 215 28% 17%;
+    --sidebar-accent: 215 25% 22%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 215 25% 25%;
+    --sidebar-ring: 37 90% 51%;
+    --sidebar-muted: 215 20% 40%;
+
+    --shadow-card: 0 1px 3px 0 hsl(215 28% 17% / 0.04), 0 1px 2px -1px hsl(215 28% 17% / 0.04);
+    --shadow-elevated: 0 4px 6px -1px hsl(215 28% 17% / 0.06), 0 2px 4px -2px hsl(215 28% 17% / 0.04);
+    --shadow-prominent: 0 10px 15px -3px hsl(215 28% 17% / 0.08), 0 4px 6px -4px hsl(215 28% 17% / 0.04);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .card-shadow {
+    box-shadow: var(--shadow-card);
+  }
+  .card-shadow-hover {
+    box-shadow: var(--shadow-elevated);
+  }
+  .card-shadow-prominent {
+    box-shadow: var(--shadow-prominent);
+  }
+  .score-excellent {
+    @apply text-success;
+  }
+  .score-good {
+    @apply text-emerald-500;
+  }
+  .score-average {
+    @apply text-warning;
+  }
+  .score-poor {
+    @apply text-destructive;
+  }
+}
