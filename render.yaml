@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: dealsignal-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python seed.py
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+    plan: free
+
+  - type: web
+    name: dealsignal-frontend
+    runtime: static
+    buildCommand: npm install && npx vite build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    plan: free

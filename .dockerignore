@@ -1,0 +1,13 @@
+venv/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+*.db
+*.db-wal
+*.db-shm
+.env
+.git/
+tests/
+run_tests.py
+.claude/
