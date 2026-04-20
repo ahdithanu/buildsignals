@@ -6,6 +6,8 @@ from app.models.deal import Deal
 from app.models.document import Document
 from app.schemas.document import DocumentCreate, DocumentResponse
 from app.utils.org_scope import get_org_id, active_query
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 
 router = APIRouter(tags=["documents"])
 
@@ -54,7 +56,10 @@ def create_document(
 
 # ── soft delete document ───────────────────────────────────────────────────
 
-@router.delete("/documents/{document_id}", status_code=204)
+@router.delete(
+    "/documents/{document_id}", status_code=204,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def delete_document(document_id: str, db: Session = Depends(get_db)):
     doc = active_query(db.query(Document), Document).filter(Document.id == document_id).first()
     if not doc:

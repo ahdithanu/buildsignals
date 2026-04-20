@@ -9,7 +9,7 @@ from sqlalchemy import String, Text, ForeignKey, Enum as SAEnum, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
-from app.models.mixins import OrgMixin, SoftDeleteMixin
+from app.models.mixins import OrgMixin, SoftDeleteMixin, OwnerMixin
 
 
 class ContactStatus(str, enum.Enum):
@@ -24,7 +24,7 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class Contact(OrgMixin, SoftDeleteMixin, Base):
+class Contact(OrgMixin, SoftDeleteMixin, OwnerMixin, Base):
     __tablename__ = "contacts"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -38,6 +38,11 @@ class Contact(OrgMixin, SoftDeleteMixin, Base):
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    # ── Relationships ──────────────────────────────────────────────────────
+    organization = relationship("Organization", back_populates="contacts", foreign_keys="[Contact.organization_id]")
+    creator = relationship("User", back_populates="created_contacts", foreign_keys="[Contact.created_by]")
+    updater = relationship("User", back_populates="updated_contacts", foreign_keys="[Contact.updated_by]")
 
     deal = relationship("Deal", back_populates="contacts")
     activities = relationship("OutreachActivity", back_populates="contact", cascade="all, delete-orphan")

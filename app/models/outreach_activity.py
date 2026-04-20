@@ -38,5 +38,6 @@ class OutreachActivity(OrgMixin, Base):
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
+    organization = relationship("Organization", back_populates="activities", foreign_keys="[OutreachActivity.organization_id]")
     deal = relationship("Deal", back_populates="activities")
     contact = relationship("Contact", back_populates="activities")

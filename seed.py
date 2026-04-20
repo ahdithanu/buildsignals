@@ -1,6 +1,8 @@
-"""Seed the database with 5 sample CRE deals and related data."""
+"""Seed the database with default org/user and 5 sample CRE deals."""
 
 from app.db import init_db, SessionLocal
+from app.models.organization import Organization
+from app.models.user import User
 from app.models.deal import Deal, DealStatus, RiskLevel
 from app.models.deal_assumptions import DealAssumptions
 from app.models.deal_outputs import DealOutputs
@@ -9,14 +11,51 @@ from app.models.signal import Signal
 from app.models.mixins import DEFAULT_ORG_ID
 from app.services.normalization_service import normalize_property_type, normalize_signal_type
 
+SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _ensure_default_org_and_user(db):
+    """Create the default organization and system user if they don't exist."""
+    org = db.get(Organization, DEFAULT_ORG_ID)
+    if not org:
+        org = Organization(
+            id=DEFAULT_ORG_ID,
+            name="Default Organization",
+            slug="default-org",
+            is_active=True,
+        )
+        db.add(org)
+        db.flush()
+        print("  Created default organization.")
+
+    user = db.get(User, SYSTEM_USER_ID)
+    if not user:
+        user = User(
+            id=SYSTEM_USER_ID,
+            email="system@dealsignal.local",
+            full_name="System",
+            password_hash="!nologin",
+            is_active=True,
+            is_superuser=False,
+        )
+        db.add(user)
+        db.flush()
+        print("  Created system user.")
+
+    return org, user
+
 
 def seed():
     init_db()
     db = SessionLocal()
 
-    # Check if data already exists
+    # Always ensure default org & system user exist
+    _ensure_default_org_and_user(db)
+    db.commit()
+
+    # Check if deal data already exists
     if db.query(Deal).first():
-        print("Database already seeded. Skipping.")
+        print("Database already seeded. Skipping deals.")
         db.close()
         return
 

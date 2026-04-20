@@ -8,14 +8,14 @@ from sqlalchemy import String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
-from app.models.mixins import OrgMixin, SoftDeleteMixin
+from app.models.mixins import OrgMixin, SoftDeleteMixin, OwnerMixin
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class Memo(OrgMixin, SoftDeleteMixin, Base):
+class Memo(OrgMixin, SoftDeleteMixin, OwnerMixin, Base):
     __tablename__ = "memos"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -25,5 +25,10 @@ class Memo(OrgMixin, SoftDeleteMixin, Base):
     version: Mapped[int] = mapped_column(default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    # ── Relationships ──────────────────────────────────────────────────────
+    organization = relationship("Organization", back_populates="memos", foreign_keys="[Memo.organization_id]")
+    creator = relationship("User", back_populates="created_memos", foreign_keys="[Memo.created_by]")
+    updater = relationship("User", back_populates="updated_memos", foreign_keys="[Memo.updated_by]")
 
     deal = relationship("Deal", back_populates="memo")

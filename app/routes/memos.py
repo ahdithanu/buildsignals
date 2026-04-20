@@ -12,6 +12,8 @@ from app.models.deal import Deal
 from app.models.memo import Memo
 from app.services.memo_service import generate_memo
 from app.utils.org_scope import active_query
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 
 router = APIRouter(tags=["memos"])
 
@@ -84,7 +86,10 @@ def update_memo(deal_id: str, payload: MemoUpdate, db: Session = Depends(get_db)
     return memo
 
 
-@router.delete("/deals/{deal_id}/memo", status_code=204)
+@router.delete(
+    "/deals/{deal_id}/memo", status_code=204,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def delete_memo(deal_id: str, db: Session = Depends(get_db)):
     """Soft-delete the memo for a deal."""
     _ensure_deal_exists(db, deal_id)

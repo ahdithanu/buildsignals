@@ -4,16 +4,20 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, DateTime
+from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 DEFAULT_ORG_ID = "default-org"
 
 
 class OrgMixin:
-    """Adds organization_id to any model."""
+    """Adds organization_id FK to any model."""
     organization_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True, default=DEFAULT_ORG_ID
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        default=DEFAULT_ORG_ID,
     )
 
 
@@ -28,3 +32,17 @@ class SoftDeleteMixin:
     @property
     def is_active(self) -> bool:
         return self.deleted_at is None
+
+
+class OwnerMixin:
+    """Adds created_by / updated_by user tracking."""
+    created_by: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    updated_by: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )

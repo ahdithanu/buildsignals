@@ -26,4 +26,5 @@ class Signal(OrgMixin, Base):
     severity: Mapped[Optional[float]] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
+    organization = relationship("Organization", back_populates="signals", foreign_keys="[Signal.organization_id]")
     deal = relationship("Deal", back_populates="signals")

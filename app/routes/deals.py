@@ -17,6 +17,8 @@ from app.schemas.deal import (
 from app.schemas.assumptions import AssumptionsResponse
 from app.schemas.outputs import OutputsResponse
 from app.utils.org_scope import get_org_id, active_query
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 from app.services.audit_service import log_change, snapshot_fields
 from app.services.normalization_service import normalize_property_type
 
@@ -121,7 +123,10 @@ def update_deal(deal_id: str, payload: DealUpdate, db: Session = Depends(get_db)
 
 # ── soft delete ─────────────────────────────────────────────────────────────
 
-@router.delete("/{deal_id}", status_code=204)
+@router.delete(
+    "/{deal_id}", status_code=204,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def delete_deal(deal_id: str, db: Session = Depends(get_db)):
     deal = _get_deal_or_404(deal_id, db)
     old = snapshot_fields(deal, ["name", "status"])

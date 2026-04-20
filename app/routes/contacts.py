@@ -7,6 +7,8 @@ from app.models.deal import Deal, DealStatus
 from app.schemas.contact import ContactCreate, ContactUpdate, ContactResponse
 from app.services.pipeline_service import move_deal_stage
 from app.utils.org_scope import get_org_id, active_query, exclude_deleted
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 from app.services.audit_service import log_change
 
 router = APIRouter(tags=["contacts"])
@@ -125,7 +127,10 @@ def update_contact(
 
 # ── DELETE /contacts/{contact_id} ────────────────────────────────────────
 
-@router.delete("/contacts/{contact_id}", status_code=204)
+@router.delete(
+    "/contacts/{contact_id}", status_code=204,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def delete_contact(contact_id: str, db: Session = Depends(get_db)):
     contact = _get_contact_or_404(db, contact_id)
     old_name = contact.name

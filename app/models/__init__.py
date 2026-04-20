@@ -1,3 +1,6 @@
+from app.models.organization import Organization  # noqa
+from app.models.user import User  # noqa
+from app.models.organization_membership import OrganizationMembership  # noqa
 from app.models.deal import Deal  # noqa
 from app.models.deal_assumptions import DealAssumptions  # noqa
 from app.models.deal_outputs import DealOutputs  # noqa
@@ -8,3 +11,5 @@ from app.models.document import Document  # noqa
 from app.models.memo import Memo  # noqa
 from app.models.pipeline_event import PipelineEvent  # noqa
 from app.models.audit_log import AuditLog  # noqa
+from app.models.buy_box import BuyBox  # noqa
+from app.models.deal_distribution import DealDistribution  # noqa

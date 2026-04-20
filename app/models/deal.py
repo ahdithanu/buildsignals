@@ -9,7 +9,7 @@ from sqlalchemy import String, Float, Text, Enum as SAEnum, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
-from app.models.mixins import OrgMixin, SoftDeleteMixin
+from app.models.mixins import OrgMixin, SoftDeleteMixin, OwnerMixin
 
 
 class DealStatus(str, enum.Enum):
@@ -34,7 +34,7 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class Deal(OrgMixin, SoftDeleteMixin, Base):
+class Deal(OrgMixin, SoftDeleteMixin, OwnerMixin, Base):
     __tablename__ = "deals"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -56,7 +56,11 @@ class Deal(OrgMixin, SoftDeleteMixin, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    # relationships
+    # ── Relationships ──────────────────────────────────────────────────────
+    organization = relationship("Organization", back_populates="deals", foreign_keys="[Deal.organization_id]")
+    creator = relationship("User", back_populates="created_deals", foreign_keys="[Deal.created_by]")
+    updater = relationship("User", back_populates="updated_deals", foreign_keys="[Deal.updated_by]")
+
     assumptions = relationship("DealAssumptions", back_populates="deal", uselist=False, cascade="all, delete-orphan")
     outputs = relationship("DealOutputs", back_populates="deal", uselist=False, cascade="all, delete-orphan")
     contacts = relationship("Contact", back_populates="deal", cascade="all, delete-orphan")
@@ -65,3 +69,4 @@ class Deal(OrgMixin, SoftDeleteMixin, Base):
     documents = relationship("Document", back_populates="deal", cascade="all, delete-orphan")
     memo = relationship("Memo", back_populates="deal", uselist=False, cascade="all, delete-orphan")
     pipeline_events = relationship("PipelineEvent", back_populates="deal", cascade="all, delete-orphan")
+    distributions = relationship("DealDistribution", back_populates="deal", cascade="all, delete-orphan")

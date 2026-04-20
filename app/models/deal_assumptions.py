@@ -38,4 +38,5 @@ class DealAssumptions(OrgMixin, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
+    organization = relationship("Organization", foreign_keys="[DealAssumptions.organization_id]")
     deal = relationship("Deal", back_populates="assumptions")

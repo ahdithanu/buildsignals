@@ -1,5 +1,35 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+export const TOKEN_STORAGE_KEY = 'dealsignal_token';
+
+/** Read the JWT from localStorage. Safe in non-browser environments. */
+export function getStoredToken(): string | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+
+/** Store the JWT (or clear it when null). */
+export function setStoredToken(token: string | null): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  if (token) window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+/** Optional callback the auth layer can register to react to 401s. */
+let unauthorizedHandler: (() => void) | null = null;
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 export class ApiClient {
   private baseUrl: string;
 
@@ -12,19 +42,31 @@ export class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options.headers as Record<string, string>) || {}),
     };
 
+    // Attach JWT if present in localStorage. The backend's middleware
+    // is permissive: missing tokens fall through to the demo org, while
+    // present tokens scope the request to the user's organization.
+    const token = getStoredToken();
+    if (token && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const config: RequestInit = { ...options, headers };
     const response = await fetch(url, config);
+
+    if (response.status === 401) {
+      // Token is invalid or expired — clear it and notify any listener.
+      setStoredToken(null);
+      if (unauthorizedHandler) unauthorizedHandler();
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(error.detail || `Request failed: ${response.status}`);
+      throw new ApiError(error.detail || `Request failed: ${response.status}`, response.status);
     }
 
     if (response.status === 204) return undefined as T;
@@ -70,9 +112,14 @@ export class ApiClient {
   async upload<T>(endpoint: string, file: File, fieldName = 'file'): Promise<T> {
     const formData = new FormData();
     formData.append(fieldName, file);
+    // Pass the token explicitly since we override the headers below.
+    const token = getStoredToken();
+    const authHeaders: Record<string, string> = token
+      ? { Authorization: `Bearer ${token}` }
+      : {};
     return this.request<T>(endpoint, {
       method: 'POST',
-      headers: {},  // Let browser set Content-Type with boundary
+      headers: authHeaders, // No Content-Type → browser sets multipart boundary
       body: formData,
     });
   }

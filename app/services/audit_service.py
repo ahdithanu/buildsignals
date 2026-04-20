@@ -14,13 +14,16 @@ def log_change(
     entity_id: str,
     action: str,
     *,
-    actor_id: str = "system",
+    actor_id: Optional[str] = None,
     old_values: Optional[dict] = None,
     new_values: Optional[dict] = None,
     organization_id: str = "default-org",
     request_id: Optional[str] = None,
 ) -> AuditLog:
-    """Create an audit log entry. Does NOT call db.commit() — caller is responsible."""
+    """Create an audit log entry. Does NOT call db.commit() — caller is responsible.
+
+    actor_id should be a valid User.id or None for system-generated actions.
+    """
     entry = AuditLog(
         organization_id=organization_id,
         entity_type=entity_type,

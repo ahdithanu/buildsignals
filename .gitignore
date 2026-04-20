@@ -30,3 +30,10 @@ Thumbs.db
 # Test artifacts
 tests/test.db*
 .pytest_cache/
+
+# Vite dev-server temp files
+vite.config.ts.timestamp-*.mjs
+
+# Claude Code / harness artifacts
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

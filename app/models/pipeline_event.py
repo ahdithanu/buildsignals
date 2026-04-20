@@ -25,4 +25,5 @@ class PipelineEvent(OrgMixin, Base):
     changed_by: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
+    organization = relationship("Organization", back_populates="pipeline_events", foreign_keys="[PipelineEvent.organization_id]")
     deal = relationship("Deal", back_populates="pipeline_events")
