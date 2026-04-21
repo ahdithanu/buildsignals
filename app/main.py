@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ALLOWED_ORIGINS
-from app.db import init_db
 from app.middleware.auth_context import AuthContextMiddleware
 from app.routes.health import router as health_router
 from app.routes.deals import router as deals_router
@@ -60,7 +59,10 @@ app.include_router(auth_router)
 app.include_router(organizations_router)
 app.include_router(auth_switch_router)
 
-
-@app.on_event("startup")
-def on_startup():
-    init_db()
+# NOTE: Schema is managed exclusively by Alembic. Production runs
+# `alembic upgrade head` in the Render preDeploy step (see render.yaml).
+# For local dev against SQLite, run `alembic upgrade head` once after clone.
+# The historical `init_db()` / `Base.metadata.create_all()` path is kept
+# available in app.db for test fixtures but is no longer invoked at startup:
+# creating schema from models at boot masks migration drift (a model change
+# that lacks a migration would "just work" in dev and then fail in prod).

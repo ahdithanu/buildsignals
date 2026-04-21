@@ -2,11 +2,23 @@ services:
   - type: web
     name: dealsignal-api
     runtime: python
-    buildCommand: pip install -r requirements.txt && python seed.py
+    buildCommand: pip install -r requirements.txt
+    # Runs once per deploy, before traffic is cut over. Applies pending
+    # Alembic migrations (including RLS policies from 003). Fails the deploy
+    # on error, so a broken migration never ships. Seeding is NOT run on
+    # every deploy — run `python seed.py` once manually via `render shell`
+    # against a fresh database if you need sample data.
+    preDeployCommand: alembic upgrade head
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      # ALLOW_ANONYMOUS is forced to false in production by app/config.py;
+      # the app refuses to start if it is set to true. CORS_ALLOWED_ORIGINS,
+      # DATABASE_URL, and SECRET_KEY must be set in the Render dashboard
+      # (kept out of VCS on purpose).
     plan: free
 
   - type: web

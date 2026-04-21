@@ -1,6 +1,6 @@
 """Seed the database with default org/user and 5 sample CRE deals."""
 
-from app.db import init_db, SessionLocal
+from app.db import SessionLocal
 from app.models.organization import Organization
 from app.models.user import User
 from app.models.deal import Deal, DealStatus, RiskLevel
@@ -46,7 +46,7 @@ def _ensure_default_org_and_user(db):
 
 
 def seed():
-    init_db()
+    # Schema is managed by Alembic — run `alembic upgrade head` before seeding.
     db = SessionLocal()
 
     # Always ensure default org & system user exist
