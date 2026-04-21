@@ -72,7 +72,12 @@ def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
 def update_memo(deal_id: str, payload: MemoUpdate, db: Session = Depends(get_db)):
     """Manually update memo content or title."""
     _ensure_deal_exists(db, deal_id)
-    memo = db.query(Memo).filter(Memo.deal_id == deal_id).first()
+    # Defence-in-depth: even though _ensure_deal_exists already scoped the
+    # deal to the current org, scope the memo query too so a stray memo
+    # whose organization_id has drifted cannot be mutated cross-org.
+    memo = (
+        active_query(db.query(Memo), Memo).filter(Memo.deal_id == deal_id).first()
+    )
     if memo is None:
         raise HTTPException(status_code=404, detail="Memo not found for this deal")
 

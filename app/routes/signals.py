@@ -5,7 +5,7 @@ from app.db import get_db
 from app.models.deal import Deal
 from app.models.signal import Signal
 from app.schemas.signal import SignalCreate, SignalResponse
-from app.utils.org_scope import get_org_id, scope_query
+from app.utils.org_scope import active_query, get_org_id, scope_query
 from app.services.normalization_service import normalize_signal_type
 
 router = APIRouter(tags=["signals"])
@@ -34,7 +34,13 @@ def list_signals(
 @router.post("/signals", response_model=SignalResponse, status_code=201)
 def create_signal(payload: SignalCreate, db: Session = Depends(get_db)):
     if payload.deal_id:
-        deal = db.query(Deal).filter(Deal.id == payload.deal_id).first()
+        # Org-scope the deal lookup so we return 404 rather than leaking that a
+        # deal with this id exists in a different organization.
+        deal = (
+            active_query(db.query(Deal), Deal)
+            .filter(Deal.id == payload.deal_id)
+            .first()
+        )
         if not deal:
             raise HTTPException(status_code=404, detail=f"Deal {payload.deal_id} not found")
     signal = Signal(**payload.model_dump())
@@ -55,7 +61,8 @@ def list_deal_signals(
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
-    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    # Org-scope: cross-org deal ids must look like "not found".
+    deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()
     if not deal:
         raise HTTPException(status_code=404, detail=f"Deal {deal_id} not found")
     signals = (
