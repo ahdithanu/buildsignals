@@ -4,6 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import {
+  RedirectIfAuthenticated,
+  RequireAuth,
+} from "@/components/auth/RequireAuth";
 import Dashboard from "./pages/Dashboard";
 import DealInbox from "./pages/DealInbox";
 import DealDetail from "./pages/DealDetail";
@@ -26,16 +30,89 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/inbox" element={<DealInbox />} />
-            <Route path="/deal/:id" element={<DealDetail />} />
-            <Route path="/underwriting" element={<Underwriting />} />
-            <Route path="/memo" element={<MemoGenerator />} />
-            <Route path="/pipeline" element={<Pipeline />} />
-            <Route path="/signals" element={<MarketSignals />} />
-            <Route path="/settings" element={<Settings />} />
+            {/* Public — authed users get bounced back to the app */}
+            <Route
+              path="/login"
+              element={
+                <RedirectIfAuthenticated>
+                  <Login />
+                </RedirectIfAuthenticated>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <RedirectIfAuthenticated>
+                  <Register />
+                </RedirectIfAuthenticated>
+              }
+            />
+
+            {/* Authenticated routes */}
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <Dashboard />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/inbox"
+              element={
+                <RequireAuth>
+                  <DealInbox />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/deal/:id"
+              element={
+                <RequireAuth>
+                  <DealDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/underwriting"
+              element={
+                <RequireAuth>
+                  <Underwriting />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/memo"
+              element={
+                <RequireAuth>
+                  <MemoGenerator />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/pipeline"
+              element={
+                <RequireAuth>
+                  <Pipeline />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/signals"
+              element={
+                <RequireAuth>
+                  <MarketSignals />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RequireAuth>
+                  <Settings />
+                </RequireAuth>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
