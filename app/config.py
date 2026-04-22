@@ -19,10 +19,24 @@ DATABASE_URL = os.environ.get(
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# JWT settings (will be used by auth layer)
+# JWT settings (used by auth layer).
+#
+# Access tokens are short-lived and held in memory on the frontend (never
+# localStorage). Refresh tokens are long-lived and carried as an httpOnly
+# Secure cookie scoped to /auth/refresh, so XSS cannot read them and the
+# browser automatically attaches them only to the refresh endpoint.
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "14"))
 ALGORITHM = "HS256"
+
+# Refresh-cookie attributes. In production we want Secure + SameSite=lax so
+# the cookie only flows over TLS and is not sent on cross-site POSTs beyond
+# top-level navigations. In dev (http://localhost) Secure must be off or the
+# browser drops the cookie entirely.
+REFRESH_COOKIE_NAME = os.environ.get("REFRESH_COOKIE_NAME", "ds_refresh")
+REFRESH_COOKIE_PATH = "/auth"  # scoped: only /auth/refresh and /auth/logout see it
+REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "lax")
 
 # Environment: "development" | "staging" | "production"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
@@ -89,6 +103,14 @@ if IS_PRODUCTION and ALLOW_ANONYMOUS:
         "ALLOW_ANONYMOUS=true is not permitted when ENVIRONMENT=production"
     )
 
+# Secure flag on the refresh cookie — resolved here after IS_PRODUCTION is
+# known. Allows tests / local dev to disable Secure (needed because browsers
+# refuse Secure cookies over http://localhost).
+REFRESH_COOKIE_SECURE: bool = _parse_bool(
+    os.environ.get("REFRESH_COOKIE_SECURE"),
+    default=IS_PRODUCTION,
+)
+
 # Routes that never require authentication. Matched as exact strings or path
 # prefixes. Keep this list minimal — everything else is authenticated.
 PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
@@ -97,6 +119,7 @@ PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     "/auth/login",
     "/auth/register",
     "/auth/refresh",
+    "/auth/logout",
     "/docs",
     "/redoc",
     "/openapi.json",

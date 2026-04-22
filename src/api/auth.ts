@@ -18,6 +18,10 @@ export const authApi = {
 
   me: () => apiClient.get<MeResponse>('/auth/me'),
 
+  refresh: () => apiClient.post<TokenResponse>('/auth/refresh'),
+
+  logout: () => apiClient.post<void>('/auth/logout'),
+
   switchOrg: (organizationId: string) =>
     apiClient.post<TokenResponse>('/auth/switch-org', { organization_id: organizationId }),
 

@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
+  // Skip PostCSS during test runs. The iCloud-synced Desktop folder
+  // intermittently ECANCELs the postcss.config.js read, which hangs Vitest.
+  // Production builds (mode !== "test") still load it normally.
+  css: mode === "test" ? { postcss: { plugins: [] } } : undefined,
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {

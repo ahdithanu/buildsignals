@@ -1,9 +1,17 @@
 import re
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from app.config import (
+    REFRESH_COOKIE_NAME,
+    REFRESH_COOKIE_PATH,
+    REFRESH_COOKIE_SAMESITE,
+    REFRESH_COOKIE_SECURE,
+    REFRESH_TOKEN_EXPIRE_DAYS,
+)
 from app.db import get_db
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
@@ -16,9 +24,49 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.services.audit_service import log_change
-from app.services.security import create_access_token, hash_password, verify_password
+from app.services.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    hash_password,
+    verify_password,
+)
 from app.utils.auth_deps import get_current_user
 from app.utils.org_scope import DEFAULT_ORG_ID
+
+
+def _set_refresh_cookie(response: Response, *, user_id: str, org_id: str) -> None:
+    """Attach a rotated refresh JWT to the response as an httpOnly cookie."""
+    refresh = create_refresh_token(user_id=user_id, org_id=org_id)
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path=REFRESH_COOKIE_PATH,
+        httponly=True,
+        secure=REFRESH_COOKIE_SECURE,
+        samesite=REFRESH_COOKIE_SAMESITE,
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path=REFRESH_COOKIE_PATH,
+    )
+
+
+def _refresh_failure(detail: str, *, clear: bool = True) -> JSONResponse:
+    """401 response that also tells the browser to drop the bad cookie.
+
+    We return a JSONResponse instead of `raise HTTPException(...)` because
+    FastAPI's exception handler builds its own response and drops cookies
+    attached to the route's injected `Response` object.
+    """
+    resp = JSONResponse(status_code=401, content={"detail": detail})
+    if clear:
+        _clear_refresh_cookie(resp)
+    return resp
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -40,7 +88,7 @@ def _unique_slug(db: Session, base: str) -> str:
 # ── register ────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+def register(payload: RegisterRequest, response: Response, db: Session = Depends(get_db)):
     # Check email uniqueness
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
@@ -98,6 +146,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
 
     token = create_access_token(user_id=user.id, org_id=org.id)
+    _set_refresh_cookie(response, user_id=user.id, org_id=org.id)
     return TokenResponse(
         access_token=token,
         user_id=user.id,
@@ -109,7 +158,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 # ── login ───────────────────────────────────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
@@ -130,12 +179,77 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="User has no organization membership")
 
     token = create_access_token(user_id=user.id, org_id=membership.organization_id)
+    _set_refresh_cookie(response, user_id=user.id, org_id=membership.organization_id)
     return TokenResponse(
         access_token=token,
         user_id=user.id,
         organization_id=membership.organization_id,
         role=membership.role.value,
     )
+
+
+# ── refresh ─────────────────────────────────────────────────────────────────
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh(
+    response: Response,
+    db: Session = Depends(get_db),
+    refresh_cookie: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+):
+    """Exchange a valid refresh cookie for a new access token.
+
+    Rotates the refresh cookie on every call: the old refresh token is
+    replaced with a fresh one carrying a new `exp`, so a stolen cookie
+    has a bounded useful lifetime even without a server-side blocklist.
+    Public route (see PUBLIC_PATH_PREFIXES); authentication is via the
+    cookie, not an Authorization header.
+    """
+    if not refresh_cookie:
+        # No cookie to clear — just 401.
+        return _refresh_failure("Missing refresh cookie", clear=False)
+    claims = decode_refresh_token(refresh_cookie)
+    if not claims:
+        return _refresh_failure("Invalid or expired refresh token")
+
+    user_id = claims.get("sub")
+    org_id = claims.get("org_id")
+    if not user_id or not org_id:
+        return _refresh_failure("Malformed refresh token")
+
+    user = db.get(User, user_id)
+    if not user or not user.is_active:
+        return _refresh_failure("User no longer active")
+
+    membership = (
+        db.query(OrganizationMembership)
+        .filter(
+            OrganizationMembership.user_id == user_id,
+            OrganizationMembership.organization_id == org_id,
+        )
+        .first()
+    )
+    if not membership:
+        return _refresh_failure("Membership revoked")
+
+    access = create_access_token(user_id=user_id, org_id=org_id)
+    _set_refresh_cookie(response, user_id=user_id, org_id=org_id)
+    return TokenResponse(
+        access_token=access,
+        user_id=user_id,
+        organization_id=org_id,
+        role=membership.role.value,
+    )
+
+
+# ── logout ──────────────────────────────────────────────────────────────────
+
+@router.post("/logout", status_code=204)
+def logout(response: Response):
+    """Clear the refresh cookie. Idempotent; safe to call without a session."""
+    _clear_refresh_cookie(response)
+    # Returning None lets FastAPI use the injected `response` (with the
+    # Set-Cookie clearing header) rather than constructing a new 204.
+    return None
 
 
 # ── me ──────────────────────────────────────────────────────────────────────

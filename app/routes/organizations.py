@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -17,6 +17,7 @@ from app.schemas.organization import (
     UpdateMemberRequest,
 )
 from app.services.audit_service import log_change
+from app.routes.auth import _set_refresh_cookie
 from app.services.security import create_access_token
 from app.utils.auth_deps import get_current_user, require_role_strict
 
@@ -276,6 +277,7 @@ switch_router = APIRouter(prefix="/auth", tags=["auth"])
 @switch_router.post("/switch-org", response_model=TokenResponse)
 def switch_org(
     payload: SwitchOrgRequest,
+    response: Response,
     principal: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -295,6 +297,13 @@ def switch_org(
         )
 
     token = create_access_token(
+        user_id=principal["user_id"],
+        org_id=payload.organization_id,
+    )
+    # Rotate the refresh cookie so a silent refresh can't throw the user
+    # back to the previous org.
+    _set_refresh_cookie(
+        response,
         user_id=principal["user_id"],
         org_id=payload.organization_id,
     )
