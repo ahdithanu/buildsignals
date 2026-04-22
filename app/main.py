@@ -2,7 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ALLOWED_ORIGINS
+from app.logging_config import configure_logging
 from app.middleware.auth_context import AuthContextMiddleware
+from app.middleware.request_context import RequestContextMiddleware
+
+configure_logging()
 from app.routes.health import router as health_router
 from app.routes.deals import router as deals_router
 from app.routes.deal_intelligence import router as intelligence_router
@@ -38,6 +42,11 @@ app.add_middleware(
 # Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
 # requests fall through to the default-org for backward compatibility.
 app.add_middleware(AuthContextMiddleware)
+
+# Outermost: tags every request with an X-Request-ID and logs method/path/
+# status/duration when it completes. Wrapping auth means even 401s get a
+# request_id in the logs and the response header.
+app.add_middleware(RequestContextMiddleware)
 
 # ── Register routers ────────────────────────────────────────────────────────
 
