@@ -1,7 +1,7 @@
 import re
 from uuid import uuid4
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -24,6 +24,16 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.services.audit_service import log_change
+from app.services.password_policy import PasswordPolicyError, validate_password
+from app.services.rate_limiter import (
+    LOGIN_LIMIT,
+    LOGIN_WINDOW,
+    REFRESH_LIMIT,
+    REFRESH_WINDOW,
+    REGISTER_LIMIT,
+    REGISTER_WINDOW,
+    limiter,
+)
 from app.services.security import (
     create_access_token,
     create_refresh_token,
@@ -71,6 +81,31 @@ def _refresh_failure(detail: str, *, clear: bool = True) -> JSONResponse:
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP.
+
+    `request.client.host` is the immediate peer (Render's load balancer).
+    When running behind a trusted proxy, X-Forwarded-For holds the real
+    client. We take the leftmost entry — note that in prod you want to
+    configure uvicorn with --proxy-headers and --forwarded-allow-ips so
+    `request.client.host` is already resolved correctly; this fallback
+    is defensive.
+    """
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _too_many(detail: str, retry_after: int) -> JSONResponse:
+    """429 with a Retry-After header, which well-behaved clients honor."""
+    return JSONResponse(
+        status_code=429,
+        content={"detail": detail},
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
 def _slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     return slug or "org"
@@ -88,7 +123,34 @@ def _unique_slug(db: Session, base: str) -> str:
 # ── register ────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-def register(payload: RegisterRequest, response: Response, db: Session = Depends(get_db)):
+def register(
+    payload: RegisterRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    # Per-IP registration throttle. Keyed on IP alone (not email) because
+    # the attacker picks the emails — rate-limiting by their choice of key
+    # would defeat the purpose.
+    ip = _client_ip(request)
+    decision = limiter.check(
+        key=f"register:{ip}",
+        limit=REGISTER_LIMIT,
+        window_seconds=REGISTER_WINDOW,
+    )
+    if not decision.allowed:
+        return _too_many(
+            "Too many registrations from this address. Try again later.",
+            decision.retry_after,
+        )
+
+    # Password policy (length ≥ 12, not digits-only, not obviously weak,
+    # not containing the user's own email handle).
+    try:
+        validate_password(payload.password, email=payload.email)
+    except PasswordPolicyError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
     # Check email uniqueness
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
@@ -158,7 +220,26 @@ def register(payload: RegisterRequest, response: Response, db: Session = Depends
 # ── login ───────────────────────────────────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
+def login(
+    payload: LoginRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    # Key the bucket on email+IP so an attacker can't lock a victim's
+    # account by spamming bad passwords from a different IP, but a single
+    # attacker can't also grind from one IP against many emails.
+    ip = _client_ip(request)
+    rl_key = f"login:{payload.email.lower()}:{ip}"
+    decision = limiter.check(
+        key=rl_key, limit=LOGIN_LIMIT, window_seconds=LOGIN_WINDOW,
+    )
+    if not decision.allowed:
+        return _too_many(
+            "Too many login attempts. Try again later.",
+            decision.retry_after,
+        )
+
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
@@ -167,6 +248,10 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
         )
     if not user.is_active:
         raise HTTPException(status_code=401, detail="Account is inactive")
+
+    # Successful login — clear the bucket so a user who mistyped twice
+    # doesn't carry the failed attempts forward into their next session.
+    limiter.reset(rl_key)
 
     # Pick the default membership, or the first one
     membership = (
@@ -192,6 +277,7 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
     refresh_cookie: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
@@ -204,6 +290,18 @@ def refresh(
     Public route (see PUBLIC_PATH_PREFIXES); authentication is via the
     cookie, not an Authorization header.
     """
+    ip = _client_ip(request)
+    decision = limiter.check(
+        key=f"refresh:{ip}",
+        limit=REFRESH_LIMIT,
+        window_seconds=REFRESH_WINDOW,
+    )
+    if not decision.allowed:
+        return _too_many(
+            "Too many refresh attempts. Try again later.",
+            decision.retry_after,
+        )
+
     if not refresh_cookie:
         # No cookie to clear — just 401.
         return _refresh_failure("Missing refresh cookie", clear=False)
