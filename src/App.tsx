@@ -16,6 +16,7 @@ import MemoGenerator from "./pages/MemoGenerator";
 import Pipeline from "./pages/Pipeline";
 import MarketSignals from "./pages/MarketSignals";
 import Settings from "./pages/Settings";
+import AuditLog from "./pages/AuditLog";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -110,6 +111,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <Settings />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/audit"
+              element={
+                <RequireAuth>
+                  <AuditLog />
                 </RequireAuth>
               }
             />

@@ -22,6 +22,7 @@ from app.routes.buy_box import router as buy_box_router
 from app.routes.distributions import router as distributions_router
 from app.routes.deal_summary import router as deal_summary_router
 from app.routes.auth import router as auth_router
+from app.routes.audit import router as audit_router
 from app.routes.organizations import router as organizations_router, switch_router as auth_switch_router
 
 app = FastAPI(
@@ -65,6 +66,7 @@ app.include_router(buy_box_router)
 app.include_router(distributions_router)
 app.include_router(deal_summary_router)
 app.include_router(auth_router)
+app.include_router(audit_router)
 app.include_router(organizations_router)
 app.include_router(auth_switch_router)
 
