@@ -7,6 +7,7 @@ import {
   Kanban,
   Radio,
   Settings,
+  Users,
   Zap,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -31,6 +32,7 @@ const navItems = [
   { title: "Memo Generator", url: "/memo", icon: FileEdit },
   { title: "Pipeline", url: "/pipeline", icon: Kanban },
   { title: "Market Signals", url: "/signals", icon: Radio },
+  { title: "Team", url: "/team", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

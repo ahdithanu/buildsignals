@@ -17,6 +17,7 @@ import Pipeline from "./pages/Pipeline";
 import MarketSignals from "./pages/MarketSignals";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
+import Team from "./pages/Team";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -119,6 +120,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <AuditLog />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/team"
+              element={
+                <RequireAuth>
+                  <Team />
                 </RequireAuth>
               }
             />
