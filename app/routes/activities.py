@@ -10,6 +10,8 @@ from app.db import get_db
 from app.models.deal import Deal
 from app.models.outreach_activity import OutreachActivity, ActivityType
 from app.utils.org_scope import get_org_id, active_query
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 
 router = APIRouter(tags=["activities"])
 
@@ -82,7 +84,12 @@ def list_activities(
 
 # ── POST /deals/{deal_id}/activities ───────────────────────────────────────
 
-@router.post("/deals/{deal_id}/activities", response_model=ActivityResponse, status_code=201)
+@router.post(
+    "/deals/{deal_id}/activities",
+    response_model=ActivityResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def create_activity(
     deal_id: str,
     payload: ActivityCreate,

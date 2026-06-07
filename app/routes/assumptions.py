@@ -11,6 +11,8 @@ from app.schemas.outputs import OutputsResponse
 from app.services.underwriting_service import calculate_and_persist, UnderwritingError
 from app.utils.org_scope import active_query
 from app.services.audit_service import log_change, snapshot_fields
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 
 router = APIRouter(tags=["assumptions"])
 
@@ -34,7 +36,11 @@ def get_assumptions(deal_id: str, db: Session = Depends(get_db)):
 
 # ── PUT assumptions (auto-recalculate) ──────────────────────────────────────
 
-@router.put("/deals/{deal_id}/assumptions", response_model=AssumptionsResponse)
+@router.put(
+    "/deals/{deal_id}/assumptions",
+    response_model=AssumptionsResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def update_assumptions(
     deal_id: str,
     payload: AssumptionsUpdate,
@@ -84,7 +90,11 @@ def get_outputs(deal_id: str, db: Session = Depends(get_db)):
 
 # ── POST recalculate ────────────────────────────────────────────────────────
 
-@router.post("/deals/{deal_id}/recalculate", response_model=OutputsResponse)
+@router.post(
+    "/deals/{deal_id}/recalculate",
+    response_model=OutputsResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def recalculate(deal_id: str, db: Session = Depends(get_db)):
     deal = _get_deal(deal_id, db)
     if deal.assumptions is None:

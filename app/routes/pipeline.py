@@ -9,6 +9,8 @@ from app.db import get_db
 from app.models.deal import Deal
 from app.services.pipeline_service import move_deal_stage
 from app.utils.org_scope import active_query
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 
 router = APIRouter(tags=["pipeline"])
 
@@ -33,7 +35,11 @@ class PipelineEventResponse(BaseModel):
 
 # ── POST /deals/{deal_id}/move-stage ──────────────────────────────────────
 
-@router.post("/deals/{deal_id}/move-stage", response_model=PipelineEventResponse)
+@router.post(
+    "/deals/{deal_id}/move-stage",
+    response_model=PipelineEventResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def move_stage(
     deal_id: str,
     payload: MoveStageRequest,

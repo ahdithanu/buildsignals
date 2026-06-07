@@ -7,13 +7,20 @@ from app.models.deal import Deal
 from app.schemas.buy_box import BuyBoxCreate, BuyBoxResponse
 from app.utils.org_scope import get_org_id, scope_query, active_query
 from app.services.matching_service import match_deal
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 
 router = APIRouter(tags=["buy-box"])
 
 
 # ── create buy box ──────────────────────────────────────────────────────────
 
-@router.post("/buy-box", response_model=BuyBoxResponse, status_code=201)
+@router.post(
+    "/buy-box",
+    response_model=BuyBoxResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def create_buy_box(payload: BuyBoxCreate, db: Session = Depends(get_db)):
     box = BuyBox(**payload.model_dump())
     box.organization_id = get_org_id()
