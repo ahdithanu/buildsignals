@@ -37,7 +37,8 @@ def verify_password(plain: str, hashed: str) -> bool:
 # ── JWT ─────────────────────────────────────────────────────────────────────
 
 def create_access_token(
-    *, user_id: str, org_id: str, expires_minutes: Optional[int] = None,
+    *, user_id: str, org_id: str, token_version: int = 0,
+    expires_minutes: Optional[int] = None,
 ) -> str:
     """Create a short-lived access JWT, carried in the Authorization header."""
     expire = datetime.now(timezone.utc) + timedelta(
@@ -52,11 +53,16 @@ def create_access_token(
         # the same second (JWT `exp` is second-granular). Also a hook for a
         # future server-side blocklist without reshaping the token format.
         "jti": uuid4().hex,
+        # `tv` (token version) is bumped by /auth/logout-all to invalidate
+        # every outstanding refresh cookie for this user. Embedded here too
+        # so a future check could reject access tokens after logout-all;
+        # today we accept the 15-min window as a documented tradeoff.
+        "tv": token_version,
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_refresh_token(*, user_id: str, org_id: str) -> str:
+def create_refresh_token(*, user_id: str, org_id: str, token_version: int = 0) -> str:
     """Create a long-lived refresh JWT, carried as an httpOnly cookie."""
     expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     payload = {
@@ -65,6 +71,7 @@ def create_refresh_token(*, user_id: str, org_id: str) -> str:
         "typ": REFRESH_TOKEN_TYPE,
         "exp": expire,
         "jti": uuid4().hex,
+        "tv": token_version,
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 

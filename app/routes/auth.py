@@ -46,9 +46,13 @@ from app.utils.auth_deps import get_current_user
 from app.utils.org_scope import DEFAULT_ORG_ID
 
 
-def _set_refresh_cookie(response: Response, *, user_id: str, org_id: str) -> None:
+def _set_refresh_cookie(
+    response: Response, *, user_id: str, org_id: str, token_version: int = 0,
+) -> None:
     """Attach a rotated refresh JWT to the response as an httpOnly cookie."""
-    refresh = create_refresh_token(user_id=user_id, org_id=org_id)
+    refresh = create_refresh_token(
+        user_id=user_id, org_id=org_id, token_version=token_version,
+    )
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh,
@@ -208,8 +212,12 @@ def register(
     )
     db.commit()
 
-    token = create_access_token(user_id=user.id, org_id=org.id)
-    _set_refresh_cookie(response, user_id=user.id, org_id=org.id)
+    token = create_access_token(
+        user_id=user.id, org_id=org.id, token_version=user.token_version,
+    )
+    _set_refresh_cookie(
+        response, user_id=user.id, org_id=org.id, token_version=user.token_version,
+    )
     return TokenResponse(
         access_token=token,
         user_id=user.id,
@@ -281,8 +289,14 @@ def login(
     if not membership:
         raise HTTPException(status_code=403, detail="User has no organization membership")
 
-    token = create_access_token(user_id=user.id, org_id=membership.organization_id)
-    _set_refresh_cookie(response, user_id=user.id, org_id=membership.organization_id)
+    token = create_access_token(
+        user_id=user.id, org_id=membership.organization_id,
+        token_version=user.token_version,
+    )
+    _set_refresh_cookie(
+        response, user_id=user.id, org_id=membership.organization_id,
+        token_version=user.token_version,
+    )
     return TokenResponse(
         access_token=token,
         user_id=user.id,
@@ -336,6 +350,13 @@ def refresh(
     if not user or not user.is_active:
         return _refresh_failure("User no longer active")
 
+    # Token-version revocation check: /auth/logout-all bumps user.token_version,
+    # which invalidates every refresh cookie minted before that bump. A claim
+    # missing `tv` is treated as version 0 (legacy tokens minted pre-feature).
+    cookie_tv = claims.get("tv", 0)
+    if cookie_tv != user.token_version:
+        return _refresh_failure("Refresh token revoked")
+
     membership = (
         db.query(OrganizationMembership)
         .filter(
@@ -347,8 +368,12 @@ def refresh(
     if not membership:
         return _refresh_failure("Membership revoked")
 
-    access = create_access_token(user_id=user_id, org_id=org_id)
-    _set_refresh_cookie(response, user_id=user_id, org_id=org_id)
+    access = create_access_token(
+        user_id=user_id, org_id=org_id, token_version=user.token_version,
+    )
+    _set_refresh_cookie(
+        response, user_id=user_id, org_id=org_id, token_version=user.token_version,
+    )
     return TokenResponse(
         access_token=access,
         user_id=user_id,
@@ -365,6 +390,36 @@ def logout(response: Response):
     _clear_refresh_cookie(response)
     # Returning None lets FastAPI use the injected `response` (with the
     # Set-Cookie clearing header) rather than constructing a new 204.
+    return None
+
+
+# ── logout-all ─────────────────────────────────────────────────────────────
+
+@router.post("/logout-all", status_code=204)
+def logout_all(
+    response: Response,
+    db: Session = Depends(get_db),
+    principal: dict = Depends(get_current_user),
+):
+    """Revoke every outstanding refresh token for the current user.
+
+    Bumps `user.token_version`. The next /auth/refresh that arrives with a
+    cookie carrying the old version compares `claims['tv'] != user.token_version`
+    and is rejected with 401. The immediate access token the caller is holding
+    stays valid for the remainder of its 15-minute TTL — that's an accepted
+    tradeoff to avoid a per-request DB lookup on every authenticated call.
+    """
+    user: User = principal["user"]
+    user.token_version = (user.token_version or 0) + 1
+    db.add(user)
+    db.commit()
+    log_change(
+        db, "user", user.id, "logout_all",
+        actor_id=user.id, organization_id=principal["org_id"],
+        new_values={"token_version": user.token_version},
+    )
+    db.commit()
+    _clear_refresh_cookie(response)
     return None
 
 
