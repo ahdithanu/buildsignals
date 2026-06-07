@@ -37,7 +37,12 @@ def list_deal_documents(
 
 # ── create document record (metadata only) ──────────────────────────────────
 
-@router.post("/deals/{deal_id}/documents", response_model=DocumentResponse, status_code=201)
+@router.post(
+    "/deals/{deal_id}/documents",
+    response_model=DocumentResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def create_document(
     deal_id: str,
     payload: DocumentCreate,

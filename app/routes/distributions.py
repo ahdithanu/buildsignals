@@ -7,11 +7,18 @@ from app.models.deal_distribution import DealDistribution
 from app.schemas.deal_distribution import DealDistributionCreate, DealDistributionResponse
 from app.utils.org_scope import get_org_id, active_query, scope_query
 from app.services.audit_service import log_change
+from app.utils.auth_deps import require_role
+from app.models.organization_membership import MemberRole
 
 router = APIRouter(tags=["distributions"])
 
 
-@router.post("/deals/{deal_id}/send", response_model=DealDistributionResponse, status_code=201)
+@router.post(
+    "/deals/{deal_id}/send",
+    response_model=DealDistributionResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def send_deal(deal_id: str, payload: DealDistributionCreate, db: Session = Depends(get_db)):
     """Log a deal distribution record. Does not send email — tracking only."""
     deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()

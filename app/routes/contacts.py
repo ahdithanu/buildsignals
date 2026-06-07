@@ -58,7 +58,12 @@ def list_contacts(
 
 # ── POST /deals/{deal_id}/contacts ─────────────────────────────────────────
 
-@router.post("/deals/{deal_id}/contacts", response_model=ContactResponse, status_code=201)
+@router.post(
+    "/deals/{deal_id}/contacts",
+    response_model=ContactResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def create_contact(
     deal_id: str,
     payload: ContactCreate,
@@ -85,7 +90,11 @@ def create_contact(
 
 # ── PATCH /contacts/{contact_id} ──────────────────────────────────────────
 
-@router.patch("/contacts/{contact_id}", response_model=ContactResponse)
+@router.patch(
+    "/contacts/{contact_id}",
+    response_model=ContactResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def update_contact(
     contact_id: str,
     payload: ContactUpdate,

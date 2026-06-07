@@ -67,7 +67,12 @@ def list_deals(
 
 # ── create deal ──────────────────────────────────────────────────────────────
 
-@router.post("", response_model=DealDetailResponse, status_code=201)
+@router.post(
+    "",
+    response_model=DealDetailResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def create_deal(payload: DealCreate, db: Session = Depends(get_db)):
     deal = Deal(**payload.model_dump())
     deal.organization_id = get_org_id()
@@ -101,7 +106,11 @@ def get_deal(deal_id: str, db: Session = Depends(get_db)):
 
 # ── partial update ───────────────────────────────────────────────────────────
 
-@router.patch("/{deal_id}", response_model=DealResponse)
+@router.patch(
+    "/{deal_id}",
+    response_model=DealResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def update_deal(deal_id: str, payload: DealUpdate, db: Session = Depends(get_db)):
     deal = _get_deal_or_404(deal_id, db)
     update_data = payload.model_dump(exclude_unset=True)
@@ -139,7 +148,12 @@ def delete_deal(deal_id: str, db: Session = Depends(get_db)):
 
 # ── bulk import ──────────────────────────────────────────────────────────────
 
-@router.post("/import", response_model=list[DealDetailResponse], status_code=201)
+@router.post(
+    "/import",
+    response_model=list[DealDetailResponse],
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def import_deals(payloads: list[DealCreate], db: Session = Depends(get_db)):
     results = []
     for payload in payloads:

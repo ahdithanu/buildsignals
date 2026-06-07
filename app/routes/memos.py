@@ -58,7 +58,12 @@ def get_memo(deal_id: str, db: Session = Depends(get_db)):
     return memo
 
 
-@router.post("/deals/{deal_id}/generate-memo", response_model=MemoResponse, status_code=201)
+@router.post(
+    "/deals/{deal_id}/generate-memo",
+    response_model=MemoResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
     """Generate (or regenerate) an investment memo from DB data."""
     _ensure_deal_exists(db, deal_id)
@@ -68,7 +73,11 @@ def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
     return memo
 
 
-@router.put("/deals/{deal_id}/memo", response_model=MemoResponse)
+@router.put(
+    "/deals/{deal_id}/memo",
+    response_model=MemoResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def update_memo(deal_id: str, payload: MemoUpdate, db: Session = Depends(get_db)):
     """Manually update memo content or title."""
     _ensure_deal_exists(db, deal_id)
