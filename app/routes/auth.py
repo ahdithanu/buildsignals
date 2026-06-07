@@ -23,6 +23,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
+from app.services.account_lockout import lockout
 from app.services.audit_service import log_change
 from app.services.password_policy import PasswordPolicyError, validate_password
 from app.services.rate_limiter import (
@@ -226,11 +227,15 @@ def login(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    # Key the bucket on email+IP so an attacker can't lock a victim's
-    # account by spamming bad passwords from a different IP, but a single
-    # attacker can't also grind from one IP against many emails.
+    # Two layered checks run in order:
+    #   1. IP-based rate limiter (cheap, kills password-grinders fast).
+    #   2. Per-account lockout (catches distributed spray across many IPs).
+    # Precedence: the IP check runs first, so a single-IP grinder will see
+    # a 429 well before the 423 lockout ever fires. The lockout only
+    # surfaces when the attempts came from many sources.
     ip = _client_ip(request)
-    rl_key = f"login:{payload.email.lower()}:{ip}"
+    email_key = payload.email.lower()
+    rl_key = f"login:{email_key}:{ip}"
     decision = limiter.check(
         key=rl_key, limit=LOGIN_LIMIT, window_seconds=LOGIN_WINDOW,
     )
@@ -240,8 +245,19 @@ def login(
             decision.retry_after,
         )
 
+    # Account-level lockout: distributed password-spray protection.
+    locked, retry_after = lockout.is_locked(email_key)
+    if locked:
+        return JSONResponse(
+            status_code=status.HTTP_423_LOCKED,
+            content={"detail": "Account temporarily locked due to repeated failed logins."},
+            headers={"Retry-After": str(retry_after)},
+        )
+
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
+        # Count this against the account, not just the IP.
+        lockout.record_failure(email_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -249,9 +265,11 @@ def login(
     if not user.is_active:
         raise HTTPException(status_code=401, detail="Account is inactive")
 
-    # Successful login — clear the bucket so a user who mistyped twice
-    # doesn't carry the failed attempts forward into their next session.
+    # Successful login — clear both the IP bucket and the account
+    # lockout counter so a user who mistyped twice doesn't carry the
+    # failed attempts forward into their next session.
     limiter.reset(rl_key)
+    lockout.reset(email_key)
 
     # Pick the default membership, or the first one
     membership = (

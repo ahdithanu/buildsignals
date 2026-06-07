@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.services.account_lockout import lockout
 from app.services.rate_limiter import limiter
 from app.services.password_policy import PasswordPolicyError, validate_password
 
@@ -12,10 +13,14 @@ STRONG_PW = "CorrectHorseBattery42"
 
 @pytest.fixture(autouse=True)
 def _reset_limiter():
-    """Each test gets a clean rate-limit state."""
+    """Each test gets a clean rate-limit state. Clear both the IP-based
+    limiter and the per-account lockout — both are process-global and
+    bleed across tests otherwise."""
     limiter.clear()
+    lockout.clear()
     yield
     limiter.clear()
+    lockout.clear()
 
 
 # ── password policy ────────────────────────────────────────────────────────
