@@ -11,7 +11,8 @@ from app.db import get_db
 from app.models.deal import Deal
 from app.models.memo import Memo
 from app.services.memo_service import generate_memo
-from app.utils.org_scope import active_query
+from app.services.rate_limiter import limiter, AI_LIMIT, AI_WINDOW
+from app.utils.org_scope import active_query, get_org_id
 from app.utils.auth_deps import require_role
 from app.models.organization_membership import MemberRole
 
@@ -66,6 +67,13 @@ def get_memo(deal_id: str, db: Session = Depends(get_db)):
 )
 def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
     """Generate (or regenerate) an investment memo from DB data."""
+    decision = limiter.check(key=f"ai:{get_org_id()}", limit=AI_LIMIT, window_seconds=AI_WINDOW)
+    if not decision.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="AI rate limit exceeded. Try again shortly.",
+            headers={"Retry-After": str(decision.retry_after)},
+        )
     _ensure_deal_exists(db, deal_id)
     memo = generate_memo(db, deal_id)
     if memo is None:

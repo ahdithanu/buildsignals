@@ -96,3 +96,9 @@ REGISTER_WINDOW = 60 * 60 # 1 hour
 
 REFRESH_LIMIT = 60        # attempts per IP — real clients refresh rarely,
 REFRESH_WINDOW = 60 * 60  # but tab storms can happen
+
+# Per-organization rate limits on LLM-backed endpoints (generate-memo,
+# enrich, score). Tuned to allow a healthy session burst without letting
+# a runaway client burn the API bill.
+AI_LIMIT = 30
+AI_WINDOW = 60   # seconds
