@@ -20,7 +20,7 @@ class TestContacts:
         assert r.status_code == 201
         data = r.json()
         assert data["name"] == "Jane Broker"
-        assert data["status"] == "new"
+        assert data["status"] == "not_contacted"
 
     def test_list_contacts(self, client):
         deal_id = client.post("/deals", json=SAMPLE_DEAL).json()["id"]
