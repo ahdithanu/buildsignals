@@ -1,3 +1,17 @@
+import os
+
+if os.environ.get("SENTRY_DSN"):
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+    sentry_sdk.init(
+        dsn=os.environ["SENTRY_DSN"],
+        environment=os.environ.get("ENVIRONMENT", "development"),
+        traces_sample_rate=0.1,
+        integrations=[FastApiIntegration()],
+        send_default_pii=False,
+    )
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
