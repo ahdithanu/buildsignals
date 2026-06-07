@@ -22,9 +22,14 @@ def _get_deal_or_404(db: Session, deal_id: str) -> Deal:
 
 
 def _get_contact_or_404(db: Session, contact_id: str) -> Contact:
-    contact = db.get(Contact, contact_id)
-    if contact and contact.deleted_at is not None:
-        contact = None
+    # SECURITY: must scope by org. A bare db.get(Contact, contact_id) lets
+    # a caller in org B read/mutate/delete contacts in org A — verified by
+    # tests/test_tenant_isolation.py before this fix landed.
+    contact = (
+        active_query(db.query(Contact), Contact)
+        .filter(Contact.id == contact_id)
+        .first()
+    )
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found.")
     return contact
