@@ -25,6 +25,7 @@ from app.routes.deal_summary import router as deal_summary_router
 from app.routes.auth import router as auth_router
 from app.routes.audit import router as audit_router
 from app.routes.organizations import router as organizations_router, switch_router as auth_switch_router
+from app.routes.data_portability import router as data_portability_router
 
 app = FastAPI(
     title="DealSignal — Real Estate Acquisition Engine",
@@ -75,6 +76,7 @@ app.include_router(auth_router)
 app.include_router(audit_router)
 app.include_router(organizations_router)
 app.include_router(auth_switch_router)
+app.include_router(data_portability_router)
 
 # NOTE: Schema is managed exclusively by Alembic. Production runs
 # `alembic upgrade head` in the Render preDeploy step (see render.yaml).
