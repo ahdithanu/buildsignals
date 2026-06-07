@@ -5,6 +5,7 @@ from app.config import CORS_ALLOWED_ORIGINS
 from app.logging_config import configure_logging
 from app.middleware.auth_context import AuthContextMiddleware
 from app.middleware.request_context import RequestContextMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 configure_logging()
 from app.routes.health import router as health_router
@@ -48,6 +49,11 @@ app.add_middleware(AuthContextMiddleware)
 # status/duration when it completes. Wrapping auth means even 401s get a
 # request_id in the logs and the response header.
 app.add_middleware(RequestContextMiddleware)
+
+# Outermost on the response path: stamp baseline security headers on every
+# response (including 404s/500s produced before any route runs). Uses
+# `setdefault` so route handlers can still override individual headers.
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ── Register routers ────────────────────────────────────────────────────────
 
