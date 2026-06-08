@@ -7,6 +7,7 @@ import {
   Kanban,
   Radio,
   Settings,
+  User,
   Users,
   Zap,
 } from "lucide-react";
@@ -33,6 +34,7 @@ const navItems = [
   { title: "Pipeline", url: "/pipeline", icon: Kanban },
   { title: "Market Signals", url: "/signals", icon: Radio },
   { title: "Team", url: "/team", icon: Users },
+  { title: "Account", url: "/account", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

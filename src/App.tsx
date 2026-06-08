@@ -18,6 +18,7 @@ import MarketSignals from "./pages/MarketSignals";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import Team from "./pages/Team";
+import Account from "./pages/Account";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -128,6 +129,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <Team />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/account"
+              element={
+                <RequireAuth>
+                  <Account />
                 </RequireAuth>
               }
             />
