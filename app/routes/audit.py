@@ -25,10 +25,14 @@ the response envelope.
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -36,9 +40,14 @@ from app.models.audit_log import AuditLog
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
 from app.schemas.audit import AuditLogEntry, AuditLogPage
+from app.services.audit_service import log_change
 from app.utils.auth_deps import get_current_user
 
 router = APIRouter(prefix="/audit", tags=["audit"])
+
+# Hard cap on rows per export to prevent an admin from hosing the server
+# with a multi-million-row download. Patchable in tests.
+EXPORT_ROW_CAP = 50_000
 
 
 def _require_admin(db: Session, *, principal: dict) -> None:
@@ -135,3 +144,155 @@ def list_audit_logs(
     ]
 
     return AuditLogPage(items=items, total=total, offset=offset, limit=limit)
+
+
+_EXPORT_COLUMNS = [
+    "created_at",
+    "request_id",
+    "actor_email",
+    "actor_name",
+    "entity_type",
+    "entity_id",
+    "action",
+    "old_values",
+    "new_values",
+]
+
+
+def _parse_iso(name: str, raw: Optional[str]) -> Optional[datetime]:
+    if not raw:
+        return None
+    try:
+        # Accept trailing 'Z' as UTC.
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid ISO8601 value for {name}: {raw!r}",
+        )
+
+
+@router.get("/export")
+def export_audit_logs(
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    format: str = Query("csv", pattern="^(csv|json)$"),
+    since: Optional[str] = Query(None, description="ISO8601 lower bound on created_at (inclusive)."),
+    until: Optional[str] = Query(None, description="ISO8601 upper bound on created_at (exclusive)."),
+    entity_type: Optional[str] = None,
+    action: Optional[str] = None,
+    actor_id: Optional[str] = None,
+):
+    """Download the org's audit log as CSV (streamed) or JSON.
+
+    Admin-only, org-scoped. Bounded by EXPORT_ROW_CAP to keep a single
+    request from monopolising the worker.
+    """
+    _require_admin(db, principal=principal)
+    org_id = principal["org_id"]
+
+    since_dt = _parse_iso("since", since)
+    until_dt = _parse_iso("until", until)
+
+    q = (
+        db.query(AuditLog, User)
+        .outerjoin(User, User.id == AuditLog.actor_id)
+        .filter(AuditLog.organization_id == org_id)
+    )
+    if entity_type:
+        q = q.filter(AuditLog.entity_type == entity_type)
+    if action:
+        q = q.filter(AuditLog.action == action)
+    if actor_id:
+        q = q.filter(AuditLog.actor_id == actor_id)
+    if since_dt is not None:
+        q = q.filter(AuditLog.created_at >= since_dt)
+    if until_dt is not None:
+        q = q.filter(AuditLog.created_at < until_dt)
+
+    total = q.count()
+    if total > EXPORT_ROW_CAP:
+        # 413 Payload Too Large communicates "your request shape is fine but
+        # the response would be huge — narrow the filters."
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"Export would return {total} rows, exceeding the per-export "
+                f"limit of {EXPORT_ROW_CAP}. Apply tighter filters "
+                f"(since/until/entity_type/action/actor_id) and retry."
+            ),
+        )
+
+    q = q.order_by(AuditLog.created_at.desc())
+
+    org_short = org_id.split("-")[0] if org_id else "org"
+    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+    filename_base = f"audit-{org_short}-{today}"
+
+    # Snapshot the export action itself BEFORE streaming the response —
+    # if we waited, a client disconnect could cancel the generator and we'd
+    # lose the audit record of who pulled the log.
+    log_change(
+        db,
+        "audit_log",
+        "*",
+        "export",
+        actor_id=principal.get("user_id"),
+        organization_id=org_id,
+        new_values={"format": format, "row_count": total},
+    )
+    db.commit()
+
+    if format == "json":
+        items = []
+        for log, user in q.all():
+            items.append({
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+                "request_id": log.request_id,
+                "actor_email": user.email if user else None,
+                "actor_name": user.full_name if user else None,
+                "entity_type": log.entity_type,
+                "entity_id": log.entity_id,
+                "action": log.action,
+                "old_values": _decode_json(log.old_values),
+                "new_values": _decode_json(log.new_values),
+            })
+        return JSONResponse(
+            content=items,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename_base}.json"',
+            },
+        )
+
+    # CSV path — stream row-by-row so we never materialize the full output.
+    def _rows():
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(_EXPORT_COLUMNS)
+        yield buf.getvalue()
+        buf.seek(0); buf.truncate(0)
+
+        # `.yield_per` lets SQLAlchemy stream rows from the cursor rather than
+        # loading them all at once.
+        for log, user in q.yield_per(500):
+            writer.writerow([
+                log.created_at.isoformat() if log.created_at else "",
+                log.request_id or "",
+                (user.email if user else "") or "",
+                (user.full_name if user else "") or "",
+                log.entity_type or "",
+                log.entity_id or "",
+                log.action or "",
+                log.old_values or "",
+                log.new_values or "",
+            ])
+            yield buf.getvalue()
+            buf.seek(0); buf.truncate(0)
+
+    return StreamingResponse(
+        _rows(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename_base}.csv"',
+        },
+    )
