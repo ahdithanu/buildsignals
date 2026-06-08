@@ -1,6 +1,7 @@
 import re
 from uuid import uuid4
 
+import pyotp
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -272,6 +273,32 @@ def login(
         )
     if not user.is_active:
         raise HTTPException(status_code=401, detail="Account is inactive")
+
+    # 2FA enforcement: if the user has confirmed 2FA enrollment, a valid
+    # TOTP code is required to mint a token. Missing vs invalid get distinct
+    # X-Auth-Reason headers so the frontend can render the right UI ("show
+    # the TOTP prompt" vs "tell the user the code was wrong") without
+    # leaking which check failed in a generic 401 message body.
+    # Failures here record against the account lockout the same way a wrong
+    # password would, so an attacker who guessed the password can't grind
+    # codes indefinitely.
+    if user.totp_enabled:
+        if not payload.totp_code:
+            lockout.record_failure(email_key)
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "TOTP code required"},
+                headers={"X-Auth-Reason": "totp_required"},
+            )
+        if not user.totp_secret or not pyotp.TOTP(user.totp_secret).verify(
+            payload.totp_code, valid_window=1,
+        ):
+            lockout.record_failure(email_key)
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid TOTP code"},
+                headers={"X-Auth-Reason": "totp_invalid"},
+            )
 
     # Successful login — clear both the IP bucket and the account
     # lockout counter so a user who mistyped twice doesn't carry the
