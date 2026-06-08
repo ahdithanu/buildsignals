@@ -30,6 +30,14 @@ class User(Base):
     # row's tv and 401s on mismatch. Cheap (one int per row, no extra writes
     # per refresh) and survives without Redis.
     token_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0", default=0)
+    # ── 2FA (TOTP) ─────────────────────────────────────────────────────────
+    # `totp_secret` is the base32 shared secret stored at /auth/2fa/setup
+    # time. It exists *before* the user confirms enrollment with /verify, so
+    # presence of a secret alone doesn't mean 2FA is enforced — that's what
+    # `totp_enabled` is for. /auth/login only requires a TOTP code when
+    # totp_enabled is True. /auth/2fa/disable clears both.
+    totp_secret: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false", default=False)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
