@@ -1,0 +1,48 @@
+import { Component, ReactNode, ErrorInfo } from "react";
+import InternalError from "@/pages/InternalError";
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+/**
+ * Top-level error boundary. React error boundaries must be class components —
+ * the hooks API has no equivalent for `componentDidCatch` /
+ * `getDerivedStateFromError`. Render errors anywhere below this boundary
+ * surface a friendly <InternalError> page instead of a white screen.
+ *
+ * NOTE: This does NOT catch errors in event handlers, async code, or during
+ * SSR — that's a React limitation. Wire Sentry for those.
+ */
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    // Log to the console so devs see it; Sentry (if wired) captures it via its
+    // own React integration / global error handler.
+    // eslint-disable-next-line no-console
+    console.error("[ErrorBoundary] Caught render error:", error, info.componentStack);
+  }
+
+  private handleReset = (): void => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return <InternalError onReset={this.handleReset} error={this.state.error} />;
+    }
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;

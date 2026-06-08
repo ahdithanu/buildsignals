@@ -3,7 +3,11 @@ import { Layout } from "@/components/Layout";
 import { stageLabels, formatCurrency } from "@/lib/formatters";
 import { useDeals, useMoveStage } from "@/hooks/useDeals";
 import { DealScoreBadge, StatusBadge } from "@/components/DealBadges";
-import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
+import { LoadingState, ErrorState } from "@/components/DataStates";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { Inbox } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -100,6 +104,33 @@ export default function Pipeline() {
 
   if (error) {
     return <Layout><ErrorState message="Failed to load pipeline." onRetry={() => refetch()} /></Layout>;
+  }
+
+  if (dealData.length === 0) {
+    return (
+      <Layout>
+        <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
+          <div className="mb-5 md:mb-6">
+            <h2 className="text-lg md:text-xl font-semibold font-display text-foreground">Pipeline</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Track acquisition progress from sourcing to close</p>
+          </div>
+          <Card className="card-shadow">
+            <CardContent className="flex flex-col items-center justify-center text-center py-16 px-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary mb-4">
+                <Inbox className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground">Your pipeline is empty</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                Add deals from the inbox and drag them across stages to track progress.
+              </p>
+              <Button asChild className="mt-4">
+                <Link to="/inbox">Add your first deal</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
   }
 
   return (
