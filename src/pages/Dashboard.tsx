@@ -4,6 +4,10 @@ import { DealScoreBadge, StatusBadge } from "@/components/DealBadges";
 import { formatCurrency, stageLabels } from "@/lib/formatters";
 import { useDashboardKpis, useTopOpportunities, usePipelineSnapshot, useRecentSignals, useAiInsights } from "@/hooks/useDashboard";
 import { LoadingState, ErrorState } from "@/components/DataStates";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { Inbox } from "lucide-react";
 import { TrendingUp, Target, Star, DollarSign, BarChart3, Lightbulb, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -35,6 +39,34 @@ export default function Dashboard() {
   }
 
   const activeCount = kpis?.pipelineDeals ?? 0;
+  const hasNoDeals = (topDeals ?? []).length === 0 && activeCount === 0;
+
+  if (hasNoDeals) {
+    return (
+      <Layout>
+        <div className="p-4 md:p-6 max-w-[1400px] mx-auto">
+          <div className="mb-5 md:mb-6">
+            <h2 className="text-lg md:text-xl font-semibold font-display text-foreground">Dashboard</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Your acquisition engine at a glance</p>
+          </div>
+          <Card className="card-shadow">
+            <CardContent className="flex flex-col items-center justify-center text-center py-16 px-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary mb-4">
+                <Inbox className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground">No deals yet</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                Paste a listing URL or add a deal manually to start building your pipeline.
+              </p>
+              <Button asChild className="mt-4">
+                <Link to="/inbox">Go to Deal Inbox</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

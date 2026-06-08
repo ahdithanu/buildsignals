@@ -219,7 +219,22 @@ export default function DealInbox() {
           {/* Table */}
           <div className={`flex-1 rounded-xl border bg-card card-shadow overflow-hidden min-w-0 ${selectedDeal ? 'hidden lg:block lg:max-w-[calc(100%-380px)]' : ''}`}>
             {filtered.length === 0 ? (
-              <EmptyState title="No deals found" description="Try adjusting your filters or add a new deal." />
+              deals.length === 0 ? (
+                <EmptyState
+                  title="No deals yet"
+                  description="Paste a listing URL or add a deal manually to get started."
+                  action={
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add your first deal
+                    </button>
+                  }
+                />
+              ) : (
+                <EmptyState title="No deals match your filters" description="Try adjusting filters or clearing your search." />
+              )
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
