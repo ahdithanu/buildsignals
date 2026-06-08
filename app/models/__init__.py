@@ -13,3 +13,4 @@ from app.models.pipeline_event import PipelineEvent  # noqa
 from app.models.audit_log import AuditLog  # noqa
 from app.models.buy_box import BuyBox  # noqa
 from app.models.deal_distribution import DealDistribution  # noqa
+from app.models.password_reset_token import PasswordResetToken  # noqa
