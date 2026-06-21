@@ -25,9 +25,20 @@ if DATABASE_URL.startswith("postgres://"):
 # localStorage). Refresh tokens are long-lived and carried as an httpOnly
 # Secure cookie scoped to /auth/refresh, so XSS cannot read them and the
 # browser automatically attaches them only to the refresh endpoint.
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "14"))
+_DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
+SECRET_KEY = os.environ.get("SECRET_KEY", _DEFAULT_SECRET_KEY)
+
+
+def _require_int(name: str, default: str) -> int:
+    raw = os.environ.get(name, default)
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be an integer, got {raw!r}") from exc
+
+
+ACCESS_TOKEN_EXPIRE_MINUTES = _require_int("ACCESS_TOKEN_EXPIRE_MINUTES", "15")
+REFRESH_TOKEN_EXPIRE_DAYS = _require_int("REFRESH_TOKEN_EXPIRE_DAYS", "14")
 ALGORITHM = "HS256"
 
 # Refresh-cookie attributes. In production we want Secure + SameSite=lax so
@@ -36,7 +47,11 @@ ALGORITHM = "HS256"
 # browser drops the cookie entirely.
 REFRESH_COOKIE_NAME = os.environ.get("REFRESH_COOKIE_NAME", "ds_refresh")
 REFRESH_COOKIE_PATH = "/auth"  # scoped: only /auth/refresh and /auth/logout see it
-REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "lax")
+REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "lax").lower()
+if REFRESH_COOKIE_SAMESITE not in ("lax", "strict", "none"):
+    raise RuntimeError(
+        f"REFRESH_COOKIE_SAMESITE must be one of lax|strict|none, got {REFRESH_COOKIE_SAMESITE!r}"
+    )
 
 # Environment: "development" | "staging" | "production"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
@@ -102,6 +117,25 @@ if IS_PRODUCTION and ALLOW_ANONYMOUS:
     raise RuntimeError(
         "ALLOW_ANONYMOUS=true is not permitted when ENVIRONMENT=production"
     )
+if IS_PRODUCTION:
+    if SECRET_KEY == _DEFAULT_SECRET_KEY or not SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY must be set to a strong random value when ENVIRONMENT=production "
+            "(the dev default is rejected)"
+        )
+    if len(SECRET_KEY) < 32:
+        raise RuntimeError(
+            "SECRET_KEY must be at least 32 characters when ENVIRONMENT=production"
+        )
+    if DATABASE_URL.startswith("sqlite"):
+        raise RuntimeError(
+            "DATABASE_URL must point to PostgreSQL when ENVIRONMENT=production "
+            "(SQLite is not safe for production)"
+        )
+    if REFRESH_COOKIE_SAMESITE == "none" and not REFRESH_COOKIE_SECURE:
+        raise RuntimeError(
+            "REFRESH_COOKIE_SAMESITE=none requires REFRESH_COOKIE_SECURE=true"
+        )
 
 # Secure flag on the refresh cookie — resolved here after IS_PRODUCTION is
 # known. Allows tests / local dev to disable Secure (needed because browsers
