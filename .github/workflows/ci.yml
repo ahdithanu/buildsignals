@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: "sqlite:///./ci.db"
-      JWT_SECRET_KEY: "ci-test-secret-key-not-for-production"
+      SECRET_KEY: "ci-test-secret-key-not-for-production"
       ENVIRONMENT: "ci"
     steps:
       - uses: actions/checkout@v4
