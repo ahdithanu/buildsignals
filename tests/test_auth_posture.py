@@ -144,11 +144,12 @@ def test_production_rejects_allow_anonymous_true(monkeypatch):
     monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
     monkeypatch.delenv("ALLOW_ANONYMOUS", raising=False)
 
-
 def test_production_defaults_allow_anonymous_false(monkeypatch):
     sys.modules.pop("app.config", None)
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://app.example.com")
+    monkeypatch.setenv("SECRET_KEY", "a" * 64)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@db.example.com/x")
     monkeypatch.delenv("ALLOW_ANONYMOUS", raising=False)
 
     config = importlib.import_module("app.config")
@@ -159,6 +160,8 @@ def test_production_defaults_allow_anonymous_false(monkeypatch):
     sys.modules.pop("app.config", None)
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
 
 def test_development_defaults_allow_anonymous_true(monkeypatch):
