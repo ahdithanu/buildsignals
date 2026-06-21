@@ -166,3 +166,13 @@ def is_public_path(path: str) -> bool:
     if path == "/":
         return True
     return any(path == p or path.startswith(p + "/") or path == p for p in PUBLIC_PATH_PREFIXES)
+
+
+# ── Observability (Sentry) ──────────────────────────────────────────────────
+# Optional. When unset, Sentry is disabled (init is a no-op). In production
+# we strongly recommend setting it — without it, errors are invisible.
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip() or None
+SENTRY_TRACES_SAMPLE_RATE = float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1"))
+SENTRY_PROFILES_SAMPLE_RATE = float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.0"))
+# Release tag for grouping deploys in Sentry — Render/Heroku set this automatically.
+SENTRY_RELEASE = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or None
