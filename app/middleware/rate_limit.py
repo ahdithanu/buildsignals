@@ -1,0 +1,70 @@
+"""Global per-IP rate limit backstop.
+
+Sits in front of route handlers, complementing per-endpoint guards in
+app/services/rate_limiter.py. Auth-specific limits live at the route
+level (richer keying: email+IP). This middleware just protects every-
+thing else from a single client hammering the app.
+
+Health endpoints are exempt so probes never get 429'd.
+"""
+from __future__ import annotations
+
+import os
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
+
+from app.services.rate_limiter import limiter
+
+
+GLOBAL_LIMIT = int(os.environ.get("GLOBAL_RATE_LIMIT", "600"))
+GLOBAL_WINDOW = int(os.environ.get("GLOBAL_RATE_WINDOW_SECONDS", "60"))
+
+# Paths skipped from global limiting. Auth routes have their own
+# tighter limits at the route layer; health/openapi need to stay open
+# for probes and docs.
+_EXEMPT_PREFIXES = (
+    "/health",
+    "/healthz",
+    "/auth/login",
+    "/auth/register",
+    "/auth/refresh",
+    "/openapi.json",
+)
+
+
+def _client_ip(request: Request) -> str:
+    """Resolve the originating IP, honoring a single proxy hop."""
+    fwd = request.headers.get("x-forwarded-for")
+    if fwd:
+        # First entry is the original client; rest are proxies.
+        return fwd.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next) -> Response:
+        path = request.url.path
+        if any(path == p or path.startswith(p + "/") for p in _EXEMPT_PREFIXES):
+            return await call_next(request)
+
+        key = f"global:{_client_ip(request)}"
+        decision = limiter.check(
+            key=key, limit=GLOBAL_LIMIT, window_seconds=GLOBAL_WINDOW
+        )
+        if not decision.allowed:
+            return JSONResponse(
+                {"detail": "Too many requests"},
+                status_code=429,
+                headers={
+                    "Retry-After": str(decision.retry_after),
+                    "X-RateLimit-Limit": str(GLOBAL_LIMIT),
+                    "X-RateLimit-Remaining": "0",
+                },
+            )
+
+        response = await call_next(request)
+        response.headers["X-RateLimit-Limit"] = str(GLOBAL_LIMIT)
+        response.headers["X-RateLimit-Remaining"] = str(decision.remaining)
+        return response
