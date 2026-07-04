@@ -1,5 +1,6 @@
 import { Component, ReactNode, ErrorInfo } from "react";
 import InternalError from "@/pages/InternalError";
+import { captureError } from "@/sentry";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -27,8 +28,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    // Log to the console so devs see it; Sentry (if wired) captures it via its
-    // own React integration / global error handler.
+    // Report to Sentry with the React component stack for context. Sentry's
+    // global handlers already catch uncaught exceptions and unhandled
+    // promise rejections; the componentStack is only available here, so we
+    // capture explicitly rather than letting the error bubble.
+    captureError(error, { componentStack: info.componentStack });
+
+    // Also log to the browser console — devs debugging locally shouldn't
+    // need a Sentry account to see the stack.
     // eslint-disable-next-line no-console
     console.error("[ErrorBoundary] Caught render error:", error, info.componentStack);
   }
