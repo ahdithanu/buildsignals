@@ -87,7 +87,8 @@ After the API service goes green:
 BASE=https://api.dealsignal.com     # adjust per environment
 
 # Basic aliveness + version
-curl -sf $BASE/health | jq .
+curl -sf $BASE/health | jq .        # shallow liveness — no DB check
+curl -sf $BASE/health/deep | jq .   # exercises the DB; 503 if Postgres is unreachable
 curl -sf $BASE/openapi.json | jq '.info.version'
 
 # Login round-trip — proves DB, JWT, and cookie wiring are healthy
