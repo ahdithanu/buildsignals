@@ -37,11 +37,11 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.audit_log import AuditLog
-from app.models.organization_membership import MemberRole, OrganizationMembership
+from app.models.organization_membership import MemberRole
 from app.models.user import User
 from app.schemas.audit import AuditLogEntry, AuditLogPage
 from app.services.audit_service import log_change
-from app.utils.auth_deps import get_current_user
+from app.utils.auth_deps import require_role_strict
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
@@ -49,21 +49,11 @@ router = APIRouter(prefix="/audit", tags=["audit"])
 # with a multi-million-row download. Patchable in tests.
 EXPORT_ROW_CAP = 50_000
 
-
-def _require_admin(db: Session, *, principal: dict) -> None:
-    """Audit visibility is admin-only inside the principal's active org."""
-    m = (
-        db.query(OrganizationMembership)
-        .filter(
-            OrganizationMembership.user_id == principal["user_id"],
-            OrganizationMembership.organization_id == principal["org_id"],
-        )
-        .first()
-    )
-    if not m:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
-    if m.role != MemberRole.admin:
-        raise HTTPException(status_code=403, detail="Admin role required")
+# Admin-only, auth-required. Bound as `principal` on each handler so the
+# guard is visible on the signature (audit-friendly) and the principal is
+# available for org-scoped queries and actor stamping. Replaces the previous
+# in-handler `_require_admin(db, principal=...)` call.
+_admin_principal = require_role_strict(MemberRole.admin)
 
 
 def _decode_json(raw: Optional[str]) -> Optional[dict]:
@@ -81,7 +71,7 @@ def _decode_json(raw: Optional[str]) -> Optional[dict]:
 
 @router.get("", response_model=AuditLogPage)
 def list_audit_logs(
-    principal: dict = Depends(get_current_user),
+    principal: dict = Depends(_admin_principal),
     db: Session = Depends(get_db),
     entity_type: Optional[str] = Query(
         None, description="Filter: 'deal', 'membership', 'user', ..."
@@ -99,7 +89,6 @@ def list_audit_logs(
     Most recent first. Joined with `users` so the UI can render "Alice
     deleted deal X" without a second round-trip.
     """
-    _require_admin(db, principal=principal)
     org_id = principal["org_id"]
 
     q = db.query(AuditLog, User).outerjoin(
@@ -174,7 +163,7 @@ def _parse_iso(name: str, raw: Optional[str]) -> Optional[datetime]:
 
 @router.get("/export")
 def export_audit_logs(
-    principal: dict = Depends(get_current_user),
+    principal: dict = Depends(_admin_principal),
     db: Session = Depends(get_db),
     format: str = Query("csv", pattern="^(csv|json)$"),
     since: Optional[str] = Query(None, description="ISO8601 lower bound on created_at (inclusive)."),
@@ -188,7 +177,6 @@ def export_audit_logs(
     Admin-only, org-scoped. Bounded by EXPORT_ROW_CAP to keep a single
     request from monopolising the worker.
     """
-    _require_admin(db, principal=principal)
     org_id = principal["org_id"]
 
     since_dt = _parse_iso("since", since)

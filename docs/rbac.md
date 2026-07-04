@@ -142,14 +142,14 @@ Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = 
 
 ## Gaps
 
-Ranked by severity.
+Ranked by severity. Items marked ✅ were addressed in the same PR that added this doc.
 
-1. **Add explicit route-level auth guards to `dashboard.py` and other tenant reads that only rely on the global posture.** These are `dashboard.py` (all 5 endpoints), `deal_summary.py` `GET /summary`, and `distributions.py` `GET /distributions`. Not exploitable in production (`ALLOW_ANONYMOUS=False` blocks them at the middleware), but a config drift or a future refactor of the middleware would silently expose them. Add `Depends(get_current_user)` on each.
-2. **`GET /audit/export` mutates on a GET.** Writes an audit-log row and commits inside a GET handler. Either change to POST or move the side effect. Cache-safety and idempotency assumptions elsewhere in the stack (browsers, CDNs, retries) don't apply to state-changing GETs.
-3. **In-handler role checks instead of `Depends(require_role(...))`.** Not broken, but easier to regress and invisible to any tooling that inspects `route.dependencies`. Convert these to decorator-level guards:
-   - `GET /audit`, `GET /audit/export` — `_require_admin()`
-   - `GET /organizations/{org_id}/export` — inline `principal['role']==admin` + `org_id` match
-   - `POST /organizations/{org_id}/members`, `PATCH /organizations/{org_id}/members/{user_id}`, `DELETE /organizations/{org_id}/members/{user_id}` — `_require_admin_of()`
+1. ✅ **Explicit route-level auth guards on tenant reads that only rely on the global posture.** `dashboard.py` (all 5 endpoints), `deal_summary.py` `GET /summary`, and `distributions.py` `GET /distributions` now declare `Depends(require_role(admin, editor))` — matches the mutation convention and survives a middleware refactor.
+2. **`GET /audit/export` mutates on a GET.** Writes an audit-log row and commits inside a GET handler. Change to POST or move the side effect. Cache-safety and idempotency assumptions elsewhere in the stack (browsers, CDNs, retries) don't apply to state-changing GETs. Deferred — coordinate with the frontend before the API change.
+3. **In-handler role checks instead of `Depends(require_role(...))`.** Not broken, but easier to regress and invisible to any tooling that inspects `route.dependencies`. Status:
+   - ✅ `GET /audit`, `GET /audit/export` — converted to `Depends(require_role_strict(admin))`.
+   - **Open:** `GET /organizations/{org_id}/export` — inline `principal['role']==admin` + `org_id` match. Needs a factory like `require_role_strict_of(path_param='org_id', roles=(admin,))` since the org id comes from the path, not the JWT.
+   - **Open:** `POST /organizations/{org_id}/members`, `PATCH /organizations/{org_id}/members/{user_id}`, `DELETE /organizations/{org_id}/members/{user_id}` — `_require_admin_of()`. Same factory would cover them.
 4. **Editor can perform destructive deletes.** Confirm intent for:
    - `DELETE /deals/{deal_id}` (soft-delete)
    - `DELETE /deals/{deal_id}/memo`

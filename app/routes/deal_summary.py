@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.deal import Deal
+from app.models.organization_membership import MemberRole
+from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(tags=["deal-summary"])
@@ -106,7 +108,10 @@ def _build_summary(deal: Deal) -> dict:
     }
 
 
-@router.get("/deals/{deal_id}/summary")
+@router.get(
+    "/deals/{deal_id}/summary",
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def get_deal_summary(deal_id: str, db: Session = Depends(get_db)):
     deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()
     if not deal:
