@@ -1,29 +1,37 @@
-"""In-process sliding-window rate limiter.
+"""Sliding-window rate limiter with pluggable backend.
 
-Used to slow down credential-stuffing and registration-abuse on the
-public /auth/* endpoints. This is deliberately simple — one bucket per
-(key, scope) tuple, held in a module-level dict, evicted lazily.
+Backends
+--------
+- `InMemoryRateLimiter` (default) — one bucket per key in a module-
+  level dict. Cheap, no external deps. Correct for a single-process
+  deploy; under gunicorn -w N each worker gets its own view, so the
+  effective limit is N × configured. Fine for pilot / local dev.
 
-Scope & trade-offs
-------------------
-- Process-local. A multi-worker deploy (e.g. gunicorn -w 4) will give
-  each worker its own buckets, so the effective limit is N × configured.
-  Acceptable for the pilot; revisit with Redis once we scale horizontally.
-- Not durable across restarts. Attackers can reset their budget by
-  waiting for a deploy, but the window is already short (minutes).
-- Keyed by the caller's choice — typically `ip:path` for public endpoints
-  or `email:path` for credential-stuffing-specific guards.
+- `RedisRateLimiter` — used automatically when `REDIS_URL` is set.
+  Atomic INCR + EXPIRE for fixed-window counting; shared state across
+  all workers and pods. Fails open on Redis errors (logs a warning
+  and allows the request through) — rate limiting is a nicety, and
+  hard-failing every request when Redis flaps is worse than briefly
+  dropping the guard.
 
 The limiter exposes `check()` which returns a decision dataclass so the
 route can surface a 429 with Retry-After instead of raising deep in
 middleware where the response headers are harder to shape.
+
+Interface is shared: routes call `limiter.check(...)`, `limiter.reset(...)`,
+`limiter.clear()` and don't care which backend is behind them.
 """
 from __future__ import annotations
 
+import logging
+import os
 import threading
 import time
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
+
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -33,8 +41,8 @@ class RateLimitDecision:
     retry_after: int  # seconds until the next allowed call; 0 when allowed
 
 
-class RateLimiter:
-    """Fixed-window counter. Cheap, predictable, good enough for auth."""
+class InMemoryRateLimiter:
+    """Fixed-window counter, process-local. Default when REDIS_URL is unset."""
 
     def __init__(self) -> None:
         # key -> (window_start_epoch, count)
@@ -77,8 +85,98 @@ class RateLimiter:
             self._buckets.clear()
 
 
+class RedisRateLimiter:
+    """Fixed-window counter backed by Redis.
+
+    Algorithm: INCR the key, set an EXPIRE if the key was fresh, compare
+    the count to the limit. Two round-trips in a pipeline — a Lua script
+    would collapse them into one, but the two-step is easier to reason
+    about and the extra hop is cheap on a colocated Redis.
+
+    Fails open on any Redis exception. This is a deliberate choice: rate
+    limiting is a defensive layer, not a hard requirement for correctness.
+    A Redis flap should not turn into a full-app outage.
+    """
+
+    def __init__(self, url: str) -> None:
+        # Local import so the `redis` package is only required when this
+        # backend is actually selected.
+        import redis  # noqa: WPS433 — intentional lazy import
+
+        # 1-second timeouts so a bad Redis doesn't stall every request.
+        self._client = redis.from_url(
+            url,
+            socket_connect_timeout=1,
+            socket_timeout=1,
+            decode_responses=False,
+        )
+        self._redis_err = redis.RedisError
+
+    def check(self, *, key: str, limit: int, window_seconds: int) -> RateLimitDecision:
+        if limit <= 0 or window_seconds <= 0:
+            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0)
+
+        try:
+            pipe = self._client.pipeline()
+            pipe.incr(key)
+            pipe.ttl(key)
+            count, ttl = pipe.execute()
+            # ttl == -1 means no TTL set (fresh key that only INCR touched);
+            # ttl == -2 means key doesn't exist (shouldn't happen post-INCR).
+            if ttl < 0:
+                self._client.expire(key, window_seconds)
+                ttl = window_seconds
+        except self._redis_err as exc:
+            # Fail open. Log once per class of error so a Redis outage
+            # doesn't drown the app logs.
+            log.warning("rate_limiter: redis error, failing open: %s", exc)
+            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0)
+
+        if count > limit:
+            return RateLimitDecision(
+                allowed=False, remaining=0, retry_after=max(1, int(ttl))
+            )
+        return RateLimitDecision(
+            allowed=True,
+            remaining=max(0, limit - int(count)),
+            retry_after=0,
+        )
+
+    def reset(self, key: str) -> None:
+        try:
+            self._client.delete(key)
+        except self._redis_err as exc:
+            log.warning("rate_limiter: redis error on reset, ignoring: %s", exc)
+
+    def clear(self) -> None:
+        """Wipe all state. Tests only — production should never call this.
+
+        Uses FLUSHDB which will drop every key in the selected Redis DB.
+        If prod and app share a Redis instance, this is destructive.
+        """
+        try:
+            self._client.flushdb()
+        except self._redis_err as exc:
+            log.warning("rate_limiter: redis error on clear, ignoring: %s", exc)
+
+
+def _build_limiter():
+    """Pick a backend based on env. Called once at import time."""
+    url = os.environ.get("REDIS_URL", "").strip()
+    if not url:
+        return InMemoryRateLimiter()
+    try:
+        return RedisRateLimiter(url)
+    except ImportError:
+        log.warning(
+            "REDIS_URL is set but `redis` package is not installed; "
+            "falling back to in-memory limiter (per-worker buckets)"
+        )
+        return InMemoryRateLimiter()
+
+
 # Shared, process-wide instance. Import this from routes.
-limiter = RateLimiter()
+limiter = _build_limiter()
 
 
 # ── Policies ──────────────────────────────────────────────────────────────

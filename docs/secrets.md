@@ -15,6 +15,7 @@ sample rates, cookie names) are not listed here — those live in
 | `DATABASE_URL` | Postgres connection incl. password. | Render dashboard, auto-injected from the linked Postgres instance. | On suspected compromise. Not on a schedule — the credential is machine-only and not human-known. |
 | `SENTRY_DSN` | Sentry ingest token. Low-sensitivity — DSNs are per-project and can only send events, not read them. | Render dashboard env var. | If leaked externally (spam events); otherwise long-lived. |
 | `RESEND_API_KEY` | Outbound email (password-reset). | Render dashboard env var. | On suspected compromise, or if a Resend account admin leaves. |
+| `REDIS_URL` | Optional — enables the shared-state rate limiter. When unset, the in-memory backend runs. The URL embeds the Redis auth password. | Render dashboard env var, auto-injected if the Redis instance is linked. | On suspected compromise. Rotate at the Redis layer (dashboard → *Reset Password*). |
 
 ## Storage
 
