@@ -6291,6 +6291,25 @@
         ]
       }
     },
+    "/health/deep": {
+      "get": {
+        "operationId": "health_check_deep_health_deep_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check Deep",
+        "tags": [
+          "health"
+        ]
+      }
+    },
     "/organizations/me": {
       "get": {
         "operationId": "list_my_organizations_organizations_me_get",
