@@ -3325,9 +3325,9 @@
       }
     },
     "/audit/export": {
-      "get": {
+      "post": {
         "description": "Download the org's audit log as CSV (streamed) or JSON.\n\nAdmin-only, org-scoped. Bounded by EXPORT_ROW_CAP to keep a single\nrequest from monopolising the worker.",
-        "operationId": "export_audit_logs_audit_export_get",
+        "operationId": "export_audit_logs_audit_export_post",
         "parameters": [
           {
             "in": "query",
