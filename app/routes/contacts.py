@@ -143,7 +143,7 @@ def update_contact(
 
 @router.delete(
     "/contacts/{contact_id}", status_code=204,
-    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+    dependencies=[Depends(require_role(MemberRole.admin))],
 )
 def delete_contact(contact_id: str, db: Session = Depends(get_db)):
     contact = _get_contact_or_404(db, contact_id)

@@ -6,9 +6,9 @@ Production reference for how role guards are (and aren't) applied across `app/ro
 
 `MemberRole` enum values:
 
-- **admin** — full control, including org membership management.
-- **editor** — create/update/delete on tenant data (deals, contacts, memos, etc.).
-- **viewer** — **does not exist in the codebase.** Any authenticated org member effectively has read access; there is no lower-privilege read-only tier. "Viewer" columns below are shown for completeness but always mirror `editor` on reads.
+- **admin** — full control, including org membership management and destructive operations (deletes, exports).
+- **editor** — create + update tenant data (deals, contacts, memos, etc.). Cannot perform destructive deletes — those are admin-only.
+- **viewer** — read-only across every tenant-scoped resource. Cannot mutate anything.
 
 ## Two layers of enforcement
 
@@ -31,7 +31,7 @@ Reads generally have no `require_role(...)` — org isolation is enforced by `ac
 
 ## Role matrix
 
-Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = allowed, `—` = denied, `Auth` = any authenticated org member, `Public` = no auth.
+Legend: A = admin, E = editor, V = viewer. `Y` = allowed, `—` = denied, `Auth` = any authenticated org member, `Public` = no auth.
 
 ### Auth / session (`auth.py`, `twofa.py`, `password_reset.py`)
 
@@ -68,7 +68,7 @@ Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = 
 | POST | /deals | Y | Y | — | Decorator guard |
 | GET | /deals/{deal_id} | Auth | Auth | Auth | |
 | PATCH | /deals/{deal_id} | Y | Y | — | Decorator guard |
-| DELETE | /deals/{deal_id} | Y | Y | — | Soft-delete; consider admin-only |
+| DELETE | /deals/{deal_id} | Y | — | — | Admin-only soft-delete |
 | POST | /deals/import | Y | Y | — | Decorator guard |
 | GET | /deals/{deal_id}/summary | Auth | Auth | Auth | No route-level auth `Depends`; relies on global posture |
 | POST | /deals/{deal_id}/move-stage | Y | Y | — | Decorator guard |
@@ -86,7 +86,7 @@ Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = 
 | GET | /deals/{deal_id}/memo | Auth | Auth | Auth | |
 | POST | /deals/{deal_id}/generate-memo | Y | Y | — | Decorator guard |
 | PUT | /deals/{deal_id}/memo | Y | Y | — | Decorator guard |
-| DELETE | /deals/{deal_id}/memo | Y | Y | — | Editor can delete — confirm intended vs. admin-only |
+| DELETE | /deals/{deal_id}/memo | Y | — | — | Admin-only |
 
 ### Contacts, activities, documents, distributions
 
@@ -95,13 +95,13 @@ Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = 
 | GET | /deals/{deal_id}/contacts | Auth | Auth | Auth | |
 | POST | /deals/{deal_id}/contacts | Y | Y | — | Decorator guard |
 | PATCH | /contacts/{contact_id} | Y | Y | — | Decorator guard |
-| DELETE | /contacts/{contact_id} | Y | Y | — | Decorator guard |
+| DELETE | /contacts/{contact_id} | Y | — | — | Admin-only |
 | GET | /deals/{deal_id}/activities | Auth | Auth | Auth | |
 | POST | /deals/{deal_id}/activities | Y | Y | — | Decorator guard |
 | GET | /outreach/follow-ups | Auth | Auth | Auth | Org scope via `active_query` only |
 | GET | /deals/{deal_id}/documents | Auth | Auth | Auth | |
 | POST | /deals/{deal_id}/documents | Y | Y | — | Decorator guard |
-| DELETE | /documents/{document_id} | Y | Y | — | Decorator guard |
+| DELETE | /documents/{document_id} | Y | — | — | Admin-only |
 | GET | /deals/{deal_id}/distributions | Auth | Auth | Auth | No route-level auth `Depends`; relies on global posture |
 | POST | /deals/{deal_id}/send | Y | Y | — | Decorator guard |
 
@@ -121,7 +121,7 @@ Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = 
 | Method | Path | A | E | V | Notes |
 |---|---|---|---|---|---|
 | GET | /audit | Y | — | — | `Depends(require_role_strict(admin))` |
-| GET | /audit/export | Y | — | — | `Depends(require_role_strict(admin))`; still writes an audit row + commits on a GET — see gap 2 |
+| POST | /audit/export | Y | — | — | `Depends(require_role_strict(admin))` — POST because it writes an audit row |
 | GET | /organizations/{org_id}/export | Y | — | — | `Depends(require_role_of(admin, must_match_active_org=True))` |
 
 ### Dashboard (`dashboard.py`)
@@ -145,26 +145,27 @@ Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = 
 Ranked by severity. Items marked ✅ were addressed in the same PR that added this doc.
 
 1. ✅ **Explicit route-level auth guards on tenant reads that only rely on the global posture.** `dashboard.py` (all 5 endpoints), `deal_summary.py` `GET /summary`, and `distributions.py` `GET /distributions` now declare `Depends(require_role(admin, editor))` — matches the mutation convention and survives a middleware refactor.
-2. **`GET /audit/export` mutates on a GET.** Writes an audit-log row and commits inside a GET handler. Change to POST or move the side effect. Cache-safety and idempotency assumptions elsewhere in the stack (browsers, CDNs, retries) don't apply to state-changing GETs. Deferred — coordinate with the frontend before the API change.
+2. ✅ **`/audit/export` is now POST**, not GET. The endpoint writes an audit-log row and commits — that's a state change, and state-changing GETs are unsafe (browsers, CDNs, retries treat GETs as idempotent). Backend tests and the frontend contract both flipped to POST in the same PR.
 3. ✅ **In-handler role checks converted to `Depends(...)` guards.** All role enforcement now lives on the route signature and is inspectable via `route.dependencies`:
-   - `GET /audit`, `GET /audit/export` — `Depends(require_role_strict(admin))`.
+   - `GET /audit`, `POST /audit/export` — `Depends(require_role_strict(admin))`.
    - `POST /organizations/{org_id}/members`, `PATCH /organizations/{org_id}/members/{user_id}`, `DELETE /organizations/{org_id}/members/{user_id}` — `Depends(require_role_of(admin))`. Path-scoped: checks membership + role of the *path* org id.
    - `GET /organizations/{org_id}/export` — `Depends(require_role_of(admin, must_match_active_org=True))`. Same factory, stricter mode: the path org must also equal the caller's active org (matches the GDPR posture — admins can't cross-export using a token signed for a different org).
    - `require_role_of` factory lives in `app/utils/auth_deps.py`. Use it for any admin-scoped endpoint where the org id comes from the URL, not the JWT.
-4. **Editor can perform destructive deletes.** Confirm intent for:
+4. ✅ **Editor-callable destructive deletes tightened to admin-only.** Applied compliance-safer default of "destructive ops = admin only":
    - `DELETE /deals/{deal_id}` (soft-delete)
    - `DELETE /deals/{deal_id}/memo`
    - `DELETE /documents/{document_id}`
    - `DELETE /contacts/{contact_id}`
-   If policy is "destructive ops = admin only," tighten these to `require_role(MemberRole.admin)`.
-5. **No `viewer` role exists.** Every authenticated org member can read every tenant-scoped endpoint. If read-only members are ever needed (auditors, guest investors), add `MemberRole.viewer` to the enum + migration and add it as an allowed role on all `GET` endpoints via `require_role`.
+   If a customer needs editors to delete, relax the specific endpoint back to `require_role(admin, editor)` with a comment explaining why. Don't undo the default posture.
+5. ✅ **`viewer` role wired to reads.** `MemberRole.viewer` was already in the enum and migration 001 — the gap was that no endpoint granted access to it. `dashboard.py` (5), `deal_summary.py` (1), and `distributions.py` (1) now allow viewer via `require_role(admin, editor, viewer)`. Reads that lack an explicit `require_role` (most GETs) work for viewer automatically because they only rely on `active_query` org scoping.
 
 ## Checklist for a new endpoint
 
 1. **Auth**: Add `Depends(get_current_user)` unless the route is genuinely public. Don't rely on the global posture — make the requirement explicit.
 2. **Org scoping**: All queries go through `active_query(db.query(Model), Model)` or `scope_query(...)`. Never raw `db.query(Model).filter(Model.id == x)` without an `org_id` filter.
 3. **Role guard on mutations**: Use `dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))]` on the decorator. Do not put role checks in the handler body.
-4. **Admin-only ops**: Use `Depends(require_role(MemberRole.admin))` at the decorator. If you find yourself calling `_require_admin(...)` inside a handler, use the dependency instead.
-5. **Destructive ops (DELETE, exports, member changes)**: default to admin-only unless there's an explicit product reason to allow editors.
-6. **GETs don't mutate.** No `db.commit()` inside a GET handler.
-7. **Public endpoints** must be rate-limited via `limiter.check` and should return constant responses when they touch account state (avoid enumeration).
+4. **Reads that need explicit auth**: Include `viewer` — `Depends(require_role(MemberRole.admin, MemberRole.editor, MemberRole.viewer))`.
+5. **Admin-only ops**: Use `Depends(require_role(MemberRole.admin))` at the decorator. If you find yourself calling `_require_admin(...)` inside a handler, use the dependency instead.
+6. **Destructive ops (DELETE, exports, member changes)**: default to admin-only unless there's an explicit product reason to allow editors — see gap 4.
+7. **GETs don't mutate.** No `db.commit()` inside a GET handler.
+8. **Public endpoints** must be rate-limited via `limiter.check` and should return constant responses when they touch account state (avoid enumeration).

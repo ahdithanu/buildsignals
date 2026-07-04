@@ -63,7 +63,7 @@ def create_document(
 
 @router.delete(
     "/documents/{document_id}", status_code=204,
-    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+    dependencies=[Depends(require_role(MemberRole.admin))],
 )
 def delete_document(document_id: str, db: Session = Depends(get_db)):
     doc = active_query(db.query(Document), Document).filter(Document.id == document_id).first()

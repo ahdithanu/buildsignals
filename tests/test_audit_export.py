@@ -1,4 +1,4 @@
-"""End-to-end tests for GET /audit/export.
+"""End-to-end tests for POST /audit/export.
 
 Covers the security contract (admin-only, org-scoped), both output
 formats, filtering, and the row-cap safety valve.
@@ -70,7 +70,7 @@ class TestAuditExport:
             _seed_log(db, org_id=org_id, entity_type="deal", action="create",
                       new_values={"i": i})
 
-        r = client.get(
+        r = client.post(
             "/audit/export?entity_type=deal",
             headers=_auth(reg["access_token"]),
         )
@@ -102,7 +102,7 @@ class TestAuditExport:
             _seed_log(db, org_id=org_id, entity_type="deal", action="create",
                       new_values={"i": i})
 
-        r = client.get(
+        r = client.post(
             "/audit/export?format=json&entity_type=deal",
             headers=_auth(reg["access_token"]),
         )
@@ -138,7 +138,7 @@ class TestAuditExport:
         db.commit()
 
         viewer_token = create_access_token(user_id=viewer.id, org_id=org_id)
-        r = client.get("/audit/export", headers=_auth(viewer_token))
+        r = client.post("/audit/export", headers=_auth(viewer_token))
         assert r.status_code == 403
 
     def test_cross_org_isolation(self, client, db):
@@ -150,7 +150,7 @@ class TestAuditExport:
         _seed_log(db, org_id=reg_b["organization_id"], entity_type="deal",
                   new_values={"secret": "globex-internal"})
 
-        r = client.get(
+        r = client.post(
             "/audit/export?format=json&entity_type=deal",
             headers=_auth(reg_b["access_token"]),
         )
@@ -166,7 +166,7 @@ class TestAuditExport:
         _seed_log(db, org_id=org_id, entity_type="memo", action="create")
         _seed_log(db, org_id=org_id, entity_type="memo", action="update")
 
-        r = client.get(
+        r = client.post(
             "/audit/export?format=json&entity_type=deal",
             headers=_auth(reg["access_token"]),
         )
@@ -185,7 +185,7 @@ class TestAuditExport:
             _seed_log(db, org_id=org_id, entity_type="deal", action="create",
                       new_values={"i": i})
 
-        r = client.get(
+        r = client.post(
             "/audit/export?entity_type=deal",
             headers=_auth(reg["access_token"]),
         )

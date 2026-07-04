@@ -49,7 +49,7 @@ def send_deal(deal_id: str, payload: DealDistributionCreate, db: Session = Depen
 @router.get(
     "/deals/{deal_id}/distributions",
     response_model=list[DealDistributionResponse],
-    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor, MemberRole.viewer))],
 )
 def list_distributions(
     deal_id: str,

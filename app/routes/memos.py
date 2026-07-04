@@ -110,7 +110,7 @@ def update_memo(deal_id: str, payload: MemoUpdate, db: Session = Depends(get_db)
 
 @router.delete(
     "/deals/{deal_id}/memo", status_code=204,
-    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+    dependencies=[Depends(require_role(MemberRole.admin))],
 )
 def delete_memo(deal_id: str, db: Session = Depends(get_db)):
     """Soft-delete the memo for a deal."""

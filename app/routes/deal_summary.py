@@ -110,7 +110,7 @@ def _build_summary(deal: Deal) -> dict:
 
 @router.get(
     "/deals/{deal_id}/summary",
-    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor, MemberRole.viewer))],
 )
 def get_deal_summary(deal_id: str, db: Session = Depends(get_db)):
     deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()

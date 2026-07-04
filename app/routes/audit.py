@@ -161,7 +161,7 @@ def _parse_iso(name: str, raw: Optional[str]) -> Optional[datetime]:
         )
 
 
-@router.get("/export")
+@router.post("/export")
 def export_audit_logs(
     principal: dict = Depends(_admin_principal),
     db: Session = Depends(get_db),

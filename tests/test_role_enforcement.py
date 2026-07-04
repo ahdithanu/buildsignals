@@ -115,16 +115,26 @@ def _make_request(client, method: str, url: str, token: str, body=None):
 
 # Representative slice of write routes — proves the dep is wired across
 # multiple route modules. Each tuple is (method, url_template, body).
-ROUTES = [
+#
+# Split by policy: EDITOR_OK covers non-destructive mutations that both
+# admin + editor can perform. ADMIN_ONLY covers destructive ops we
+# deliberately tightened after the RBAC audit (see docs/rbac.md gap 4).
+# Both classes must 403 for viewer.
+EDITOR_OK_ROUTES = [
     ("POST", "/deals", {"name": "X", "address": "1 St", "property_type": "multifamily"}),
     ("PATCH", "/deals/{deal_id}", {"name": "Renamed"}),
     ("POST", "/deals/{deal_id}/contacts", {"name": "New", "role": "broker", "status": "not_contacted"}),
     ("POST", "/deals/{deal_id}/generate-memo", None),
+]
+
+ADMIN_ONLY_ROUTES = [
     ("DELETE", "/contacts/{contact_id}", None),
 ]
 
+ALL_MUTATION_ROUTES = EDITOR_OK_ROUTES + ADMIN_ONLY_ROUTES
 
-@pytest.mark.parametrize("method,url_tmpl,body", ROUTES)
+
+@pytest.mark.parametrize("method,url_tmpl,body", ALL_MUTATION_ROUTES)
 def test_viewer_is_forbidden(client, roles, method, url_tmpl, body):
     url = url_tmpl.format(deal_id=roles["deal_id"], contact_id=roles["contact_id"])
     r = _make_request(client, method, url, roles["viewer"], body)
@@ -133,7 +143,7 @@ def test_viewer_is_forbidden(client, roles, method, url_tmpl, body):
     )
 
 
-@pytest.mark.parametrize("method,url_tmpl,body", ROUTES)
+@pytest.mark.parametrize("method,url_tmpl,body", EDITOR_OK_ROUTES)
 def test_editor_is_not_forbidden(client, roles, method, url_tmpl, body):
     url = url_tmpl.format(deal_id=roles["deal_id"], contact_id=roles["contact_id"])
     r = _make_request(client, method, url, roles["editor"], body)
@@ -145,7 +155,16 @@ def test_editor_is_not_forbidden(client, roles, method, url_tmpl, body):
     )
 
 
-@pytest.mark.parametrize("method,url_tmpl,body", ROUTES)
+@pytest.mark.parametrize("method,url_tmpl,body", ADMIN_ONLY_ROUTES)
+def test_editor_is_forbidden_on_admin_only(client, roles, method, url_tmpl, body):
+    url = url_tmpl.format(deal_id=roles["deal_id"], contact_id=roles["contact_id"])
+    r = _make_request(client, method, url, roles["editor"], body)
+    assert r.status_code == 403, (
+        f"editor should be 403 on admin-only {method} {url}, got {r.status_code}: {r.text}"
+    )
+
+
+@pytest.mark.parametrize("method,url_tmpl,body", ALL_MUTATION_ROUTES)
 def test_admin_is_not_forbidden(client, roles, method, url_tmpl, body):
     url = url_tmpl.format(deal_id=roles["deal_id"], contact_id=roles["contact_id"])
     r = _make_request(client, method, url, roles["admin"], body)

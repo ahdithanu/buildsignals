@@ -27,8 +27,8 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 # ALLOW_ANONYMOUS=False posture, but declaring an explicit dep here makes
 # the requirement obvious at the route level and survives a middleware
 # refactor. Permissive `require_role` preserves the demo-mode passthrough
-# other reads rely on.
-_auth = [Depends(require_role(MemberRole.admin, MemberRole.editor))]
+# other reads rely on. All three roles allowed — this is a read.
+_auth = [Depends(require_role(MemberRole.admin, MemberRole.editor, MemberRole.viewer))]
 
 
 @router.get("/kpis", response_model=KPIResponse, dependencies=_auth)
