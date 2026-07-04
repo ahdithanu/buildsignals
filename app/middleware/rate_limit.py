@@ -5,7 +5,8 @@ app/services/rate_limiter.py. Auth-specific limits live at the route
 level (richer keying: email+IP). This middleware just protects every-
 thing else from a single client hammering the app.
 
-Health endpoints are exempt so probes never get 429'd.
+Health endpoints are exempt so probes never get 429'd. Auth endpoints
+are exempt because they have tighter, better-keyed limits already.
 """
 from __future__ import annotations
 
@@ -21,9 +22,6 @@ from app.services.rate_limiter import limiter
 GLOBAL_LIMIT = int(os.environ.get("GLOBAL_RATE_LIMIT", "600"))
 GLOBAL_WINDOW = int(os.environ.get("GLOBAL_RATE_WINDOW_SECONDS", "60"))
 
-# Paths skipped from global limiting. Auth routes have their own
-# tighter limits at the route layer; health/openapi need to stay open
-# for probes and docs.
 _EXEMPT_PREFIXES = (
     "/health",
     "/healthz",
@@ -38,7 +36,6 @@ def _client_ip(request: Request) -> str:
     """Resolve the originating IP, honoring a single proxy hop."""
     fwd = request.headers.get("x-forwarded-for")
     if fwd:
-        # First entry is the original client; rest are proxies.
         return fwd.split(",", 1)[0].strip()
     return request.client.host if request.client else "unknown"
 

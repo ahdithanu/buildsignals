@@ -3,12 +3,14 @@ import os
 if os.environ.get("SENTRY_DSN"):
     import sentry_sdk
     from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
         environment=os.environ.get("ENVIRONMENT", "development"),
-        traces_sample_rate=0.1,
-        integrations=[FastApiIntegration()],
+        release=os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT"),
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        integrations=[FastApiIntegration(), SqlalchemyIntegration()],
         send_default_pii=False,
     )
 
@@ -18,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import CORS_ALLOWED_ORIGINS
 from app.logging_config import configure_logging
 from app.middleware.auth_context import AuthContextMiddleware
+from app.middleware.rate_limit import GlobalRateLimitMiddleware
 from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 
@@ -61,6 +64,12 @@ app.add_middleware(
 # Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
 # requests fall through to the default-org for backward compatibility.
 app.add_middleware(AuthContextMiddleware)
+
+# Per-IP DoS backstop. Sits outside AuthContext so a hammering client gets
+# rejected before we touch the DB, but inside RequestContext so the 429 still
+# carries an X-Request-ID for tracing. Auth routes have their own tighter
+# limits at the route layer; those still apply on top of this.
+app.add_middleware(GlobalRateLimitMiddleware)
 
 # Outermost: tags every request with an X-Request-ID and logs method/path/
 # status/duration when it completes. Wrapping auth means even 401s get a
