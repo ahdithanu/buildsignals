@@ -1,0 +1,47 @@
+name: openapi
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "sqlite:///./openapi-export.db"
+      SECRET_KEY: "openapi-export-not-a-real-secret"
+      ENVIRONMENT: "ci"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Export OpenAPI schema
+        run: python scripts/export_openapi.py
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- openapi.json; then
+            echo "openapi.json unchanged"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add openapi.json
+          # [skip ci] prevents an infinite loop on the push trigger.
+          git commit -m "chore(openapi): refresh schema [skip ci]"
+          git push
