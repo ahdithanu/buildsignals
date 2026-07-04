@@ -23,7 +23,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session
@@ -45,7 +45,7 @@ from app.models.pipeline_event import PipelineEvent
 from app.models.signal import Signal
 from app.models.user import User
 from app.services.audit_service import log_change
-from app.utils.auth_deps import get_current_user
+from app.utils.auth_deps import require_role_of
 
 router = APIRouter(prefix="/organizations", tags=["data-portability"])
 
@@ -104,7 +104,9 @@ def _serialize_user(user: User) -> dict:
 @router.get("/{org_id}/export")
 def export_organization_data(
     org_id: str,
-    principal: dict = Depends(get_current_user),
+    principal: dict = Depends(
+        require_role_of(MemberRole.admin, must_match_active_org=True)
+    ),
     db: Session = Depends(get_db),
 ):
     """Return every tenant-scoped row for `org_id` as a downloadable JSON blob.
@@ -113,20 +115,6 @@ def export_organization_data(
     cannot cross-export by guessing another org's id, even one they belong
     to under a different membership.
     """
-    if principal["org_id"] != org_id:
-        # Don't 404 — leaking "this org exists, you just can't see it" is the
-        # information disclosure we're protecting against. 403 matches the
-        # rest of the codebase's cross-tenant posture.
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot export data for a different organization",
-        )
-    if principal["role"] != MemberRole.admin.value:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin role required for data export",
-        )
-
     org = db.get(Organization, org_id)
     if not org:
         # Membership existed but org row is gone — exotic but possible during

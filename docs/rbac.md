@@ -56,9 +56,9 @@ Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = 
 |---|---|---|---|---|---|
 | GET | /organizations/me | Auth | Auth | Auth | Own memberships |
 | GET | /organizations/{org_id}/members | Auth | Auth | Auth | Manual `_ensure_membership()` |
-| POST | /organizations/{org_id}/members | Y | — | — | **In-handler** `_require_admin_of()` (consistency gap) |
-| PATCH | /organizations/{org_id}/members/{user_id} | Y | — | — | **In-handler** `_require_admin_of()` (consistency gap) |
-| DELETE | /organizations/{org_id}/members/{user_id} | Y | — | — | **In-handler** `_require_admin_of()` (consistency gap) |
+| POST | /organizations/{org_id}/members | Y | — | — | `Depends(require_role_of(admin))` |
+| PATCH | /organizations/{org_id}/members/{user_id} | Y | — | — | `Depends(require_role_of(admin))` |
+| DELETE | /organizations/{org_id}/members/{user_id} | Y | — | — | `Depends(require_role_of(admin))` |
 
 ### Deals (`deals.py`, `deal_summary.py`, `pipeline.py`)
 
@@ -120,9 +120,9 @@ Legend: A = admin, E = editor, V = viewer (n/a — treat as E for reads). `Y` = 
 
 | Method | Path | A | E | V | Notes |
 |---|---|---|---|---|---|
-| GET | /audit | Y | — | — | **In-handler** `_require_admin()` (consistency gap) |
-| GET | /audit/export | Y | — | — | **In-handler** `_require_admin()`; also writes an audit row + commits on a GET |
-| GET | /organizations/{org_id}/export | Y | — | — | **In-handler** org+admin check (consistency gap) |
+| GET | /audit | Y | — | — | `Depends(require_role_strict(admin))` |
+| GET | /audit/export | Y | — | — | `Depends(require_role_strict(admin))`; still writes an audit row + commits on a GET — see gap 2 |
+| GET | /organizations/{org_id}/export | Y | — | — | `Depends(require_role_of(admin, must_match_active_org=True))` |
 
 ### Dashboard (`dashboard.py`)
 
@@ -146,10 +146,11 @@ Ranked by severity. Items marked ✅ were addressed in the same PR that added th
 
 1. ✅ **Explicit route-level auth guards on tenant reads that only rely on the global posture.** `dashboard.py` (all 5 endpoints), `deal_summary.py` `GET /summary`, and `distributions.py` `GET /distributions` now declare `Depends(require_role(admin, editor))` — matches the mutation convention and survives a middleware refactor.
 2. **`GET /audit/export` mutates on a GET.** Writes an audit-log row and commits inside a GET handler. Change to POST or move the side effect. Cache-safety and idempotency assumptions elsewhere in the stack (browsers, CDNs, retries) don't apply to state-changing GETs. Deferred — coordinate with the frontend before the API change.
-3. **In-handler role checks instead of `Depends(require_role(...))`.** Not broken, but easier to regress and invisible to any tooling that inspects `route.dependencies`. Status:
-   - ✅ `GET /audit`, `GET /audit/export` — converted to `Depends(require_role_strict(admin))`.
-   - **Open:** `GET /organizations/{org_id}/export` — inline `principal['role']==admin` + `org_id` match. Needs a factory like `require_role_strict_of(path_param='org_id', roles=(admin,))` since the org id comes from the path, not the JWT.
-   - **Open:** `POST /organizations/{org_id}/members`, `PATCH /organizations/{org_id}/members/{user_id}`, `DELETE /organizations/{org_id}/members/{user_id}` — `_require_admin_of()`. Same factory would cover them.
+3. ✅ **In-handler role checks converted to `Depends(...)` guards.** All role enforcement now lives on the route signature and is inspectable via `route.dependencies`:
+   - `GET /audit`, `GET /audit/export` — `Depends(require_role_strict(admin))`.
+   - `POST /organizations/{org_id}/members`, `PATCH /organizations/{org_id}/members/{user_id}`, `DELETE /organizations/{org_id}/members/{user_id}` — `Depends(require_role_of(admin))`. Path-scoped: checks membership + role of the *path* org id.
+   - `GET /organizations/{org_id}/export` — `Depends(require_role_of(admin, must_match_active_org=True))`. Same factory, stricter mode: the path org must also equal the caller's active org (matches the GDPR posture — admins can't cross-export using a token signed for a different org).
+   - `require_role_of` factory lives in `app/utils/auth_deps.py`. Use it for any admin-scoped endpoint where the org id comes from the URL, not the JWT.
 4. **Editor can perform destructive deletes.** Confirm intent for:
    - `DELETE /deals/{deal_id}` (soft-delete)
    - `DELETE /deals/{deal_id}/memo`

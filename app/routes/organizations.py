@@ -19,7 +19,7 @@ from app.schemas.organization import (
 from app.services.audit_service import log_change
 from app.routes.auth import _set_refresh_cookie
 from app.services.security import create_access_token
-from app.utils.auth_deps import get_current_user, require_role_strict
+from app.utils.auth_deps import get_current_user, require_role_of, require_role_strict
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -37,23 +37,6 @@ def _ensure_membership(db: Session, *, org_id: str, user_id: str) -> Organizatio
     )
     if not m:
         raise HTTPException(status_code=404, detail="Membership not found")
-    return m
-
-
-def _require_admin_of(db: Session, *, principal: dict, org_id: str) -> OrganizationMembership:
-    """Resolve the principal's membership in `org_id` and require admin role."""
-    m = (
-        db.query(OrganizationMembership)
-        .filter(
-            OrganizationMembership.organization_id == org_id,
-            OrganizationMembership.user_id == principal["user_id"],
-        )
-        .first()
-    )
-    if not m:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
-    if m.role != MemberRole.admin:
-        raise HTTPException(status_code=403, detail="Admin role required")
     return m
 
 
@@ -119,11 +102,9 @@ def list_members(
 def invite_member(
     org_id: str,
     payload: InviteMemberRequest,
-    principal: dict = Depends(get_current_user),
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
     db: Session = Depends(get_db),
 ):
-    _require_admin_of(db, principal=principal, org_id=org_id)
-
     org = db.get(Organization, org_id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -181,11 +162,9 @@ def update_member_role(
     org_id: str,
     user_id: str,
     payload: UpdateMemberRequest,
-    principal: dict = Depends(get_current_user),
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
     db: Session = Depends(get_db),
 ):
-    _require_admin_of(db, principal=principal, org_id=org_id)
-
     membership = _ensure_membership(db, org_id=org_id, user_id=user_id)
 
     # Prevent demoting the last admin
@@ -233,11 +212,9 @@ def update_member_role(
 def remove_member(
     org_id: str,
     user_id: str,
-    principal: dict = Depends(get_current_user),
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
     db: Session = Depends(get_db),
 ):
-    _require_admin_of(db, principal=principal, org_id=org_id)
-
     membership = _ensure_membership(db, org_id=org_id, user_id=user_id)
 
     # Prevent removing the last admin

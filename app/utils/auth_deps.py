@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -125,6 +125,80 @@ def require_role_strict(*allowed: MemberRole):
 
     def _checker(principal: dict = Depends(get_current_user)) -> dict:
         if principal["role"] not in allowed_values:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires one of roles: {sorted(allowed_values)}",
+            )
+        return principal
+
+    return _checker
+
+
+def require_role_of(
+    *allowed: MemberRole,
+    path_param: str = "org_id",
+    must_match_active_org: bool = False,
+):
+    """Strict role check scoped to an org id pulled from the path.
+
+    For endpoints like `/organizations/{org_id}/members` where the target
+    org lives in the URL, not the JWT. The dependency:
+
+    1. Requires authentication (401 without a valid Bearer token).
+    2. Looks up the caller's membership in the *path* org and requires
+       one of `allowed` roles (403 otherwise).
+    3. Optionally requires the path org to equal the caller's active org
+       (`principal['org_id']`) — set `must_match_active_org=True` for
+       endpoints that must not act on a different org even if the caller
+       is a member of both (e.g. data export, per GDPR posture).
+
+    Returns the JWT principal dict, same shape as `get_current_user`.
+
+    Usage:
+        @router.delete(
+            "/organizations/{org_id}/members/{user_id}",
+            dependencies=[Depends(require_role_of(MemberRole.admin))],
+        )
+    """
+    allowed_values = {r.value for r in allowed}
+
+    def _checker(
+        request: Request,
+        principal: dict = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> dict:
+        path_org_id = request.path_params.get(path_param)
+        if not path_org_id:
+            # Misuse: dependency wired to a route that lacks the path param.
+            # 500 rather than 403 because this is a server-config bug, not
+            # an authz decision.
+            raise HTTPException(
+                status_code=500,
+                detail=f"require_role_of misconfigured: no path param '{path_param}'",
+            )
+
+        if must_match_active_org and principal["org_id"] != path_org_id:
+            # Don't 404 — leaking "this org exists, you just can't act on it"
+            # is the information-disclosure we're guarding against.
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot act on a different organization",
+            )
+
+        membership = (
+            db.query(OrganizationMembership)
+            .filter(
+                OrganizationMembership.organization_id == path_org_id,
+                OrganizationMembership.user_id == principal["user_id"],
+            )
+            .first()
+        )
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this organization",
+            )
+        if membership.role.value not in allowed_values:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires one of roles: {sorted(allowed_values)}",

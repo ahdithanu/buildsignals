@@ -7,7 +7,7 @@ demand — a trust-builder worth shipping before any sales call.
 
 Scoping & posture
 -----------------
-- Strictly org-scoped via `_require_admin_of`: a request signed for
+- Strictly org-scoped: a request signed for
   org-A can never read org-B's audit trail, even with a raw DB row
   id, because the filter is `organization_id == principal.org_id`.
 - Admin-only. Editors/viewers don't get to audit other members.
