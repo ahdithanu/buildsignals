@@ -5,14 +5,14 @@ fastapi==0.139.0
 # PYSEC-2026-161/248/249. See git history for the pre-bump ignore list.
 starlette>=1.3.1
 uvicorn[standard]==0.30.1
-sqlalchemy==2.0.30
+sqlalchemy==2.0.51
 # fastapi 0.139 requires pydantic>=2.9.0; 2.13.4 is the version the suite
 # was validated against during the fastapi bump.
 pydantic==2.13.4
 email-validator==2.2.0
 python-dateutil==2.9.0
 alembic==1.13.1
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.12
 passlib[bcrypt]==1.7.4
 # JWT signing/verification. Migrated off python-jose 3.4.0, whose
 # transitive pyasn1<0.5.0 pin held CVE-2026-30922 open. We only use
