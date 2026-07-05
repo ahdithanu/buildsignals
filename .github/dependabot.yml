@@ -1,0 +1,41 @@
+version: 2
+
+updates:
+  # Python backend.
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    labels: ["deps", "backend"]
+    # Group patch bumps so we don't get 15 PRs a week.
+    groups:
+      backend-patches:
+        patterns: ["*"]
+        update-types: ["patch"]
+
+  # Frontend.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    labels: ["deps", "frontend"]
+    groups:
+      frontend-patches:
+        patterns: ["*"]
+        update-types: ["patch"]
+
+  # GitHub Actions themselves — the workflow files pin action versions
+  # (uses: actions/checkout@v4, etc.) and dependabot updates those too.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    labels: ["deps", "ci"]
