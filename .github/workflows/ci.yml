@@ -31,19 +31,13 @@ jobs:
       # advisory DB (osv.dev). To skip a CVE we've reviewed and confirmed
       # doesn't affect us, add --ignore-vuln=<ID> with a comment.
       #
-      # Currently-ignored, with the fix path documented so this list
-      # shrinks rather than grows:
-      #
-      # pyasn1 CVE-2026-30922 — pinned transitively by python-jose
-      #   (pyasn1<0.5.0). Fix: wait for a python-jose release that loosens
-      #   the bound, or migrate to PyJWT (worth evaluating regardless).
-      #
-      # (The starlette CVE cluster was cleared by bumping fastapi 0.111→0.139
-      #  which brings starlette>=1.3.1 — no longer ignored.)
+      # Zero suppressions. If this step fails, a dependency has a known
+      # CVE — bump it, or add --ignore-vuln=<ID> WITH a comment stating
+      # why it's safe and the fix path. Do not let the ignore list grow
+      # silently. (History: starlette cluster cleared by the fastapi
+      # 0.111→0.139 bump; pyasn1 cleared by migrating python-jose→PyJWT.)
       - name: pip-audit — CVE scan
-        run: |
-          pip-audit --strict --requirement requirements.txt \
-            --ignore-vuln CVE-2026-30922
+        run: pip-audit --strict --requirement requirements.txt
 
       - name: Run Alembic migrations
         run: alembic upgrade head

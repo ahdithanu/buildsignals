@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
 
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 
 from app.config import (
@@ -81,7 +81,7 @@ def decode_access_token(token: str) -> Optional[dict]:
     refresh cookie can never be used as a bearer token, and vice versa."""
     try:
         claims = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except JWTError:
+    except jwt.PyJWTError:
         return None
     # Legacy tokens minted before the typ claim existed are still accepted
     # as access tokens — they can only be access tokens since refresh tokens
@@ -96,7 +96,7 @@ def decode_refresh_token(token: str) -> Optional[dict]:
     """Decode a refresh JWT. Rejects anything missing typ=='refresh'."""
     try:
         claims = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except JWTError:
+    except jwt.PyJWTError:
         return None
     if claims.get("typ") != REFRESH_TOKEN_TYPE:
         return None
