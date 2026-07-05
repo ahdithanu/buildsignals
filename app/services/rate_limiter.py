@@ -185,18 +185,34 @@ limiter = _build_limiter()
 # user typically types their password 1–2 times, not 10, and registration
 # is even rarer. If we start blocking legitimate users we loosen these,
 # not drop the guard entirely.
+#
+# Each limit is env-overridable so a load-test environment (many virtual
+# users behind one IP) or a temporary ops adjustment can raise them without
+# a redeploy. Defaults are the production-safe values. See loadtest/README.
 
-LOGIN_LIMIT = 10          # attempts per email+IP combo
-LOGIN_WINDOW = 15 * 60    # 15 minutes
 
-REGISTER_LIMIT = 5        # attempts per IP
-REGISTER_WINDOW = 60 * 60 # 1 hour
+def _int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        log.warning("rate_limiter: %s=%r is not an int, using default %d", name, raw, default)
+        return default
 
-REFRESH_LIMIT = 60        # attempts per IP — real clients refresh rarely,
-REFRESH_WINDOW = 60 * 60  # but tab storms can happen
+
+LOGIN_LIMIT = _int_env("LOGIN_RATE_LIMIT", 10)          # attempts per email+IP combo
+LOGIN_WINDOW = _int_env("LOGIN_RATE_WINDOW_SECONDS", 15 * 60)    # 15 minutes
+
+REGISTER_LIMIT = _int_env("REGISTER_RATE_LIMIT", 5)        # attempts per IP
+REGISTER_WINDOW = _int_env("REGISTER_RATE_WINDOW_SECONDS", 60 * 60)  # 1 hour
+
+REFRESH_LIMIT = _int_env("REFRESH_RATE_LIMIT", 60)        # attempts per IP — real clients refresh rarely,
+REFRESH_WINDOW = _int_env("REFRESH_RATE_WINDOW_SECONDS", 60 * 60)  # but tab storms can happen
 
 # Per-organization rate limits on LLM-backed endpoints (generate-memo,
 # enrich, score). Tuned to allow a healthy session burst without letting
 # a runaway client burn the API bill.
-AI_LIMIT = 30
-AI_WINDOW = 60   # seconds
+AI_LIMIT = _int_env("AI_RATE_LIMIT", 30)
+AI_WINDOW = _int_env("AI_RATE_WINDOW_SECONDS", 60)   # seconds
