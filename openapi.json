@@ -3179,10 +3179,48 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/audit": {
+    "/health": {
+      "get": {
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/deep": {
+      "get": {
+        "operationId": "health_check_deep_health_deep_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check Deep",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/audit": {
       "get": {
         "description": "List audit log entries for the caller's active org.\n\nMost recent first. Joined with `users` so the UI can render \"Alice\ndeleted deal X\" without a second round-trip.",
-        "operationId": "list_audit_logs_audit_get",
+        "operationId": "list_audit_logs_v1_audit_get",
         "parameters": [
           {
             "description": "Filter: 'deal', 'membership', 'user', ...",
@@ -3324,10 +3362,10 @@
         ]
       }
     },
-    "/audit/export": {
+    "/v1/audit/export": {
       "post": {
         "description": "Download the org's audit log as CSV (streamed) or JSON.\n\nAdmin-only, org-scoped. Bounded by EXPORT_ROW_CAP to keep a single\nrequest from monopolising the worker.",
-        "operationId": "export_audit_logs_audit_export_post",
+        "operationId": "export_audit_logs_v1_audit_export_post",
         "parameters": [
           {
             "in": "query",
@@ -3467,10 +3505,10 @@
         ]
       }
     },
-    "/auth/2fa/disable": {
+    "/v1/auth/2fa/disable": {
       "post": {
         "description": "Turn off 2FA. Requires the current password AND a valid TOTP code.\n\nDefense in depth: a stolen access token alone is not enough to weaken\nthe account \u2014 the attacker would also need to know the password and\nhave a working second factor. On success we drop both `totp_enabled`\nand the secret, so re-enabling means a fresh /setup + /verify pair.",
-        "operationId": "disable_auth_2fa_disable_post",
+        "operationId": "disable_v1_auth_2fa_disable_post",
         "parameters": [
           {
             "in": "header",
@@ -3520,10 +3558,10 @@
         ]
       }
     },
-    "/auth/2fa/setup": {
+    "/v1/auth/2fa/setup": {
       "post": {
         "description": "Begin 2FA enrollment.\n\nMints a new base32 secret and persists it on the user row. The user is\nNOT considered 2FA-enabled until they prove possession of the secret by\nsubmitting a code to /verify \u2014 until then, login flow is unchanged.\n\nCalling /setup again on an unconfirmed enrollment rotates the secret,\nwhich is the right behavior if the QR was never scanned or the user\nwants to restart. Calling it on an *already-enabled* user 400s, so the\nuser must /disable first.",
-        "operationId": "setup_auth_2fa_setup_post",
+        "operationId": "setup_v1_auth_2fa_setup_post",
         "parameters": [
           {
             "in": "header",
@@ -3570,10 +3608,10 @@
         ]
       }
     },
-    "/auth/2fa/verify": {
+    "/v1/auth/2fa/verify": {
       "post": {
         "description": "Confirm the user can generate codes from the secret minted at /setup.\n\nUses `valid_window=1` to tolerate ~30s of clock skew between the device\nand the server \u2014 a single window on either side of the current step.",
-        "operationId": "verify_auth_2fa_verify_post",
+        "operationId": "verify_v1_auth_2fa_verify_post",
         "parameters": [
           {
             "in": "header",
@@ -3623,9 +3661,9 @@
         ]
       }
     },
-    "/auth/login": {
+    "/v1/auth/login": {
       "post": {
-        "operationId": "login_auth_login_post",
+        "operationId": "login_v1_auth_login_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3664,10 +3702,10 @@
         ]
       }
     },
-    "/auth/logout": {
+    "/v1/auth/logout": {
       "post": {
         "description": "Clear the refresh cookie. Idempotent; safe to call without a session.",
-        "operationId": "logout_auth_logout_post",
+        "operationId": "logout_v1_auth_logout_post",
         "responses": {
           "204": {
             "description": "Successful Response"
@@ -3679,10 +3717,10 @@
         ]
       }
     },
-    "/auth/logout-all": {
+    "/v1/auth/logout-all": {
       "post": {
         "description": "Revoke every outstanding refresh token for the current user.\n\nBumps `user.token_version`. The next /auth/refresh that arrives with a\ncookie carrying the old version compares `claims['tv'] != user.token_version`\nand is rejected with 401. The immediate access token the caller is holding\nstays valid for the remainder of its 15-minute TTL \u2014 that's an accepted\ntradeoff to avoid a per-request DB lookup on every authenticated call.",
-        "operationId": "logout_all_auth_logout_all_post",
+        "operationId": "logout_all_v1_auth_logout_all_post",
         "parameters": [
           {
             "in": "header",
@@ -3722,9 +3760,9 @@
         ]
       }
     },
-    "/auth/me": {
+    "/v1/auth/me": {
       "get": {
-        "operationId": "me_auth_me_get",
+        "operationId": "me_v1_auth_me_get",
         "parameters": [
           {
             "in": "header",
@@ -3771,10 +3809,10 @@
         ]
       }
     },
-    "/auth/password/forgot": {
+    "/v1/auth/password/forgot": {
       "post": {
         "description": "Kick off a password reset by emailing a one-time link.\n\nAlways returns 204. The response is identical whether or not the\nemail matches a known account \u2014 this is the whole point of the\nendpoint from a security standpoint.",
-        "operationId": "forgot_password_auth_password_forgot_post",
+        "operationId": "forgot_password_v1_auth_password_forgot_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3806,10 +3844,10 @@
         ]
       }
     },
-    "/auth/password/reset": {
+    "/v1/auth/password/reset": {
       "post": {
         "description": "Burn a reset token and set a new password.",
-        "operationId": "reset_password_auth_password_reset_post",
+        "operationId": "reset_password_v1_auth_password_reset_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3841,10 +3879,10 @@
         ]
       }
     },
-    "/auth/refresh": {
+    "/v1/auth/refresh": {
       "post": {
         "description": "Exchange a valid refresh cookie for a new access token.\n\nRotates the refresh cookie on every call: the old refresh token is\nreplaced with a fresh one carrying a new `exp`, so a stolen cookie\nhas a bounded useful lifetime even without a server-side blocklist.\nPublic route (see PUBLIC_PATH_PREFIXES); authentication is via the\ncookie, not an Authorization header.",
-        "operationId": "refresh_auth_refresh_post",
+        "operationId": "refresh_v1_auth_refresh_post",
         "parameters": [
           {
             "in": "cookie",
@@ -3891,9 +3929,9 @@
         ]
       }
     },
-    "/auth/register": {
+    "/v1/auth/register": {
       "post": {
-        "operationId": "register_auth_register_post",
+        "operationId": "register_v1_auth_register_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -3932,10 +3970,10 @@
         ]
       }
     },
-    "/auth/switch-org": {
+    "/v1/auth/switch-org": {
       "post": {
         "description": "Issue a new JWT scoped to a different org the user belongs to.",
-        "operationId": "switch_org_auth_switch_org_post",
+        "operationId": "switch_org_v1_auth_switch_org_post",
         "parameters": [
           {
             "in": "header",
@@ -3992,9 +4030,9 @@
         ]
       }
     },
-    "/buy-box": {
+    "/v1/buy-box": {
       "get": {
-        "operationId": "list_buy_boxes_buy_box_get",
+        "operationId": "list_buy_boxes_v1_buy_box_get",
         "parameters": [
           {
             "in": "query",
@@ -4028,7 +4066,7 @@
                   "items": {
                     "$ref": "#/components/schemas/BuyBoxResponse"
                   },
-                  "title": "Response List Buy Boxes Buy Box Get",
+                  "title": "Response List Buy Boxes V1 Buy Box Get",
                   "type": "array"
                 }
               }
@@ -4052,7 +4090,7 @@
         ]
       },
       "post": {
-        "operationId": "create_buy_box_buy_box_post",
+        "operationId": "create_buy_box_v1_buy_box_post",
         "parameters": [
           {
             "in": "header",
@@ -4109,9 +4147,9 @@
         ]
       }
     },
-    "/contacts/{contact_id}": {
+    "/v1/contacts/{contact_id}": {
       "delete": {
-        "operationId": "delete_contact_contacts__contact_id__delete",
+        "operationId": "delete_contact_v1_contacts__contact_id__delete",
         "parameters": [
           {
             "in": "path",
@@ -4160,7 +4198,7 @@
         ]
       },
       "patch": {
-        "operationId": "update_contact_contacts__contact_id__patch",
+        "operationId": "update_contact_v1_contacts__contact_id__patch",
         "parameters": [
           {
             "in": "path",
@@ -4226,9 +4264,9 @@
         ]
       }
     },
-    "/dashboard/ai-insights": {
+    "/v1/dashboard/ai-insights": {
       "get": {
-        "operationId": "dashboard_ai_insights_dashboard_ai_insights_get",
+        "operationId": "dashboard_ai_insights_v1_dashboard_ai_insights_get",
         "parameters": [
           {
             "in": "header",
@@ -4255,7 +4293,7 @@
                   "items": {
                     "$ref": "#/components/schemas/AIInsight"
                   },
-                  "title": "Response Dashboard Ai Insights Dashboard Ai Insights Get",
+                  "title": "Response Dashboard Ai Insights V1 Dashboard Ai Insights Get",
                   "type": "array"
                 }
               }
@@ -4279,9 +4317,9 @@
         ]
       }
     },
-    "/dashboard/kpis": {
+    "/v1/dashboard/kpis": {
       "get": {
-        "operationId": "dashboard_kpis_dashboard_kpis_get",
+        "operationId": "dashboard_kpis_v1_dashboard_kpis_get",
         "parameters": [
           {
             "in": "header",
@@ -4328,9 +4366,9 @@
         ]
       }
     },
-    "/dashboard/pipeline-snapshot": {
+    "/v1/dashboard/pipeline-snapshot": {
       "get": {
-        "operationId": "dashboard_pipeline_snapshot_dashboard_pipeline_snapshot_get",
+        "operationId": "dashboard_pipeline_snapshot_v1_dashboard_pipeline_snapshot_get",
         "parameters": [
           {
             "in": "header",
@@ -4357,7 +4395,7 @@
                   "items": {
                     "$ref": "#/components/schemas/PipelineSnapshot"
                   },
-                  "title": "Response Dashboard Pipeline Snapshot Dashboard Pipeline Snapshot Get",
+                  "title": "Response Dashboard Pipeline Snapshot V1 Dashboard Pipeline Snapshot Get",
                   "type": "array"
                 }
               }
@@ -4381,9 +4419,9 @@
         ]
       }
     },
-    "/dashboard/recent-signals": {
+    "/v1/dashboard/recent-signals": {
       "get": {
-        "operationId": "dashboard_recent_signals_dashboard_recent_signals_get",
+        "operationId": "dashboard_recent_signals_v1_dashboard_recent_signals_get",
         "parameters": [
           {
             "in": "query",
@@ -4422,7 +4460,7 @@
                   "items": {
                     "$ref": "#/components/schemas/RecentSignal"
                   },
-                  "title": "Response Dashboard Recent Signals Dashboard Recent Signals Get",
+                  "title": "Response Dashboard Recent Signals V1 Dashboard Recent Signals Get",
                   "type": "array"
                 }
               }
@@ -4446,9 +4484,9 @@
         ]
       }
     },
-    "/dashboard/top-opportunities": {
+    "/v1/dashboard/top-opportunities": {
       "get": {
-        "operationId": "dashboard_top_opportunities_dashboard_top_opportunities_get",
+        "operationId": "dashboard_top_opportunities_v1_dashboard_top_opportunities_get",
         "parameters": [
           {
             "in": "query",
@@ -4487,7 +4525,7 @@
                   "items": {
                     "$ref": "#/components/schemas/TopOpportunity"
                   },
-                  "title": "Response Dashboard Top Opportunities Dashboard Top Opportunities Get",
+                  "title": "Response Dashboard Top Opportunities V1 Dashboard Top Opportunities Get",
                   "type": "array"
                 }
               }
@@ -4511,9 +4549,9 @@
         ]
       }
     },
-    "/deals": {
+    "/v1/deals": {
       "get": {
-        "operationId": "list_deals_deals_get",
+        "operationId": "list_deals_v1_deals_get",
         "parameters": [
           {
             "in": "query",
@@ -4579,7 +4617,7 @@
                   "items": {
                     "$ref": "#/components/schemas/DealResponse"
                   },
-                  "title": "Response List Deals Deals Get",
+                  "title": "Response List Deals V1 Deals Get",
                   "type": "array"
                 }
               }
@@ -4603,7 +4641,7 @@
         ]
       },
       "post": {
-        "operationId": "create_deal_deals_post",
+        "operationId": "create_deal_v1_deals_post",
         "parameters": [
           {
             "in": "header",
@@ -4660,9 +4698,9 @@
         ]
       }
     },
-    "/deals/import": {
+    "/v1/deals/import": {
       "post": {
-        "operationId": "import_deals_deals_import_post",
+        "operationId": "import_deals_v1_deals_import_post",
         "parameters": [
           {
             "in": "header",
@@ -4703,7 +4741,7 @@
                   "items": {
                     "$ref": "#/components/schemas/DealDetailResponse"
                   },
-                  "title": "Response Import Deals Deals Import Post",
+                  "title": "Response Import Deals V1 Deals Import Post",
                   "type": "array"
                 }
               }
@@ -4727,9 +4765,9 @@
         ]
       }
     },
-    "/deals/{deal_id}": {
+    "/v1/deals/{deal_id}": {
       "delete": {
-        "operationId": "delete_deal_deals__deal_id__delete",
+        "operationId": "delete_deal_v1_deals__deal_id__delete",
         "parameters": [
           {
             "in": "path",
@@ -4778,7 +4816,7 @@
         ]
       },
       "get": {
-        "operationId": "get_deal_deals__deal_id__get",
+        "operationId": "get_deal_v1_deals__deal_id__get",
         "parameters": [
           {
             "in": "path",
@@ -4818,7 +4856,7 @@
         ]
       },
       "patch": {
-        "operationId": "update_deal_deals__deal_id__patch",
+        "operationId": "update_deal_v1_deals__deal_id__patch",
         "parameters": [
           {
             "in": "path",
@@ -4884,9 +4922,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/activities": {
+    "/v1/deals/{deal_id}/activities": {
       "get": {
-        "operationId": "list_activities_deals__deal_id__activities_get",
+        "operationId": "list_activities_v1_deals__deal_id__activities_get",
         "parameters": [
           {
             "in": "path",
@@ -4929,7 +4967,7 @@
                   "items": {
                     "$ref": "#/components/schemas/ActivityResponse"
                   },
-                  "title": "Response List Activities Deals  Deal Id  Activities Get",
+                  "title": "Response List Activities V1 Deals  Deal Id  Activities Get",
                   "type": "array"
                 }
               }
@@ -4953,7 +4991,7 @@
         ]
       },
       "post": {
-        "operationId": "create_activity_deals__deal_id__activities_post",
+        "operationId": "create_activity_v1_deals__deal_id__activities_post",
         "parameters": [
           {
             "in": "path",
@@ -5019,9 +5057,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/assumptions": {
+    "/v1/deals/{deal_id}/assumptions": {
       "get": {
-        "operationId": "get_assumptions_deals__deal_id__assumptions_get",
+        "operationId": "get_assumptions_v1_deals__deal_id__assumptions_get",
         "parameters": [
           {
             "in": "path",
@@ -5061,7 +5099,7 @@
         ]
       },
       "put": {
-        "operationId": "update_assumptions_deals__deal_id__assumptions_put",
+        "operationId": "update_assumptions_v1_deals__deal_id__assumptions_put",
         "parameters": [
           {
             "in": "path",
@@ -5127,9 +5165,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/contacts": {
+    "/v1/deals/{deal_id}/contacts": {
       "get": {
-        "operationId": "list_contacts_deals__deal_id__contacts_get",
+        "operationId": "list_contacts_v1_deals__deal_id__contacts_get",
         "parameters": [
           {
             "in": "path",
@@ -5172,7 +5210,7 @@
                   "items": {
                     "$ref": "#/components/schemas/ContactResponse"
                   },
-                  "title": "Response List Contacts Deals  Deal Id  Contacts Get",
+                  "title": "Response List Contacts V1 Deals  Deal Id  Contacts Get",
                   "type": "array"
                 }
               }
@@ -5196,7 +5234,7 @@
         ]
       },
       "post": {
-        "operationId": "create_contact_deals__deal_id__contacts_post",
+        "operationId": "create_contact_v1_deals__deal_id__contacts_post",
         "parameters": [
           {
             "in": "path",
@@ -5262,9 +5300,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/distributions": {
+    "/v1/deals/{deal_id}/distributions": {
       "get": {
-        "operationId": "list_distributions_deals__deal_id__distributions_get",
+        "operationId": "list_distributions_v1_deals__deal_id__distributions_get",
         "parameters": [
           {
             "in": "path",
@@ -5323,7 +5361,7 @@
                   "items": {
                     "$ref": "#/components/schemas/DealDistributionResponse"
                   },
-                  "title": "Response List Distributions Deals  Deal Id  Distributions Get",
+                  "title": "Response List Distributions V1 Deals  Deal Id  Distributions Get",
                   "type": "array"
                 }
               }
@@ -5347,9 +5385,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/documents": {
+    "/v1/deals/{deal_id}/documents": {
       "get": {
-        "operationId": "list_deal_documents_deals__deal_id__documents_get",
+        "operationId": "list_deal_documents_v1_deals__deal_id__documents_get",
         "parameters": [
           {
             "in": "path",
@@ -5392,7 +5430,7 @@
                   "items": {
                     "$ref": "#/components/schemas/DocumentResponse"
                   },
-                  "title": "Response List Deal Documents Deals  Deal Id  Documents Get",
+                  "title": "Response List Deal Documents V1 Deals  Deal Id  Documents Get",
                   "type": "array"
                 }
               }
@@ -5416,7 +5454,7 @@
         ]
       },
       "post": {
-        "operationId": "create_document_deals__deal_id__documents_post",
+        "operationId": "create_document_v1_deals__deal_id__documents_post",
         "parameters": [
           {
             "in": "path",
@@ -5482,10 +5520,10 @@
         ]
       }
     },
-    "/deals/{deal_id}/enrich": {
+    "/v1/deals/{deal_id}/enrich": {
       "post": {
         "description": "Run deterministic mock enrichment on a deal, filling missing fields.",
-        "operationId": "enrich_deals__deal_id__enrich_post",
+        "operationId": "enrich_v1_deals__deal_id__enrich_post",
         "parameters": [
           {
             "in": "path",
@@ -5541,10 +5579,10 @@
         ]
       }
     },
-    "/deals/{deal_id}/generate-memo": {
+    "/v1/deals/{deal_id}/generate-memo": {
       "post": {
         "description": "Generate (or regenerate) an investment memo from DB data.",
-        "operationId": "generate_deal_memo_deals__deal_id__generate_memo_post",
+        "operationId": "generate_deal_memo_v1_deals__deal_id__generate_memo_post",
         "parameters": [
           {
             "in": "path",
@@ -5600,9 +5638,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/match-buy-boxes": {
+    "/v1/deals/{deal_id}/match-buy-boxes": {
       "get": {
-        "operationId": "match_deal_to_buy_boxes_deals__deal_id__match_buy_boxes_get",
+        "operationId": "match_deal_to_buy_boxes_v1_deals__deal_id__match_buy_boxes_get",
         "parameters": [
           {
             "in": "path",
@@ -5640,10 +5678,10 @@
         ]
       }
     },
-    "/deals/{deal_id}/memo": {
+    "/v1/deals/{deal_id}/memo": {
       "delete": {
         "description": "Soft-delete the memo for a deal.",
-        "operationId": "delete_memo_deals__deal_id__memo_delete",
+        "operationId": "delete_memo_v1_deals__deal_id__memo_delete",
         "parameters": [
           {
             "in": "path",
@@ -5693,7 +5731,7 @@
       },
       "get": {
         "description": "Return the existing memo for a deal, or 404 if none exists.",
-        "operationId": "get_memo_deals__deal_id__memo_get",
+        "operationId": "get_memo_v1_deals__deal_id__memo_get",
         "parameters": [
           {
             "in": "path",
@@ -5734,7 +5772,7 @@
       },
       "put": {
         "description": "Manually update memo content or title.",
-        "operationId": "update_memo_deals__deal_id__memo_put",
+        "operationId": "update_memo_v1_deals__deal_id__memo_put",
         "parameters": [
           {
             "in": "path",
@@ -5800,9 +5838,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/move-stage": {
+    "/v1/deals/{deal_id}/move-stage": {
       "post": {
-        "operationId": "move_stage_deals__deal_id__move_stage_post",
+        "operationId": "move_stage_v1_deals__deal_id__move_stage_post",
         "parameters": [
           {
             "in": "path",
@@ -5868,9 +5906,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/outputs": {
+    "/v1/deals/{deal_id}/outputs": {
       "get": {
-        "operationId": "get_outputs_deals__deal_id__outputs_get",
+        "operationId": "get_outputs_v1_deals__deal_id__outputs_get",
         "parameters": [
           {
             "in": "path",
@@ -5910,9 +5948,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/recalculate": {
+    "/v1/deals/{deal_id}/recalculate": {
       "post": {
-        "operationId": "recalculate_deals__deal_id__recalculate_post",
+        "operationId": "recalculate_v1_deals__deal_id__recalculate_post",
         "parameters": [
           {
             "in": "path",
@@ -5968,10 +6006,10 @@
         ]
       }
     },
-    "/deals/{deal_id}/score": {
+    "/v1/deals/{deal_id}/score": {
       "post": {
         "description": "Score a deal 0-100 and assign a risk level.",
-        "operationId": "score_deals__deal_id__score_post",
+        "operationId": "score_v1_deals__deal_id__score_post",
         "parameters": [
           {
             "in": "path",
@@ -6027,10 +6065,10 @@
         ]
       }
     },
-    "/deals/{deal_id}/send": {
+    "/v1/deals/{deal_id}/send": {
       "post": {
         "description": "Log a deal distribution record. Does not send email \u2014 tracking only.",
-        "operationId": "send_deal_deals__deal_id__send_post",
+        "operationId": "send_deal_v1_deals__deal_id__send_post",
         "parameters": [
           {
             "in": "path",
@@ -6096,9 +6134,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/signals": {
+    "/v1/deals/{deal_id}/signals": {
       "get": {
-        "operationId": "list_deal_signals_deals__deal_id__signals_get",
+        "operationId": "list_deal_signals_v1_deals__deal_id__signals_get",
         "parameters": [
           {
             "in": "path",
@@ -6141,7 +6179,7 @@
                   "items": {
                     "$ref": "#/components/schemas/SignalResponse"
                   },
-                  "title": "Response List Deal Signals Deals  Deal Id  Signals Get",
+                  "title": "Response List Deal Signals V1 Deals  Deal Id  Signals Get",
                   "type": "array"
                 }
               }
@@ -6165,9 +6203,9 @@
         ]
       }
     },
-    "/deals/{deal_id}/summary": {
+    "/v1/deals/{deal_id}/summary": {
       "get": {
-        "operationId": "get_deal_summary_deals__deal_id__summary_get",
+        "operationId": "get_deal_summary_v1_deals__deal_id__summary_get",
         "parameters": [
           {
             "in": "path",
@@ -6221,9 +6259,9 @@
         ]
       }
     },
-    "/documents/{document_id}": {
+    "/v1/documents/{document_id}": {
       "delete": {
-        "operationId": "delete_document_documents__document_id__delete",
+        "operationId": "delete_document_v1_documents__document_id__delete",
         "parameters": [
           {
             "in": "path",
@@ -6272,47 +6310,9 @@
         ]
       }
     },
-    "/health": {
+    "/v1/organizations/me": {
       "get": {
-        "operationId": "health_check_health_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Health Check",
-        "tags": [
-          "health"
-        ]
-      }
-    },
-    "/health/deep": {
-      "get": {
-        "operationId": "health_check_deep_health_deep_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Health Check Deep",
-        "tags": [
-          "health"
-        ]
-      }
-    },
-    "/organizations/me": {
-      "get": {
-        "operationId": "list_my_organizations_organizations_me_get",
+        "operationId": "list_my_organizations_v1_organizations_me_get",
         "parameters": [
           {
             "in": "header",
@@ -6339,7 +6339,7 @@
                   "items": {
                     "$ref": "#/components/schemas/MyOrganizationItem"
                   },
-                  "title": "Response List My Organizations Organizations Me Get",
+                  "title": "Response List My Organizations V1 Organizations Me Get",
                   "type": "array"
                 }
               }
@@ -6363,10 +6363,10 @@
         ]
       }
     },
-    "/organizations/{org_id}/export": {
+    "/v1/organizations/{org_id}/export": {
       "get": {
         "description": "Return every tenant-scoped row for `org_id` as a downloadable JSON blob.\n\nAdmin-only. The `{org_id}` must match the caller's active org \u2014 admins\ncannot cross-export by guessing another org's id, even one they belong\nto under a different membership.",
-        "operationId": "export_organization_data_organizations__org_id__export_get",
+        "operationId": "export_organization_data_v1_organizations__org_id__export_get",
         "parameters": [
           {
             "in": "path",
@@ -6420,9 +6420,9 @@
         ]
       }
     },
-    "/organizations/{org_id}/members": {
+    "/v1/organizations/{org_id}/members": {
       "get": {
-        "operationId": "list_members_organizations__org_id__members_get",
+        "operationId": "list_members_v1_organizations__org_id__members_get",
         "parameters": [
           {
             "in": "path",
@@ -6458,7 +6458,7 @@
                   "items": {
                     "$ref": "#/components/schemas/MemberResponse"
                   },
-                  "title": "Response List Members Organizations  Org Id  Members Get",
+                  "title": "Response List Members V1 Organizations  Org Id  Members Get",
                   "type": "array"
                 }
               }
@@ -6482,7 +6482,7 @@
         ]
       },
       "post": {
-        "operationId": "invite_member_organizations__org_id__members_post",
+        "operationId": "invite_member_v1_organizations__org_id__members_post",
         "parameters": [
           {
             "in": "path",
@@ -6548,9 +6548,9 @@
         ]
       }
     },
-    "/organizations/{org_id}/members/{user_id}": {
+    "/v1/organizations/{org_id}/members/{user_id}": {
       "delete": {
-        "operationId": "remove_member_organizations__org_id__members__user_id__delete",
+        "operationId": "remove_member_v1_organizations__org_id__members__user_id__delete",
         "parameters": [
           {
             "in": "path",
@@ -6608,7 +6608,7 @@
         ]
       },
       "patch": {
-        "operationId": "update_member_role_organizations__org_id__members__user_id__patch",
+        "operationId": "update_member_role_v1_organizations__org_id__members__user_id__patch",
         "parameters": [
           {
             "in": "path",
@@ -6683,9 +6683,9 @@
         ]
       }
     },
-    "/outreach/follow-ups": {
+    "/v1/outreach/follow-ups": {
       "get": {
-        "operationId": "list_follow_ups_outreach_follow_ups_get",
+        "operationId": "list_follow_ups_v1_outreach_follow_ups_get",
         "parameters": [
           {
             "in": "query",
@@ -6719,7 +6719,7 @@
                   "items": {
                     "$ref": "#/components/schemas/ActivityResponse"
                   },
-                  "title": "Response List Follow Ups Outreach Follow Ups Get",
+                  "title": "Response List Follow Ups V1 Outreach Follow Ups Get",
                   "type": "array"
                 }
               }
@@ -6743,9 +6743,9 @@
         ]
       }
     },
-    "/signals": {
+    "/v1/signals": {
       "get": {
-        "operationId": "list_signals_signals_get",
+        "operationId": "list_signals_v1_signals_get",
         "parameters": [
           {
             "in": "query",
@@ -6779,7 +6779,7 @@
                   "items": {
                     "$ref": "#/components/schemas/SignalResponse"
                   },
-                  "title": "Response List Signals Signals Get",
+                  "title": "Response List Signals V1 Signals Get",
                   "type": "array"
                 }
               }
@@ -6803,7 +6803,7 @@
         ]
       },
       "post": {
-        "operationId": "create_signal_signals_post",
+        "operationId": "create_signal_v1_signals_post",
         "parameters": [
           {
             "in": "header",
