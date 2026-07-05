@@ -34,24 +34,15 @@ jobs:
       # Currently-ignored, with the fix path documented so this list
       # shrinks rather than grows:
       #
-      # starlette CVEs — pinned by fastapi==0.111.0 (starlette<0.38.0).
-      #   Fix: bump fastapi to 0.115.x → starlette>=0.40.0.
-      # pyasn1 CVE-2026-30922 — pinned by python-jose (pyasn1<0.5.0).
-      #   Fix: wait for a python-jose release that loosens the bound,
-      #   or move to PyJWT (which we should evaluate anyway).
+      # pyasn1 CVE-2026-30922 — pinned transitively by python-jose
+      #   (pyasn1<0.5.0). Fix: wait for a python-jose release that loosens
+      #   the bound, or migrate to PyJWT (worth evaluating regardless).
       #
-      # Both bumps are their own PRs because they carry non-trivial
-      # risk surface.
+      # (The starlette CVE cluster was cleared by bumping fastapi 0.111→0.139
+      #  which brings starlette>=1.3.1 — no longer ignored.)
       - name: pip-audit — CVE scan
         run: |
           pip-audit --strict --requirement requirements.txt \
-            --ignore-vuln PYSEC-2026-161 \
-            --ignore-vuln PYSEC-2026-249 \
-            --ignore-vuln PYSEC-2026-248 \
-            --ignore-vuln CVE-2024-47874 \
-            --ignore-vuln CVE-2025-54121 \
-            --ignore-vuln CVE-2026-48818 \
-            --ignore-vuln CVE-2026-48817 \
             --ignore-vuln CVE-2026-30922
 
       - name: Run Alembic migrations

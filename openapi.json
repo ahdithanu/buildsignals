@@ -597,6 +597,7 @@
           "new_values": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -608,6 +609,7 @@
           "old_values": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -946,11 +948,7 @@
             "title": "Role"
           },
           "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ContactStatus"
-              }
-            ],
+            "$ref": "#/components/schemas/ContactStatus",
             "default": "not_contacted"
           }
         },
@@ -2100,11 +2098,7 @@
             "type": "string"
           },
           "role": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/MemberRole"
-              }
-            ],
+            "$ref": "#/components/schemas/MemberRole",
             "default": "editor"
           }
         },
@@ -2798,6 +2792,7 @@
       "ScoreResponse": {
         "properties": {
           "breakdown": {
+            "additionalProperties": true,
             "title": "Breakdown",
             "type": "object"
           },
@@ -3127,6 +3122,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
