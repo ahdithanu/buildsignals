@@ -4,7 +4,7 @@ fastapi==0.139.0
 # 1.3.1 clears CVE-2024-47874, CVE-2025-54121, CVE-2026-48817/48818, and
 # PYSEC-2026-161/248/249. See git history for the pre-bump ignore list.
 starlette>=1.3.1
-uvicorn[standard]==0.30.1
+uvicorn[standard]==0.50.0
 sqlalchemy==2.0.30
 # fastapi 0.139 requires pydantic>=2.9.0; 2.13.4 is the version the suite
 # was validated against during the fastapi bump.
