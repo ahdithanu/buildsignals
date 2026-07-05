@@ -44,6 +44,11 @@ in the Render dashboard).
         (otherwise old app instances during the deploy window will crash).
       - No index build on a large table without `CREATE INDEX
         CONCURRENTLY` (blocks writes).
+      - Reversibility is enforced in CI (`tests/test_migration_reversibility.py`
+        round-trips upgrade→downgrade→upgrade on SQLite), so a missing or
+        broken `downgrade()` fails the build. Note this does NOT prove the
+        downgrade is *data-safe* — a `DROP COLUMN` downgrade still destroys
+        data. CI only proves it runs.
 - [ ] Sentry release tag will pick up via `RENDER_GIT_COMMIT` — no manual
       action needed (see `app/main.py`).
 
