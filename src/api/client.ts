@@ -1,6 +1,15 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
+ * Current API major version. All requests below are prepended with this so a
+ * caller writes `apiClient.get('/deals')` and the actual URL is `${host}/v1/deals`.
+ * The backend also accepts unversioned paths during a deprecation window (see
+ * app/middleware/versioning.py), so an older frontend build still works after
+ * a backend deploy — but every new call should go through here.
+ */
+const API_VERSION_PREFIX = '/v1';
+
+/**
  * Historical localStorage key — kept only so we can proactively clear any
  * token left behind from the pre-cookie build on first page load.
  */
@@ -82,7 +91,7 @@ async function attemptRefresh(baseUrl: string): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
     try {
-      const res = await fetch(`${baseUrl}/auth/refresh`, {
+      const res = await fetch(`${baseUrl}${API_VERSION_PREFIX}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -132,7 +141,7 @@ export class ApiClient {
     options: RequestInit,
     withContentType: boolean,
   ): Promise<Response> {
-    return fetch(`${this.baseUrl}${endpoint}`, {
+    return fetch(`${this.baseUrl}${API_VERSION_PREFIX}${endpoint}`, {
       ...options,
       headers: this.buildHeaders(options.headers, withContentType),
       // credentials:'include' ensures the refresh cookie rides along with

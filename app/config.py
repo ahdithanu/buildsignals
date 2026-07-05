@@ -150,10 +150,22 @@ REFRESH_COOKIE_SECURE: bool = _parse_bool(
 PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     "/health",
     "/healthz",
+    # AuthContextMiddleware runs INSIDE ApiVersioningMiddleware, so by the
+    # time it evaluates this list the path has already been rewritten from
+    # /auth/* to /v1/auth/*. Unversioned forms are kept for defense-in-depth
+    # in case the middleware chain is ever reordered.
     "/auth/login",
     "/auth/register",
     "/auth/refresh",
     "/auth/logout",
+    "/auth/password/forgot",
+    "/auth/password/reset",
+    "/v1/auth/login",
+    "/v1/auth/register",
+    "/v1/auth/refresh",
+    "/v1/auth/logout",
+    "/v1/auth/password/forgot",
+    "/v1/auth/password/reset",
     "/docs",
     "/redoc",
     "/openapi.json",

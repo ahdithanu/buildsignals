@@ -23,6 +23,7 @@ from app.middleware.auth_context import AuthContextMiddleware
 from app.middleware.rate_limit import GlobalRateLimitMiddleware
 from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.versioning import ApiVersioningMiddleware, CURRENT_API_PREFIX
 
 configure_logging()
 from app.routes.health import router as health_router
@@ -71,6 +72,12 @@ app.add_middleware(AuthContextMiddleware)
 # limits at the route layer; those still apply on top of this.
 app.add_middleware(GlobalRateLimitMiddleware)
 
+# API versioning: rewrite unversioned inbound paths to /v1/* and stamp
+# Deprecation + Sunset headers on the response. Sits outside AuthContext
+# so JWT decoding and rate limiting see the rewritten path, ensuring
+# per-path counters and audit rows key off the canonical /v1 path.
+app.add_middleware(ApiVersioningMiddleware)
+
 # Outermost: tags every request with an X-Request-ID and logs method/path/
 # status/duration when it completes. Wrapping auth means even 401s get a
 # request_id in the logs and the response header.
@@ -83,27 +90,33 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # ── Register routers ────────────────────────────────────────────────────────
 
+# Infrastructure — stays unversioned. Restart probes, uptime monitors,
+# and OpenAPI codegen tools should not need to know about API versions.
 app.include_router(health_router)
-app.include_router(deals_router)
-app.include_router(intelligence_router)
-app.include_router(assumptions_router)
-app.include_router(contacts_router)
-app.include_router(activities_router)
-app.include_router(pipeline_router)
-app.include_router(signals_router)
-app.include_router(documents_router)
-app.include_router(memos_router)
-app.include_router(dashboard_router)
-app.include_router(buy_box_router)
-app.include_router(distributions_router)
-app.include_router(deal_summary_router)
-app.include_router(auth_router)
-app.include_router(password_reset_router)
-app.include_router(twofa_router)
-app.include_router(audit_router)
-app.include_router(organizations_router)
-app.include_router(auth_switch_router)
-app.include_router(data_portability_router)
+
+# Versioned public API. Every other router mounts under /v1. The
+# versioning middleware transparently rewrites unversioned callers
+# so existing clients keep working during the deprecation window.
+app.include_router(deals_router, prefix=CURRENT_API_PREFIX)
+app.include_router(intelligence_router, prefix=CURRENT_API_PREFIX)
+app.include_router(assumptions_router, prefix=CURRENT_API_PREFIX)
+app.include_router(contacts_router, prefix=CURRENT_API_PREFIX)
+app.include_router(activities_router, prefix=CURRENT_API_PREFIX)
+app.include_router(pipeline_router, prefix=CURRENT_API_PREFIX)
+app.include_router(signals_router, prefix=CURRENT_API_PREFIX)
+app.include_router(documents_router, prefix=CURRENT_API_PREFIX)
+app.include_router(memos_router, prefix=CURRENT_API_PREFIX)
+app.include_router(dashboard_router, prefix=CURRENT_API_PREFIX)
+app.include_router(buy_box_router, prefix=CURRENT_API_PREFIX)
+app.include_router(distributions_router, prefix=CURRENT_API_PREFIX)
+app.include_router(deal_summary_router, prefix=CURRENT_API_PREFIX)
+app.include_router(auth_router, prefix=CURRENT_API_PREFIX)
+app.include_router(password_reset_router, prefix=CURRENT_API_PREFIX)
+app.include_router(twofa_router, prefix=CURRENT_API_PREFIX)
+app.include_router(audit_router, prefix=CURRENT_API_PREFIX)
+app.include_router(organizations_router, prefix=CURRENT_API_PREFIX)
+app.include_router(auth_switch_router, prefix=CURRENT_API_PREFIX)
+app.include_router(data_portability_router, prefix=CURRENT_API_PREFIX)
 
 # NOTE: Schema is managed exclusively by Alembic. Production runs
 # `alembic upgrade head` in the Render preDeploy step (see render.yaml).

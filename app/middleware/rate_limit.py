@@ -25,9 +25,11 @@ GLOBAL_WINDOW = int(os.environ.get("GLOBAL_RATE_WINDOW_SECONDS", "60"))
 _EXEMPT_PREFIXES = (
     "/health",
     "/healthz",
-    "/auth/login",
-    "/auth/register",
-    "/auth/refresh",
+    # Auth routes are rewritten to /v1/auth/* by ApiVersioningMiddleware
+    # BEFORE this middleware runs, so only the versioned forms match.
+    "/v1/auth/login",
+    "/v1/auth/register",
+    "/v1/auth/refresh",
     "/openapi.json",
 )
 
