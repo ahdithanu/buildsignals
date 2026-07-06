@@ -1,0 +1,61 @@
+name: frontend
+
+# Frontend checks: lint, type-check, unit tests (vitest), and production
+# build. This is the gate the backend-only ci.yml never provided — it's why
+# frontend dependabot bumps could merge "green" without anything actually
+# exercising the frontend.
+#
+# ⚠️ Authored but not run locally (the authoring env was Node 10; this needs
+# 18+). Starts as pull_request + manual so it can be confirmed green before
+# gating direct pushes to main — run it once from the Actions tab, and if the
+# first run surfaces PRE-EXISTING lint/type debt, fix the debt rather than
+# reverting the gate. Then add `push: { branches: [main] }` below.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - "eslint.config.js"
+      - "tailwind.config.ts"
+      - "postcss.config.js"
+      - ".github/workflows/frontend.yml"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        # NOTE: `npm install`, not `npm ci`, on purpose — package-lock.json is
+        # currently behind package.json (@playwright/test was added in an env
+        # that couldn't regenerate the lock). Switch back to `npm ci` once the
+        # lock is regenerated on a Node 18+ machine (`npm install` + commit).
+        run: npm install --no-audit --no-fund
+
+      # Ordered cheapest → most expensive so a fast failure surfaces first.
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        # vite build uses swc, which strips types WITHOUT checking them — so a
+        # standalone tsc pass is the only thing that catches type errors.
+        run: npm run typecheck
+
+      - name: Unit tests (vitest)
+        run: npm run test
+
+      - name: Production build
+        run: npm run build

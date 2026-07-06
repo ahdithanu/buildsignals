@@ -48,7 +48,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install Node deps
-        run: npm ci
+        # `npm install`, not `npm ci` — package-lock.json is behind package.json
+        # (@playwright/test added without a lock regen). Switch to `npm ci` once
+        # the lock is refreshed on a Node 18+ machine.
+        run: npm install --no-audit --no-fund
 
       - name: Install Playwright browser
         run: npm run e2e:install

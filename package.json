@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "e2e": "playwright test -c e2e/playwright.config.ts",
     "e2e:install": "playwright install --with-deps chromium"
   },
