@@ -45,17 +45,20 @@ and raises the auth rate limits so repeated register/login from one IP isn't
 
 ## CI
 
-Not wired into a workflow yet — do that once the specs are confirmed green
-locally. A `.github/workflows/e2e.yml` would:
+Workflow lives at `.github/workflows/e2e.yml`. It's **manual-trigger only**
+(`workflow_dispatch`) right now — run it from the Actions tab. Once the specs
+pass on a real run, uncomment the `pull_request` trigger in that file to gate
+PRs on them.
 
-1. `actions/setup-node@v4` (Node 20) + `actions/setup-python@v5` (3.11)
-2. `pip install -r requirements.txt` and `npm ci`
-3. `npm run e2e:install`
-4. `npm run e2e` (the config's `webServer` handles booting both servers)
-5. Upload `playwright-report/` as an artifact on failure
+It's kept separate from `ci.yml` on purpose: E2E is slow (two servers + a real
+browser) and shouldn't block every push. The job does setup-node@20 +
+setup-python@3.11, installs both dependency trees, `npm run e2e:install` for
+the browser, then `npm run e2e` (the config's `webServer` boots both servers),
+and uploads `playwright-report/` as an artifact.
 
-Keep it a separate workflow from `ci.yml` — E2E is slower and browser-based,
-and you may not want it blocking every push.
+First-run note: the artifact path assumes the HTML report lands at repo-root
+`playwright-report/`. If Playwright writes it elsewhere (e.g. under `e2e/`),
+fix the `path:` in the upload step — a one-line change the first run surfaces.
 
 ## Layout
 
