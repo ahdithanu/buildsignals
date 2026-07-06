@@ -4,16 +4,24 @@ fastapi==0.139.0
 # 1.3.1 clears CVE-2024-47874, CVE-2025-54121, CVE-2026-48817/48818, and
 # PYSEC-2026-161/248/249. See git history for the pre-bump ignore list.
 starlette>=1.3.1
-uvicorn[standard]==0.30.1
-sqlalchemy==2.0.30
+uvicorn[standard]==0.50.0
+sqlalchemy==2.0.51
 # fastapi 0.139 requires pydantic>=2.9.0; 2.13.4 is the version the suite
 # was validated against during the fastapi bump.
 pydantic==2.13.4
-email-validator==2.2.0
+email-validator==2.3.0
 python-dateutil==2.9.0
 alembic==1.13.1
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.10
 passlib[bcrypt]==1.7.4
+# bcrypt is HELD at 4.x on purpose. bcrypt 5.0.0 raises ValueError on
+# passwords >72 bytes instead of truncating, which crashes passlib 1.7.4's
+# backend self-test (detect_wrap_bug) → all password hashing/verification
+# breaks → auth is down. passlib 1.7.4 is the last passlib release (unmaintained
+# since 2020) so it can't be upgraded to fix this. Unblocking bcrypt 5 requires
+# migrating off passlib to calling the bcrypt library directly. Until then, <5.
+# dependabot is configured to ignore bcrypt major bumps (see .github/dependabot.yml).
+bcrypt>=4.1.3,<5
 # JWT signing/verification. Migrated off python-jose 3.4.0, whose
 # transitive pyasn1<0.5.0 pin held CVE-2026-30922 open. We only use
 # HS256 (HMAC), so PyJWT needs no cryptography backend at all — this
@@ -22,5 +30,5 @@ PyJWT==2.13.0
 bcrypt==4.1.3
 sentry-sdk[fastapi]==2.18.0
 pyotp==2.9.0
-resend>=2.0.0
+resend>=2.32.2
 redis==5.0.7

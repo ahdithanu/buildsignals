@@ -16,6 +16,13 @@ updates:
       backend-patches:
         patterns: ["*"]
         update-types: ["patch"]
+    ignore:
+      # bcrypt 5.x breaks passlib 1.7.4 (raises on >72-byte passwords, crashing
+      # passlib's backend self-test → auth down). passlib is unmaintained and
+      # can't be upgraded to fix it. Held at 4.x until we migrate off passlib.
+      # See the comment on bcrypt in requirements.txt.
+      - dependency-name: bcrypt
+        update-types: ["version-update:semver-major"]
 
   # Frontend.
   - package-ecosystem: npm
