@@ -13,21 +13,16 @@ email-validator==2.3.0
 python-dateutil==2.9.0
 alembic==1.13.1
 psycopg2-binary==2.9.10
-passlib[bcrypt]==1.7.4
-# bcrypt is HELD at 4.x on purpose. bcrypt 5.0.0 raises ValueError on
-# passwords >72 bytes instead of truncating, which crashes passlib 1.7.4's
-# backend self-test (detect_wrap_bug) → all password hashing/verification
-# breaks → auth is down. passlib 1.7.4 is the last passlib release (unmaintained
-# since 2020) so it can't be upgraded to fix this. Unblocking bcrypt 5 requires
-# migrating off passlib to calling the bcrypt library directly. Until then, <5.
-# dependabot is configured to ignore bcrypt major bumps (see .github/dependabot.yml).
-bcrypt>=4.1.3,<5
+# passlib removed — it was unmaintained (last release 1.7.4, 2020) and its
+# backend self-test crashed under bcrypt 5. app/services/security.py now calls
+# bcrypt directly. Existing stored hashes still verify (validated: old
+# passlib/bcrypt-4 hashes verify unchanged under the new code + bcrypt 5).
+bcrypt==5.0.0
 # JWT signing/verification. Migrated off python-jose 3.4.0, whose
 # transitive pyasn1<0.5.0 pin held CVE-2026-30922 open. We only use
 # HS256 (HMAC), so PyJWT needs no cryptography backend at all — this
 # also drops cryptography/ecdsa/rsa/pyasn1 from the dependency tree.
 PyJWT==2.13.0
-bcrypt==4.1.3
 sentry-sdk[fastapi]==2.18.0
 pyotp==2.9.0
 resend>=2.32.2

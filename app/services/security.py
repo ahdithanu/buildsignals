@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from app.config import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -18,19 +18,38 @@ from app.config import (
 REFRESH_TOKEN_TYPE = "refresh"
 ACCESS_TOKEN_TYPE = "access"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 # ── Password hashing ────────────────────────────────────────────────────────
+#
+# We call bcrypt directly rather than through passlib. passlib 1.7.4 is the
+# last release (unmaintained since 2020) and its backend self-test crashes
+# under bcrypt >= 5, which pins the whole app to bcrypt 4.x. Talking to bcrypt
+# directly removes that ceiling and drops an abandoned dependency.
+#
+# bcrypt only considers the first 72 BYTES of a password; bytes past that are
+# ignored. passlib silently truncated to 72 bytes, and bcrypt 5 now *raises*
+# on longer input instead of truncating. To (a) keep verifying hashes that
+# passlib wrote and (b) not crash on a >72-byte password, we truncate to 72
+# bytes ourselves before every hash and check — exactly reproducing the old
+# behavior, so existing stored hashes still validate unchanged.
+_BCRYPT_MAX_BYTES = 72
+
+
+def _prepare(password: str) -> bytes:
+    """Encode + truncate to bcrypt's 72-byte input limit (matches passlib)."""
+    return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(_prepare(password), bcrypt.gensalt()).decode("ascii")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     try:
-        return pwd_context.verify(plain, hashed)
-    except Exception:
+        return bcrypt.checkpw(_prepare(plain), hashed.encode("ascii"))
+    except (ValueError, TypeError):
+        # Malformed/empty stored hash, or non-ascii hash string. Treat any
+        # such case as a failed verification rather than a 500.
         return False
 
 
