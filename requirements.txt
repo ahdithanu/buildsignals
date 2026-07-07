@@ -4,7 +4,7 @@ fastapi==0.139.0
 # 1.3.1 clears CVE-2024-47874, CVE-2025-54121, CVE-2026-48817/48818, and
 # PYSEC-2026-161/248/249. See git history for the pre-bump ignore list.
 starlette>=1.3.1
-uvicorn[standard]==0.50.0
+uvicorn[standard]==0.50.2
 sqlalchemy==2.0.51
 # fastapi 0.139 requires pydantic>=2.9.0; 2.13.4 is the version the suite
 # was validated against during the fastapi bump.
@@ -12,7 +12,7 @@ pydantic==2.13.4
 email-validator==2.3.0
 python-dateutil==2.9.0
 alembic==1.13.1
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.12
 # passlib removed — it was unmaintained (last release 1.7.4, 2020) and its
 # backend self-test crashed under bcrypt 5. app/services/security.py now calls
 # bcrypt directly. Existing stored hashes still verify (validated: old
