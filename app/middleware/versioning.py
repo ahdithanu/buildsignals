@@ -36,6 +36,7 @@ SUNSET_DATE = "2027-01-01"
 _UNVERSIONED_PREFIXES = (
     "/health",
     "/healthz",
+    "/metrics",
     "/openapi.json",
     "/docs",
     "/redoc",

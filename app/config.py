@@ -150,6 +150,9 @@ REFRESH_COOKIE_SECURE: bool = _parse_bool(
 PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     "/health",
     "/healthz",
+    # /metrics does its own METRICS_TOKEN check; exempt it from the global
+    # auth posture so a scraper isn't blocked by ALLOW_ANONYMOUS=false.
+    "/metrics",
     # AuthContextMiddleware runs INSIDE ApiVersioningMiddleware, so by the
     # time it evaluates this list the path has already been rewritten from
     # /auth/* to /v1/auth/*. Unversioned forms are kept for defense-in-depth

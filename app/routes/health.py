@@ -15,12 +15,13 @@ Two flavours, both public:
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app import metrics
 from app.db import get_db
 
 router = APIRouter(tags=["health"])
@@ -44,3 +45,24 @@ def health_check_deep(db: Session = Depends(get_db)):
             content={"status": "degraded", "db": type(exc).__name__},
         )
     return {"status": "ok", "db": "ok"}
+
+
+@router.get("/metrics")
+def prometheus_metrics(authorization: str | None = Header(default=None)):
+    """Prometheus scrape endpoint.
+
+    When METRICS_TOKEN is set, requires `Authorization: Bearer <token>`;
+    when unset (dev), it's open. Restrict at the network layer in prod
+    regardless — it exposes route names and traffic volume.
+    """
+    token = metrics.metrics_token()
+    if token is not None:
+        expected = f"Bearer {token}"
+        if authorization != expected:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid metrics token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    payload, content_type = metrics.render_latest()
+    return Response(content=payload, media_type=content_type)
