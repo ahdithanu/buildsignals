@@ -3219,6 +3219,54 @@
         ]
       }
     },
+    "/metrics": {
+      "get": {
+        "description": "Prometheus scrape endpoint.\n\nWhen METRICS_TOKEN is set, requires `Authorization: Bearer <token>`;\nwhen unset (dev), it's open. Restrict at the network layer in prod\nregardless \u2014 it exposes route names and traffic volume.",
+        "operationId": "prometheus_metrics_metrics_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prometheus Metrics",
+        "tags": [
+          "health"
+        ]
+      }
+    },
     "/v1/audit": {
       "get": {
         "description": "List audit log entries for the caller's active org.\n\nMost recent first. Joined with `users` so the UI can render \"Alice\ndeleted deal X\" without a second round-trip.",
