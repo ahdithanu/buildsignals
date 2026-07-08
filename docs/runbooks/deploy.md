@@ -156,14 +156,13 @@ as a normal deploy — the auto-deploy on push does the work.
 
 ---
 
-## Who to page
+## When a deploy goes wrong
 
-| What broke                              | Who              |
-|-----------------------------------------|------------------|
-| API 5xx spike, Sentry errors            | Backend on-call  |
-| Frontend white screen / build fail      | Frontend on-call |
-| Postgres CPU / disk alarms              | Backend on-call → escalate to whoever owns the migration |
-| Auth broken for every user              | Backend on-call, treat as SEV-1 |
-| Migration failed mid-deploy             | Author of the migration first, then backend on-call |
+If a deploy breaks production, this stops being a deploy and becomes an
+incident. Roll back or fix forward using the matrix above, then follow
+[incident-response.md](incident-response.md) — it owns severity levels, the
+on-call/paging table, comms cadence, and the postmortem process. This runbook
+deliberately doesn't duplicate that; keeping one source of truth means the
+pager list can't drift between two files.
 
-Escalation channel: `#dealsignal-incidents` (Slack). Status page: TBD.
+Escalation channel: `#dealsignal-incidents` (Slack).
