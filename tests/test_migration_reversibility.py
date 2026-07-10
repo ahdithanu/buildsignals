@@ -16,6 +16,7 @@ by tests/test_rls_postgres.py when TEST_POSTGRES_URL is set.
 """
 from __future__ import annotations
 
+import os as _os
 import subprocess
 import sys
 from pathlib import Path
@@ -71,3 +72,45 @@ def test_single_step_down_up_targets_latest_migration(tmp_path):
 
     up_one = _alembic("upgrade", "head", db_url=db_url)
     assert up_one.returncode == 0, f"re-upgrade failed:\n{up_one.stderr}"
+
+
+# ── Postgres-specific reversibility ─────────────────────────────────────────
+# SQLite has no first-class ENUM type (enums are VARCHAR+CHECK), so the SQLite
+# round-trip above CANNOT catch a downgrade that drops tables but leaves the
+# Postgres ENUM types behind — the exact bug that made re-upgrade fail with
+# `type "memberrole" already exists`. This gated test runs the round-trip on a
+# real Postgres and asserts the schema comes back to a truly empty state.
+#
+# Set TEST_POSTGRES_URL to a THROWAWAY database (it gets upgraded/downgraded
+# destructively). Skipped otherwise, like tests/test_rls_postgres.py.
+_PG_URL = _os.environ.get("TEST_POSTGRES_URL")
+
+
+@pytest.mark.skipif(not _PG_URL, reason="TEST_POSTGRES_URL not set")
+def test_postgres_round_trip_leaves_no_orphaned_enum_types():
+    from sqlalchemy import create_engine, text
+
+    # Start clean, then upgrade → downgrade → upgrade. The re-upgrade is the
+    # step that regresses if a downgrade forgets to DROP TYPE.
+    assert _alembic("downgrade", "base", db_url=_PG_URL).returncode == 0
+    assert _alembic("upgrade", "head", db_url=_PG_URL).returncode == 0
+    down = _alembic("downgrade", "base", db_url=_PG_URL)
+    assert down.returncode == 0, f"downgrade base failed:\n{down.stderr}"
+
+    # At base, no user-defined ENUM types should remain.
+    engine = create_engine(_PG_URL, future=True)
+    try:
+        with engine.connect() as conn:
+            orphaned = conn.execute(
+                text(
+                    "select count(distinct t.typname) "
+                    "from pg_type t join pg_enum e on t.oid = e.enumtypid"
+                )
+            ).scalar()
+        assert orphaned == 0, f"{orphaned} enum type(s) left behind after downgrade"
+    finally:
+        engine.dispose()
+
+    # And it rebuilds cleanly (the regression symptom was here).
+    reup = _alembic("upgrade", "head", db_url=_PG_URL)
+    assert reup.returncode == 0, f"re-upgrade after clean downgrade failed:\n{reup.stderr}"

@@ -1,8 +1,17 @@
 """Proves Postgres row-level security actually blocks cross-org reads.
 
-Skips unless `TEST_POSTGRES_URL` is set — e.g. in CI or when a developer
-runs a local Postgres container. The rest of the suite continues to run
-on SQLite where RLS is a no-op.
+Skips unless `TEST_POSTGRES_URL` is set — e.g. when a developer runs a local
+Postgres container. The rest of the suite continues to run on SQLite where
+RLS is a no-op.
+
+⚠ `TEST_POSTGRES_URL` MUST connect as a NON-superuser role. Postgres
+superusers (and BYPASSRLS roles) ignore row-level security entirely — even
+under FORCE ROW LEVEL SECURITY — so these assertions silently pass-through
+and validate nothing if you point them at a superuser connection. Migration
+003 uses FORCE RLS specifically so the policy applies to the table owner;
+production on Render connects as a non-superuser owner, which is exactly the
+condition under which RLS protects tenant data. Test as that role or you're
+testing a lie.
 
 What this test guards against: a future refactor that drops the
 `after_begin` hook in app/db.py or reverts migration 003 would make all
@@ -51,10 +60,20 @@ def pg_session(pg_engine):
 
 
 def _seed_deals(session, org_a: str, org_b: str) -> tuple[str, str]:
-    """Insert one deal per org using a bypass role or by SET app.current_org
-    per insert. Uses SET LOCAL twice so each insert satisfies WITH CHECK."""
+    """Insert one deal per org. `deals.organization_id` FKs to `organizations`,
+    so the org rows must exist first. `organizations` is NOT in TENANT_TABLES
+    (migration 003), so those inserts aren't RLS-governed. Deals ARE, so each
+    deal insert runs with app.current_org set to satisfy the WITH CHECK policy."""
     deal_a = str(uuid.uuid4())
     deal_b = str(uuid.uuid4())
+
+    # Orgs first (no RLS on organizations) — satisfies the deals FK.
+    for oid in (org_a, org_b):
+        session.execute(
+            text("INSERT INTO organizations (id, name, slug) VALUES (:id, :n, :s)"),
+            {"id": oid, "n": f"Org {oid}", "s": oid},
+        )
+    session.commit()
 
     # Insert A
     session.execute(

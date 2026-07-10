@@ -12,6 +12,13 @@ jobs:
       DATABASE_URL: "sqlite:///./ci.db"
       SECRET_KEY: "ci-test-secret-key-not-for-production"
       ENVIRONMENT: "ci"
+      # NOTE: The TEST_POSTGRES_URL-gated tests (RLS isolation + migration
+      # reversibility) are NOT run here yet. They need a Postgres service AND
+      # a NON-superuser role — a superuser bypasses RLS, so the isolation
+      # tests only mean something when run as a non-owner-ish role (as they
+      # would in production on Render). Wiring that up is a separate task;
+      # see docs/runbooks/first-deploy.md. Run them locally against a real
+      # Postgres to exercise the enum-leak / RLS guards.
     steps:
       - uses: actions/checkout@v4
 

@@ -137,6 +137,15 @@ curl -s -o /dev/null -w '%{http_code}\n' $BASE/metrics          # 401 (token req
       bearer, or the endpoint is restricted at the network layer.
 - [ ] Fill in the on-call / status-page TODOs in
       [incident-response.md](incident-response.md).
+- [ ] **Confirm the app connects to Postgres as a NON-superuser role.**
+      Tenant isolation (row-level security, migration 003) is *silently
+      bypassed* by Postgres superusers — even with FORCE RLS. Render's managed
+      Postgres gives a non-superuser owner by default, which is correct; but if
+      you ever swap in a self-managed DB and connect as `postgres`/superuser,
+      RLS provides ZERO cross-tenant protection with no error. Verify with:
+      `SELECT rolsuper FROM pg_roles WHERE rolname = current_user;` → must be
+      `f`. (App-layer org scoping still applies either way, but RLS is the
+      defense-in-depth backstop and you want it real.)
 
 From here on, deploying is just merging to `main`. Read [deploy.md](deploy.md)
 before the first routine deploy.

@@ -263,3 +263,19 @@ def downgrade() -> None:
     op.drop_table("organization_memberships")
     op.drop_table("users")
     op.drop_table("organizations")
+
+    # Postgres materializes each `sa.Enum(..., name=...)` as a first-class
+    # TYPE, and drop_table does NOT drop it. Without this, a downgrade leaves
+    # the enum types behind and a subsequent re-upgrade fails with
+    # "type <name> already exists". SQLite has no separate enum type (enums
+    # are VARCHAR + CHECK), so this block is Postgres-only.
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        for enum_name in (
+            "activitytype",
+            "contactstatus",
+            "dealstatus",
+            "memberrole",
+            "risklevel",
+        ):
+            op.execute(sa.text(f"DROP TYPE IF EXISTS {enum_name}"))
