@@ -131,6 +131,7 @@ docs/                runbooks and operational docs — see below
 | [docs/runbooks/deploy.md](docs/runbooks/deploy.md) | Deploy, smoke test, rollback |
 | [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | Sev levels, on-call, comms, postmortem |
 | [docs/backups.md](docs/backups.md) | Backup & restore, RPO/RTO, DR drills |
+| [docs/data-retention.md](docs/data-retention.md) | What we store, retention, right-to-erasure |
 | [docs/rbac.md](docs/rbac.md) | Role matrix + per-endpoint access |
 | [docs/secrets.md](docs/secrets.md) | Secret inventory, rotation, leaked-secret playbook |
 | [docs/operations.md](docs/operations.md) | Env vars, CI overview |

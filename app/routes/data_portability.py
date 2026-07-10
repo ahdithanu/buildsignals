@@ -46,8 +46,21 @@ from app.models.signal import Signal
 from app.models.user import User
 from app.services.audit_service import log_change
 from app.utils.auth_deps import require_role_of
+from app.utils.org_scope import DEFAULT_ORG_ID
+
+import logging
+
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/organizations", tags=["data-portability"])
+
+log = logging.getLogger("dealsignal.erasure")
+
+
+class OrgDeletionRequest(BaseModel):
+    # GitHub-style "type the name to confirm" — makes an irreversible bulk
+    # delete impossible to trigger by accident or a stray API call.
+    confirm: str = Field(..., description="Must exactly equal the organization's name.")
 
 
 # Tables to dump, in stable order. Key is the JSON field name in the export.
@@ -181,3 +194,100 @@ def export_organization_data(
             "Content-Disposition": f'attachment; filename="{filename}"',
         },
     )
+
+
+@router.post("/{org_id}/delete")
+def delete_organization_data(
+    org_id: str,
+    payload: OrgDeletionRequest,
+    principal: dict = Depends(
+        require_role_of(MemberRole.admin, must_match_active_org=True)
+    ),
+    db: Session = Depends(get_db),
+):
+    """GDPR right-to-erasure: permanently delete all data for an organization.
+
+    Irreversible. Guard rails, in order:
+      - admin of the org, and `{org_id}` must equal the caller's active org
+        (require_role_of(..., must_match_active_org=True));
+      - the request body must echo the org's exact name;
+      - the default/demo org can never be deleted.
+
+    Deletes every tenant-scoped row, memberships, and users whose ONLY
+    membership was this org (users belonging to other orgs are left intact).
+    Because the org's audit_logs are deleted too, the erasure itself is
+    recorded to the application log (which lives in separate storage) as a
+    PII-free receipt, not to audit_logs.
+    """
+    if org_id == DEFAULT_ORG_ID:
+        raise HTTPException(status_code=403, detail="The default organization cannot be deleted")
+
+    org = db.get(Organization, org_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    if payload.confirm != org.name:
+        raise HTTPException(
+            status_code=400,
+            detail="Confirmation text does not match the organization name",
+        )
+
+    # Identify users to erase: members of this org with no membership elsewhere.
+    member_ids = [
+        m.user_id
+        for m in db.query(OrganizationMembership)
+        .filter(OrganizationMembership.organization_id == org_id)
+        .all()
+    ]
+    orphan_user_ids: list[str] = []
+    for uid in member_ids:
+        other = (
+            db.query(OrganizationMembership)
+            .filter(
+                OrganizationMembership.user_id == uid,
+                OrganizationMembership.organization_id != org_id,
+            )
+            .count()
+        )
+        if other == 0:
+            orphan_user_ids.append(uid)
+
+    deleted: dict[str, int] = {}
+
+    # Tenant tables, deleted in REVERSE of the export order so child rows
+    # (e.g. deal_outputs) go before their parent (deals) and no FK is violated.
+    for field_name, model in reversed(_ORG_SCOPED_MODELS):
+        n = (
+            db.query(model)
+            .filter(model.organization_id == org_id)
+            .delete(synchronize_session=False)
+        )
+        deleted[field_name] = n
+
+    deleted["memberships"] = (
+        db.query(OrganizationMembership)
+        .filter(OrganizationMembership.organization_id == org_id)
+        .delete(synchronize_session=False)
+    )
+
+    if orphan_user_ids:
+        deleted["users"] = (
+            db.query(User)
+            .filter(User.id.in_(orphan_user_ids))
+            .delete(synchronize_session=False)
+        )
+    else:
+        deleted["users"] = 0
+
+    db.delete(org)
+    db.commit()
+
+    receipt = {
+        "deleted_at": datetime.now(timezone.utc).isoformat(),
+        "organization_id": org_id,
+        "deleted_by": principal["user_id"],
+        "rows_deleted": deleted,
+    }
+    # PII-free record in application logs — survives the audit_logs deletion.
+    log.warning("organization.erased %s", receipt)
+    return receipt
