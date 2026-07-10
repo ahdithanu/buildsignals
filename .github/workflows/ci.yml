@@ -25,7 +25,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest httpx pip-audit
+          pip install pytest httpx pip-audit pytest-cov
 
       # Fails the build on any known-vulnerable dependency. Uses the PyPI
       # advisory DB (osv.dev). To skip a CVE we've reviewed and confirmed
@@ -71,5 +71,8 @@ jobs:
             fi
           fi
 
+      # Coverage gate: floor is set below current (~88%) so it passes with
+      # headroom but fails if a meaningful chunk of new code lands untested.
+      # Raise the floor deliberately as coverage improves — don't chase 100%.
       - name: Run tests
-        run: pytest -q
+        run: pytest -q --cov=app --cov-report=term-missing --cov-fail-under=85
