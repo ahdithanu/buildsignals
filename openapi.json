@@ -2389,6 +2389,20 @@
         "title": "MyOrganizationItem",
         "type": "object"
       },
+      "OrgDeletionRequest": {
+        "properties": {
+          "confirm": {
+            "description": "Must exactly equal the organization's name.",
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "OrgDeletionRequest",
+        "type": "object"
+      },
       "OrganizationResponse": {
         "properties": {
           "created_at": {
@@ -6410,6 +6424,73 @@
         "summary": "List My Organizations",
         "tags": [
           "organizations"
+        ]
+      }
+    },
+    "/v1/organizations/{org_id}/delete": {
+      "post": {
+        "description": "GDPR right-to-erasure: permanently delete all data for an organization.\n\nIrreversible. Guard rails, in order:\n  - admin of the org, and `{org_id}` must equal the caller's active org\n    (require_role_of(..., must_match_active_org=True));\n  - the request body must echo the org's exact name;\n  - the default/demo org can never be deleted.\n\nDeletes every tenant-scoped row, memberships, and users whose ONLY\nmembership was this org (users belonging to other orgs are left intact).\nBecause the org's audit_logs are deleted too, the erasure itself is\nrecorded to the application log (which lives in separate storage) as a\nPII-free receipt, not to audit_logs.",
+        "operationId": "delete_organization_data_v1_organizations__org_id__delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgDeletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Organization Data",
+        "tags": [
+          "data-portability"
         ]
       }
     },
