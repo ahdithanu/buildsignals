@@ -128,7 +128,8 @@ docs/                runbooks and operational docs — see below
 
 | Doc | What |
 |---|---|
-| [docs/runbooks/deploy.md](docs/runbooks/deploy.md) | Deploy, smoke test, rollback |
+| [docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md) | One-time Render provisioning from scratch |
+| [docs/runbooks/deploy.md](docs/runbooks/deploy.md) | Routine deploy, smoke test, rollback |
 | [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | Sev levels, on-call, comms, postmortem |
 | [docs/backups.md](docs/backups.md) | Backup & restore, RPO/RTO, DR drills |
 | [docs/data-retention.md](docs/data-retention.md) | What we store, retention, right-to-erasure |
@@ -141,9 +142,13 @@ docs/                runbooks and operational docs — see below
 
 ## Deployment
 
-Merges to `main` auto-deploy on Render. Migrations run automatically in the
-pre-deploy step (`alembic upgrade head`). **Read
-[docs/runbooks/deploy.md](docs/runbooks/deploy.md) before shipping** — it
+The whole stack is described by [`render.yaml`](render.yaml) — Postgres, Redis,
+the API, and the static frontend. **Standing it up the first time:**
+[docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md).
+
+After that, merges to `main` auto-deploy on Render; migrations run
+automatically in the pre-deploy step (`alembic upgrade head`). **Read
+[docs/runbooks/deploy.md](docs/runbooks/deploy.md) before a routine ship** — it
 covers the env-var preflight, the 2-minute smoke test, and the rollback
 decision matrix.
 
