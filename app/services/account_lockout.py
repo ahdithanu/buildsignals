@@ -28,7 +28,6 @@ import time
 from dataclasses import dataclass
 from typing import Dict
 
-
 # Tunables — conservative on purpose. 10 attempts covers fat-finger,
 # password manager re-fills, and the user trying a few old passwords.
 # Anything beyond that looks like an attack.

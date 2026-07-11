@@ -9,7 +9,7 @@ the default org and system user. Once JWT auth is wired in, the
 """
 
 from contextvars import ContextVar
-from typing import Optional, NamedTuple
+from typing import NamedTuple, Optional
 
 from sqlalchemy.orm import Query
 

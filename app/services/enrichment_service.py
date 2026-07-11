@@ -15,7 +15,6 @@ from app.models.deal import Deal
 from app.models.deal_assumptions import DealAssumptions
 from app.services.normalization_service import normalize_property_type
 
-
 # ── Property-type ranges ────────────────────────────────────────────────────
 
 _RANGES: dict[str, dict] = {

@@ -26,7 +26,6 @@ from app.services.audit_service import log_change
 from app.services.security import verify_password
 from app.utils.auth_deps import get_current_user
 
-
 router = APIRouter(prefix="/auth/2fa", tags=["auth"])
 
 

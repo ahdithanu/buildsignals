@@ -7,6 +7,7 @@ from app.db import get_db
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
+from app.routes.auth import _set_refresh_cookie
 from app.schemas.auth import TokenResponse
 from app.schemas.organization import (
     InviteMemberRequest,
@@ -17,9 +18,8 @@ from app.schemas.organization import (
     UpdateMemberRequest,
 )
 from app.services.audit_service import log_change
-from app.routes.auth import _set_refresh_cookie
 from app.services.security import create_access_token
-from app.utils.auth_deps import get_current_user, require_role_of, require_role_strict
+from app.utils.auth_deps import get_current_user, require_role_of
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 

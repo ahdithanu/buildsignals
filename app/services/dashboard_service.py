@@ -3,15 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func, case
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.deal import Deal, DealStatus
 from app.models.contact import Contact
+from app.models.deal import Deal, DealStatus
 from app.models.outreach_activity import OutreachActivity
 from app.models.signal import Signal
-from app.utils.org_scope import get_org_id, scope_query, active_query
-
+from app.utils.org_scope import active_query, scope_query
 
 _DEAD_CLOSED = {DealStatus.dead, DealStatus.closed}
 

@@ -13,8 +13,8 @@ from __future__ import annotations
 import pytest
 
 from app.config import REFRESH_COOKIE_NAME
-from app.services.rate_limiter import limiter
 from app.services.account_lockout import lockout
+from app.services.rate_limiter import limiter
 
 
 @pytest.fixture(autouse=True)

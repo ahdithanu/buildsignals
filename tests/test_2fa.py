@@ -18,7 +18,6 @@ from app.models.user import User
 from app.services.account_lockout import lockout
 from app.services.rate_limiter import limiter
 
-
 STRONG_PW = "CorrectHorseBattery42"
 
 

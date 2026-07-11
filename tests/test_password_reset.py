@@ -14,11 +14,9 @@ import pytest
 
 from app.config import REFRESH_COOKIE_NAME
 from app.models.password_reset_token import PasswordResetToken
-from app.models.user import User
 from app.services import email_service as email_module
 from app.services.account_lockout import lockout
 from app.services.rate_limiter import limiter
-
 
 STRONG_PW = "CorrectHorseBattery42"
 NEW_PW = "NewStrongPass9182!"
@@ -204,7 +202,7 @@ def test_forgot_per_email_rate_limit(client, mock_send):
 
 
 def test_reset_bumps_token_version_revoking_refresh(client, mock_send):
-    r = _register(client)
+    _register(client)
     original_refresh = client.cookies.get(REFRESH_COOKIE_NAME)
     assert original_refresh
 

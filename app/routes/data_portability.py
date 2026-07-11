@@ -20,11 +20,13 @@ Posture
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session
 
@@ -47,10 +49,6 @@ from app.models.user import User
 from app.services.audit_service import log_change
 from app.utils.auth_deps import require_role_of
 from app.utils.org_scope import DEFAULT_ORG_ID
-
-import logging
-
-from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/organizations", tags=["data-portability"])
 

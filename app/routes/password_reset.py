@@ -35,7 +35,6 @@ from app.services.password_policy import PasswordPolicyError, validate_password
 from app.services.rate_limiter import limiter
 from app.services.security import hash_password
 
-
 router = APIRouter(prefix="/auth/password", tags=["auth"])
 
 

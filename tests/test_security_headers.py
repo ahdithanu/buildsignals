@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 from app import config as app_config
 from app.main import app
 
-
 ALWAYS_ON = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",

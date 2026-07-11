@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from tests.conftest import SAMPLE_DEAL
 
-
 SAMPLE_CONTACT = {"name": "Test Contact", "role": "Owner", "email": "t@t.com"}
 
 

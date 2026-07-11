@@ -6,13 +6,13 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.deal import Deal
 from app.models.deal_assumptions import DealAssumptions
-from app.schemas.assumptions import AssumptionsUpdate, AssumptionsResponse
-from app.schemas.outputs import OutputsResponse
-from app.services.underwriting_service import calculate_and_persist, UnderwritingError
-from app.utils.org_scope import active_query
-from app.services.audit_service import log_change, snapshot_fields
-from app.utils.auth_deps import require_role
 from app.models.organization_membership import MemberRole
+from app.schemas.assumptions import AssumptionsResponse, AssumptionsUpdate
+from app.schemas.outputs import OutputsResponse
+from app.services.audit_service import log_change, snapshot_fields
+from app.services.underwriting_service import UnderwritingError, calculate_and_persist
+from app.utils.auth_deps import require_role
+from app.utils.org_scope import active_query
 
 router = APIRouter(tags=["assumptions"])
 

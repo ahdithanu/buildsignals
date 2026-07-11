@@ -7,7 +7,7 @@ from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.organization_membership import OrganizationMembership, MemberRole
+from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
 from app.services.security import decode_access_token
 from app.utils.org_scope import RequestContext

@@ -4,11 +4,11 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.deal import Deal
 from app.models.deal_distribution import DealDistribution
+from app.models.organization_membership import MemberRole
 from app.schemas.deal_distribution import DealDistributionCreate, DealDistributionResponse
-from app.utils.org_scope import get_org_id, active_query, scope_query
 from app.services.audit_service import log_change
 from app.utils.auth_deps import require_role
-from app.models.organization_membership import MemberRole
+from app.utils.org_scope import active_query, get_org_id, scope_query
 
 router = APIRouter(tags=["distributions"])
 

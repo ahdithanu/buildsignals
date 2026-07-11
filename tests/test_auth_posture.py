@@ -26,7 +26,6 @@ from app import config as app_config
 from app.db import Base, get_db
 from app.main import app
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────────
 
 

@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.deal import Deal, DealStatus
-from app.models.outreach_activity import OutreachActivity, ActivityType
+from app.models.outreach_activity import ActivityType, OutreachActivity
 from app.models.pipeline_event import PipelineEvent
 from app.services.audit_service import log_change
 

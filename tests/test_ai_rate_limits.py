@@ -11,11 +11,11 @@ from uuid import uuid4
 
 import pytest
 
+import app.routes.deal_intelligence as deal_intel_routes
+import app.routes.memos as memo_routes
 from app.models.deal import Deal
 from app.services import enrichment_service, memo_service, scoring_service
 from app.services.rate_limiter import AI_LIMIT, limiter
-import app.routes.deal_intelligence as deal_intel_routes
-import app.routes.memos as memo_routes
 
 STRONG_PW = "CorrectHorseBattery42"
 
@@ -47,8 +47,9 @@ def _stub_llm_services(monkeypatch):
         }
 
     def _fake_generate_memo(db, deal_id):
-        from app.models.memo import Memo
         from datetime import datetime, timezone
+
+        from app.models.memo import Memo
 
         # Reuse an existing memo if the route is called again for the
         # same deal — the route is idempotent by design.

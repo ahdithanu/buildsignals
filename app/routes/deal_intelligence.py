@@ -6,13 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.deal import Deal
+from app.models.organization_membership import MemberRole
 from app.schemas.deal import DealResponse
 from app.services.enrichment_service import enrich_deal
+from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter
 from app.services.scoring_service import score_deal
-from app.services.rate_limiter import limiter, AI_LIMIT, AI_WINDOW
-from app.utils.org_scope import active_query, get_org_id
 from app.utils.auth_deps import require_role
-from app.models.organization_membership import MemberRole
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(tags=["deal-intelligence"])
 

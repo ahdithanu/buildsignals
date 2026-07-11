@@ -5,11 +5,12 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import String, Float, Text, Enum as SAEnum, DateTime
+from sqlalchemy import DateTime, Float, String, Text
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
-from app.models.mixins import OrgMixin, SoftDeleteMixin, OwnerMixin
+from app.models.mixins import OrgMixin, OwnerMixin, SoftDeleteMixin
 
 
 class DealStatus(str, enum.Enum):

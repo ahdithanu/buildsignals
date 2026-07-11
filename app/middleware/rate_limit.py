@@ -18,7 +18,6 @@ from starlette.responses import JSONResponse, Response
 
 from app.services.rate_limiter import limiter
 
-
 GLOBAL_LIMIT = int(os.environ.get("GLOBAL_RATE_LIMIT", "600"))
 GLOBAL_WINDOW = int(os.environ.get("GLOBAL_RATE_WINDOW_SECONDS", "60"))
 

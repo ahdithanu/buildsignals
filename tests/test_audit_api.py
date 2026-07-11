@@ -11,7 +11,6 @@ from uuid import uuid4
 import pytest
 
 from app.models.audit_log import AuditLog
-from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
 from app.services.rate_limiter import limiter

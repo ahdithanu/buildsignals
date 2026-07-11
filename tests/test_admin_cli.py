@@ -10,8 +10,6 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts import admin as admin_cli  # noqa: E402
-
 from app.db import Base, SessionLocal, engine  # noqa: E402
 from app.models.audit_log import AuditLog  # noqa: E402
 from app.models.organization import Organization  # noqa: E402
@@ -21,6 +19,7 @@ from app.models.organization_membership import (  # noqa: E402
 )
 from app.models.user import User  # noqa: E402
 from app.services.security import hash_password  # noqa: E402
+from scripts import admin as admin_cli  # noqa: E402
 
 
 @pytest.fixture(scope="module", autouse=True)

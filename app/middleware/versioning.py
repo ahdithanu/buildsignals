@@ -22,7 +22,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-
 # Bump this when the current major version changes. Kept as a module-level
 # constant so grep-for-migration works.
 CURRENT_API_PREFIX = "/v1"

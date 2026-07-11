@@ -1,7 +1,7 @@
 """Tests for deal CRUD and core workflows."""
 from __future__ import annotations
 
-from tests.conftest import SAMPLE_DEAL, SAMPLE_ASSUMPTIONS
+from tests.conftest import SAMPLE_DEAL
 
 
 class TestDealCRUD:

@@ -6,18 +6,18 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.organization_membership import MemberRole
 from app.schemas.dashboard import (
+    AIInsight,
     KPIResponse,
-    TopOpportunity,
     PipelineSnapshot,
     RecentSignal,
-    AIInsight,
+    TopOpportunity,
 )
 from app.services.dashboard_service import (
+    get_ai_insights,
     get_kpis,
-    get_top_opportunities,
     get_pipeline_snapshot,
     get_recent_signals,
-    get_ai_insights,
+    get_top_opportunities,
 )
 from app.utils.auth_deps import require_role
 

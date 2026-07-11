@@ -17,7 +17,6 @@ from starlette.responses import Response
 
 from app import config as app_config
 
-
 _ALWAYS_ON_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",

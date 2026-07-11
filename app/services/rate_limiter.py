@@ -28,8 +28,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
-
+from typing import Dict, Tuple
 
 log = logging.getLogger(__name__)
 

@@ -34,7 +34,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.db import SessionLocal  # noqa: E402
-from app.models.audit_log import AuditLog  # noqa: E402
 from app.models.organization_membership import (  # noqa: E402
     MemberRole,
     OrganizationMembership,

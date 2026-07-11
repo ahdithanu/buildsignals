@@ -2,7 +2,6 @@
 
 Importing app.main must not pull in sentry_sdk or attempt any network call.
 """
-import importlib
 import os
 import sys
 

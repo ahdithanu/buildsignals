@@ -4,9 +4,8 @@ from __future__ import annotations
 import pytest
 
 from app.services.account_lockout import lockout
-from app.services.rate_limiter import limiter
 from app.services.password_policy import PasswordPolicyError, validate_password
-
+from app.services.rate_limiter import limiter
 
 STRONG_PW = "CorrectHorseBattery42"
 

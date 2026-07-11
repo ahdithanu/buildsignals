@@ -4,12 +4,12 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.contact import Contact, ContactStatus
 from app.models.deal import Deal, DealStatus
-from app.schemas.contact import ContactCreate, ContactUpdate, ContactResponse
-from app.services.pipeline_service import move_deal_stage
-from app.utils.org_scope import get_org_id, active_query, exclude_deleted
-from app.utils.auth_deps import require_role
 from app.models.organization_membership import MemberRole
+from app.schemas.contact import ContactCreate, ContactResponse, ContactUpdate
 from app.services.audit_service import log_change
+from app.services.pipeline_service import move_deal_stage
+from app.utils.auth_deps import require_role
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(tags=["contacts"])
 

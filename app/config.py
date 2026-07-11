@@ -117,6 +117,17 @@ if IS_PRODUCTION and ALLOW_ANONYMOUS:
     raise RuntimeError(
         "ALLOW_ANONYMOUS=true is not permitted when ENVIRONMENT=production"
     )
+
+# Secure flag on the refresh cookie. Resolved BEFORE the production guards
+# below, which reference it — defining it after them would make the
+# SAMESITE=none guard raise NameError instead of its intended RuntimeError.
+# Allows tests / local dev to disable Secure (browsers refuse Secure cookies
+# over http://localhost).
+REFRESH_COOKIE_SECURE: bool = _parse_bool(
+    os.environ.get("REFRESH_COOKIE_SECURE"),
+    default=IS_PRODUCTION,
+)
+
 if IS_PRODUCTION:
     if SECRET_KEY == _DEFAULT_SECRET_KEY or not SECRET_KEY:
         raise RuntimeError(
@@ -136,14 +147,6 @@ if IS_PRODUCTION:
         raise RuntimeError(
             "REFRESH_COOKIE_SAMESITE=none requires REFRESH_COOKIE_SECURE=true"
         )
-
-# Secure flag on the refresh cookie — resolved here after IS_PRODUCTION is
-# known. Allows tests / local dev to disable Secure (needed because browsers
-# refuse Secure cookies over http://localhost).
-REFRESH_COOKIE_SECURE: bool = _parse_bool(
-    os.environ.get("REFRESH_COOKIE_SECURE"),
-    default=IS_PRODUCTION,
-)
 
 # Routes that never require authentication. Matched as exact strings or path
 # prefixes. Keep this list minimal — everything else is authenticated.

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import enum
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import List, Optional
 from uuid import uuid4
 
-from sqlalchemy import String, Boolean, DateTime, Integer
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base

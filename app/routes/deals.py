@@ -4,23 +4,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.deal import Deal, DealStatus as ModelDealStatus
+from app.models.deal import Deal
 from app.models.deal_assumptions import DealAssumptions
 from app.models.deal_outputs import DealOutputs
+from app.models.organization_membership import MemberRole
+from app.schemas.assumptions import AssumptionsResponse
 from app.schemas.deal import (
     DealCreate,
-    DealUpdate,
-    DealResponse,
     DealDetailResponse,
+    DealResponse,
     DealStatus,
+    DealUpdate,
 )
-from app.schemas.assumptions import AssumptionsResponse
 from app.schemas.outputs import OutputsResponse
-from app.utils.org_scope import get_org_id, active_query
-from app.utils.auth_deps import require_role
-from app.models.organization_membership import MemberRole
 from app.services.audit_service import log_change, snapshot_fields
 from app.services.normalization_service import normalize_property_type
+from app.utils.auth_deps import require_role
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 

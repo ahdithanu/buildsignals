@@ -4,11 +4,11 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.buy_box import BuyBox
 from app.models.deal import Deal
+from app.models.organization_membership import MemberRole
 from app.schemas.buy_box import BuyBoxCreate, BuyBoxResponse
-from app.utils.org_scope import get_org_id, scope_query, active_query
 from app.services.matching_service import match_deal
 from app.utils.auth_deps import require_role
-from app.models.organization_membership import MemberRole
+from app.utils.org_scope import active_query, get_org_id, scope_query
 
 router = APIRouter(tags=["buy-box"])
 

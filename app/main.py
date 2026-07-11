@@ -23,29 +23,30 @@ from app.middleware.auth_context import AuthContextMiddleware
 from app.middleware.rate_limit import GlobalRateLimitMiddleware
 from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
-from app.middleware.versioning import ApiVersioningMiddleware, CURRENT_API_PREFIX
+from app.middleware.versioning import CURRENT_API_PREFIX, ApiVersioningMiddleware
 
 configure_logging()
-from app.routes.health import router as health_router
-from app.routes.deals import router as deals_router
-from app.routes.deal_intelligence import router as intelligence_router
-from app.routes.assumptions import router as assumptions_router
-from app.routes.contacts import router as contacts_router
 from app.routes.activities import router as activities_router
+from app.routes.assumptions import router as assumptions_router
+from app.routes.audit import router as audit_router
+from app.routes.auth import router as auth_router
+from app.routes.buy_box import router as buy_box_router
+from app.routes.contacts import router as contacts_router
+from app.routes.dashboard import router as dashboard_router
+from app.routes.data_portability import router as data_portability_router
+from app.routes.deal_intelligence import router as intelligence_router
+from app.routes.deal_summary import router as deal_summary_router
+from app.routes.deals import router as deals_router
+from app.routes.distributions import router as distributions_router
+from app.routes.documents import router as documents_router
+from app.routes.health import router as health_router
+from app.routes.memos import router as memos_router
+from app.routes.organizations import router as organizations_router
+from app.routes.organizations import switch_router as auth_switch_router
+from app.routes.password_reset import router as password_reset_router
 from app.routes.pipeline import router as pipeline_router
 from app.routes.signals import router as signals_router
-from app.routes.documents import router as documents_router
-from app.routes.memos import router as memos_router
-from app.routes.dashboard import router as dashboard_router
-from app.routes.buy_box import router as buy_box_router
-from app.routes.distributions import router as distributions_router
-from app.routes.deal_summary import router as deal_summary_router
-from app.routes.auth import router as auth_router
-from app.routes.password_reset import router as password_reset_router
 from app.routes.twofa import router as twofa_router
-from app.routes.audit import router as audit_router
-from app.routes.organizations import router as organizations_router, switch_router as auth_switch_router
-from app.routes.data_portability import router as data_portability_router
 
 app = FastAPI(
     title="DealSignal — Real Estate Acquisition Engine",

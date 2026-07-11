@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.assumptions import AssumptionsResponse
 from app.schemas.outputs import OutputsResponse
 
-
 # ── Enums (mirror SQLAlchemy enums) ──────────────────────────────────────────
 
 class DealStatus(str, Enum):
