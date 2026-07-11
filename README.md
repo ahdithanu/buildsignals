@@ -136,6 +136,7 @@ docs/                runbooks and operational docs — see below
 | [docs/rbac.md](docs/rbac.md) | Role matrix + per-endpoint access |
 | [docs/secrets.md](docs/secrets.md) | Secret inventory, rotation, leaked-secret playbook |
 | [docs/operations.md](docs/operations.md) | Env vars, CI overview |
+| [docs/slo.md](docs/slo.md) | Service level objectives + error budget |
 | [SECURITY.md](SECURITY.md) | Vulnerability disclosure |
 
 ---
