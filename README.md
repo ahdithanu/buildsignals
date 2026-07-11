@@ -98,8 +98,16 @@ pip install locust && locust -f loadtest/locustfile.py --host http://localhost:8
 npm run e2e:install && npm run e2e
 ```
 
-CI runs backend tests, an Alembic migration-drift check, and a `pip-audit`
-CVE scan on every push. See `.github/workflows/`.
+CI runs backend tests (incl. RLS + migration reversibility on real Postgres),
+lint (ruff), an Alembic migration-drift check, a `pip-audit` CVE scan, and a
+gitleaks secret scan on every push. See `.github/workflows/`.
+
+Catch the lint/secret checks locally before you push:
+
+```bash
+pip install pre-commit && pre-commit install   # one time
+pre-commit run --all-files                      # on demand
+```
 
 ---
 
