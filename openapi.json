@@ -1932,6 +1932,19 @@
         "title": "DealUpdate",
         "type": "object"
       },
+      "DeleteAccountRequest": {
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "DeleteAccountRequest",
+        "type": "object"
+      },
       "DisableRequest": {
         "properties": {
           "code": {
@@ -3720,6 +3733,59 @@
           }
         },
         "summary": "Verify",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/delete-account": {
+      "post": {
+        "description": "Permanently delete the caller's own account (GDPR right to erasure).\n\nRequires re-entering the current password. Irreversible.\n\nThe user row holds the personal data (email, name, password hash, 2FA\nsecret); deleting it is the erasure. FKs handle the rest: memberships and\npassword-reset tokens cascade away, and authored records (deals, audit\nrows, buy boxes) have their `created_by`/`actor_id` set NULL \u2014 the org's\ndata stays, the personal link is severed.\n\nGuard: a user who is the SOLE admin of an org can't self-delete \u2014 that\nwould orphan the org with no one able to manage it. They must promote\nanother admin (or delete the org) first.",
+        "operationId": "delete_account_v1_auth_delete_account_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Account",
         "tags": [
           "auth"
         ]

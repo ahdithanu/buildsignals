@@ -64,12 +64,24 @@ to the application log — which lives in separate storage — rather than to
 
 ### Deleting a single user
 
-There's no per-user self-service erasure endpoint yet. To remove one user
-today: an org admin removes their membership
-(`DELETE /v1/organizations/{org_id}/members/{user_id}`); if that was their
-last membership, delete the orphaned user row via the backoffice CLI
-(`scripts/admin.py`). A dedicated per-user erasure endpoint is a reasonable
-future addition if self-service GDPR requests become common.
+`POST /v1/auth/delete-account` lets a user erase their own account (GDPR
+right to erasure). It requires re-entering the current password and is
+irreversible.
+
+- The user row (email, name, password hash, TOTP secret) is deleted — that's
+  the personal data, so deleting it is the erasure.
+- FKs handle the rest: memberships and password-reset tokens cascade away;
+  authored records (deals, audit rows, buy boxes) have their
+  `created_by`/`actor_id` set NULL. The org keeps its data; the personal
+  link is severed.
+- Guard: a user who is the **sole admin** of any org can't self-delete (it
+  would orphan the org). They must promote another admin or delete the org
+  first — a 409 explains which org(s).
+
+An admin can also remove another user: drop their membership
+(`DELETE /v1/organizations/{org_id}/members/{user_id}`), then delete the
+orphaned user row via the backoffice CLI (`scripts/admin.py`) if it was
+their last membership.
 
 ## Gaps / future work
 

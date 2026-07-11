@@ -22,6 +22,12 @@ class LoginRequest(BaseModel):
     totp_code: Optional[str] = None
 
 
+class DeleteAccountRequest(BaseModel):
+    # Re-enter the current password to confirm intent + identity before an
+    # irreversible account deletion.
+    password: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

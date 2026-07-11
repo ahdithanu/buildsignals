@@ -18,6 +18,7 @@ from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
 from app.schemas.auth import (
+    DeleteAccountRequest,
     LoginRequest,
     MeResponse,
     RegisterRequest,
@@ -459,3 +460,80 @@ def me(principal: dict = Depends(get_current_user)):
         organization_id=principal["org_id"],
         role=principal["role"],
     )
+
+
+# ── delete account (GDPR self-service erasure) ──────────────────────────────
+
+@router.post("/delete-account", status_code=204)
+def delete_account(
+    payload: DeleteAccountRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+    principal: dict = Depends(get_current_user),
+):
+    """Permanently delete the caller's own account (GDPR right to erasure).
+
+    Requires re-entering the current password. Irreversible.
+
+    The user row holds the personal data (email, name, password hash, 2FA
+    secret); deleting it is the erasure. FKs handle the rest: memberships and
+    password-reset tokens cascade away, and authored records (deals, audit
+    rows, buy boxes) have their `created_by`/`actor_id` set NULL — the org's
+    data stays, the personal link is severed.
+
+    Guard: a user who is the SOLE admin of an org can't self-delete — that
+    would orphan the org with no one able to manage it. They must promote
+    another admin (or delete the org) first.
+    """
+    user: User = principal["user"]
+
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=403, detail="Password is incorrect")
+
+    # Block if the user is the only admin of any org they belong to.
+    admin_memberships = (
+        db.query(OrganizationMembership)
+        .filter(
+            OrganizationMembership.user_id == user.id,
+            OrganizationMembership.role == MemberRole.admin,
+        )
+        .all()
+    )
+    sole_admin_orgs: list[str] = []
+    for m in admin_memberships:
+        other_admins = (
+            db.query(OrganizationMembership)
+            .filter(
+                OrganizationMembership.organization_id == m.organization_id,
+                OrganizationMembership.role == MemberRole.admin,
+                OrganizationMembership.user_id != user.id,
+            )
+            .count()
+        )
+        if other_admins == 0:
+            org = db.get(Organization, m.organization_id)
+            sole_admin_orgs.append(org.name if org else m.organization_id)
+    if sole_admin_orgs:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "You are the only admin of: "
+                + ", ".join(sole_admin_orgs)
+                + ". Promote another admin or delete the organization first."
+            ),
+        )
+
+    user_id = user.id
+    # Audit before delete. The row's actor_id FK is SET NULL when the user
+    # row goes, so the trail keeps entity_id + action, not a dangling pointer.
+    log_change(
+        db, "user", user_id, "account_deleted",
+        actor_id=user_id, organization_id=principal["org_id"],
+    )
+    db.commit()
+
+    db.delete(user)
+    db.commit()
+
+    _clear_refresh_cookie(response)
+    return None
