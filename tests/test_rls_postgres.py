@@ -1,8 +1,8 @@
 """Proves Postgres row-level security actually blocks cross-org reads.
 
-Skips unless `TEST_POSTGRES_URL` is set — e.g. when a developer runs a local
-Postgres container. The rest of the suite continues to run on SQLite where
-RLS is a no-op.
+Skips unless `TEST_POSTGRES_URL` is set. CI sets it (a Postgres service +
+non-superuser `appuser`); a developer can too against a local Postgres. The
+rest of the suite runs on SQLite where RLS is a no-op.
 
 ⚠ `TEST_POSTGRES_URL` MUST connect as a NON-superuser role. Postgres
 superusers (and BYPASSRLS roles) ignore row-level security entirely — even

@@ -12,13 +12,25 @@ jobs:
       DATABASE_URL: "sqlite:///./ci.db"
       SECRET_KEY: "ci-test-secret-key-not-for-production"
       ENVIRONMENT: "ci"
-      # NOTE: The TEST_POSTGRES_URL-gated tests (RLS isolation + migration
-      # reversibility) are NOT run here yet. They need a Postgres service AND
-      # a NON-superuser role — a superuser bypasses RLS, so the isolation
-      # tests only mean something when run as a non-owner-ish role (as they
-      # would in production on Render). Wiring that up is a separate task;
-      # see docs/runbooks/first-deploy.md. Run them locally against a real
-      # Postgres to exercise the enum-leak / RLS guards.
+      # RLS + migration-reversibility tests run against real Postgres, as a
+      # NON-superuser role. This matters: a superuser bypasses row-level
+      # security even under FORCE RLS, so RLS assertions only mean something
+      # as a non-superuser — exactly how the app connects in production.
+      TEST_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dealsignal_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -78,8 +90,25 @@ jobs:
             fi
           fi
 
+      # Provision the Postgres DB for the gated tests. `appuser` is a
+      # NON-superuser and RUNS the migrations, so it owns the tables — which
+      # is what makes FORCE ROW LEVEL SECURITY apply to it (a superuser, or a
+      # non-owner without FORCE, would bypass RLS and the isolation tests
+      # would validate nothing). This mirrors production: the app connects as
+      # a non-superuser owner of its schema.
+      - name: Provision Postgres (non-superuser role) + migrate
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d dealsignal_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE appuser LOGIN PASSWORD 'app';
+          GRANT ALL ON SCHEMA public TO appuser;
+          SQL
+          DATABASE_URL="$TEST_POSTGRES_URL" alembic upgrade head
+
       # Coverage gate: floor is set below current (~88%) so it passes with
       # headroom but fails if a meaningful chunk of new code lands untested.
       # Raise the floor deliberately as coverage improves — don't chase 100%.
+      # TEST_POSTGRES_URL (job env) activates the RLS + reversibility tests.
       - name: Run tests
         run: pytest -q --cov=app --cov-report=term-missing --cov-fail-under=85
