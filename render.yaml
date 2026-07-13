@@ -107,6 +107,40 @@ services:
       - path: /*
         name: Cache-Control
         value: public, max-age=0, must-revalidate
+      # Security headers on the browser-executing surface. The backend's CSP
+      # only covers API (JSON) responses; the static app had none. These five
+      # are safe for any SPA and deliver most of the hardening.
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      # no-referrer also stops the password-reset ?token= leaking via Referer.
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), interest-cohort=()
+      # ── Content-Security-Policy — ENABLE AFTER A BUILD TEST ──
+      # A strict script-src is the real XSS defense, but a wrong CSP white-
+      # screens the app, and this couldn't be validated in the authoring env
+      # (Node 10). Before enabling: `npm run build && npm run preview`, confirm
+      # the app loads with no CSP violations in the console, and adjust
+      # connect-src to your actual API + Sentry origins. Vite's prod build may
+      # need 'unsafe-inline' in style-src (injected styles); it should NOT need
+      # it in script-src. Then uncomment:
+      # - path: /*
+      #   name: Content-Security-Policy
+      #   value: >-
+      #     default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+      #     img-src 'self' data: https:; font-src 'self' data:;
+      #     connect-src 'self' https://YOUR-API.onrender.com https://*.ingest.sentry.io;
+      #     frame-ancestors 'none'; base-uri 'self'; object-src 'none'
     routes:
       # SPA fallback: every path serves index.html so client-side routing works.
       - type: rewrite
