@@ -54,6 +54,7 @@ export default function DealInbox() {
       },
       {
         onSuccess: () => {
+          setShowAddModal(false);  // close only on success — keeps input on failure
           toast({ title: "Deal added", description: `${form.name} has been added to your inbox.` });
         },
         onError: () => {
@@ -337,7 +338,7 @@ export default function DealInbox() {
           </AnimatePresence>
         </div>
       </div>
-      <AddDealModal open={showAddModal} onOpenChange={setShowAddModal} onAdd={handleAddDeal} />
+      <AddDealModal open={showAddModal} onOpenChange={setShowAddModal} onAdd={handleAddDeal} submitting={createDeal.isPending} />
     </Layout>
   );
 }

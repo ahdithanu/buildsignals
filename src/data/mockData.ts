@@ -563,25 +563,3 @@ export function getScoreBg(score: number): string {
   return 'bg-destructive/10 text-destructive';
 }
 
-export function getRiskColor(risk: string): string {
-  switch (risk) {
-    case 'low': return 'bg-success/10 text-success';
-    case 'medium': return 'bg-warning/10 text-warning';
-    case 'high': return 'bg-destructive/10 text-destructive';
-    default: return 'bg-muted text-muted-foreground';
-  }
-}
-
-export function getStatusColor(status: string): string {
-  switch (status) {
-    case 'new': return 'bg-info/10 text-info';
-    case 'qualified': return 'bg-accent/15 text-accent-foreground';
-    case 'underwriting': return 'bg-warning/10 text-warning';
-    case 'ic-review': return 'bg-purple-100 text-purple-700';
-    case 'loi-sent': return 'bg-success/10 text-success';
-    case 'psa': return 'bg-emerald-100 text-emerald-700';
-    case 'closing': return 'bg-success/15 text-success';
-    case 'dead': return 'bg-muted text-muted-foreground';
-    default: return 'bg-muted text-muted-foreground';
-  }
-}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,19 +11,31 @@ interface AddDealModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd: (deal: { name: string; address: string; market: string; assetClass: string; askingPrice: string; source: string }) => void;
+  /** True while the create request is in flight — disables submit and the
+   *  parent closes the modal on success. */
+  submitting?: boolean;
 }
 
-export function AddDealModal({ open, onOpenChange, onAdd }: AddDealModalProps) {
-  const [form, setForm] = useState({ name: '', address: '', market: '', assetClass: '', askingPrice: '', source: '' });
+const EMPTY_FORM = { name: '', address: '', market: '', assetClass: '', askingPrice: '', source: '' };
+
+export function AddDealModal({ open, onOpenChange, onAdd, submitting = false }: AddDealModalProps) {
+  const [form, setForm] = useState(EMPTY_FORM);
+
+  // Reset when the modal closes so a reopen starts clean — and so input isn't
+  // lost mid-flight (the parent closes only on success).
+  useEffect(() => {
+    if (!open) setForm(EMPTY_FORM);
+  }, [open]);
 
   const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;  // guard against double-submit while in flight
     if (!form.name || !form.market || !form.assetClass) return;
     onAdd(form);
-    setForm({ name: '', address: '', market: '', assetClass: '', askingPrice: '', source: '' });
-    onOpenChange(false);
+    // Do NOT close/reset here — the parent closes on the mutation's success,
+    // so a failed create keeps the modal open with the user's input intact.
   };
 
   return (
@@ -72,11 +84,11 @@ export function AddDealModal({ open, onOpenChange, onAdd }: AddDealModalProps) {
             </div>
           </div>
           <DialogFooter>
-            <button type="button" onClick={() => onOpenChange(false)} className="rounded-lg border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors">
+            <button type="button" onClick={() => onOpenChange(false)} className="rounded-lg border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               Cancel
             </button>
-            <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-              Add Deal
+            <button type="submit" disabled={submitting} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
+              {submitting ? 'Adding…' : 'Add Deal'}
             </button>
           </DialogFooter>
         </form>

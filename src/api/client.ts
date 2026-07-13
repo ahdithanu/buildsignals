@@ -163,6 +163,13 @@ export class ApiClient {
       const newToken = await attemptRefresh(this.baseUrl);
       if (newToken) {
         response = await this.doFetch(endpoint, options, withContentType);
+        // If the retry with a fresh token STILL 401s (rotated/revoked token,
+        // or an authz-level 401), we're genuinely logged out — don't leave
+        // the app half-authenticated. Clear and bounce to login.
+        if (response.status === 401) {
+          setAccessToken(null);
+          if (unauthorizedHandler) unauthorizedHandler();
+        }
       } else {
         // Refresh failed — we're really logged out.
         setAccessToken(null);

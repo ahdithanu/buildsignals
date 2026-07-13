@@ -31,6 +31,7 @@ export default function MemoGenerator() {
   const [selectedDealId, setSelectedDealId] = useState('');
   const [localMemo, setLocalMemo] = useState<Record<string, string>>({});
   const [activeSection, setActiveSection] = useState<string>('executiveSummary');
+  const [regeneratingKey, setRegeneratingKey] = useState<string | null>(null);
   const generateMemo = useGenerateMemo();
   const updateMemo = useUpdateMemo();
   const { toast } = useToast();
@@ -82,15 +83,22 @@ export default function MemoGenerator() {
   };
 
   const handleRegenerate = (key: string) => {
+    if (regeneratingKey) return;  // one section at a time — avoids interleaved writes
+    const prior = localMemo[key] ?? '';  // snapshot to restore on failure/empty
+    setRegeneratingKey(key);
     setLocalMemo(prev => ({ ...prev, [key]: 'Regenerating...' }));
     generateMemo.mutate(deal.id, {
       onSuccess: (data) => {
         const section = (data as unknown as Record<string, string>)[key];
-        setLocalMemo(prev => ({ ...prev, [key]: section || prev[key] }));
+        // Fall back to the PRIOR content (not the "Regenerating..." placeholder)
+        // if the response has nothing for this section.
+        setLocalMemo(prev => ({ ...prev, [key]: section || prior }));
       },
       onError: () => {
+        setLocalMemo(prev => ({ ...prev, [key]: prior }));  // restore — no stuck placeholder
         toast({ title: "Regeneration failed", description: "Could not regenerate section.", variant: "destructive" });
       },
+      onSettled: () => setRegeneratingKey(null),
     });
   };
 
@@ -173,9 +181,11 @@ export default function MemoGenerator() {
                       />
                       <button
                         onClick={() => handleRegenerate(s.key)}
-                        className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        disabled={regeneratingKey !== null}
+                        className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                       >
-                        <RefreshCw className="h-3 w-3" /> Regenerate section
+                        <RefreshCw className={`h-3 w-3 ${regeneratingKey === s.key ? 'animate-spin' : ''}`} />
+                        {regeneratingKey === s.key ? 'Regenerating…' : 'Regenerate section'}
                       </button>
                     </div>
                   )}
