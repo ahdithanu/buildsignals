@@ -112,8 +112,17 @@ export default function Dashboard() {
                     {(topDeals ?? []).map((deal) => (
                       <tr
                         key={deal.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open deal ${deal.name}`}
                         onClick={() => navigate(`/deal/${deal.id}`)}
-                        className="border-t cursor-pointer hover:bg-secondary/50 transition-colors"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/deal/${deal.id}`);
+                          }
+                        }}
+                        className="border-t cursor-pointer hover:bg-secondary/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       >
                         <td className="px-4 md:px-5 py-3 font-medium text-foreground">{deal.name}</td>
                         <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{(deal.market || '').split(',')[0]}</td>

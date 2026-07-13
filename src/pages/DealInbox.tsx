@@ -200,16 +200,17 @@ export default function DealInbox() {
           <div className="flex items-center gap-2 rounded-lg bg-card border px-3 py-1.5 w-full sm:w-auto">
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search deals..."
+              aria-label="Search deals"
               className="bg-transparent text-sm outline-none w-full sm:w-48 placeholder:text-muted-foreground" />
           </div>
           <button className="sm:hidden flex items-center gap-2 text-sm text-muted-foreground" onClick={() => setShowFilters(!showFilters)}>
             <Filter className="h-3.5 w-3.5" /> Filters
           </button>
           <div className={`${showFilters ? 'flex' : 'hidden'} sm:flex items-center gap-3 flex-wrap`}>
-            <select value={filterAsset} onChange={e => setFilterAsset(e.target.value)} className="rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground outline-none">
+            <select value={filterAsset} onChange={e => setFilterAsset(e.target.value)} aria-label="Filter by asset type" className="rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground outline-none">
               {assetTypes.map(t => <option key={t}>{t}</option>)}
             </select>
-            <select value={filterMarket} onChange={e => setFilterMarket(e.target.value)} className="rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground outline-none">
+            <select value={filterMarket} onChange={e => setFilterMarket(e.target.value)} aria-label="Filter by market" className="rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground outline-none">
               {markets.map(m => <option key={m}>{m}</option>)}
             </select>
           </div>
@@ -255,9 +256,18 @@ export default function DealInbox() {
                     {filtered.map((deal) => (
                       <tr
                         key={deal.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Deal ${deal.name} — press Enter to preview`}
                         onClick={() => setSelectedDeal(deal)}
                         onDoubleClick={() => navigate(`/deal/${deal.id}`)}
-                        className={`border-t cursor-pointer transition-colors ${selectedDeal?.id === deal.id ? 'bg-secondary' : 'hover:bg-secondary/30'}`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedDeal(deal);
+                          }
+                        }}
+                        className={`border-t cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${selectedDeal?.id === deal.id ? 'bg-secondary' : 'hover:bg-secondary/30'}`}
                       >
                         <td className="px-4 md:px-5 py-3 font-medium text-foreground">{deal.name}</td>
                         <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{deal.source}</td>
@@ -290,7 +300,7 @@ export default function DealInbox() {
                     <h3 className="text-sm font-semibold text-foreground truncate">{selectedDeal.name}</h3>
                     <p className="text-xs text-muted-foreground mt-1 truncate">{selectedDeal.address}</p>
                   </div>
-                  <button onClick={() => setSelectedDeal(null)} className="text-muted-foreground hover:text-foreground shrink-0 ml-2">
+                  <button onClick={() => setSelectedDeal(null)} aria-label="Close preview" className="text-muted-foreground hover:text-foreground shrink-0 ml-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
                     <X className="h-4 w-4" />
                   </button>
                 </div>

@@ -235,7 +235,7 @@ export default function MemoGenerator() {
 
                   <div className="border-t pt-4">
                     <p className="text-xs text-muted-foreground text-center">
-                      Confidential — Prepared by Apex Capital | Deal Engine
+                      Confidential — Prepared with DealSignal
                     </p>
                   </div>
                 </div>

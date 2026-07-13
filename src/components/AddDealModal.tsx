@@ -43,18 +43,18 @@ export function AddDealModal({ open, onOpenChange, onAdd }: AddDealModalProps) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Asset Type *</Label>
+              <Label htmlFor="deal-asset-type">Asset Type *</Label>
               <Select value={form.assetClass} onValueChange={v => update('assetClass', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger id="deal-asset-type" aria-label="Asset Type"><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   {assetTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Market *</Label>
+              <Label htmlFor="deal-market">Market *</Label>
               <Select value={form.market} onValueChange={v => update('market', v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger id="deal-market" aria-label="Market"><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
                   {marketOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                 </SelectContent>

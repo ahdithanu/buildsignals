@@ -55,7 +55,7 @@ export default function Settings() {
       <div className="p-6 max-w-[900px] mx-auto">
         <motion.div {...fadeIn} className="mb-6">
           <h2 className="text-xl font-semibold font-display text-foreground">Settings</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Configure your Deal Engine workspace</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Configure your DealSignal workspace</p>
         </motion.div>
 
         <div className="space-y-4">

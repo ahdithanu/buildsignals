@@ -25,19 +25,20 @@ export function Layout({ children }: LayoutProps) {
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
                 <input
                   type="text"
+                  aria-label="Search deals, markets, and signals"
                   placeholder="Search deals, markets, signals..."
                   className="bg-transparent text-sm outline-none w-64 placeholder:text-muted-foreground"
                 />
               </div>
               {/* Mobile search icon */}
-              <button className="md:hidden text-muted-foreground hover:text-foreground">
+              <button aria-label="Search" className="md:hidden text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
                 <Search className="h-4 w-4" />
               </button>
             </div>
             <div className="flex items-center gap-3 md:gap-4">
-              <button className="relative text-muted-foreground hover:text-foreground transition-colors">
-                <Bell className="h-4.5 w-4.5" />
-                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent" />
+              <button aria-label="Notifications" className="relative text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
+                <Bell className="h-4 w-4" />
+                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
               </button>
               {isAuthenticated && user ? (
                 <div className="flex items-center gap-2 text-sm">
