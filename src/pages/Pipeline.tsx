@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { stageLabels, formatCurrency } from "@/lib/formatters";
 import { useDeals, useMoveStage } from "@/hooks/useDeals";
@@ -26,14 +25,10 @@ export default function Pipeline() {
   const moveStage = useMoveStage();
   const { toast } = useToast();
 
-  // Local state for optimistic drag-and-drop
-  const [localDeals, setLocalDeals] = useState<Deal[] | null>(null);
-  const dealData = localDeals ?? (fetchedDeals as Deal[] | undefined) ?? [];
-
-  // Sync from server when data arrives
-  if (fetchedDeals && !localDeals) {
-    // Will set on first render after data loads
-  }
+  // Board is driven directly by server data. The optimistic move + rollback
+  // now lives in useMoveStage (React-Query cache), so there's no parallel
+  // local-state shadow that would freeze the board or diverge from the server.
+  const dealData = (fetchedDeals as Deal[] | undefined) ?? [];
 
   const grouped = columns.map(col => ({
     key: col,
@@ -44,41 +39,28 @@ export default function Pipeline() {
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
     if (!destination) return;
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
     const sourceCol = source.droppableId as Deal['status'];
     const destCol = destination.droppableId as Deal['status'];
-    const currentDeals = [...dealData];
+    // Only a stage change is persisted; intra-column ordering isn't a stored
+    // concept, so a same-column drop is a no-op (the board re-renders from
+    // server order).
+    if (sourceCol === destCol) return;
 
-    const sourceDeals = currentDeals.filter((d) => d.status === sourceCol);
-    const [moved] = sourceDeals.splice(source.index, 1);
-    const updatedDeal = { ...moved, status: destCol };
+    const moved = grouped.find(g => g.key === sourceCol)?.deals[source.index];
+    if (!moved) return;
 
-    if (sourceCol === destCol) {
-      sourceDeals.splice(destination.index, 0, updatedDeal);
-      const otherDeals = currentDeals.filter((d) => d.status !== sourceCol);
-      setLocalDeals([...otherDeals, ...sourceDeals]);
-    } else {
-      const destDeals = currentDeals.filter((d) => d.status === destCol);
-      destDeals.splice(destination.index, 0, updatedDeal);
-      const otherDeals = currentDeals.filter((d) => d.status !== sourceCol && d.status !== destCol);
-      setLocalDeals([...otherDeals, ...sourceDeals, ...destDeals]);
-
-      // Call API
-      moveStage.mutate(
-        { dealId: moved.id, data: { targetStage: destCol } },
-        {
-          onError: () => {
-            toast({ title: "Move failed", description: "Could not update stage on server.", variant: "destructive" });
-          },
-        }
-      );
-
-      toast({
-        title: "Deal moved",
-        description: `${moved.name} → ${stageLabels[destCol]}`,
-      });
-    }
+    moveStage.mutate(
+      { dealId: moved.id, data: { targetStage: destCol } },
+      {
+        onSuccess: () => {
+          toast({ title: "Deal moved", description: `${moved.name} → ${stageLabels[destCol]}` });
+        },
+        onError: () => {
+          toast({ title: "Move failed", description: "Could not update stage — the change was reverted.", variant: "destructive" });
+        },
+      }
+    );
   };
 
   const analyticsData = columns.filter(c => c !== 'dead').map(col => ({

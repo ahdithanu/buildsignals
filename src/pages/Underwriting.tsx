@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/Layout";
 import { formatCurrency } from "@/lib/formatters";
 import { useDeals } from "@/hooks/useDeals";
-import { useAssumptions, useUpdateAssumptions, useOutputs, useRecalculate } from "@/hooks/useAssumptions";
+import { useAssumptions, useUpdateAssumptions, useOutputs } from "@/hooks/useAssumptions";
 import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
 import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -29,15 +29,19 @@ export default function Underwriting() {
   // Fetch assumptions and outputs from dedicated endpoints
   const { data: backendAssumptions, isLoading: assumptionsLoading } = useAssumptions(selectedDealId);
   const { data: backendOutputs, isLoading: outputsLoading } = useOutputs(selectedDealId);
-  const recalculate = useRecalculate();
   const updateAssumptions = useUpdateAssumptions();
 
-  // Local assumptions state for the sliders, seeded from backend
+  // Local assumptions state for the sliders, seeded from backend.
   const [localAssumptions, setLocalAssumptions] = useState<Partial<Assumptions>>({});
 
+  // Seed ONCE per deal. Previously this re-ran on every backendAssumptions
+  // refetch (e.g. window focus), silently wiping the user's unsaved slider
+  // edits. The ref makes it seed only when the selected deal actually changes.
+  const seededDealRef = useRef<string | null>(null);
   useEffect(() => {
-    if (backendAssumptions) {
+    if (backendAssumptions && seededDealRef.current !== selectedDealId) {
       setLocalAssumptions({ ...backendAssumptions });
+      seededDealRef.current = selectedDealId;
     }
   }, [selectedDealId, backendAssumptions]);
 
@@ -65,7 +69,11 @@ export default function Underwriting() {
 
   const handleRecalculate = () => {
     if (!selectedDealId || !assumptions) return;
-    recalculate.mutate({ dealId: selectedDealId, data: { assumptions } });
+    // The backend recomputes outputs from SAVED assumptions, so the current
+    // on-screen slider values must be persisted first. PUT /assumptions saves
+    // AND auto-recalculates outputs — so "Recalculate" now reflects what the
+    // user actually sees, instead of the last-saved values.
+    updateAssumptions.mutate({ dealId: selectedDealId, data: assumptions });
   };
 
   const handleSaveAssumptions = () => {
@@ -130,10 +138,10 @@ export default function Underwriting() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleRecalculate}
-                      disabled={recalculate.isPending}
+                      disabled={updateAssumptions.isPending}
                       className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
-                      {recalculate.isPending ? 'Calculating...' : 'Recalculate'}
+                      {updateAssumptions.isPending ? 'Calculating...' : 'Recalculate'}
                     </button>
                     <button
                       onClick={handleSaveAssumptions}

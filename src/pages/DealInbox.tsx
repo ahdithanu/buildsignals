@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { DealScoreBadge, StatusBadge } from "@/components/DealBadges";
 import { formatCurrency, stageLabels } from "@/lib/formatters";
 import { useDeals, useCreateDeal } from "@/hooks/useDeals";
+import { dealsApi } from "@/api/deals";
 import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
 import type { Deal } from "@/types/deal";
 import { useNavigate } from "react-router-dom";
@@ -62,38 +63,39 @@ export default function DealInbox() {
     );
   };
 
-  // Enrichment is a backend batch operation — we show a progress indicator
-  // while waiting for the API to complete, then refetch
+  // Enrich every deal via the typed API (auth + /v1 handled by apiClient).
+  // dealsApi.enrich throws on a non-2xx, so a fulfilled promise is a real
+  // success — we count them and report accurately instead of always claiming
+  // "complete" (the old raw-fetch version fired unauthenticated, ignored
+  // res.ok, and toasted success even when every request 401'd).
   const handleEnrichment = async () => {
     if (enriching || deals.length === 0) return;
     setEnriching(true);
     setEnrichProgress(0);
 
-    try {
-      // Enrich all deals via their individual endpoints
-      const enrichPromises = deals.map(d =>
-        fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/deals/${d.id}/enrich`, { method: 'POST' })
-      );
+    let completed = 0;
+    const results = await Promise.allSettled(
+      deals.map(d =>
+        dealsApi.enrich(d.id).finally(() => {
+          completed++;
+          setEnrichProgress(Math.round((completed / deals.length) * 100));
+        })
+      )
+    );
 
-      // Track progress as promises resolve
-      let completed = 0;
-      await Promise.allSettled(
-        enrichPromises.map(p =>
-          p.then(res => {
-            completed++;
-            setEnrichProgress(Math.round((completed / deals.length) * 100));
-            return res;
-          })
-        )
-      );
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    const failed = deals.length - succeeded;
 
-      toast({ title: "AI Enrichment Complete", description: `${deals.length} deals enriched.` });
-      refetch();
-    } catch {
-      toast({ title: "Enrichment failed", description: "Could not reach the backend.", variant: "destructive" });
-    } finally {
-      setEnriching(false);
-      setEnrichProgress(0);
+    refetch();
+    setEnriching(false);
+    setEnrichProgress(0);
+
+    if (failed === 0) {
+      toast({ title: "AI Enrichment complete", description: `${succeeded} deal${succeeded === 1 ? '' : 's'} enriched.` });
+    } else if (succeeded === 0) {
+      toast({ title: "Enrichment failed", description: `Could not enrich ${failed} deal${failed === 1 ? '' : 's'}.`, variant: "destructive" });
+    } else {
+      toast({ title: "Enrichment partially complete", description: `${succeeded} enriched, ${failed} failed.`, variant: "destructive" });
     }
   };
 
