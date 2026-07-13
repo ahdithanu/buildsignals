@@ -12,7 +12,7 @@ pydantic==2.13.4
 email-validator==2.3.0
 python-dateutil==2.9.0
 alembic==1.13.1
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.12
 # passlib removed — it was unmaintained (last release 1.7.4, 2020) and its
 # backend self-test crashed under bcrypt 5. app/services/security.py now calls
 # bcrypt directly. Existing stored hashes still verify (validated: old
