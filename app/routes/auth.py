@@ -4,6 +4,7 @@ from uuid import uuid4
 import pyotp
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import (
@@ -41,6 +42,7 @@ from app.services.security import (
     create_access_token,
     create_refresh_token,
     decode_refresh_token,
+    dummy_verify,
     hash_password,
     verify_password,
 )
@@ -205,7 +207,15 @@ def register(
         is_default=True,
     )
     db.add(membership)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two concurrent registrations with the same email both pass the
+        # check-then-insert above; the unique constraint on users.email lets
+        # exactly one win. The loser lands here — surface the same clean 409
+        # as the pre-check rather than a 500.
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Email already registered")
 
     log_change(
         db, "user", user.id, "register",
@@ -265,7 +275,14 @@ def login(
         )
 
     user = db.query(User).filter(User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.password_hash):
+    if user:
+        password_ok = verify_password(payload.password, user.password_hash)
+    else:
+        # Burn the same bcrypt CPU as a real verify so a missing email can't be
+        # distinguished from a wrong password by response timing.
+        dummy_verify()
+        password_ok = False
+    if not user or not password_ok:
         # Count this against the account, not just the IP.
         lockout.record_failure(email_key)
         raise HTTPException(

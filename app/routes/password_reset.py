@@ -250,12 +250,27 @@ def reset_password(
     except PasswordPolicyError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
+    # Atomically claim the token: flip used_at from NULL in a single UPDATE.
+    # Only the first of N concurrent requests gets rowcount 1; losers get 0
+    # and the same generic 400. Closes the check-then-set race (two requests
+    # both seeing used_at IS NULL and both resetting / double-bumping
+    # token_version).
+    claimed = (
+        db.query(PasswordResetToken)
+        .filter(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.used_at.is_(None),
+        )
+        .update({"used_at": _utcnow()}, synchronize_session=False)
+    )
+    if claimed == 0:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
     # Commit the new password + revoke every outstanding session.
     user.password_hash = hash_password(payload.new_password)
     user.token_version = (user.token_version or 0) + 1
-    row.used_at = _utcnow()
     db.add(user)
-    db.add(row)
 
     # Successful reset = legitimate access proven via email. Drop any
     # lingering failed-login counter so the user isn't immediately locked

@@ -53,6 +53,23 @@ def verify_password(plain: str, hashed: str) -> bool:
         return False
 
 
+# A real bcrypt hash (cost 12) used only to burn the same ~CPU as a genuine
+# verify when a login targets a non-existent email. Without this, the missing
+# user short-circuits before bcrypt runs and the fast response reveals which
+# emails are registered (timing-based user enumeration). The plaintext behind
+# it is irrelevant — we discard the result.
+_DUMMY_HASH = "$2b$12$C6UzMDM.H6dfI/f/IKcEeO3Q0m3F.p3nJ0aYtQ8kFqf3zJ0mZ0aZ2"
+
+
+def dummy_verify() -> None:
+    """Run a throwaway bcrypt verify to keep login timing constant when the
+    user lookup missed. Call it in the no-such-user branch."""
+    try:
+        bcrypt.checkpw(b"timing-equalizer", _DUMMY_HASH.encode("ascii"))
+    except (ValueError, TypeError):
+        pass
+
+
 # ── JWT ─────────────────────────────────────────────────────────────────────
 
 def create_access_token(

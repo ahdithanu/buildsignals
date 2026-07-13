@@ -41,7 +41,7 @@ class DealCreate(BaseModel):
     year_built: Optional[int] = Field(None, ge=1800, le=2100)
     asking_price: Optional[float] = Field(None, ge=0)
     source: Optional[str] = Field(None, max_length=100)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=10000)
 
 
 # ── Update (all optional) ───────────────────────────────────────────────────
@@ -60,7 +60,7 @@ class DealUpdate(BaseModel):
     year_built: Optional[int] = Field(None, ge=1800, le=2100)
     asking_price: Optional[float] = Field(None, ge=0)
     source: Optional[str] = Field(None, max_length=100)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=10000)
 
 
 # ── Response ─────────────────────────────────────────────────────────────────
