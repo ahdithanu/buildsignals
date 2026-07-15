@@ -7,13 +7,13 @@ from pydantic import BaseModel, ConfigDict, Field
 class MemoCreate(BaseModel):
     deal_id: str
     title: Optional[str] = Field(None, max_length=500)
-    content: Optional[str] = None
+    content: Optional[str] = Field(None, max_length=100000)
     version: int = 1
 
 
 class MemoUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=500)
-    content: Optional[str] = None
+    content: Optional[str] = Field(None, max_length=100000)
     version: Optional[int] = None
 
 

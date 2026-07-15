@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class DealDistributionCreate(BaseModel):
     recipient_name: str = Field(..., min_length=1, max_length=255)
     recipient_email: str = Field(..., min_length=1, max_length=255)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=5000)
 
 
 class DealDistributionResponse(BaseModel):

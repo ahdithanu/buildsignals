@@ -20,7 +20,7 @@ class ContactCreate(BaseModel):
     phone: Optional[str] = Field(None, max_length=50)
     company: Optional[str] = Field(None, max_length=255)
     status: ContactStatus = ContactStatus.not_contacted
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=10000)
 
 
 class ContactUpdate(BaseModel):
@@ -30,7 +30,7 @@ class ContactUpdate(BaseModel):
     phone: Optional[str] = Field(None, max_length=50)
     company: Optional[str] = Field(None, max_length=255)
     status: Optional[ContactStatus] = None
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=10000)
 
 
 class ContactResponse(BaseModel):

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -34,8 +34,8 @@ class MemoResponse(BaseModel):
 
 
 class MemoUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=500)
+    content: Optional[str] = Field(None, max_length=100000)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────

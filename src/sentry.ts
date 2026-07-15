@@ -16,6 +16,30 @@
  */
 import * as Sentry from "@sentry/react";
 
+// Query params that must never reach Sentry. The password-reset token lives
+// in `?token=` and browserTracingIntegration records navigation URLs — so
+// without this it would be sent to Sentry (sendDefaultPii:false does NOT
+// scrub query strings). `Referrer-Policy: no-referrer` covers the Referer
+// leak; this covers the Sentry-capture leak.
+const SENSITIVE_QS = ["token", "code", "access_token", "refresh_token", "reset"];
+
+function scrubUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  try {
+    const u = new URL(url, window.location.origin);
+    let changed = false;
+    for (const k of SENSITIVE_QS) {
+      if (u.searchParams.has(k)) {
+        u.searchParams.set(k, "[redacted]");
+        changed = true;
+      }
+    }
+    return changed ? u.toString() : url;
+  } catch {
+    return url;
+  }
+}
+
 export function initSentry(): void {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!dsn) return;
@@ -33,6 +57,27 @@ export function initSentry(): void {
     integrations: [
       Sentry.browserTracingIntegration(),
     ],
+    // Redact sensitive query params from error events.
+    beforeSend(event) {
+      if (event.request?.url) event.request.url = scrubUrl(event.request.url);
+      return event;
+    },
+    // ...and from performance transactions (the tracing URLs).
+    beforeSendTransaction(event) {
+      if (event.request?.url) event.request.url = scrubUrl(event.request.url);
+      if (event.transaction) event.transaction = scrubUrl(event.transaction) ?? event.transaction;
+      return event;
+    },
+    // ...and from navigation breadcrumbs (route changes carry from/to URLs).
+    beforeBreadcrumb(breadcrumb) {
+      const data = breadcrumb.data;
+      if (data) {
+        if (typeof data.url === "string") data.url = scrubUrl(data.url);
+        if (typeof data.to === "string") data.to = scrubUrl(data.to);
+        if (typeof data.from === "string") data.from = scrubUrl(data.from);
+      }
+      return breadcrumb;
+    },
   });
 }
 

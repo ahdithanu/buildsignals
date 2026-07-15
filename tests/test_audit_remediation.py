@@ -53,6 +53,30 @@ def test_signal_description_over_limit_is_422(client):
     assert r.status_code == 422
 
 
+def test_contact_notes_over_limit_is_422(client):
+    reg = _register(client)
+    deal = client.post("/deals", headers=_auth(reg["access_token"]), json={"name": "D"})
+    deal_id = deal.json()["id"]
+    r = client.post(
+        f"/deals/{deal_id}/contacts",
+        headers=_auth(reg["access_token"]),
+        json={"name": "C", "notes": "x" * 10_001},
+    )
+    assert r.status_code == 422
+
+
+def test_memo_content_over_limit_is_422(client):
+    reg = _register(client)
+    deal = client.post("/deals", headers=_auth(reg["access_token"]), json={"name": "D"})
+    deal_id = deal.json()["id"]
+    r = client.put(
+        f"/deals/{deal_id}/memo",
+        headers=_auth(reg["access_token"]),
+        json={"content": "x" * 100_001},
+    )
+    assert r.status_code == 422
+
+
 # ── M-1: login on a nonexistent email behaves identically to wrong password ──
 
 def test_login_nonexistent_email_returns_generic_401(client):
