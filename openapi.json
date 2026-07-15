@@ -706,6 +706,7 @@
           "locations": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {
@@ -756,6 +757,7 @@
           "notes": {
             "anyOf": [
               {
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -915,6 +917,7 @@
           "notes": {
             "anyOf": [
               {
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -1105,6 +1108,7 @@
           "notes": {
             "anyOf": [
               {
+                "maxLength": 10000,
                 "type": "string"
               },
               {
@@ -1506,6 +1510,7 @@
           "notes": {
             "anyOf": [
               {
+                "maxLength": 5000,
                 "type": "string"
               },
               {
@@ -2332,6 +2337,7 @@
           "content": {
             "anyOf": [
               {
+                "maxLength": 100000,
                 "type": "string"
               },
               {
@@ -2343,6 +2349,7 @@
           "title": {
             "anyOf": [
               {
+                "maxLength": 500,
                 "type": "string"
               },
               {
