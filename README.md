@@ -6,6 +6,10 @@ React/Vite frontend, Postgres.
 
 > **Status:** pilot. Security, auth, and CI are production-grade; see
 > `docs/` for the operational picture and known gaps.
+>
+> ⚠️ **Frontend changes pending validation:** a batch of frontend fixes was
+> authored on Node 10 and hasn't been built/run. Before shipping to users,
+> work through [VALIDATION.md](VALIDATION.md) on a Node 18+ machine.
 
 ---
 
