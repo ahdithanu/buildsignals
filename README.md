@@ -141,6 +141,7 @@ docs/                runbooks and operational docs — see below
 | Doc | What |
 |---|---|
 | [docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md) | One-time Render provisioning from scratch |
+| [docs/runbooks/deploy-aws.md](docs/runbooks/deploy-aws.md) | AWS deploy (App Runner + RDS + CloudFront) |
 | [docs/runbooks/deploy.md](docs/runbooks/deploy.md) | Routine deploy, smoke test, rollback |
 | [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | Sev levels, on-call, comms, postmortem |
 | [docs/backups.md](docs/backups.md) | Backup & restore, RPO/RTO, DR drills |
@@ -157,7 +158,10 @@ docs/                runbooks and operational docs — see below
 
 The whole stack is described by [`render.yaml`](render.yaml) — Postgres, Redis,
 the API, and the static frontend. **Standing it up the first time:**
-[docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md).
+[docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md). **On AWS**
+(App Runner + RDS + CloudFront) instead:
+[docs/runbooks/deploy-aws.md](docs/runbooks/deploy-aws.md) — the `Dockerfile`
+runs there.
 
 After that, merges to `main` auto-deploy on Render; migrations run
 automatically in the pre-deploy step (`alembic upgrade head`). **Read
