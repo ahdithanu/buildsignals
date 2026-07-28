@@ -77,4 +77,48 @@ describe("<ParcelMap>", () => {
 
     expect(screen.getByText("Boundary")).toBeInTheDocument();
   });
+
+  it("renders candidate footprint boundaries from map points", () => {
+    render(
+      <ParcelMap
+        title="Search Map"
+        center={{
+          label: "Signal anchor",
+          latitude: 30.2672,
+          longitude: -97.7431,
+        }}
+        radiusMiles={1}
+        points={[
+          {
+            id: "candidate-1",
+            label: "Parcel A",
+            latitude: 30.2678,
+            longitude: -97.7427,
+            tone: "highlight",
+            boundary: {
+              type: "Polygon",
+              coordinates: [[
+                [-97.7430, 30.2674],
+                [-97.7424, 30.2674],
+                [-97.7424, 30.2680],
+                [-97.7430, 30.2680],
+                [-97.7430, 30.2674],
+              ]],
+            },
+          },
+          {
+            id: "candidate-2",
+            label: "Parcel B",
+            latitude: 30.2668,
+            longitude: -97.7440,
+            tone: "candidate",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Boundary")).toBeInTheDocument();
+    expect(screen.getAllByText("Parcel A").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Parcel B").length).toBeGreaterThan(0);
+  });
 });

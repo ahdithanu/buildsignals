@@ -787,6 +787,69 @@ def test_parcel_ingestion_versions_fact_evidence(client, db, tmp_path):
     assert versions[1].raw_source_record_id == second_raw.id
 
 
+def test_parcel_snapshot_geometry_surfaces_as_boundary_geometry(db):
+    from app.models.ingestion import IngestionRun, IngestionSource, RawSourceRecord
+    from app.services.parcel_ingestion import upsert_parcel_snapshot
+
+    now = datetime.now(timezone.utc)
+    source = IngestionSource(
+        organization_id="default-org",
+        key="geometry-parcels",
+        name="Geometry Parcels",
+        adapter="arcgis",
+        record_type="parcel",
+    )
+    db.add(source)
+    db.flush()
+    run = IngestionRun(organization_id="default-org", source_id=source.id, status="completed")
+    db.add(run)
+    db.flush()
+    raw = RawSourceRecord(
+        organization_id="default-org",
+        source_id=source.id,
+        run_id=run.id,
+        external_record_id="parcel-geometry-1",
+        record_type="parcel",
+        content_hash="g" * 64,
+        payload={"pin": "0600500019"},
+        received_at=now,
+    )
+    db.add(raw)
+    db.flush()
+
+    parcel, action = upsert_parcel_snapshot(
+        db,
+        source=source,
+        raw_record=raw,
+        external_parcel_id="0600500019",
+        values={
+            "address": "125 Main St",
+            "city": "Wilmington",
+            "state": "DE",
+            "latitude": 39.8350529,
+            "longitude": -75.5210446,
+        },
+        facts=[],
+        verified_at=now,
+        attributes={
+            "geometry": {
+                "rings": [[
+                    [-75.52092528443355, 39.83522338557626],
+                    [-75.52081899307417, 39.834910673876756],
+                    [-75.52127695600264, 39.83496886694226],
+                    [-75.52116505466434, 39.83526917634252],
+                    [-75.52092528443355, 39.83522338557626],
+                ]],
+            },
+        },
+    )
+
+    assert action == "created"
+    assert parcel.boundary_geometry is not None
+    assert parcel.boundary_geometry["type"] == "Polygon"
+    assert len(parcel.boundary_geometry["coordinates"][0]) == 5
+
+
 def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     csv_path = tmp_path / "assessor.csv"
     csv_path.write_text(

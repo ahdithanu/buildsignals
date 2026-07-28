@@ -14,6 +14,7 @@ export interface ParcelMapPoint {
   href?: string;
   score?: number;
   distanceMiles?: number;
+  boundary?: unknown;
 }
 
 export interface ParcelMapCenter {
@@ -135,6 +136,37 @@ function toneClasses(tone: ParcelMapPointTone | undefined) {
   }
 }
 
+function boundaryStyles(tone: ParcelMapPointTone | undefined) {
+  switch (tone) {
+    case 'anchor':
+      return { fill: 'rgba(59, 130, 246, 0.12)', stroke: 'rgba(59, 130, 246, 0.75)' };
+    case 'highlight':
+      return { fill: 'rgba(34, 197, 94, 0.16)', stroke: 'rgba(34, 197, 94, 0.85)' };
+    default:
+      return { fill: 'rgba(15, 23, 42, 0.08)', stroke: 'rgba(15, 23, 42, 0.35)' };
+  }
+}
+
+function ringsToPaths(
+  rings: BoundaryRing[],
+  centerLatitude: number,
+  centerLongitude: number,
+  extentMiles: number,
+) {
+  return rings.map((ring) => {
+    const path = ring
+      .map(([longitude, latitude], index) => {
+        const point = toSvgPoint(
+          projectCoordinate(latitude, longitude, centerLatitude, centerLongitude),
+          extentMiles,
+        );
+        return `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+      })
+      .join(' ');
+    return `${path} Z`;
+  });
+}
+
 export function ParcelMap({
   center,
   points = [],
@@ -145,10 +177,33 @@ export function ParcelMap({
   className,
   emptyLabel = 'Boundary data is not attached yet.',
 }: ParcelMapProps) {
-  const rings = useMemo(() => extractBoundaryRings(boundary), [boundary]);
+  const primaryRings = useMemo(() => extractBoundaryRings(boundary), [boundary]);
+  const pointBoundaries = useMemo(
+    () => points.flatMap((point) => {
+      const rings = extractBoundaryRings(point.boundary);
+      return rings.map((ring, ringIndex) => ({
+        id: `${point.id}-${ringIndex}`,
+        tone: point.tone,
+        ring,
+      }));
+    }),
+    [points],
+  );
+  const allBoundaryRings = useMemo(
+    () => [
+      ...primaryRings,
+      ...pointBoundaries.map((entry) => entry.ring),
+    ],
+    [pointBoundaries, primaryRings],
+  );
   const projectedBoundary = useMemo(
-    () => rings.flatMap((ring) => ring.map(([longitude, latitude]) => projectCoordinate(latitude, longitude, center.latitude, center.longitude))),
-    [center.latitude, center.longitude, rings],
+    () => allBoundaryRings.flatMap((ring) => ring.map(([longitude, latitude]) => projectCoordinate(
+      latitude,
+      longitude,
+      center.latitude,
+      center.longitude,
+    ))),
+    [allBoundaryRings, center.latitude, center.longitude],
   );
   const projectedPoints = useMemo(
     () => points.map((point) => ({
@@ -163,15 +218,16 @@ export function ParcelMap({
     return Math.max(radiusMiles ?? 0, furthest * 1.15, 0.35);
   }, [projectedBoundary, projectedPoints, radiusMiles]);
   const centerPoint = toSvgPoint({ x: 0, y: 0 }, extentMiles);
-  const boundaryPaths = rings.map((ring) => {
-    const path = ring
-      .map(([longitude, latitude], index) => {
-        const point = toSvgPoint(projectCoordinate(latitude, longitude, center.latitude, center.longitude), extentMiles);
-        return `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
-      })
-      .join(' ');
-    return `${path} Z`;
+  const primaryBoundaryPaths = ringsToPaths(primaryRings, center.latitude, center.longitude, extentMiles);
+  const pointBoundaryPaths = pointBoundaries.flatMap((entry) => {
+    const styles = boundaryStyles(entry.tone);
+    return ringsToPaths([entry.ring], center.latitude, center.longitude, extentMiles).map((path) => ({
+      id: entry.id,
+      path,
+      ...styles,
+    }));
   });
+  const hasBoundary = primaryBoundaryPaths.length > 0 || pointBoundaryPaths.length > 0;
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -188,7 +244,7 @@ export function ParcelMap({
             <Target className="h-3.5 w-3.5" />
             Center
           </span>
-          {boundaryPaths.length > 0 ? (
+          {hasBoundary ? (
             <span className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1">
               <span className="h-2 w-2 rounded-full bg-emerald-600" />
               Boundary
@@ -219,9 +275,18 @@ export function ParcelMap({
             strokeDasharray="4 4"
             className="text-border"
           />
-          {boundaryPaths.map((path, index) => (
+          {pointBoundaryPaths.map((entry) => (
             <path
-              key={`${index}-${path.slice(0, 12)}`}
+              key={entry.id}
+              d={entry.path}
+              fill={entry.fill}
+              stroke={entry.stroke}
+              strokeWidth="1.5"
+            />
+          ))}
+          {primaryBoundaryPaths.map((path, index) => (
+            <path
+              key={`primary-${index}-${path.slice(0, 12)}`}
               d={path}
               fill="rgba(34, 197, 94, 0.12)"
               stroke="rgba(34, 197, 94, 0.75)"
@@ -276,7 +341,7 @@ export function ParcelMap({
             {point.subtitle && <span className="text-[10px] opacity-70">{point.subtitle}</span>}
           </span>
         ))}
-        {points.length === 0 && boundaryPaths.length === 0 && (
+        {points.length === 0 && !hasBoundary && (
           <span className="inline-flex items-center rounded-md border bg-background px-2 py-1">
             {emptyLabel}
           </span>

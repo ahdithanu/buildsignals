@@ -311,8 +311,8 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
     tone: index === 0 ? 'highlight' : 'candidate',
     subtitle: `${Math.round(candidate.score)} score`,
     distanceMiles: candidate.distance_miles,
+    boundary: candidate.parcel.boundary_geometry ?? undefined,
   })) ?? [];
-  const highlightedBoundary = bestCandidate?.parcel.boundary_geometry ?? undefined;
   const isLoading = history.isLoading || (!!history.data?.length && search.isLoading);
   const error = create.error || history.error || search.error;
   const canExport = !!latest && latest.candidates.length > 0;
@@ -516,7 +516,6 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
               }}
               radiusMiles={radius}
               points={mapPoints}
-              boundary={highlightedBoundary}
               emptyLabel="Run a search to plot nearby parcels."
             />
           )}
