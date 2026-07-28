@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 revision = "20260704_0001"
-down_revision = "003"
+down_revision = "006_add_password_reset_tokens"
 branch_labels = None
 depends_on = None
 
