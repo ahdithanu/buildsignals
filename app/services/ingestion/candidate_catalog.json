@@ -1,0 +1,666 @@
+[
+  {
+    "key": "washington_state_lcb_local_authority_letters",
+    "name": "Washington State LCB Local Authority Letters",
+    "adapter": "socrata",
+    "record_type": "permit",
+    "jurisdiction": "Washington State",
+    "base_url": "https://data.wa.gov/resource/vgcw-qfjm.json",
+    "official_landing_page": "https://data.wa.gov/Public-Safety/Local-Authority-Letters/vgcw-qfjm",
+    "license": "Public Domain",
+    "status": "operational_retry",
+    "blocker_summary": "Official row API retries returned HTTP 503 on July 18, 2026; do not promote until a live row canary succeeds against the public endpoint.",
+    "early_warning_value": "Statewide pre-opening liquor, restaurant, grocery, and cannabis opening-intent context before public opening activity.",
+    "candidate_source_fields": [
+      "license",
+      "ubi",
+      "application_date",
+      "local_authority_posted_date",
+      "application_type",
+      "licensee_name",
+      "trade_name",
+      "address",
+      "city",
+      "county",
+      "zip",
+      "privilege_descriptions"
+    ],
+    "probe_settings": {
+      "connector": {
+        "dataset_identifier": "vgcw-qfjm",
+        "page_size": 5,
+        "order_by": "application_date DESC",
+        "where": "application_date >= '{utc_today_minus_180}'"
+      },
+      "defaults": {
+        "state": "WA",
+        "approval_stage": "pre_approval",
+        "permit_type": "local_authority_letter",
+        "jurisdiction": "Washington State"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "record_filters": {
+        "application_type__contains_any": [
+          "new",
+          "change",
+          "privilege"
+        ]
+      }
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "license",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "license",
+        "canonical_field": "permit_number",
+        "is_active": true
+      },
+      {
+        "source_field": "application_date",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "local_authority_posted_date",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      },
+      {
+        "source_field": "application_type",
+        "canonical_field": "permit_subtype",
+        "is_active": true
+      },
+      {
+        "source_field": "licensee_name",
+        "canonical_field": "owner_name",
+        "is_active": true
+      },
+      {
+        "source_field": "trade_name",
+        "canonical_field": "project_name",
+        "is_active": true
+      },
+      {
+        "source_field": "address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "city",
+        "canonical_field": "city",
+        "is_active": true
+      },
+      {
+        "source_field": "zip",
+        "canonical_field": "postal_code",
+        "is_active": true
+      },
+      {
+        "source_field": "privilege_descriptions",
+        "canonical_field": "description",
+        "is_active": true
+      }
+    ],
+    "can_run_canary": true,
+    "last_checked_on": "2026-07-18",
+    "next_audit_on": "2026-07-25",
+    "notes": "Treat new license applications, location changes, and added privileges as pre-opening or opening-intent context. Suppress designated-signee and contact-like fields. Keep separate from building-permit coverage even if promoted."
+  },
+  {
+    "key": "bend_or_planning_applications",
+    "name": "Bend Planning Applications",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Bend, OR",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Planning/FeatureServer/0",
+    "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::planning-table",
+    "license": "Custom License",
+    "status": "operational_retry",
+    "blocker_summary": "Official planning applications data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "early_warning_value": "City planning applications for subdivision, site plan, and review-stage activity before permits are issued.",
+    "candidate_source_fields": [
+      "ApplicationNumber",
+      "ApplicationDate",
+      "ApplicationDescription",
+      "ProjectTypeCode",
+      "ApplicationTypeCode",
+      "ApplicationReviewStatusCode",
+      "AppStatus",
+      "AppStatusDesc",
+      "Owner",
+      "Address",
+      "TAXLOT",
+      "DecisionDate",
+      "LASTUPDATE"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 5,
+        "where": "ApplicationNumber IS NOT NULL",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PL_RecordID,ApplicationNumber,ApplicationDate,ApplicationDescription,ProjectTypeCode,ApplicationTypeCode,ApplicationReviewStatusCode,AppStatus,AppStatusDesc,Owner,Address,TAXLOT,DecisionDate,LASTUPDATE,OverallStatus",
+        "order_by_fields": "ApplicationNumber ASC",
+        "include_geometry": true,
+        "query": {
+          "f": "json"
+        }
+      },
+      "defaults": {
+        "city": "Bend",
+        "state": "OR",
+        "jurisdiction": "Bend",
+        "permit_type": "planning_application",
+        "approval_stage": "pre_approval"
+      },
+      "signal_stage": "pre_approval_and_approved"
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "permit_number",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDate",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "DecisionDate",
+        "canonical_field": "approved_at",
+        "is_active": true
+      },
+      {
+        "source_field": "AppStatusDesc",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDescription",
+        "canonical_field": "description",
+        "is_active": true
+      },
+      {
+        "source_field": "Owner",
+        "canonical_field": "owner_name",
+        "is_active": true
+      },
+      {
+        "source_field": "Address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationTypeCode",
+        "canonical_field": "permit_subtype",
+        "is_active": true
+      },
+      {
+        "source_field": "ProjectTypeCode",
+        "canonical_field": "permit_type",
+        "is_active": true
+      },
+      {
+        "source_field": "OverallStatus",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "LASTUPDATE",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      }
+    ],
+    "can_run_canary": true,
+    "last_checked_on": "2026-07-23",
+    "next_audit_on": "2026-07-30",
+    "notes": "Planning applications are the earliest durable public signal of retail, subdivision, and site-plan movement. Keep the source in candidate status until the connector is exercised against live rows and the permission review is complete."
+  },
+  {
+    "key": "bend_or_permit_applications_point",
+    "name": "Bend Permit Applications Point",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Bend, OR",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Permit_Applications_Point/FeatureServer/0",
+    "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-point",
+    "license": "Custom License",
+    "status": "operational_retry",
+    "blocker_summary": "Official permit applications data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "early_warning_value": "Permit applications with IssueDate and status signals that flag retailer buildouts and opening activity before completion.",
+    "candidate_source_fields": [
+      "ApplicationNumber",
+      "ApplicationDate",
+      "IssueDate",
+      "DateFinaled",
+      "ProjectValuation",
+      "ApplicationType",
+      "TypeDesc",
+      "ApplicationStatus",
+      "StatusDesc",
+      "BldgUse",
+      "UseDesc",
+      "Owner",
+      "Address",
+      "TAXLOT",
+      "LASTUPDATE"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 5,
+        "where": "ApplicationNumber IS NOT NULL",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,Owner,Address,TAXLOT,LASTUPDATE,OverallStatus",
+        "order_by_fields": "ApplicationNumber ASC",
+        "include_geometry": true,
+        "query": {
+          "f": "json"
+        }
+      },
+      "defaults": {
+        "city": "Bend",
+        "state": "OR",
+        "jurisdiction": "Bend",
+        "permit_type": "building_permit",
+        "approval_stage": "pre_approval"
+      },
+      "signal_stage": "pre_approval_and_approved"
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "permit_number",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDate",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "IssueDate",
+        "canonical_field": "issued_at",
+        "is_active": true
+      },
+      {
+        "source_field": "DateFinaled",
+        "canonical_field": "completed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationStatus",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "StatusDesc",
+        "canonical_field": "description",
+        "is_active": true
+      },
+      {
+        "source_field": "Owner",
+        "canonical_field": "owner_name",
+        "is_active": true
+      },
+      {
+        "source_field": "Address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationType",
+        "canonical_field": "permit_subtype",
+        "is_active": true
+      },
+      {
+        "source_field": "BldgUse",
+        "canonical_field": "permit_type",
+        "is_active": true
+      },
+      {
+        "source_field": "OverallStatus",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "LASTUPDATE",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      }
+    ],
+    "can_run_canary": true,
+    "last_checked_on": "2026-07-23",
+    "next_audit_on": "2026-07-30",
+    "notes": "This layer captures public permit lifecycle motion before completion. Keep it separate from planning-review datasets so issue-stage and under-review-stage intelligence stay distinct."
+  },
+  {
+    "key": "bend_or_permit_applications_line",
+    "name": "Bend Permit Applications Line",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Bend, OR",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Permit_Applications_Line/FeatureServer/0",
+    "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-line",
+    "license": "Custom License",
+    "status": "operational_retry",
+    "blocker_summary": "Official permit line data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "early_warning_value": "Permit applications tied to street-segment geometry, useful for pre-approval retail, corridor, and buildout detection.",
+    "candidate_source_fields": [
+      "ApplicationNumber",
+      "ApplicationDate",
+      "IssueDate",
+      "DateFinaled",
+      "SQFT",
+      "Units",
+      "ProjectValuation",
+      "ApplicationType",
+      "TypeDesc",
+      "ApplicationStatus",
+      "StatusDesc",
+      "BldgUse",
+      "UseDesc",
+      "BuildingCategory",
+      "DeptCode",
+      "Department",
+      "Owner",
+      "Address",
+      "TAXLOT",
+      "CENTERLINID",
+      "LASTUPDATE",
+      "OverallStatus"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 5,
+        "where": "ApplicationNumber IS NOT NULL",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,BuildingCategory,DeptCode,Department,Owner,Address,TAXLOT,CENTERLINID,LASTUPDATE,OverallStatus,Shape.STLength()",
+        "order_by_fields": "ApplicationNumber ASC",
+        "include_geometry": true,
+        "query": {
+          "f": "json"
+        }
+      },
+      "defaults": {
+        "city": "Bend",
+        "state": "OR",
+        "jurisdiction": "Bend",
+        "permit_type": "building_permit",
+        "approval_stage": "pre_approval"
+      },
+      "signal_stage": "pre_approval_and_approved"
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "permit_number",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDate",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "IssueDate",
+        "canonical_field": "issued_at",
+        "is_active": true
+      },
+      {
+        "source_field": "DateFinaled",
+        "canonical_field": "completed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationStatus",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "StatusDesc",
+        "canonical_field": "description",
+        "is_active": true
+      },
+      {
+        "source_field": "Owner",
+        "canonical_field": "owner_name",
+        "is_active": true
+      },
+      {
+        "source_field": "Address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationType",
+        "canonical_field": "permit_subtype",
+        "is_active": true
+      },
+      {
+        "source_field": "BldgUse",
+        "canonical_field": "permit_type",
+        "is_active": true
+      },
+      {
+        "source_field": "LASTUPDATE",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      }
+    ],
+    "can_run_canary": true,
+    "last_checked_on": "2026-07-23",
+    "next_audit_on": "2026-07-30",
+    "notes": "This geometry-backed view gives corridor-level context for development motion and is useful for identifying retail buildout patterns before a final issued permit arrives."
+  },
+  {
+    "key": "orlando_fl_planning_applications",
+    "name": "Orlando Planning Applications",
+    "adapter": "socrata",
+    "record_type": "permit",
+    "jurisdiction": "Orlando, FL",
+    "base_url": "https://data.cityoforlando.net/resource/bhxy-4rji.json",
+    "official_landing_page": "https://data.cityoforlando.net/Government/Planning-Applications/bhxy-4rji",
+    "license": "Public access with no dataset-specific license grant published",
+    "status": "legal_hold",
+    "blocker_summary": "The official metadata reports public access but no affirmative commercial copying, adaptation, redistribution, or SaaS display grant.",
+    "early_warning_value": "Daily planning-application rows with pre-approval retailer, site, and developer movement before permit issuance or public opening announcements.",
+    "candidate_source_fields": [
+      "application_number",
+      "application_type",
+      "application_status",
+      "project_name",
+      "comments",
+      "address",
+      "parcel_number",
+      "district",
+      "application_date",
+      "approval_date"
+    ],
+    "can_run_canary": false,
+    "last_checked_on": "2026-07-18",
+    "next_audit_on": "2026-08-15",
+    "notes": "Technically strong five-year rolling dataset with actionable open, hold, and hard-hold planning records. Promote only after written permission covers commercial storage, derived matching, customer display, and redistribution constraints."
+  },
+  {
+    "key": "atlanta_ga_building_permit_tracker",
+    "name": "Atlanta Building Permit Tracker",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Atlanta, GA",
+    "base_url": "https://services5.arcgis.com/5RxyIIJ9boPdptdo/ArcGIS/rest/services/Building_Permit_Tracker/FeatureServer/2/query",
+    "official_landing_page": "https://gis.atlantaga.gov/",
+    "license": "Open data portal item advertises CC-BY-SA; service metadata is blank",
+    "status": "legal_hold",
+    "blocker_summary": "The official tracker is current and exposes pre-approval statuses, but the live service has blank license metadata and the CSV archive is static, so commercial reuse rights still need confirmation.",
+    "early_warning_value": "Official Atlanta building permit tracker with under-review, ready-to-issue, and issued lifecycle context for commercial and mixed-use activity before closeout.",
+    "candidate_source_fields": [
+      "FID",
+      "RecordID",
+      "Name",
+      "OrigOpened",
+      "Opend",
+      "TypeCombo",
+      "Use_",
+      "Subtype",
+      "Group_",
+      "Address",
+      "Status_1",
+      "StatusDate",
+      "JOB_VALUE",
+      "PARCEL",
+      "JobValue",
+      "ACA_Link",
+      "GrpdStatus"
+    ],
+    "last_checked_on": "2026-07-23",
+    "next_audit_on": "2026-08-06",
+    "notes": "Track Atlanta as a strong pre-approval and issued confirmation source, but keep it in legal hold until the tracker and archive rights clearly cover commercial storage, derived matching, customer display, and redistribution."
+  },
+  {
+    "key": "phoenix_az_plan_review_and_permits",
+    "name": "Phoenix Plan Review And Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Phoenix, AZ",
+    "base_url": "https://maps.phoenix.gov/pub/rest/services/Public/Planning_Permit/MapServer",
+    "official_landing_page": "https://maps.phoenix.gov/pub/rest/services/Public/Planning_Permit/MapServer",
+    "license": "Blank service license metadata; city terms still require written review",
+    "status": "legal_hold",
+    "blocker_summary": "The official planning permit map exposes current plan review, permit, zoning, and GPA layers, but blank license metadata and the city non-commercial download posture still block commercial admission.",
+    "early_warning_value": "Current Phoenix plan-review and permit layers with strong pre-approval zoning, permit, and development context for retailer and chain scouting before issuance.",
+    "candidate_source_fields": [
+      "PID",
+      "OBJECTID",
+      "Plan Review",
+      "Permits",
+      "Proposed Zoning",
+      "Approved Zoning",
+      "GPA"
+    ],
+    "last_checked_on": "2026-07-18",
+    "next_audit_on": "2026-08-06",
+    "notes": "Hold Phoenix in the expansion queue so the official service stays visible while legal review confirms whether commercial storage, display, and redistribution are allowed."
+  },
+  {
+    "key": "huntsville_al_issued_building_permits",
+    "name": "Huntsville Issued Building Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Huntsville, AL",
+    "base_url": "https://maps.huntsvilleal.gov/server/rest/services/Licenses/BuildingPermits/MapServer/0/query",
+    "official_landing_page": "https://maps.huntsvilleal.gov/server/rest/services/Licenses/BuildingPermits/MapServer/0",
+    "license": "Blank service license metadata; city process pages still need written reuse review",
+    "status": "legal_hold",
+    "blocker_summary": "The official Huntsville GIS layer is current and useful, but it is issued-permit confirmation only and the service carries restricted/blank rights metadata, so commercial admission still needs written clearance.",
+    "early_warning_value": "Issued-permit confirmation layer with occupancy, work type, building size, address, and value context for commercial project tracking once rights are cleared.",
+    "candidate_source_fields": [
+      "PermitID",
+      "Permit_Issue_DateTime",
+      "OccupancyType",
+      "WorkType",
+      "BuildingSize",
+      "Address",
+      "Value",
+      "ObjectID"
+    ],
+    "last_checked_on": "2026-07-23",
+    "next_audit_on": "2026-08-06",
+    "notes": "Keep Huntsville in the queue as a confirmation source only; it is useful for approved-only opportunity corroboration, but it should not be promoted until rights and reuse terms are explicit."
+  },
+  {
+    "key": "birmingham_al_digital_plan_room",
+    "name": "Birmingham Digital Plan Room",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Birmingham, AL",
+    "base_url": "https://www.birminghamal.gov/government/city-departments/pep/permitting-inspection-division/online-permit-center-introduction",
+    "official_landing_page": "https://www.birminghamal.gov/government/city-departments/pep/permitting-inspection-division/city-birmingham-digital-plan-room",
+    "license": "Official city permit center with no explicit commercial reuse grant confirmed yet",
+    "status": "legal_hold",
+    "blocker_summary": "The city says applicants can apply, pay, manage, track status, and print permits through the Online Permit Center and Digital Plan Room, but no supported bulk/API contract or written commercial reuse permission has been verified.",
+    "early_warning_value": "Digital plan-room workflow for pre-approval permit and plan-review activity that can reveal tenant and retailer movement before issuance.",
+    "candidate_source_fields": [
+      "site_address",
+      "applicant_contact_information",
+      "licensed_professional_information",
+      "application_specific_information",
+      "specific_documents",
+      "payment",
+      "status"
+    ],
+    "last_checked_on": "2026-07-23",
+    "next_audit_on": "2026-08-06",
+    "notes": "Keep Birmingham in hold status until a supported export/API and written commercial rights are in hand."
+  },
+  {
+    "key": "mobile_al_build_mobile_portal",
+    "name": "Mobile Build Mobile Portal",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Mobile, AL",
+    "base_url": "https://www.buildmobile.org/",
+    "official_landing_page": "https://www.buildmobile.org/",
+    "license": "Official city portal with no supported bulk/API rights verified yet",
+    "status": "legal_hold",
+    "blocker_summary": "Build Mobile exposes predevelopment meetings, permit applications, planning and zoning, and plan-review materials, but it is still a portal workflow without a documented bulk/API feed or clear commercial reuse grant.",
+    "early_warning_value": "Mobile portal coverage for planning, permitting, and predevelopment workflows that can surface retail, redevelopment, and land-use intent before formal approval.",
+    "candidate_source_fields": [
+      "application",
+      "permit_type",
+      "site_address",
+      "applicant_contact_information",
+      "licensed_professional_information",
+      "plan_review_documents",
+      "status"
+    ],
+    "last_checked_on": "2026-07-23",
+    "next_audit_on": "2026-08-06",
+    "notes": "Keep Mobile in the queue as a portal hold until a supported export/API and written reuse rights are verified."
+  },
+  {
+    "key": "evansville_in_building_commission_permits",
+    "name": "Evansville Building Commission Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Evansville, IN",
+    "base_url": "https://gis.evansvillegis.com/arcgis/rest/services/BC/BUILDING_COMMISSION_PERMITS/MapServer/0/query",
+    "official_landing_page": "https://gis.evansvillegis.com/arcgis/rest/services/BC/BUILDING_COMMISSION_PERMITS/MapServer/0",
+    "license": "No affirmative commercial redistribution terms published; live queries failed during review",
+    "status": "legal_hold",
+    "blocker_summary": "The official Evansville layer exposes application status, project/use descriptions, parcel, owner, applicant role, contractor, valuation, and issued/not-issued records, but live queries failed and no commercial redistribution terms are published.",
+    "early_warning_value": "Application-stage and issued permit records with project/use, parcel, owner, contractor, and valuation context for commercial project scouting once the backend and rights issues are resolved.",
+    "candidate_source_fields": [
+      "application_status",
+      "project_description",
+      "use_description",
+      "parcel",
+      "owner",
+      "applicant_role",
+      "contractor",
+      "valuation",
+      "issued_flag"
+    ],
+    "last_checked_on": "2026-07-23",
+    "next_audit_on": "2026-08-06",
+    "notes": "Track Evansville as a high-value hold for Indiana coverage, but keep it out of production until the backend responds reliably and commercial rights are explicit."
+  }
+]

@@ -14,3 +14,26 @@ from app.models.audit_log import AuditLog  # noqa
 from app.models.buy_box import BuyBox  # noqa
 from app.models.deal_distribution import DealDistribution  # noqa
 from app.models.password_reset_token import PasswordResetToken  # noqa
+from app.models.graph import (  # noqa
+    GraphEntity,
+    GraphEntityAlias,
+    GraphEntityLink,
+    GraphRelationship,
+    GraphRelationshipEvidence,
+)
+from app.models.ingestion import (  # noqa
+    IngestionCandidateCanaryAttempt,
+    IngestionRun,
+    IngestionSource,
+    PermitEvent,
+    PermitRecord,
+    RawSourceRecord,
+    SourceFieldMapping,
+)
+from app.models.brand import BrandAlias, BrandProfile, PermitBrandMatch  # noqa
+from app.models.parcel import (  # noqa
+    NearbyParcelCandidate,
+    NearbyParcelSearch,
+    ParcelFact,
+    ParcelRecord,
+)
