@@ -25,9 +25,20 @@ if DATABASE_URL.startswith("postgres://"):
 # localStorage). Refresh tokens are long-lived and carried as an httpOnly
 # Secure cookie scoped to /auth/refresh, so XSS cannot read them and the
 # browser automatically attaches them only to the refresh endpoint.
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS", "14"))
+_DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
+SECRET_KEY = os.environ.get("SECRET_KEY", _DEFAULT_SECRET_KEY)
+
+
+def _require_int(name: str, default: str) -> int:
+    raw = os.environ.get(name, default)
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be an integer, got {raw!r}") from exc
+
+
+ACCESS_TOKEN_EXPIRE_MINUTES = _require_int("ACCESS_TOKEN_EXPIRE_MINUTES", "15")
+REFRESH_TOKEN_EXPIRE_DAYS = _require_int("REFRESH_TOKEN_EXPIRE_DAYS", "14")
 ALGORITHM = "HS256"
 
 # Refresh-cookie attributes. In production we want Secure + SameSite=lax so
@@ -36,7 +47,11 @@ ALGORITHM = "HS256"
 # browser drops the cookie entirely.
 REFRESH_COOKIE_NAME = os.environ.get("REFRESH_COOKIE_NAME", "ds_refresh")
 REFRESH_COOKIE_PATH = "/auth"  # scoped: only /auth/refresh and /auth/logout see it
-REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "lax")
+REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "lax").lower()
+if REFRESH_COOKIE_SAMESITE not in ("lax", "strict", "none"):
+    raise RuntimeError(
+        f"REFRESH_COOKIE_SAMESITE must be one of lax|strict|none, got {REFRESH_COOKIE_SAMESITE!r}"
+    )
 
 # Environment: "development" | "staging" | "production"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
@@ -103,23 +118,60 @@ if IS_PRODUCTION and ALLOW_ANONYMOUS:
         "ALLOW_ANONYMOUS=true is not permitted when ENVIRONMENT=production"
     )
 
-# Secure flag on the refresh cookie — resolved here after IS_PRODUCTION is
-# known. Allows tests / local dev to disable Secure (needed because browsers
-# refuse Secure cookies over http://localhost).
+# Secure flag on the refresh cookie. Resolved BEFORE the production guards
+# below, which reference it — defining it after them would make the
+# SAMESITE=none guard raise NameError instead of its intended RuntimeError.
+# Allows tests / local dev to disable Secure (browsers refuse Secure cookies
+# over http://localhost).
 REFRESH_COOKIE_SECURE: bool = _parse_bool(
     os.environ.get("REFRESH_COOKIE_SECURE"),
     default=IS_PRODUCTION,
 )
+
+if IS_PRODUCTION:
+    if SECRET_KEY == _DEFAULT_SECRET_KEY or not SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY must be set to a strong random value when ENVIRONMENT=production "
+            "(the dev default is rejected)"
+        )
+    if len(SECRET_KEY) < 32:
+        raise RuntimeError(
+            "SECRET_KEY must be at least 32 characters when ENVIRONMENT=production"
+        )
+    if DATABASE_URL.startswith("sqlite"):
+        raise RuntimeError(
+            "DATABASE_URL must point to PostgreSQL when ENVIRONMENT=production "
+            "(SQLite is not safe for production)"
+        )
+    if REFRESH_COOKIE_SAMESITE == "none" and not REFRESH_COOKIE_SECURE:
+        raise RuntimeError(
+            "REFRESH_COOKIE_SAMESITE=none requires REFRESH_COOKIE_SECURE=true"
+        )
 
 # Routes that never require authentication. Matched as exact strings or path
 # prefixes. Keep this list minimal — everything else is authenticated.
 PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     "/health",
     "/healthz",
+    # /metrics does its own METRICS_TOKEN check; exempt it from the global
+    # auth posture so a scraper isn't blocked by ALLOW_ANONYMOUS=false.
+    "/metrics",
+    # AuthContextMiddleware runs INSIDE ApiVersioningMiddleware, so by the
+    # time it evaluates this list the path has already been rewritten from
+    # /auth/* to /v1/auth/*. Unversioned forms are kept for defense-in-depth
+    # in case the middleware chain is ever reordered.
     "/auth/login",
     "/auth/register",
     "/auth/refresh",
     "/auth/logout",
+    "/auth/password/forgot",
+    "/auth/password/reset",
+    "/v1/auth/login",
+    "/v1/auth/register",
+    "/v1/auth/refresh",
+    "/v1/auth/logout",
+    "/v1/auth/password/forgot",
+    "/v1/auth/password/reset",
     "/docs",
     "/redoc",
     "/openapi.json",
@@ -132,3 +184,13 @@ def is_public_path(path: str) -> bool:
     if path == "/":
         return True
     return any(path == p or path.startswith(p + "/") or path == p for p in PUBLIC_PATH_PREFIXES)
+
+
+# ── Observability (Sentry) ──────────────────────────────────────────────────
+# Optional. When unset, Sentry is disabled (init is a no-op). In production
+# we strongly recommend setting it — without it, errors are invisible.
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip() or None
+SENTRY_TRACES_SAMPLE_RATE = float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1"))
+SENTRY_PROFILES_SAMPLE_RATE = float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.0"))
+# Release tag for grouping deploys in Sentry — Render/Heroku set this automatically.
+SENTRY_RELEASE = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or None

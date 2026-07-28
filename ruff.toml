@@ -1,0 +1,21 @@
+# Ruff — Python linter for the backend. Deliberately a FOCUSED ruleset, not
+# the everything-and-the-kitchen-sink default: this codebase predates linting,
+# so we enable the rules that catch real bugs (pyflakes) and one safe,
+# autofixable hygiene rule (import sorting) rather than churning the whole tree
+# for line length / annotation style. Widen `select` later if there's appetite.
+target-version = "py311"
+line-length = 100  # informational; E-series not selected so it's not enforced
+
+[lint]
+select = [
+  "F",  # pyflakes — undefined names, unused imports, f-string bugs, redefs
+  "I",  # isort — import ordering (autofixable)
+]
+
+[lint.per-file-ignores]
+# SQLAlchemy declares relationships with STRING forward-refs inside
+# Mapped["Model"]; ruff's F821 can't see those are resolved at runtime.
+# (F821 stays ON everywhere else — it's what caught the config.py bug.)
+"app/models/*.py" = ["F821"]
+# __init__.py files re-export symbols; imported-but-unused is the point.
+"**/__init__.py" = ["F401"]

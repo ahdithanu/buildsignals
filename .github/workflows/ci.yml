@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "sqlite:///./ci.db"
+      SECRET_KEY: "ci-test-secret-key-not-for-production"
+      ENVIRONMENT: "ci"
+      # RLS + migration-reversibility tests run against real Postgres, as a
+      # NON-superuser role. This matters: a superuser bypasses row-level
+      # security even under FORCE RLS, so RLS assertions only mean something
+      # as a non-superuser — exactly how the app connects in production.
+      TEST_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dealsignal_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx pip-audit pytest-cov ruff
+
+      # Lint: a focused ruleset (pyflakes + import order) — see ruff.toml.
+      # Catches real bugs (undefined names, unused imports); this is how the
+      # config.py use-before-definition bug was found.
+      - name: Lint (ruff)
+        run: ruff check app/ scripts/ tests/
+
+      # Fails the build on any known-vulnerable dependency. Uses the PyPI
+      # advisory DB (osv.dev). To skip a CVE we've reviewed and confirmed
+      # doesn't affect us, add --ignore-vuln=<ID> with a comment.
+      #
+      # Zero suppressions. If this step fails, a dependency has a known
+      # CVE — bump it, or add --ignore-vuln=<ID> WITH a comment stating
+      # why it's safe and the fix path. Do not let the ignore list grow
+      # silently. (History: starlette cluster cleared by the fastapi
+      # 0.111→0.139 bump; pyasn1 cleared by migrating python-jose→PyJWT.)
+      - name: pip-audit — CVE scan
+        run: pip-audit --strict --requirement requirements.txt
+
+      - name: Run Alembic migrations
+        run: alembic upgrade head
+
+      - name: Alembic drift check (no un-migrated model changes)
+        run: |
+          set -e
+          # Try `alembic check` (Alembic >= 1.9). If unavailable or it errors out
+          # with the wrong signature, fall back to autogenerate + diff inspection.
+          if alembic check 2>&1 | tee /tmp/alembic_check.log; then
+            echo "alembic check passed"
+          else
+            echo "alembic check failed or unavailable; falling back to autogenerate diff"
+            alembic revision --autogenerate -m ci_drift_check 2>&1 | tee /tmp/alembic_autogen.log
+            GENERATED=$(ls -t alembic/versions/*ci_drift_check*.py | head -n1)
+            if [ -z "$GENERATED" ]; then
+              echo "No autogenerate file produced — treating as no drift."
+              exit 0
+            fi
+            # If the generated migration's upgrade body only contains `pass`, no drift.
+            if grep -E "^\s*pass\s*$" "$GENERATED" > /dev/null && \
+               ! grep -E "op\.(create|drop|add|alter|rename)" "$GENERATED" > /dev/null; then
+              echo "No schema drift detected."
+              rm -f "$GENERATED"
+              exit 0
+            else
+              echo "Schema drift detected — model changes lack a migration."
+              cat "$GENERATED"
+              rm -f "$GENERATED"
+              exit 1
+            fi
+          fi
+
+      # Provision the Postgres DB for the gated tests. `appuser` is a
+      # NON-superuser and RUNS the migrations, so it owns the tables — which
+      # is what makes FORCE ROW LEVEL SECURITY apply to it (a superuser, or a
+      # non-owner without FORCE, would bypass RLS and the isolation tests
+      # would validate nothing). This mirrors production: the app connects as
+      # a non-superuser owner of its schema.
+      - name: Provision Postgres (non-superuser role) + migrate
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d dealsignal_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE appuser LOGIN PASSWORD 'app';
+          GRANT ALL ON SCHEMA public TO appuser;
+          SQL
+          DATABASE_URL="$TEST_POSTGRES_URL" alembic upgrade head
+
+      # Coverage gate: floor is set below current (~88%) so it passes with
+      # headroom but fails if a meaningful chunk of new code lands untested.
+      # Raise the floor deliberately as coverage improves — don't chase 100%.
+      # TEST_POSTGRES_URL (job env) activates the RLS + reversibility tests.
+      - name: Run tests
+        run: pytest -q --cov=app --cov-report=term-missing --cov-fail-under=85

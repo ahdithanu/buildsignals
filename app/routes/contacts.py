@@ -4,12 +4,12 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.contact import Contact, ContactStatus
 from app.models.deal import Deal, DealStatus
-from app.schemas.contact import ContactCreate, ContactUpdate, ContactResponse
-from app.services.pipeline_service import move_deal_stage
-from app.utils.org_scope import get_org_id, active_query, exclude_deleted
-from app.utils.auth_deps import require_role
 from app.models.organization_membership import MemberRole
+from app.schemas.contact import ContactCreate, ContactResponse, ContactUpdate
 from app.services.audit_service import log_change
+from app.services.pipeline_service import move_deal_stage
+from app.utils.auth_deps import require_role
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(tags=["contacts"])
 
@@ -22,10 +22,9 @@ def _get_deal_or_404(db: Session, deal_id: str) -> Deal:
 
 
 def _get_contact_or_404(db: Session, contact_id: str) -> Contact:
-    # SECURITY: must filter by organization_id. The previous implementation
-    # used db.get(Contact, id) and bypassed tenant scoping — an admin of
-    # org B could PATCH/DELETE a contact owned by org A. Caught by
-    # tests/test_tenant_isolation.py (TestChildEntityRoutesCrossOrg).
+    # SECURITY: must scope by org. A bare db.get(Contact, contact_id) lets
+    # a caller in org B read/mutate/delete contacts in org A — verified by
+    # tests/test_tenant_isolation.py before this fix landed.
     contact = (
         active_query(db.query(Contact), Contact)
         .filter(Contact.id == contact_id)
@@ -59,7 +58,12 @@ def list_contacts(
 
 # ── POST /deals/{deal_id}/contacts ─────────────────────────────────────────
 
-@router.post("/deals/{deal_id}/contacts", response_model=ContactResponse, status_code=201)
+@router.post(
+    "/deals/{deal_id}/contacts",
+    response_model=ContactResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def create_contact(
     deal_id: str,
     payload: ContactCreate,
@@ -86,7 +90,11 @@ def create_contact(
 
 # ── PATCH /contacts/{contact_id} ──────────────────────────────────────────
 
-@router.patch("/contacts/{contact_id}", response_model=ContactResponse)
+@router.patch(
+    "/contacts/{contact_id}",
+    response_model=ContactResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def update_contact(
     contact_id: str,
     payload: ContactUpdate,
@@ -135,7 +143,7 @@ def update_contact(
 
 @router.delete(
     "/contacts/{contact_id}", status_code=204,
-    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+    dependencies=[Depends(require_role(MemberRole.admin))],
 )
 def delete_contact(contact_id: str, db: Session = Depends(get_db)):
     contact = _get_contact_or_404(db, contact_id)

@@ -1,0 +1,40 @@
+# gitleaks config — extends the default ruleset, then allowlists the
+# intentional placeholder/test secrets in this repo so the scan fails only
+# on REAL leaks, not on our own dummy values.
+#
+# Validate locally:  gitleaks detect --source . --config .gitleaks.toml --redact
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Intentional non-secret placeholders and test fixtures."
+
+# Files that legitimately contain fake credentials.
+paths = [
+  '''\.env\.example$''',
+  '''\.gitleaks\.toml$''',
+  '''tests/.*\.py$''',
+  '''e2e/.*''',
+  '''loadtest/.*''',
+  '''\.github/workflows/.*\.yml$''',
+  '''docs/.*\.md$''',
+  '''README\.md$''',
+  '''SECURITY\.md$''',
+]
+
+# Known dummy values that may appear inline (defense in depth if one of the
+# above files is ever renamed). All are obviously-fake by construction.
+regexes = [
+  '''dev-secret-change-in-production''',
+  '''.*-not-for-production''',
+  '''ci-test-secret-key.*''',
+  '''migration-reversibility-test-secret-key.*''',
+  '''loadtestsecretkey.*''',
+  '''openapi-export-not-a-real-secret''',
+  '''s3cr3t-scrape''',
+  # Test passwords used across the suite — not credentials to anything real.
+  '''CorrectHorseBattery42''',
+  '''E2ePassw0rd!''',
+  '''LoadTestPassw0rd!''',
+]

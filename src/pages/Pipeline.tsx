@@ -1,9 +1,12 @@
-import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { stageLabels, formatCurrency } from "@/lib/formatters";
 import { useDeals, useMoveStage } from "@/hooks/useDeals";
 import { DealScoreBadge, StatusBadge } from "@/components/DealBadges";
-import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
+import { LoadingState, ErrorState } from "@/components/DataStates";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { Inbox } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -22,14 +25,10 @@ export default function Pipeline() {
   const moveStage = useMoveStage();
   const { toast } = useToast();
 
-  // Local state for optimistic drag-and-drop
-  const [localDeals, setLocalDeals] = useState<Deal[] | null>(null);
-  const dealData = localDeals ?? (fetchedDeals as Deal[] | undefined) ?? [];
-
-  // Sync from server when data arrives
-  if (fetchedDeals && !localDeals) {
-    // Will set on first render after data loads
-  }
+  // Board is driven directly by server data. The optimistic move + rollback
+  // now lives in useMoveStage (React-Query cache), so there's no parallel
+  // local-state shadow that would freeze the board or diverge from the server.
+  const dealData = (fetchedDeals as Deal[] | undefined) ?? [];
 
   const grouped = columns.map(col => ({
     key: col,
@@ -40,41 +39,28 @@ export default function Pipeline() {
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
     if (!destination) return;
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
     const sourceCol = source.droppableId as Deal['status'];
     const destCol = destination.droppableId as Deal['status'];
-    const currentDeals = [...dealData];
+    // Only a stage change is persisted; intra-column ordering isn't a stored
+    // concept, so a same-column drop is a no-op (the board re-renders from
+    // server order).
+    if (sourceCol === destCol) return;
 
-    const sourceDeals = currentDeals.filter((d) => d.status === sourceCol);
-    const [moved] = sourceDeals.splice(source.index, 1);
-    const updatedDeal = { ...moved, status: destCol };
+    const moved = grouped.find(g => g.key === sourceCol)?.deals[source.index];
+    if (!moved) return;
 
-    if (sourceCol === destCol) {
-      sourceDeals.splice(destination.index, 0, updatedDeal);
-      const otherDeals = currentDeals.filter((d) => d.status !== sourceCol);
-      setLocalDeals([...otherDeals, ...sourceDeals]);
-    } else {
-      const destDeals = currentDeals.filter((d) => d.status === destCol);
-      destDeals.splice(destination.index, 0, updatedDeal);
-      const otherDeals = currentDeals.filter((d) => d.status !== sourceCol && d.status !== destCol);
-      setLocalDeals([...otherDeals, ...sourceDeals, ...destDeals]);
-
-      // Call API
-      moveStage.mutate(
-        { dealId: moved.id, data: { targetStage: destCol } },
-        {
-          onError: () => {
-            toast({ title: "Move failed", description: "Could not update stage on server.", variant: "destructive" });
-          },
-        }
-      );
-
-      toast({
-        title: "Deal moved",
-        description: `${moved.name} → ${stageLabels[destCol]}`,
-      });
-    }
+    moveStage.mutate(
+      { dealId: moved.id, data: { targetStage: destCol } },
+      {
+        onSuccess: () => {
+          toast({ title: "Deal moved", description: `${moved.name} → ${stageLabels[destCol]}` });
+        },
+        onError: () => {
+          toast({ title: "Move failed", description: "Could not update stage — the change was reverted.", variant: "destructive" });
+        },
+      }
+    );
   };
 
   const analyticsData = columns.filter(c => c !== 'dead').map(col => ({
@@ -100,6 +86,33 @@ export default function Pipeline() {
 
   if (error) {
     return <Layout><ErrorState message="Failed to load pipeline." onRetry={() => refetch()} /></Layout>;
+  }
+
+  if (dealData.length === 0) {
+    return (
+      <Layout>
+        <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
+          <div className="mb-5 md:mb-6">
+            <h2 className="text-lg md:text-xl font-semibold font-display text-foreground">Pipeline</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Track acquisition progress from sourcing to close</p>
+          </div>
+          <Card className="card-shadow">
+            <CardContent className="flex flex-col items-center justify-center text-center py-16 px-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary mb-4">
+                <Inbox className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground">Your pipeline is empty</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                Add deals from the inbox and drag them across stages to track progress.
+              </p>
+              <Button asChild className="mt-4">
+                <Link to="/inbox">Add your first deal</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
   }
 
   return (

@@ -63,6 +63,14 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
               />
+              <div className="text-right">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-muted-foreground hover:text-primary hover:underline underline-offset-4"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </div>
             {error && (
               <div className="text-sm text-destructive" role="alert">

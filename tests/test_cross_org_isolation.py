@@ -19,7 +19,6 @@ from uuid import uuid4
 from app.models.deal import Deal
 from app.models.memo import Memo
 
-
 OTHER_ORG = "other-org"
 
 

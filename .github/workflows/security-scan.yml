@@ -1,0 +1,37 @@
+name: security-scan
+
+# Secret scanning with gitleaks. Fails the build if a real credential is
+# committed. Intentional test/placeholder secrets are allowlisted in
+# .gitleaks.toml so the scan flags only genuine leaks.
+#
+# Uses the gitleaks binary directly (not gitleaks-action) to avoid the
+# org-license prompt and to match exactly what's validated locally:
+#   gitleaks detect --source . --config .gitleaks.toml --redact
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the scan catches a secret introduced in any commit,
+          # not just the diff.
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          VERSION=8.21.2
+          curl -sL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+
+      - name: Scan for secrets
+        run: gitleaks detect --source . --config .gitleaks.toml --redact --no-banner

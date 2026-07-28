@@ -37,3 +37,7 @@ vite.config.ts.timestamp-*.mjs
 # Claude Code / harness artifacts
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+
+# Coverage artifacts
+.coverage
+htmlcov/

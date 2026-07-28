@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { DealScoreBadge, StatusBadge } from "@/components/DealBadges";
 import { formatCurrency, stageLabels } from "@/lib/formatters";
 import { useDeals, useCreateDeal } from "@/hooks/useDeals";
+import { dealsApi } from "@/api/deals";
 import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
 import type { Deal } from "@/types/deal";
 import { useNavigate } from "react-router-dom";
@@ -53,6 +54,7 @@ export default function DealInbox() {
       },
       {
         onSuccess: () => {
+          setShowAddModal(false);  // close only on success — keeps input on failure
           toast({ title: "Deal added", description: `${form.name} has been added to your inbox.` });
         },
         onError: () => {
@@ -62,38 +64,39 @@ export default function DealInbox() {
     );
   };
 
-  // Enrichment is a backend batch operation — we show a progress indicator
-  // while waiting for the API to complete, then refetch
+  // Enrich every deal via the typed API (auth + /v1 handled by apiClient).
+  // dealsApi.enrich throws on a non-2xx, so a fulfilled promise is a real
+  // success — we count them and report accurately instead of always claiming
+  // "complete" (the old raw-fetch version fired unauthenticated, ignored
+  // res.ok, and toasted success even when every request 401'd).
   const handleEnrichment = async () => {
     if (enriching || deals.length === 0) return;
     setEnriching(true);
     setEnrichProgress(0);
 
-    try {
-      // Enrich all deals via their individual endpoints
-      const enrichPromises = deals.map(d =>
-        fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/deals/${d.id}/enrich`, { method: 'POST' })
-      );
+    let completed = 0;
+    const results = await Promise.allSettled(
+      deals.map(d =>
+        dealsApi.enrich(d.id).finally(() => {
+          completed++;
+          setEnrichProgress(Math.round((completed / deals.length) * 100));
+        })
+      )
+    );
 
-      // Track progress as promises resolve
-      let completed = 0;
-      await Promise.allSettled(
-        enrichPromises.map(p =>
-          p.then(res => {
-            completed++;
-            setEnrichProgress(Math.round((completed / deals.length) * 100));
-            return res;
-          })
-        )
-      );
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    const failed = deals.length - succeeded;
 
-      toast({ title: "AI Enrichment Complete", description: `${deals.length} deals enriched.` });
-      refetch();
-    } catch {
-      toast({ title: "Enrichment failed", description: "Could not reach the backend.", variant: "destructive" });
-    } finally {
-      setEnriching(false);
-      setEnrichProgress(0);
+    refetch();
+    setEnriching(false);
+    setEnrichProgress(0);
+
+    if (failed === 0) {
+      toast({ title: "AI Enrichment complete", description: `${succeeded} deal${succeeded === 1 ? '' : 's'} enriched.` });
+    } else if (succeeded === 0) {
+      toast({ title: "Enrichment failed", description: `Could not enrich ${failed} deal${failed === 1 ? '' : 's'}.`, variant: "destructive" });
+    } else {
+      toast({ title: "Enrichment partially complete", description: `${succeeded} enriched, ${failed} failed.`, variant: "destructive" });
     }
   };
 
@@ -200,16 +203,17 @@ export default function DealInbox() {
           <div className="flex items-center gap-2 rounded-lg bg-card border px-3 py-1.5 w-full sm:w-auto">
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search deals..."
+              aria-label="Search deals"
               className="bg-transparent text-sm outline-none w-full sm:w-48 placeholder:text-muted-foreground" />
           </div>
           <button className="sm:hidden flex items-center gap-2 text-sm text-muted-foreground" onClick={() => setShowFilters(!showFilters)}>
             <Filter className="h-3.5 w-3.5" /> Filters
           </button>
           <div className={`${showFilters ? 'flex' : 'hidden'} sm:flex items-center gap-3 flex-wrap`}>
-            <select value={filterAsset} onChange={e => setFilterAsset(e.target.value)} className="rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground outline-none">
+            <select value={filterAsset} onChange={e => setFilterAsset(e.target.value)} aria-label="Filter by asset type" className="rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground outline-none">
               {assetTypes.map(t => <option key={t}>{t}</option>)}
             </select>
-            <select value={filterMarket} onChange={e => setFilterMarket(e.target.value)} className="rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground outline-none">
+            <select value={filterMarket} onChange={e => setFilterMarket(e.target.value)} aria-label="Filter by market" className="rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground outline-none">
               {markets.map(m => <option key={m}>{m}</option>)}
             </select>
           </div>
@@ -219,7 +223,22 @@ export default function DealInbox() {
           {/* Table */}
           <div className={`flex-1 rounded-xl border bg-card card-shadow overflow-hidden min-w-0 ${selectedDeal ? 'hidden lg:block lg:max-w-[calc(100%-380px)]' : ''}`}>
             {filtered.length === 0 ? (
-              <EmptyState title="No deals found" description="Try adjusting your filters or add a new deal." />
+              deals.length === 0 ? (
+                <EmptyState
+                  title="No deals yet"
+                  description="Paste a listing URL or add a deal manually to get started."
+                  action={
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add your first deal
+                    </button>
+                  }
+                />
+              ) : (
+                <EmptyState title="No deals match your filters" description="Try adjusting filters or clearing your search." />
+              )
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -240,9 +259,18 @@ export default function DealInbox() {
                     {filtered.map((deal) => (
                       <tr
                         key={deal.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Deal ${deal.name} — press Enter to preview`}
                         onClick={() => setSelectedDeal(deal)}
                         onDoubleClick={() => navigate(`/deal/${deal.id}`)}
-                        className={`border-t cursor-pointer transition-colors ${selectedDeal?.id === deal.id ? 'bg-secondary' : 'hover:bg-secondary/30'}`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedDeal(deal);
+                          }
+                        }}
+                        className={`border-t cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${selectedDeal?.id === deal.id ? 'bg-secondary' : 'hover:bg-secondary/30'}`}
                       >
                         <td className="px-4 md:px-5 py-3 font-medium text-foreground">{deal.name}</td>
                         <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{deal.source}</td>
@@ -275,7 +303,7 @@ export default function DealInbox() {
                     <h3 className="text-sm font-semibold text-foreground truncate">{selectedDeal.name}</h3>
                     <p className="text-xs text-muted-foreground mt-1 truncate">{selectedDeal.address}</p>
                   </div>
-                  <button onClick={() => setSelectedDeal(null)} className="text-muted-foreground hover:text-foreground shrink-0 ml-2">
+                  <button onClick={() => setSelectedDeal(null)} aria-label="Close preview" className="text-muted-foreground hover:text-foreground shrink-0 ml-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -310,7 +338,7 @@ export default function DealInbox() {
           </AnimatePresence>
         </div>
       </div>
-      <AddDealModal open={showAddModal} onOpenChange={setShowAddModal} onAdd={handleAddDeal} />
+      <AddDealModal open={showAddModal} onOpenChange={setShowAddModal} onAdd={handleAddDeal} submitting={createDeal.isPending} />
     </Layout>
   );
 }

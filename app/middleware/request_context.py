@@ -21,6 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app import metrics
 from app.logging_config import reset_request_id, set_request_id
 
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -49,17 +50,24 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 
         start = time.perf_counter()
         status_code = 500
+        method = request.method
+        metrics.REQUESTS_IN_PROGRESS.labels(method=method).inc()
         try:
             response = await call_next(request)
             status_code = response.status_code
             response.headers[REQUEST_ID_HEADER] = request_id
             return response
         finally:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
+            elapsed = time.perf_counter() - start
+            duration_ms = round(elapsed * 1000, 2)
+            # Route template (not raw path) keeps metric cardinality bounded.
+            path_label = metrics.route_template(request)
+            metrics.record(method, path_label, status_code, elapsed)
+            metrics.REQUESTS_IN_PROGRESS.labels(method=method).dec()
             logger.info(
                 "request.complete",
                 extra={
-                    "method": request.method,
+                    "method": method,
                     "path": request.url.path,
                     "status": status_code,
                     "duration_ms": duration_ms,

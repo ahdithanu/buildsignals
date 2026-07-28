@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 
 from app.models.buy_box import BuyBox
 from app.models.deal import Deal
-from app.models.deal_outputs import DealOutputs
 from app.utils.org_scope import scope_query
 
 

@@ -338,14 +338,11 @@ class TestCollectionRoutesCrossOrg:
             "/outreach/follow-ups",
             headers=_auth(two_orgs["b"]["access_token"]),
         )
-        # Endpoint may filter on overdue/etc; just assert it doesn't leak.
         assert r.status_code == 200
         ids = [a["id"] for a in r.json()]
         assert two_orgs["activity_a"].id not in ids
 
     def test_dashboard_kpis_counts_only_own_org(self, client, two_orgs):
-        # Org B has zero deals (only an admin). KPI total_deals should be 0
-        # even though org A has one.
         r = client.get(
             "/dashboard/kpis",
             headers=_auth(two_orgs["b"]["access_token"]),

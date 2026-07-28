@@ -1,8 +1,8 @@
 """Tests for audit logging."""
 from __future__ import annotations
 
-from tests.conftest import SAMPLE_DEAL, SAMPLE_ASSUMPTIONS
 from app.models.audit_log import AuditLog
+from tests.conftest import SAMPLE_DEAL
 
 
 class TestAuditLogging:

@@ -17,6 +17,15 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    # Only required when the user has 2FA enabled. Absence triggers a 401
+    # with X-Auth-Reason: totp_required so the frontend can prompt for it.
+    totp_code: Optional[str] = None
+
+
+class DeleteAccountRequest(BaseModel):
+    # Re-enter the current password to confirm intent + identity before an
+    # irreversible account deletion.
+    password: str
 
 
 class TokenResponse(BaseModel):

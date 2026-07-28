@@ -1,7 +1,7 @@
 """Tests for assumptions, outputs, and recalculation."""
 from __future__ import annotations
 
-from tests.conftest import SAMPLE_DEAL, SAMPLE_ASSUMPTIONS
+from tests.conftest import SAMPLE_ASSUMPTIONS, SAMPLE_DEAL
 
 
 class TestAssumptions:

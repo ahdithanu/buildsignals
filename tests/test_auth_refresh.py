@@ -13,8 +13,6 @@ Covers the security-critical properties of /auth/refresh and /auth/logout:
 """
 from __future__ import annotations
 
-import pytest
-
 from app.config import REFRESH_COOKIE_NAME
 from app.services.security import (
     create_access_token,
@@ -22,7 +20,6 @@ from app.services.security import (
     decode_access_token,
     decode_refresh_token,
 )
-
 
 REGISTER = {
     "email": "alice@example.com",

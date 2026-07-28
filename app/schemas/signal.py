@@ -8,7 +8,7 @@ class SignalCreate(BaseModel):
     deal_id: Optional[str] = None
     signal_type: str = Field(..., min_length=1, max_length=100)
     source: Optional[str] = Field(None, max_length=255)
-    description: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=5000)
     severity: Optional[float] = Field(None, ge=0, le=10)
 
 
@@ -16,7 +16,7 @@ class SignalUpdate(BaseModel):
     deal_id: Optional[str] = None
     signal_type: Optional[str] = Field(None, min_length=1, max_length=100)
     source: Optional[str] = Field(None, max_length=255)
-    description: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=5000)
     severity: Optional[float] = Field(None, ge=0, le=10)
 
 

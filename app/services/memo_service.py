@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from collections import Counter
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session, joinedload
 

@@ -18,9 +18,13 @@ import MarketSignals from "./pages/MarketSignals";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import Team from "./pages/Team";
+import Account from "./pages/Account";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +35,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ErrorBoundary>
           <Routes>
             {/* Public — authed users get bounced back to the app */}
             <Route
@@ -46,6 +51,22 @@ const App = () => (
               element={
                 <RedirectIfAuthenticated>
                   <Register />
+                </RedirectIfAuthenticated>
+              }
+            />
+            <Route
+              path="/forgot-password"
+              element={
+                <RedirectIfAuthenticated>
+                  <ForgotPassword />
+                </RedirectIfAuthenticated>
+              }
+            />
+            <Route
+              path="/reset-password"
+              element={
+                <RedirectIfAuthenticated>
+                  <ResetPassword />
                 </RedirectIfAuthenticated>
               }
             />
@@ -131,8 +152,17 @@ const App = () => (
                 </RequireAuth>
               }
             />
+            <Route
+              path="/account"
+              element={
+                <RequireAuth>
+                  <Account />
+                </RequireAuth>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

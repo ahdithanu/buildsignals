@@ -7,11 +7,13 @@ import {
   Kanban,
   Radio,
   Settings,
+  User,
   Users,
   Zap,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -33,12 +35,24 @@ const navItems = [
   { title: "Pipeline", url: "/pipeline", icon: Kanban },
   { title: "Market Signals", url: "/signals", icon: Radio },
   { title: "Team", url: "/team", icon: Users },
+  { title: "Account", url: "/account", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
+
+function initials(name: string | null | undefined): string {
+  if (!name) return "?";
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const { user, role } = useAuth();
   const location = useLocation();
 
   return (
@@ -51,9 +65,9 @@ export function AppSidebar() {
           {!collapsed && (
             <div>
               <h1 className="text-sm font-semibold text-sidebar-accent-foreground font-display tracking-tight">
-                Deal Engine
+                DealSignal
               </h1>
-              <p className="text-[11px] text-sidebar-muted">Acquisition OS</p>
+              <p className="text-[11px] text-sidebar-muted">Acquisition intelligence</p>
             </div>
           )}
         </div>
@@ -84,14 +98,14 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        {!collapsed && (
+        {!collapsed && user && (
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground">
-              SC
+              {initials(user.full_name)}
             </div>
-            <div>
-              <p className="text-xs font-medium text-sidebar-accent-foreground">Sarah Chen</p>
-              <p className="text-[11px] text-sidebar-muted">Managing Director</p>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-sidebar-accent-foreground truncate">{user.full_name}</p>
+              {role && <p className="text-[11px] text-sidebar-muted capitalize">{role}</p>}
             </div>
           </div>
         )}

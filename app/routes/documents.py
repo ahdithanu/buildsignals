@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.deal import Deal
 from app.models.document import Document
-from app.schemas.document import DocumentCreate, DocumentResponse
-from app.utils.org_scope import get_org_id, active_query
-from app.utils.auth_deps import require_role
 from app.models.organization_membership import MemberRole
+from app.schemas.document import DocumentCreate, DocumentResponse
+from app.utils.auth_deps import require_role
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(tags=["documents"])
 
@@ -37,7 +37,12 @@ def list_deal_documents(
 
 # ── create document record (metadata only) ──────────────────────────────────
 
-@router.post("/deals/{deal_id}/documents", response_model=DocumentResponse, status_code=201)
+@router.post(
+    "/deals/{deal_id}/documents",
+    response_model=DocumentResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def create_document(
     deal_id: str,
     payload: DocumentCreate,
@@ -58,7 +63,7 @@ def create_document(
 
 @router.delete(
     "/documents/{document_id}", status_code=204,
-    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+    dependencies=[Depends(require_role(MemberRole.admin))],
 )
 def delete_document(document_id: str, db: Session = Depends(get_db)):
     doc = active_query(db.query(Document), Document).filter(Document.id == document_id).first()

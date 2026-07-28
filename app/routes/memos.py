@@ -4,16 +4,17 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.deal import Deal
 from app.models.memo import Memo
-from app.services.memo_service import generate_memo
-from app.utils.org_scope import active_query
-from app.utils.auth_deps import require_role
 from app.models.organization_membership import MemberRole
+from app.services.memo_service import generate_memo
+from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter
+from app.utils.auth_deps import require_role
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(tags=["memos"])
 
@@ -33,8 +34,8 @@ class MemoResponse(BaseModel):
 
 
 class MemoUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=500)
+    content: Optional[str] = Field(None, max_length=100000)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -58,9 +59,21 @@ def get_memo(deal_id: str, db: Session = Depends(get_db)):
     return memo
 
 
-@router.post("/deals/{deal_id}/generate-memo", response_model=MemoResponse, status_code=201)
+@router.post(
+    "/deals/{deal_id}/generate-memo",
+    response_model=MemoResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
     """Generate (or regenerate) an investment memo from DB data."""
+    decision = limiter.check(key=f"ai:{get_org_id()}", limit=AI_LIMIT, window_seconds=AI_WINDOW)
+    if not decision.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="AI rate limit exceeded. Try again shortly.",
+            headers={"Retry-After": str(decision.retry_after)},
+        )
     _ensure_deal_exists(db, deal_id)
     memo = generate_memo(db, deal_id)
     if memo is None:
@@ -68,7 +81,11 @@ def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
     return memo
 
 
-@router.put("/deals/{deal_id}/memo", response_model=MemoResponse)
+@router.put(
+    "/deals/{deal_id}/memo",
+    response_model=MemoResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
 def update_memo(deal_id: str, payload: MemoUpdate, db: Session = Depends(get_db)):
     """Manually update memo content or title."""
     _ensure_deal_exists(db, deal_id)
@@ -93,7 +110,7 @@ def update_memo(deal_id: str, payload: MemoUpdate, db: Session = Depends(get_db)
 
 @router.delete(
     "/deals/{deal_id}/memo", status_code=204,
-    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+    dependencies=[Depends(require_role(MemberRole.admin))],
 )
 def delete_memo(deal_id: str, db: Session = Depends(get_db)):
     """Soft-delete the memo for a deal."""

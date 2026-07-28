@@ -30,6 +30,7 @@ export function StatusBadge({ status, label }: { status: string; label: string }
     'loi-sent': 'bg-success/10 text-success',
     'psa': 'bg-emerald-50 text-emerald-700',
     'closing': 'bg-success/15 text-success',
+    'closed': 'bg-success/20 text-success',
     'dead': 'bg-muted text-muted-foreground',
     'low': 'bg-success/10 text-success',
     'medium': 'bg-warning/10 text-warning',
