@@ -9,7 +9,6 @@ from typing import Any, Iterable, Mapping, Optional
 
 from dateutil import parser as date_parser
 
-
 CANONICAL_FIELDS = {
     "source_record_id",
     "application_number",

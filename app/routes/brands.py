@@ -10,11 +10,12 @@ from app.models.organization_membership import MemberRole
 from app.schemas.brand import (
     BrandProfileResponse,
     PermitBrandMatchEvidenceResponse,
-    PermitBrandOpportunityCreate,
-    PermitBrandOpportunityResponse,
     PermitBrandMatchResponse,
     PermitBrandMatchReview,
+    PermitBrandOpportunityCreate,
+    PermitBrandOpportunityResponse,
 )
+from app.services.audit_service import log_change
 from app.services.brand_intelligence import (
     create_or_get_opportunity_from_brand_match,
     get_brand_match_evidence,
@@ -23,10 +24,8 @@ from app.services.brand_intelligence import (
     review_brand_match,
     serialize_brand_match,
 )
-from app.services.audit_service import log_change
 from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query
-
 
 router = APIRouter(tags=["brand intelligence"])
 

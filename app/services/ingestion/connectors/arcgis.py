@@ -15,7 +15,6 @@ from .base import (
     checkpoint_offset,
 )
 
-
 _ARCGIS_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 

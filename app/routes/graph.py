@@ -7,8 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.deal import Deal
-from app.models.graph import GraphEntity
-from app.models.graph import GraphEntityType
+from app.models.graph import GraphEntity, GraphEntityType
 from app.models.organization_membership import MemberRole
 from app.schemas.graph import (
     GraphBuyerLensSummary,
@@ -18,27 +17,30 @@ from app.schemas.graph import (
     GraphEntitySearchResponse,
     GraphPathResponse,
     GraphRelatedEntityResponse,
-    GraphSharedParcelSummary,
     GraphRelationshipCreate,
     GraphRelationshipResponse,
+    GraphSharedParcelSummary,
     OpportunityGraphContextResponse,
 )
+from app.services.brand_intelligence import list_deal_brand_matches
 from app.services.graph_service import (
     create_relationship,
     find_relationship_paths,
     get_entity_or_none,
     opportunity_context,
-    sync_deal_contacts_to_graph,
-    search_entities,
     relationships_for_entity,
     resolve_entity,
+    search_entities,
+    sync_deal_contacts_to_graph,
     upsert_deal_graph_context,
 )
-from app.services.parcel_service import count_nearby_parcel_searches_for_deal, summarize_nearby_parcel_searches_for_deal
-from app.services.parcel_service import summarize_shared_parcels_for_deal
-from app.utils.org_scope import active_query
+from app.services.parcel_service import (
+    count_nearby_parcel_searches_for_deal,
+    summarize_nearby_parcel_searches_for_deal,
+    summarize_shared_parcels_for_deal,
+)
 from app.utils.auth_deps import require_role
-from app.services.brand_intelligence import list_deal_brand_matches
+from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 opportunity_router = APIRouter(tags=["graph"])

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
@@ -10,11 +10,10 @@ from pydantic import TypeAdapter
 from sqlalchemy.orm import Session
 
 from app.models.ingestion import IngestionSource
-from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.schemas.ingestion import IngestionSourceCreate, IngestionSourceUpdate
+from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.ingestion.service import create_source, update_source
 from app.utils.org_scope import active_query
-
 
 DEFAULT_CATALOG_PATH = Path(__file__).with_name("catalog.json")
 DEFAULT_CANDIDATE_CATALOG_PATH = Path(__file__).with_name("candidate_catalog.json")

@@ -14,12 +14,12 @@ from .base import (
     Record,
     RetryingHttpClient,
 )
-from .csv import CSVConnector, CsvConnector
 from .ckan import CKANConnector, CKANDataStoreConnector
+from .csv import CSVConnector, CsvConnector
+from .factory import build_connector
 from .json_array import JSONArrayConnector
 from .opendatasoft import OpenDataSoftConnector, OpenDataSoftV2Connector
 from .socrata import SocrataConnector
-from .factory import build_connector
 
 __all__ = [
     "ArcGISConnector",

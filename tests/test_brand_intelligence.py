@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import app.services.ingestion.service as ingestion_service
 from app.models.brand import BrandAlias, BrandProfile, PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
 from app.models.ingestion import PermitRecord
 from app.models.parcel import NearbyParcelSearch
 from app.models.signal import Signal
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
-from app.services.ingestion.service import _project_permit_to_graph
-import app.services.ingestion.service as ingestion_service
 from app.services.ingestion.catalog import load_catalog
 from app.services.ingestion.connectors import FetchEnvelope
+from app.services.ingestion.service import _project_permit_to_graph
 
 
 class _StaticConnector:

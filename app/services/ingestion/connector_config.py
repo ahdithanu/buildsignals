@@ -4,7 +4,6 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-
 _DATE_PLACEHOLDER = re.compile(r"\{utc_today(?:(?P<direction>_plus_|_minus_)(?P<days>\d+))?\}")
 
 

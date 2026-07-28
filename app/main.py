@@ -30,6 +30,7 @@ from app.routes.activities import router as activities_router
 from app.routes.assumptions import router as assumptions_router
 from app.routes.audit import router as audit_router
 from app.routes.auth import router as auth_router
+from app.routes.brands import router as brands_router
 from app.routes.buy_box import router as buy_box_router
 from app.routes.contacts import router as contacts_router
 from app.routes.dashboard import router as dashboard_router
@@ -39,18 +40,18 @@ from app.routes.deal_summary import router as deal_summary_router
 from app.routes.deals import router as deals_router
 from app.routes.distributions import router as distributions_router
 from app.routes.documents import router as documents_router
+from app.routes.graph import opportunity_router as graph_opportunity_router
+from app.routes.graph import router as graph_router
 from app.routes.health import router as health_router
+from app.routes.ingestion import router as ingestion_router
 from app.routes.memos import router as memos_router
 from app.routes.organizations import router as organizations_router
 from app.routes.organizations import switch_router as auth_switch_router
+from app.routes.parcels import router as parcels_router
 from app.routes.password_reset import router as password_reset_router
 from app.routes.pipeline import router as pipeline_router
 from app.routes.signals import router as signals_router
 from app.routes.twofa import router as twofa_router
-from app.routes.graph import router as graph_router, opportunity_router as graph_opportunity_router
-from app.routes.ingestion import router as ingestion_router
-from app.routes.brands import router as brands_router
-from app.routes.parcels import router as parcels_router
 
 app = FastAPI(
     title="DealSignal — Real Estate Acquisition Engine",

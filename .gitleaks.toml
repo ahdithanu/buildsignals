@@ -14,6 +14,8 @@ description = "Intentional non-secret placeholders and test fixtures."
 paths = [
   '''\.env\.example$''',
   '''\.gitleaks\.toml$''',
+  '''app/services/ingestion/catalog\.json$''',
+  '''app/services/ingestion/candidate_catalog\.json$''',
   '''tests/.*\.py$''',
   '''e2e/.*''',
   '''loadtest/.*''',

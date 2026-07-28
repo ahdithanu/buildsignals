@@ -29,10 +29,10 @@ from app.schemas.brand import (
     BrandPermitSummary,
     BrandProfileResponse,
     LinkedDealSummary,
-    PermitBrandOpportunityCreate,
-    PermitBrandOpportunityResponse,
     PermitBrandMatchEvidenceResponse,
     PermitBrandMatchResponse,
+    PermitBrandOpportunityCreate,
+    PermitBrandOpportunityResponse,
 )
 from app.schemas.deal import DealCreate
 from app.schemas.parcel import NearbyParcelSearchSummary
@@ -40,7 +40,6 @@ from app.services.deal_service import create_deal_with_defaults, deal_to_detail_
 from app.services.graph_service import normalize_address, normalize_name
 from app.services.normalization_service import normalize_signal_type
 from app.utils.org_scope import active_query, get_org_id
-
 
 DEFAULT_BRAND_CATALOG_PATH = Path(__file__).with_name("brand_catalog.json")
 DETECTOR_VERSION = "brand-alias-v1"

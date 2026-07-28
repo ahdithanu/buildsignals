@@ -12,7 +12,6 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
-
 Checkpoint = Mapping[str, Any]
 Record = Mapping[str, Any]
 

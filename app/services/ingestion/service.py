@@ -3,7 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 from uuid import uuid4
@@ -12,8 +13,13 @@ from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.graph import GraphEntityLink, GraphEntityType, GraphRelationship, GraphRelationshipType
 from app.models.brand import PermitBrandMatch
+from app.models.graph import (
+    GraphEntityLink,
+    GraphEntityType,
+    GraphRelationship,
+    GraphRelationshipType,
+)
 from app.models.ingestion import (
     IngestionRun,
     IngestionSource,
@@ -26,10 +32,10 @@ from app.models.parcel import ParcelRecord
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
 from app.schemas.ingestion import IngestionSourceCreate, IngestionSourceUpdate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
-from app.services.graph_service import create_relationship, link_entity_to_record, resolve_entity
 from app.services.brand_intelligence import detect_permit_brands
-from app.services.ingestion.connectors import ConnectorResponseError, build_connector
+from app.services.graph_service import create_relationship, link_entity_to_record, resolve_entity
 from app.services.ingestion.connector_config import resolve_connector_config_dates
+from app.services.ingestion.connectors import ConnectorResponseError, build_connector
 from app.services.ingestion.normalization import (
     NormalizedParcel,
     NormalizedPermit,
@@ -41,7 +47,6 @@ from app.services.ingestion.normalization import (
 )
 from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
 from app.utils.org_scope import active_query, get_org_id
-
 
 PERMIT_COLUMNS = {
     "application_number",

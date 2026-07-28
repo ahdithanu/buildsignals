@@ -5,11 +5,11 @@ from typing import Any, Mapping
 from urllib.parse import urlparse
 
 from app.config import IS_PRODUCTION
+
 from .arcgis import ArcGISConnector
-from .base import Connector
-from .base import RetryingHttpClient
-from .csv import CSVConnector
+from .base import Connector, RetryingHttpClient
 from .ckan import CKANConnector
+from .csv import CSVConnector
 from .json_array import JSONArrayConnector
 from .opendatasoft import OpenDataSoftConnector
 from .socrata import SocrataConnector

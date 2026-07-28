@@ -23,7 +23,6 @@ from app.models.graph import (
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
 from app.utils.org_scope import active_query, get_org_id
 
-
 COMPANY_SUFFIXES = {
     "co",
     "company",

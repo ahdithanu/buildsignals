@@ -15,8 +15,8 @@ from app.models.graph import (
 )
 from app.models.ingestion import IngestionRun, IngestionSource, PermitRecord, RawSourceRecord
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelRecord
-from app.services.ingestion.service import _project_permit_to_graph
 from app.services.graph_service import normalize_address
+from app.services.ingestion.service import _project_permit_to_graph
 
 
 def _entity(client, **overrides):

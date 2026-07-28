@@ -3,21 +3,21 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import app.services.ingestion.service as ingestion_service
 from app.models.audit_log import AuditLog
 from app.models.brand import PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
 from app.models.ingestion import IngestionSource, RawSourceRecord
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
-from app.models.parcel import NearbyParcelCandidate, ParcelFact, ParcelRecord
+from app.models.parcel import ParcelFact, ParcelRecord
 from app.models.user import User
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
-import app.services.ingestion.service as ingestion_service
 from app.services.ingestion.catalog import load_catalog
 from app.services.ingestion.connectors import FetchEnvelope
+from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
 from app.services.parcel_proximity import find_nearby_parcels, haversine_miles
 from app.services.parcel_ranking import rank_developer_candidate, rank_parcel_candidate
-from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
 from app.services.security import create_access_token, hash_password
 
 
@@ -798,6 +798,9 @@ def test_parcel_snapshot_geometry_surfaces_as_boundary_geometry(db):
         name="Geometry Parcels",
         adapter="arcgis",
         record_type="parcel",
+        settings={
+            "export_policy": "derived_nearby_parcel_context_only_no_raw_test_resale",
+        },
     )
     db.add(source)
     db.flush()
