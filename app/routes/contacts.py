@@ -22,9 +22,15 @@ def _get_deal_or_404(db: Session, deal_id: str) -> Deal:
 
 
 def _get_contact_or_404(db: Session, contact_id: str) -> Contact:
-    contact = db.get(Contact, contact_id)
-    if contact and contact.deleted_at is not None:
-        contact = None
+    # SECURITY: must filter by organization_id. The previous implementation
+    # used db.get(Contact, id) and bypassed tenant scoping — an admin of
+    # org B could PATCH/DELETE a contact owned by org A. Caught by
+    # tests/test_tenant_isolation.py (TestChildEntityRoutesCrossOrg).
+    contact = (
+        active_query(db.query(Contact), Contact)
+        .filter(Contact.id == contact_id)
+        .first()
+    )
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found.")
     return contact
