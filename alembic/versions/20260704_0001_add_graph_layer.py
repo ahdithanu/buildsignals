@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision = "20260704_0001"
@@ -52,12 +53,12 @@ RELATIONSHIP_TYPES = (
 )
 
 
-def _entity_type_enum(*, create_type: bool = True) -> sa.Enum:
-    return sa.Enum(*ENTITY_TYPES, name="graphentitytype", create_type=create_type)
+def _entity_type_enum(*, create_type: bool = True) -> postgresql.ENUM:
+    return postgresql.ENUM(*ENTITY_TYPES, name="graphentitytype", create_type=create_type)
 
 
-def _relationship_type_enum(*, create_type: bool = True) -> sa.Enum:
-    return sa.Enum(*RELATIONSHIP_TYPES, name="graphrelationshiptype", create_type=create_type)
+def _relationship_type_enum(*, create_type: bool = True) -> postgresql.ENUM:
+    return postgresql.ENUM(*RELATIONSHIP_TYPES, name="graphrelationshiptype", create_type=create_type)
 
 
 entity_type = _entity_type_enum()
