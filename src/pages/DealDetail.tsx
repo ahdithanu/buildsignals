@@ -5,6 +5,9 @@ import { formatCurrency, stageLabels, getScoreColor } from "@/lib/formatters";
 import { useDealDetail } from "@/hooks/useDealDetail";
 import { useActivities } from "@/hooks/useActivities";
 import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
+import { OpportunityGraphPanel } from "@/components/OpportunityGraphPanel";
+import { RetailPermitSignalsPanel } from "@/components/RetailPermitSignalsPanel";
+import { NearbyParcelsPanel } from "@/components/NearbyParcelsPanel";
 import { ArrowLeft, MapPin, Building2, Calendar, Ruler, User, FileText, Lightbulb, AlertTriangle, CheckCircle, MessageSquare, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -166,6 +169,18 @@ export default function DealDetail() {
                   <p className="text-lg md:text-xl font-semibold font-display mt-1 text-foreground">{m.value}</p>
                 </div>
               ))}
+            </motion.div>
+
+            <motion.div {...fadeIn} transition={{ delay: 0.12 }}>
+              <RetailPermitSignalsPanel dealId={id} />
+            </motion.div>
+
+            <motion.div {...fadeIn} transition={{ delay: 0.12 }}>
+              <NearbyParcelsPanel dealId={id} />
+            </motion.div>
+
+            <motion.div {...fadeIn} transition={{ delay: 0.12 }}>
+              <OpportunityGraphPanel dealId={id} />
             </motion.div>
 
             {/* AI Summary */}

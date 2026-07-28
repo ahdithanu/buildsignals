@@ -47,6 +47,10 @@ from app.routes.password_reset import router as password_reset_router
 from app.routes.pipeline import router as pipeline_router
 from app.routes.signals import router as signals_router
 from app.routes.twofa import router as twofa_router
+from app.routes.graph import router as graph_router, opportunity_router as graph_opportunity_router
+from app.routes.ingestion import router as ingestion_router
+from app.routes.brands import router as brands_router
+from app.routes.parcels import router as parcels_router
 
 app = FastAPI(
     title="DealSignal — Real Estate Acquisition Engine",
@@ -118,6 +122,11 @@ app.include_router(audit_router, prefix=CURRENT_API_PREFIX)
 app.include_router(organizations_router, prefix=CURRENT_API_PREFIX)
 app.include_router(auth_switch_router, prefix=CURRENT_API_PREFIX)
 app.include_router(data_portability_router, prefix=CURRENT_API_PREFIX)
+app.include_router(graph_router, prefix=CURRENT_API_PREFIX)
+app.include_router(graph_opportunity_router, prefix=CURRENT_API_PREFIX)
+app.include_router(ingestion_router, prefix=CURRENT_API_PREFIX)
+app.include_router(brands_router, prefix=CURRENT_API_PREFIX)
+app.include_router(parcels_router, prefix=CURRENT_API_PREFIX)
 
 # NOTE: Schema is managed exclusively by Alembic. Production runs
 # `alembic upgrade head` in the Render preDeploy step (see render.yaml).

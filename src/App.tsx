@@ -15,6 +15,14 @@ import Underwriting from "./pages/Underwriting";
 import MemoGenerator from "./pages/MemoGenerator";
 import Pipeline from "./pages/Pipeline";
 import MarketSignals from "./pages/MarketSignals";
+import PermitBrandReview from "./pages/PermitBrandReview";
+import PermitDetail from "./pages/PermitDetail";
+import IngestionOperations from "./pages/IngestionOperations";
+import IngestionCandidateDetail from "./pages/IngestionCandidateDetail";
+import IngestionSourceDetail from "./pages/IngestionSourceDetail";
+import GraphEntityDetail from "./pages/GraphEntityDetail";
+import GraphExplorer from "./pages/GraphExplorer";
+import ParcelDetail from "./pages/ParcelDetail";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import Team from "./pages/Team";
@@ -125,6 +133,70 @@ const App = () => (
               element={
                 <RequireAuth>
                   <MarketSignals />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/permit-review"
+              element={
+                <RequireAuth>
+                  <PermitBrandReview />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/permits/:permitId"
+              element={
+                <RequireAuth>
+                  <PermitDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/source-health"
+              element={
+                <RequireAuth>
+                  <IngestionOperations />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/source-health/sources/:sourceId"
+              element={
+                <RequireAuth>
+                  <IngestionSourceDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/source-health/candidates/:candidateKey"
+              element={
+                <RequireAuth>
+                  <IngestionCandidateDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/graph/entities/:entityId"
+              element={
+                <RequireAuth>
+                  <GraphEntityDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/graph"
+              element={
+                <RequireAuth>
+                  <GraphExplorer />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/parcels/:parcelId"
+              element={
+                <RequireAuth>
+                  <ParcelDetail />
                 </RequireAuth>
               }
             />
