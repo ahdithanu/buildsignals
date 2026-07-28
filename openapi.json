@@ -193,6 +193,57 @@
         "title": "ActivityTypeEnum",
         "type": "string"
       },
+      "ApprovedOnlyCoverageSourceResponse": {
+        "properties": {
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "official_landing_page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Official Landing Page"
+          },
+          "signal_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Stage"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_key",
+          "source_name"
+        ],
+        "title": "ApprovedOnlyCoverageSourceResponse",
+        "type": "object"
+      },
       "AssumptionsResponse": {
         "properties": {
           "cap_rate_market": {
@@ -677,6 +728,512 @@
         "title": "AuditLogPage",
         "type": "object"
       },
+      "BrandMatchGraphContext": {
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence_count": {
+            "title": "Evidence Count",
+            "type": "integer"
+          },
+          "evidence_preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencePreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "related_entity": {
+            "$ref": "#/components/schemas/RelatedEntity"
+          },
+          "relationship_id": {
+            "title": "Relationship Id",
+            "type": "string"
+          },
+          "relationship_type": {
+            "title": "Relationship Type",
+            "type": "string"
+          },
+          "review_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Status"
+          },
+          "source_entity_id": {
+            "title": "Source Entity Id",
+            "type": "string"
+          },
+          "source_entity_name": {
+            "title": "Source Entity Name",
+            "type": "string"
+          },
+          "source_entity_type": {
+            "title": "Source Entity Type",
+            "type": "string"
+          },
+          "target_entity_id": {
+            "title": "Target Entity Id",
+            "type": "string"
+          },
+          "target_entity_name": {
+            "title": "Target Entity Name",
+            "type": "string"
+          },
+          "target_entity_type": {
+            "title": "Target Entity Type",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date-time",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "relationship_id",
+          "relationship_type",
+          "source_entity_id",
+          "source_entity_type",
+          "source_entity_name",
+          "target_entity_id",
+          "target_entity_type",
+          "target_entity_name",
+          "review_status",
+          "is_current",
+          "confidence",
+          "evidence_count",
+          "valid_from",
+          "valid_to",
+          "last_verified_at",
+          "related_entity"
+        ],
+        "title": "BrandMatchGraphContext",
+        "type": "object"
+      },
+      "BrandMatchRawEvidence": {
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "external_record_id": {
+            "title": "External Record Id",
+            "type": "string"
+          },
+          "payload_excerpt": {
+            "additionalProperties": true,
+            "title": "Payload Excerpt",
+            "type": "object"
+          },
+          "raw_record_id": {
+            "title": "Raw Record Id",
+            "type": "string"
+          },
+          "received_age_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Received Age Hours"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "source_lag_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Source Lag Hours"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Updated At"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "raw_record_id",
+          "external_record_id",
+          "content_hash",
+          "received_at",
+          "source_updated_at",
+          "source_key",
+          "source_name",
+          "source_url",
+          "payload_excerpt",
+          "received_age_hours",
+          "source_lag_hours"
+        ],
+        "title": "BrandMatchRawEvidence",
+        "type": "object"
+      },
+      "BrandPermitSummary": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "application_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Number"
+          },
+          "approval_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pre_approval",
+                  "approved"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Stage"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "filed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filed At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "permit_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Number"
+          },
+          "permit_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Type"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "proposed_use": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Use"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "valuation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation"
+          },
+          "work_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Class"
+          }
+        },
+        "required": [
+          "id",
+          "application_number",
+          "permit_number",
+          "approval_stage",
+          "status",
+          "project_name",
+          "description",
+          "address",
+          "city",
+          "state",
+          "jurisdiction",
+          "permit_type",
+          "work_class",
+          "proposed_use",
+          "valuation",
+          "latitude",
+          "longitude",
+          "filed_at",
+          "source_url"
+        ],
+        "title": "BrandPermitSummary",
+        "type": "object"
+      },
+      "BrandProfileResponse": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scale"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "category",
+          "scale",
+          "priority",
+          "is_active"
+        ],
+        "title": "BrandProfileResponse",
+        "type": "object"
+      },
       "BuyBoxCreate": {
         "properties": {
           "asset_type": {
@@ -880,6 +1437,172 @@
           "created_at"
         ],
         "title": "BuyBoxResponse",
+        "type": "object"
+      },
+      "CandidateCanaryAttemptResponse": {
+        "properties": {
+          "approval_stages": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Approval Stages",
+            "type": "object"
+          },
+          "candidate_key": {
+            "title": "Candidate Key",
+            "type": "string"
+          },
+          "candidate_name": {
+            "title": "Candidate Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "next_checkpoint": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Checkpoint"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "records_failed": {
+            "title": "Records Failed",
+            "type": "integer"
+          },
+          "records_fetched": {
+            "title": "Records Fetched",
+            "type": "integer"
+          },
+          "records_valid": {
+            "title": "Records Valid",
+            "type": "integer"
+          },
+          "sample_record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sample Record Ids",
+            "type": "array"
+          },
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "candidate_key",
+          "candidate_name",
+          "sample_size",
+          "ok",
+          "records_fetched",
+          "records_valid",
+          "records_failed",
+          "approval_stages",
+          "sample_record_ids",
+          "next_checkpoint",
+          "errors",
+          "created_at"
+        ],
+        "title": "CandidateCanaryAttemptResponse",
+        "type": "object"
+      },
+      "CandidateCanaryResponse": {
+        "properties": {
+          "approval_stages": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Approval Stages",
+            "type": "object"
+          },
+          "candidate_key": {
+            "title": "Candidate Key",
+            "type": "string"
+          },
+          "candidate_name": {
+            "title": "Candidate Name",
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "next_checkpoint": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Checkpoint"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "records_failed": {
+            "title": "Records Failed",
+            "type": "integer"
+          },
+          "records_fetched": {
+            "title": "Records Fetched",
+            "type": "integer"
+          },
+          "records_valid": {
+            "title": "Records Valid",
+            "type": "integer"
+          },
+          "sample_record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sample Record Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidate_key",
+          "candidate_name",
+          "ok",
+          "records_fetched",
+          "records_valid",
+          "records_failed",
+          "approval_stages",
+          "sample_record_ids",
+          "next_checkpoint",
+          "errors"
+        ],
+        "title": "CandidateCanaryResponse",
         "type": "object"
       },
       "ContactCreate": {
@@ -1153,6 +1876,29 @@
           }
         },
         "title": "ContactUpdate",
+        "type": "object"
+      },
+      "CoverageJurisdictionBucket": {
+        "properties": {
+          "candidate_sources": {
+            "title": "Candidate Sources",
+            "type": "integer"
+          },
+          "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "live_sources": {
+            "title": "Live Sources",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jurisdiction",
+          "live_sources",
+          "candidate_sources"
+        ],
+        "title": "CoverageJurisdictionBucket",
         "type": "object"
       },
       "DealCreate": {
@@ -2083,6 +2829,199 @@
         "title": "DocumentResponse",
         "type": "object"
       },
+      "EvidencePreview": {
+        "properties": {
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "source_system"
+        ],
+        "title": "EvidencePreview",
+        "type": "object"
+      },
+      "FieldMappingCreate": {
+        "properties": {
+          "canonical_field": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Canonical Field",
+            "type": "string"
+          },
+          "default_value": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_required": {
+            "default": false,
+            "title": "Is Required",
+            "type": "boolean"
+          },
+          "source_field": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Source Field",
+            "type": "string"
+          },
+          "transform": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transform"
+          },
+          "transform_options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transform Options"
+          }
+        },
+        "required": [
+          "source_field",
+          "canonical_field"
+        ],
+        "title": "FieldMappingCreate",
+        "type": "object"
+      },
+      "FieldMappingResponse": {
+        "properties": {
+          "canonical_field": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Canonical Field",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "default_value": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_required": {
+            "default": false,
+            "title": "Is Required",
+            "type": "boolean"
+          },
+          "source_field": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Source Field",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "transform": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transform"
+          },
+          "transform_options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transform Options"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_field",
+          "canonical_field",
+          "id",
+          "source_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "FieldMappingResponse",
+        "type": "object"
+      },
       "ForgotPasswordRequest": {
         "properties": {
           "email": {
@@ -2097,6 +3036,1215 @@
         "title": "ForgotPasswordRequest",
         "type": "object"
       },
+      "GraphBuyerLensSummary": {
+        "properties": {
+          "latest_created_at": {
+            "format": "date-time",
+            "title": "Latest Created At",
+            "type": "string"
+          },
+          "latest_radius_miles": {
+            "title": "Latest Radius Miles",
+            "type": "number"
+          },
+          "persona": {
+            "title": "Persona",
+            "type": "string"
+          },
+          "search_count": {
+            "title": "Search Count",
+            "type": "integer"
+          },
+          "top_parcels": {
+            "items": {
+              "$ref": "#/components/schemas/GraphParcelPreviewSummary"
+            },
+            "title": "Top Parcels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "persona",
+          "search_count",
+          "latest_radius_miles",
+          "latest_created_at"
+        ],
+        "title": "GraphBuyerLensSummary",
+        "type": "object"
+      },
+      "GraphEntityCreate": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "confidence": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "display_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "entity_type": {
+            "$ref": "#/components/schemas/GraphEntityType"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "required": [
+          "entity_type",
+          "display_name"
+        ],
+        "title": "GraphEntityCreate",
+        "type": "object"
+      },
+      "GraphEntityDetailResponse": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "entity_type": {
+            "$ref": "#/components/schemas/GraphEntityType"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "links": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "normalized_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Address"
+          },
+          "normalized_name": {
+            "title": "Normalized Name",
+            "type": "string"
+          },
+          "related": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Related",
+            "type": "array"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "required": [
+          "id",
+          "entity_type",
+          "display_name",
+          "normalized_name",
+          "confidence",
+          "created_at",
+          "updated_at",
+          "last_verified_at"
+        ],
+        "title": "GraphEntityDetailResponse",
+        "type": "object"
+      },
+      "GraphEntityResponse": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "entity_type": {
+            "$ref": "#/components/schemas/GraphEntityType"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "normalized_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Address"
+          },
+          "normalized_name": {
+            "title": "Normalized Name",
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "required": [
+          "id",
+          "entity_type",
+          "display_name",
+          "normalized_name",
+          "confidence",
+          "created_at",
+          "updated_at",
+          "last_verified_at"
+        ],
+        "title": "GraphEntityResponse",
+        "type": "object"
+      },
+      "GraphEntitySearchResponse": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "entity_type": {
+            "$ref": "#/components/schemas/GraphEntityType"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "normalized_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Address"
+          },
+          "normalized_name": {
+            "title": "Normalized Name",
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "required": [
+          "id",
+          "entity_type",
+          "display_name",
+          "normalized_name",
+          "confidence",
+          "created_at",
+          "updated_at",
+          "last_verified_at"
+        ],
+        "title": "GraphEntitySearchResponse",
+        "type": "object"
+      },
+      "GraphEntityType": {
+        "enum": [
+          "opportunity",
+          "permit",
+          "parcel",
+          "property",
+          "developer",
+          "owner",
+          "general_contractor",
+          "architect",
+          "engineer",
+          "city",
+          "lender",
+          "broker",
+          "company",
+          "person",
+          "source_record"
+        ],
+        "title": "GraphEntityType",
+        "type": "string"
+      },
+      "GraphEvidenceCreate": {
+        "properties": {
+          "confidence": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence_type": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Type"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Source System",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "source_system"
+        ],
+        "title": "GraphEvidenceCreate",
+        "type": "object"
+      },
+      "GraphParcelPreviewSummary": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "distance_miles": {
+            "title": "Distance Miles",
+            "type": "number"
+          },
+          "external_parcel_id": {
+            "title": "External Parcel Id",
+            "type": "string"
+          },
+          "parcel_id": {
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "parcel_id",
+          "external_parcel_id",
+          "distance_miles",
+          "score",
+          "rank"
+        ],
+        "title": "GraphParcelPreviewSummary",
+        "type": "object"
+      },
+      "GraphPathResponse": {
+        "properties": {
+          "entities": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEntityResponse"
+            },
+            "title": "Entities",
+            "type": "array"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelationshipResponse"
+            },
+            "title": "Relationships",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entities",
+          "relationships"
+        ],
+        "title": "GraphPathResponse",
+        "type": "object"
+      },
+      "GraphRelatedEntityResponse": {
+        "properties": {
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/GraphEntityResponse"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/GraphRelationshipResponse"
+          }
+        },
+        "required": [
+          "entity",
+          "relationship",
+          "direction"
+        ],
+        "title": "GraphRelatedEntityResponse",
+        "type": "object"
+      },
+      "GraphRelationshipCreate": {
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "confidence": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEvidenceCreate"
+            },
+            "minItems": 1,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "relationship_type": {
+            "$ref": "#/components/schemas/GraphRelationshipType"
+          },
+          "source_entity_id": {
+            "title": "Source Entity Id",
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "target_entity_id": {
+            "title": "Target Entity Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_entity_id",
+          "target_entity_id",
+          "relationship_type",
+          "evidence"
+        ],
+        "title": "GraphRelationshipCreate",
+        "type": "object"
+      },
+      "GraphRelationshipEvidenceResponse": {
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Type"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "id",
+          "source_system",
+          "confidence",
+          "created_at"
+        ],
+        "title": "GraphRelationshipEvidenceResponse",
+        "type": "object"
+      },
+      "GraphRelationshipResponse": {
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelationshipEvidenceResponse"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "relationship_type": {
+            "$ref": "#/components/schemas/GraphRelationshipType"
+          },
+          "source_entity_id": {
+            "title": "Source Entity Id",
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "target_entity_id": {
+            "title": "Target Entity Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date-time",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "id",
+          "source_entity_id",
+          "target_entity_id",
+          "relationship_type",
+          "confidence",
+          "is_current",
+          "valid_from",
+          "created_at",
+          "updated_at",
+          "last_verified_at"
+        ],
+        "title": "GraphRelationshipResponse",
+        "type": "object"
+      },
+      "GraphRelationshipType": {
+        "enum": [
+          "located_on",
+          "owns",
+          "owned_by",
+          "developed_by",
+          "developer_of",
+          "contracted_by",
+          "contractor_for",
+          "designed_by",
+          "engineer_for",
+          "permitted_by",
+          "permit_for",
+          "financed_by",
+          "brokered_by",
+          "related_to"
+        ],
+        "title": "GraphRelationshipType",
+        "type": "string"
+      },
+      "GraphSharedParcelSummary": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "best_distance_miles": {
+            "title": "Best Distance Miles",
+            "type": "number"
+          },
+          "best_persona": {
+            "title": "Best Persona",
+            "type": "string"
+          },
+          "best_score": {
+            "title": "Best Score",
+            "type": "number"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "external_parcel_id": {
+            "title": "External Parcel Id",
+            "type": "string"
+          },
+          "lens_count": {
+            "title": "Lens Count",
+            "type": "integer"
+          },
+          "parcel_id": {
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "personas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Personas",
+            "type": "array"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "parcel_id",
+          "external_parcel_id",
+          "best_distance_miles",
+          "best_score",
+          "best_persona",
+          "lens_count"
+        ],
+        "title": "GraphSharedParcelSummary",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2108,6 +4256,740 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "IngestionCandidateResponse": {
+        "properties": {
+          "adapter": {
+            "title": "Adapter",
+            "type": "string"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "blocker_summary": {
+            "title": "Blocker Summary",
+            "type": "string"
+          },
+          "can_run_canary": {
+            "default": false,
+            "title": "Can Run Canary",
+            "type": "boolean"
+          },
+          "candidate_source_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidate Source Fields",
+            "type": "array"
+          },
+          "early_warning_value": {
+            "title": "Early Warning Value",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "last_canary_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Canary At"
+          },
+          "last_canary_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Canary Ok"
+          },
+          "last_canary_records_failed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Canary Records Failed"
+          },
+          "last_canary_records_valid": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Canary Records Valid"
+          },
+          "last_checked_on": {
+            "format": "date",
+            "title": "Last Checked On",
+            "type": "string"
+          },
+          "license": {
+            "title": "License",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "next_audit_on": {
+            "format": "date",
+            "title": "Next Audit On",
+            "type": "string"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "official_landing_page": {
+            "title": "Official Landing Page",
+            "type": "string"
+          },
+          "record_type": {
+            "enum": [
+              "permit",
+              "parcel"
+            ],
+            "title": "Record Type",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "operational_retry",
+              "legal_hold",
+              "technical_hold",
+              "freshness_hold",
+              "lifecycle_hold",
+              "queued"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "adapter",
+          "record_type",
+          "jurisdiction",
+          "base_url",
+          "official_landing_page",
+          "license",
+          "status",
+          "blocker_summary",
+          "early_warning_value",
+          "candidate_source_fields",
+          "last_checked_on",
+          "next_audit_on",
+          "notes"
+        ],
+        "title": "IngestionCandidateResponse",
+        "type": "object"
+      },
+      "IngestionCoverageResponse": {
+        "properties": {
+          "activation_queue": {
+            "items": {
+              "$ref": "#/components/schemas/StateCoverageBucket"
+            },
+            "title": "Activation Queue",
+            "type": "array"
+          },
+          "approved_only_source_count": {
+            "title": "Approved Only Source Count",
+            "type": "integer"
+          },
+          "approved_only_sources": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovedOnlyCoverageSourceResponse"
+            },
+            "title": "Approved Only Sources",
+            "type": "array"
+          },
+          "candidate_count": {
+            "title": "Candidate Count",
+            "type": "integer"
+          },
+          "candidate_only_state_count": {
+            "title": "Candidate Only State Count",
+            "type": "integer"
+          },
+          "candidate_only_states": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidate Only States",
+            "type": "array"
+          },
+          "candidate_status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Candidate Status Counts",
+            "type": "object"
+          },
+          "covered_state_count": {
+            "title": "Covered State Count",
+            "type": "integer"
+          },
+          "covered_states": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Covered States",
+            "type": "array"
+          },
+          "jurisdiction_count": {
+            "title": "Jurisdiction Count",
+            "type": "integer"
+          },
+          "live_signal_sources_by_stage": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/RetailerOpeningCoverageSourceResponse"
+              },
+              "type": "array"
+            },
+            "title": "Live Signal Sources By Stage",
+            "type": "object"
+          },
+          "live_signal_stage_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Live Signal Stage Counts",
+            "type": "object"
+          },
+          "live_source_count": {
+            "title": "Live Source Count",
+            "type": "integer"
+          },
+          "missing_state_count": {
+            "title": "Missing State Count",
+            "type": "integer"
+          },
+          "missing_states": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing States",
+            "type": "array"
+          },
+          "pre_approval_source_count": {
+            "title": "Pre Approval Source Count",
+            "type": "integer"
+          },
+          "retailer_opening_source_count": {
+            "title": "Retailer Opening Source Count",
+            "type": "integer"
+          },
+          "retailer_opening_sources": {
+            "items": {
+              "$ref": "#/components/schemas/RetailerOpeningCoverageSourceResponse"
+            },
+            "title": "Retailer Opening Sources",
+            "type": "array"
+          },
+          "state_buckets": {
+            "items": {
+              "$ref": "#/components/schemas/StateCoverageBucket"
+            },
+            "title": "State Buckets",
+            "type": "array"
+          },
+          "top_jurisdictions": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageJurisdictionBucket"
+            },
+            "title": "Top Jurisdictions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "live_source_count",
+          "candidate_count",
+          "jurisdiction_count",
+          "retailer_opening_source_count",
+          "retailer_opening_sources",
+          "approved_only_sources",
+          "pre_approval_source_count",
+          "approved_only_source_count",
+          "live_signal_stage_counts",
+          "live_signal_sources_by_stage",
+          "candidate_status_counts",
+          "top_jurisdictions",
+          "state_buckets",
+          "activation_queue",
+          "candidate_only_state_count",
+          "candidate_only_states",
+          "covered_state_count",
+          "missing_state_count",
+          "covered_states",
+          "missing_states"
+        ],
+        "title": "IngestionCoverageResponse",
+        "type": "object"
+      },
+      "IngestionReliabilitySummaryResponse": {
+        "properties": {
+          "attention_sources": {
+            "title": "Attention Sources",
+            "type": "integer"
+          },
+          "critical_sources": {
+            "title": "Critical Sources",
+            "type": "integer"
+          },
+          "failed_retry_canaries": {
+            "title": "Failed Retry Canaries",
+            "type": "integer"
+          },
+          "healthy_sources": {
+            "title": "Healthy Sources",
+            "type": "integer"
+          },
+          "stale_runs": {
+            "title": "Stale Runs",
+            "type": "integer"
+          },
+          "stalled_cursors": {
+            "title": "Stalled Cursors",
+            "type": "integer"
+          },
+          "watchlist_sources": {
+            "items": {
+              "$ref": "#/components/schemas/ReliabilityWatchlistItemResponse"
+            },
+            "title": "Watchlist Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "healthy_sources",
+          "attention_sources",
+          "critical_sources",
+          "stale_runs",
+          "stalled_cursors",
+          "failed_retry_canaries",
+          "watchlist_sources"
+        ],
+        "title": "IngestionReliabilitySummaryResponse",
+        "type": "object"
+      },
+      "IngestionRunRequest": {
+        "properties": {
+          "checkpoint": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkpoint"
+          },
+          "max_pages": {
+            "default": 1,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Pages",
+            "type": "integer"
+          }
+        },
+        "title": "IngestionRunRequest",
+        "type": "object"
+      },
+      "IngestionRunResponse": {
+        "properties": {
+          "checkpoint": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkpoint"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "heartbeat_at": {
+            "format": "date-time",
+            "title": "Heartbeat At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parameters"
+          },
+          "records_failed": {
+            "title": "Records Failed",
+            "type": "integer"
+          },
+          "records_inserted": {
+            "title": "Records Inserted",
+            "type": "integer"
+          },
+          "records_seen": {
+            "title": "Records Seen",
+            "type": "integer"
+          },
+          "records_updated": {
+            "title": "Records Updated",
+            "type": "integer"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_id",
+          "status",
+          "trigger",
+          "started_at",
+          "heartbeat_at",
+          "completed_at",
+          "checkpoint",
+          "parameters",
+          "records_seen",
+          "records_inserted",
+          "records_updated",
+          "records_failed",
+          "error_message",
+          "created_at"
+        ],
+        "title": "IngestionRunResponse",
+        "type": "object"
+      },
+      "IngestionSourceCreate": {
+        "properties": {
+          "adapter": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Adapter",
+            "type": "string"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "field_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/FieldMappingCreate"
+            },
+            "title": "Field Mappings",
+            "type": "array"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "key": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "record_type": {
+            "default": "permit",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Record Type",
+            "type": "string"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "title": "Settings",
+            "type": "object"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "adapter"
+        ],
+        "title": "IngestionSourceCreate",
+        "type": "object"
+      },
+      "IngestionSourceResponse": {
+        "properties": {
+          "adapter": {
+            "title": "Adapter",
+            "type": "string"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "field_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/FieldMappingResponse"
+            },
+            "title": "Field Mappings",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "record_type": {
+            "title": "Record Type",
+            "type": "string"
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "adapter",
+          "record_type",
+          "jurisdiction",
+          "base_url",
+          "settings",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "IngestionSourceResponse",
+        "type": "object"
+      },
+      "IngestionSourceUpdate": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "field_mappings": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FieldMappingCreate"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Mappings"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings"
+          }
+        },
+        "title": "IngestionSourceUpdate",
         "type": "object"
       },
       "InviteMemberRequest": {
@@ -2168,6 +5050,24 @@
           "deals_by_status"
         ],
         "title": "KPIResponse",
+        "type": "object"
+      },
+      "LinkedDealSummary": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LinkedDealSummary",
         "type": "object"
       },
       "LoginRequest": {
@@ -2411,6 +5311,567 @@
         "title": "MyOrganizationItem",
         "type": "object"
       },
+      "NearbyParcelCandidateAssignment": {
+        "properties": {
+          "assigned_to_user_id": {
+            "minLength": 1,
+            "title": "Assigned To User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assigned_to_user_id"
+        ],
+        "title": "NearbyParcelCandidateAssignment",
+        "type": "object"
+      },
+      "NearbyParcelCandidateResponse": {
+        "properties": {
+          "assigned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          },
+          "assigned_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned By User Id"
+          },
+          "assigned_to_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To Name"
+          },
+          "assigned_to_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To User Id"
+          },
+          "distance_miles": {
+            "title": "Distance Miles",
+            "type": "number"
+          },
+          "explanation": {
+            "additionalProperties": true,
+            "title": "Explanation",
+            "type": "object"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelFactResponse"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "parcel": {
+            "$ref": "#/components/schemas/ParcelSummaryResponse"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "ranker_version": {
+            "title": "Ranker Version",
+            "type": "string"
+          },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "score_confidence": {
+            "title": "Score Confidence",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "rank",
+          "distance_miles",
+          "score",
+          "score_confidence",
+          "explanation",
+          "review_status",
+          "ranker_version",
+          "parcel"
+        ],
+        "title": "NearbyParcelCandidateResponse",
+        "type": "object"
+      },
+      "NearbyParcelCandidateReview": {
+        "properties": {
+          "review_status": {
+            "enum": [
+              "candidate",
+              "shortlisted",
+              "dismissed"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_status"
+        ],
+        "title": "NearbyParcelCandidateReview",
+        "type": "object"
+      },
+      "NearbyParcelOpportunityCreate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "NearbyParcelOpportunityCreate",
+        "type": "object"
+      },
+      "NearbyParcelOpportunityResponse": {
+        "properties": {
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "deal": {
+            "$ref": "#/components/schemas/DealDetailResponse"
+          }
+        },
+        "required": [
+          "created",
+          "candidate_id",
+          "deal"
+        ],
+        "title": "NearbyParcelOpportunityResponse",
+        "type": "object"
+      },
+      "NearbyParcelSearchCreate": {
+        "properties": {
+          "anchor_brand_match_id": {
+            "title": "Anchor Brand Match Id",
+            "type": "string"
+          },
+          "land_uses": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Land Uses",
+            "type": "array"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "minimum_land_area_sq_ft": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Land Area Sq Ft"
+          },
+          "persona": {
+            "default": "developer",
+            "enum": [
+              "developer",
+              "broker",
+              "realtor"
+            ],
+            "title": "Persona",
+            "type": "string"
+          },
+          "radius_miles": {
+            "default": 2.0,
+            "maximum": 5.0,
+            "minimum": 0.25,
+            "title": "Radius Miles",
+            "type": "number"
+          },
+          "zoning_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Zoning Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "anchor_brand_match_id"
+        ],
+        "title": "NearbyParcelSearchCreate",
+        "type": "object"
+      },
+      "NearbyParcelSearchResponse": {
+        "properties": {
+          "anchor_brand_match_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Brand Match Id"
+          },
+          "anchor_latitude": {
+            "title": "Anchor Latitude",
+            "type": "number"
+          },
+          "anchor_longitude": {
+            "title": "Anchor Longitude",
+            "type": "number"
+          },
+          "anchor_permit_id": {
+            "title": "Anchor Permit Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/NearbyParcelCandidateResponse"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deal_id": {
+            "title": "Deal Id",
+            "type": "string"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "persona": {
+            "title": "Persona",
+            "type": "string"
+          },
+          "radius_miles": {
+            "title": "Radius Miles",
+            "type": "number"
+          },
+          "ranker_version": {
+            "title": "Ranker Version",
+            "type": "string"
+          },
+          "result_limit": {
+            "title": "Result Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "deal_id",
+          "anchor_brand_match_id",
+          "anchor_permit_id",
+          "anchor_latitude",
+          "anchor_longitude",
+          "radius_miles",
+          "persona",
+          "filters",
+          "result_limit",
+          "as_of",
+          "ranker_version",
+          "created_at"
+        ],
+        "title": "NearbyParcelSearchResponse",
+        "type": "object"
+      },
+      "NearbyParcelSearchSummary": {
+        "properties": {
+          "anchor_brand_match_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Brand Match Id"
+          },
+          "anchor_latitude": {
+            "title": "Anchor Latitude",
+            "type": "number"
+          },
+          "anchor_longitude": {
+            "title": "Anchor Longitude",
+            "type": "number"
+          },
+          "anchor_permit_id": {
+            "title": "Anchor Permit Id",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deal_id": {
+            "title": "Deal Id",
+            "type": "string"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "persona": {
+            "title": "Persona",
+            "type": "string"
+          },
+          "radius_miles": {
+            "title": "Radius Miles",
+            "type": "number"
+          },
+          "ranker_version": {
+            "title": "Ranker Version",
+            "type": "string"
+          },
+          "result_limit": {
+            "title": "Result Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "deal_id",
+          "anchor_brand_match_id",
+          "anchor_permit_id",
+          "anchor_latitude",
+          "anchor_longitude",
+          "radius_miles",
+          "persona",
+          "filters",
+          "result_limit",
+          "as_of",
+          "ranker_version",
+          "created_at"
+        ],
+        "title": "NearbyParcelSearchSummary",
+        "type": "object"
+      },
+      "OpportunityGraphContextResponse": {
+        "properties": {
+          "architects": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Architects",
+            "type": "array"
+          },
+          "brokers": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Brokers",
+            "type": "array"
+          },
+          "buyer_lenses": {
+            "items": {
+              "$ref": "#/components/schemas/GraphBuyerLensSummary"
+            },
+            "title": "Buyer Lenses",
+            "type": "array"
+          },
+          "cities": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Cities",
+            "type": "array"
+          },
+          "companies": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Companies",
+            "type": "array"
+          },
+          "contractors": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Contractors",
+            "type": "array"
+          },
+          "developers": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Developers",
+            "type": "array"
+          },
+          "engineers": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Engineers",
+            "type": "array"
+          },
+          "lenders": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Lenders",
+            "type": "array"
+          },
+          "nearby_parcel_searches": {
+            "default": 0,
+            "title": "Nearby Parcel Searches",
+            "type": "integer"
+          },
+          "opportunity_id": {
+            "title": "Opportunity Id",
+            "type": "string"
+          },
+          "other": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Other",
+            "type": "array"
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "parcels": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Parcels",
+            "type": "array"
+          },
+          "permit_brand_matches": {
+            "items": {
+              "$ref": "#/components/schemas/PermitBrandMatchResponse"
+            },
+            "title": "Permit Brand Matches",
+            "type": "array"
+          },
+          "permits": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Permits",
+            "type": "array"
+          },
+          "root_entities": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEntityResponse"
+            },
+            "title": "Root Entities",
+            "type": "array"
+          },
+          "shared_parcels": {
+            "items": {
+              "$ref": "#/components/schemas/GraphSharedParcelSummary"
+            },
+            "title": "Shared Parcels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "opportunity_id",
+          "root_entities"
+        ],
+        "title": "OpportunityGraphContextResponse",
+        "type": "object"
+      },
       "OrgDeletionRequest": {
         "properties": {
           "confirm": {
@@ -2621,6 +6082,1391 @@
         "title": "OutputsResponse",
         "type": "object"
       },
+      "ParcelDetailResponse": {
+        "properties": {
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelFactResponse"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "graph_entity": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Entity"
+          },
+          "graph_related": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Graph Related",
+            "type": "array"
+          },
+          "parcel": {
+            "$ref": "#/components/schemas/ParcelSummaryResponse"
+          },
+          "search_count": {
+            "default": 0,
+            "title": "Search Count",
+            "type": "integer"
+          },
+          "search_hits": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelSearchHitResponse"
+            },
+            "title": "Search Hits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "parcel"
+        ],
+        "title": "ParcelDetailResponse",
+        "type": "object"
+      },
+      "ParcelFactResponse": {
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "fact_type": {
+            "title": "Fact Type",
+            "type": "string"
+          },
+          "field_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Path"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "id",
+          "fact_type",
+          "value",
+          "source_url",
+          "field_path",
+          "excerpt",
+          "confidence",
+          "observed_at",
+          "last_verified_at"
+        ],
+        "title": "ParcelFactResponse",
+        "type": "object"
+      },
+      "ParcelSearchHitResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deal_id": {
+            "title": "Deal Id",
+            "type": "string"
+          },
+          "deal_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deal Name"
+          },
+          "distance_miles": {
+            "title": "Distance Miles",
+            "type": "number"
+          },
+          "persona": {
+            "title": "Persona",
+            "type": "string"
+          },
+          "radius_miles": {
+            "title": "Radius Miles",
+            "type": "number"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "score_confidence": {
+            "title": "Score Confidence",
+            "type": "number"
+          },
+          "search_id": {
+            "title": "Search Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_id",
+          "deal_id",
+          "persona",
+          "radius_miles",
+          "created_at",
+          "rank",
+          "distance_miles",
+          "score",
+          "score_confidence",
+          "review_status"
+        ],
+        "title": "ParcelSearchHitResponse",
+        "type": "object"
+      },
+      "ParcelSummaryResponse": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "boundary_geometry": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boundary Geometry"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "county": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "County"
+          },
+          "external_parcel_id": {
+            "title": "External Parcel Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "improvement_area_sq_ft": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Improvement Area Sq Ft"
+          },
+          "improvement_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Improvement Value"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "land_area_sq_ft": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Area Sq Ft"
+          },
+          "land_use": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Use"
+          },
+          "land_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Value"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          },
+          "parcel_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel Group Id"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "total_assessed_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Assessed Value"
+          },
+          "zoning_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zoning Code"
+          }
+        },
+        "required": [
+          "id",
+          "external_parcel_id",
+          "parcel_group_id",
+          "jurisdiction",
+          "county",
+          "state",
+          "address",
+          "city",
+          "postal_code",
+          "latitude",
+          "longitude",
+          "land_area_sq_ft",
+          "improvement_area_sq_ft",
+          "land_value",
+          "improvement_value",
+          "total_assessed_value",
+          "land_use",
+          "zoning_code",
+          "last_verified_at"
+        ],
+        "title": "ParcelSummaryResponse",
+        "type": "object"
+      },
+      "PermitBrandMatchEvidenceResponse": {
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/BrandProfileResponse"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "detector_version": {
+            "title": "Detector Version",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "first_evidence": {
+            "$ref": "#/components/schemas/BrandMatchRawEvidence"
+          },
+          "first_seen_at": {
+            "format": "date-time",
+            "title": "First Seen At",
+            "type": "string"
+          },
+          "graph_context": {
+            "items": {
+              "$ref": "#/components/schemas/BrandMatchGraphContext"
+            },
+            "title": "Graph Context",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "latest_evidence": {
+            "$ref": "#/components/schemas/BrandMatchRawEvidence"
+          },
+          "linked_deals": {
+            "items": {
+              "$ref": "#/components/schemas/LinkedDealSummary"
+            },
+            "title": "Linked Deals",
+            "type": "array"
+          },
+          "matched_alias": {
+            "title": "Matched Alias",
+            "type": "string"
+          },
+          "matched_field": {
+            "title": "Matched Field",
+            "type": "string"
+          },
+          "matched_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matched Fields",
+            "type": "array"
+          },
+          "permit": {
+            "$ref": "#/components/schemas/BrandPermitSummary"
+          },
+          "review_status": {
+            "enum": [
+              "candidate",
+              "confirmed",
+              "dismissed",
+              "retracted"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          },
+          "rule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rule Ids",
+            "type": "array"
+          },
+          "signal_quality": {
+            "title": "Signal Quality",
+            "type": "string"
+          },
+          "signal_quality_label": {
+            "title": "Signal Quality Label",
+            "type": "string"
+          },
+          "signal_quality_note": {
+            "title": "Signal Quality Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "brand",
+          "permit",
+          "review_status",
+          "confidence",
+          "matched_alias",
+          "matched_field",
+          "excerpt",
+          "signal_quality",
+          "signal_quality_label",
+          "signal_quality_note",
+          "detector_version",
+          "first_seen_at",
+          "last_seen_at",
+          "first_evidence",
+          "latest_evidence"
+        ],
+        "title": "PermitBrandMatchEvidenceResponse",
+        "type": "object"
+      },
+      "PermitBrandMatchResponse": {
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/BrandProfileResponse"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "detector_version": {
+            "title": "Detector Version",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "first_seen_at": {
+            "format": "date-time",
+            "title": "First Seen At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "linked_deals": {
+            "items": {
+              "$ref": "#/components/schemas/LinkedDealSummary"
+            },
+            "title": "Linked Deals",
+            "type": "array"
+          },
+          "matched_alias": {
+            "title": "Matched Alias",
+            "type": "string"
+          },
+          "matched_field": {
+            "title": "Matched Field",
+            "type": "string"
+          },
+          "matched_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matched Fields",
+            "type": "array"
+          },
+          "permit": {
+            "$ref": "#/components/schemas/BrandPermitSummary"
+          },
+          "permit_id": {
+            "title": "Permit Id",
+            "type": "string"
+          },
+          "review_status": {
+            "enum": [
+              "candidate",
+              "confirmed",
+              "dismissed",
+              "retracted"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          },
+          "rule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rule Ids",
+            "type": "array"
+          },
+          "signal_quality": {
+            "readOnly": true,
+            "title": "Signal Quality",
+            "type": "string"
+          },
+          "signal_quality_label": {
+            "readOnly": true,
+            "title": "Signal Quality Label",
+            "type": "string"
+          },
+          "signal_quality_note": {
+            "readOnly": true,
+            "title": "Signal Quality Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "permit_id",
+          "review_status",
+          "confidence",
+          "matched_alias",
+          "matched_field",
+          "excerpt",
+          "detector_version",
+          "first_seen_at",
+          "last_seen_at",
+          "brand",
+          "permit",
+          "signal_quality",
+          "signal_quality_label",
+          "signal_quality_note"
+        ],
+        "title": "PermitBrandMatchResponse",
+        "type": "object"
+      },
+      "PermitBrandMatchReview": {
+        "properties": {
+          "review_status": {
+            "enum": [
+              "confirmed",
+              "dismissed",
+              "candidate"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_status"
+        ],
+        "title": "PermitBrandMatchReview",
+        "type": "object"
+      },
+      "PermitBrandOpportunityCreate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "PermitBrandOpportunityCreate",
+        "type": "object"
+      },
+      "PermitBrandOpportunityResponse": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "deal": {
+            "$ref": "#/components/schemas/DealDetailResponse"
+          },
+          "match_id": {
+            "title": "Match Id",
+            "type": "string"
+          },
+          "nearby_parcel_search": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NearbyParcelSearchSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nearby_parcel_searches": {
+            "items": {
+              "$ref": "#/components/schemas/NearbyParcelSearchSummary"
+            },
+            "title": "Nearby Parcel Searches",
+            "type": "array"
+          }
+        },
+        "required": [
+          "match_id",
+          "created",
+          "deal"
+        ],
+        "title": "PermitBrandOpportunityResponse",
+        "type": "object"
+      },
+      "PermitDetailResponse": {
+        "properties": {
+          "brand_matches": {
+            "items": {
+              "$ref": "#/components/schemas/PermitBrandMatchResponse"
+            },
+            "title": "Brand Matches",
+            "type": "array"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PermitEventResponse"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "graph_entity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphEntityDetailResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "graph_related": {
+            "items": {
+              "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+            },
+            "title": "Graph Related",
+            "type": "array"
+          },
+          "permit": {
+            "$ref": "#/components/schemas/PermitRecordResponse"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "source_landing_page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Landing Page"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "permit",
+          "source_key",
+          "source_name"
+        ],
+        "title": "PermitDetailResponse",
+        "type": "object"
+      },
+      "PermitEventResponse": {
+        "properties": {
+          "approval_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pre_approval",
+                  "approved"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Stage"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "permit_id": {
+            "title": "Permit Id",
+            "type": "string"
+          },
+          "raw_source_record_id": {
+            "title": "Raw Source Record Id",
+            "type": "string"
+          },
+          "source_event_id": {
+            "title": "Source Event Id",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "id",
+          "permit_id",
+          "raw_source_record_id",
+          "source_event_id",
+          "event_type",
+          "occurred_at",
+          "created_at"
+        ],
+        "title": "PermitEventResponse",
+        "type": "object"
+      },
+      "PermitRecordResponse": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "applicant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applicant Name"
+          },
+          "application_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Number"
+          },
+          "approval_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pre_approval",
+                  "approved"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Stage"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "architect_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Architect Name"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "contractor_license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contractor License"
+          },
+          "contractor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contractor Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "developer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Name"
+          },
+          "engineer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engineer Name"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "external_record_id": {
+            "title": "External Record Id",
+            "type": "string"
+          },
+          "filed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filed At"
+          },
+          "first_seen_at": {
+            "format": "date-time",
+            "title": "First Seen At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "occupancy_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occupancy Type"
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
+          },
+          "parcel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel Id"
+          },
+          "permit_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Number"
+          },
+          "permit_subtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Subtype"
+          },
+          "permit_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Type"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "proposed_use": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Use"
+          },
+          "retired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retired At"
+          },
+          "review_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Type"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "square_feet": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Square Feet"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "status_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Updated At"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          },
+          "valuation": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valuation"
+          },
+          "work_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Class"
+          }
+        },
+        "required": [
+          "id",
+          "source_id",
+          "external_record_id",
+          "application_number",
+          "permit_number",
+          "approval_stage",
+          "permit_type",
+          "permit_subtype",
+          "work_class",
+          "review_type",
+          "proposed_use",
+          "occupancy_type",
+          "status",
+          "description",
+          "project_name",
+          "address",
+          "city",
+          "state",
+          "postal_code",
+          "parcel_id",
+          "jurisdiction",
+          "applicant_name",
+          "owner_name",
+          "developer_name",
+          "contractor_name",
+          "contractor_license",
+          "architect_name",
+          "engineer_name",
+          "valuation",
+          "square_feet",
+          "units",
+          "latitude",
+          "longitude",
+          "filed_at",
+          "status_updated_at",
+          "approved_at",
+          "issued_at",
+          "expires_at",
+          "completed_at",
+          "source_url",
+          "is_active",
+          "retired_at",
+          "first_seen_at",
+          "last_seen_at"
+        ],
+        "title": "PermitRecordResponse",
+        "type": "object"
+      },
       "PipelineEventResponse": {
         "properties": {
           "changed_by": {
@@ -2798,6 +7644,103 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "RelatedEntity": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "id",
+          "entity_type",
+          "display_name"
+        ],
+        "title": "RelatedEntity",
+        "type": "object"
+      },
+      "ReliabilityWatchlistItemResponse": {
+        "properties": {
+          "active_run_stale": {
+            "title": "Active Run Stale",
+            "type": "boolean"
+          },
+          "cursor_stalled": {
+            "title": "Cursor Stalled",
+            "type": "boolean"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_name",
+          "status",
+          "active_run_stale",
+          "cursor_stalled",
+          "reasons"
+        ],
+        "title": "ReliabilityWatchlistItemResponse",
+        "type": "object"
+      },
       "ResetPasswordRequest": {
         "properties": {
           "new_password": {
@@ -2814,6 +7757,57 @@
           "new_password"
         ],
         "title": "ResetPasswordRequest",
+        "type": "object"
+      },
+      "RetailerOpeningCoverageSourceResponse": {
+        "properties": {
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "official_landing_page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Official Landing Page"
+          },
+          "signal_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Stage"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_key",
+          "source_name"
+        ],
+        "title": "RetailerOpeningCoverageSourceResponse",
         "type": "object"
       },
       "RiskLevel": {
@@ -3001,6 +7995,411 @@
           "created_at"
         ],
         "title": "SignalResponse",
+        "type": "object"
+      },
+      "SourceCanaryRequest": {
+        "properties": {
+          "sample_size": {
+            "default": 10,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Sample Size",
+            "type": "integer"
+          }
+        },
+        "title": "SourceCanaryRequest",
+        "type": "object"
+      },
+      "SourceCanaryResponse": {
+        "properties": {
+          "approval_stages": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Approval Stages",
+            "type": "object"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "next_checkpoint": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Checkpoint"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "records_failed": {
+            "title": "Records Failed",
+            "type": "integer"
+          },
+          "records_fetched": {
+            "title": "Records Fetched",
+            "type": "integer"
+          },
+          "records_valid": {
+            "title": "Records Valid",
+            "type": "integer"
+          },
+          "sample_record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sample Record Ids",
+            "type": "array"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_key",
+          "ok",
+          "records_fetched",
+          "records_valid",
+          "records_failed",
+          "approval_stages",
+          "sample_record_ids",
+          "next_checkpoint",
+          "errors"
+        ],
+        "title": "SourceCanaryResponse",
+        "type": "object"
+      },
+      "SourceHealthResponse": {
+        "properties": {
+          "active_heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Heartbeat At"
+          },
+          "active_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Run Id"
+          },
+          "active_run_stale": {
+            "title": "Active Run Stale",
+            "type": "boolean"
+          },
+          "attribution_required": {
+            "title": "Attribution Required",
+            "type": "boolean"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor"
+          },
+          "cursor_stalled": {
+            "title": "Cursor Stalled",
+            "type": "boolean"
+          },
+          "cursor_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor Updated At"
+          },
+          "heartbeat_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat Age Seconds"
+          },
+          "ingestion_age_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingestion Age Hours"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "official_landing_page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Official Landing Page"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "record_failure_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Failure Rate"
+          },
+          "records_failed": {
+            "title": "Records Failed",
+            "type": "integer"
+          },
+          "records_seen": {
+            "title": "Records Seen",
+            "type": "integer"
+          },
+          "run_failure_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Failure Rate"
+          },
+          "share_alike_review_required": {
+            "title": "Share Alike Review Required",
+            "type": "boolean"
+          },
+          "signal_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Stage"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "source_lag_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Lag Hours"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_watermark_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Watermark At"
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "critical",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "terminal_runs": {
+            "title": "Terminal Runs",
+            "type": "integer"
+          },
+          "unhealthy_runs": {
+            "title": "Unhealthy Runs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_key",
+          "source_name",
+          "jurisdiction",
+          "license",
+          "signal_stage",
+          "attribution_required",
+          "share_alike_review_required",
+          "status",
+          "active_run_id",
+          "active_heartbeat_at",
+          "heartbeat_age_seconds",
+          "active_run_stale",
+          "last_run_at",
+          "last_success_at",
+          "ingestion_age_hours",
+          "source_watermark_at",
+          "source_lag_hours",
+          "terminal_runs",
+          "unhealthy_runs",
+          "run_failure_rate",
+          "records_seen",
+          "records_failed",
+          "record_failure_rate",
+          "cursor",
+          "cursor_updated_at",
+          "cursor_stalled",
+          "reasons"
+        ],
+        "title": "SourceHealthResponse",
+        "type": "object"
+      },
+      "StateCoverageBucket": {
+        "properties": {
+          "approved_only_sources": {
+            "title": "Approved Only Sources",
+            "type": "integer"
+          },
+          "candidate_sources": {
+            "title": "Candidate Sources",
+            "type": "integer"
+          },
+          "live_sources": {
+            "title": "Live Sources",
+            "type": "integer"
+          },
+          "pre_approval_sources": {
+            "title": "Pre Approval Sources",
+            "type": "integer"
+          },
+          "retailer_opening_sources": {
+            "title": "Retailer Opening Sources",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "live_sources",
+          "candidate_sources",
+          "retailer_opening_sources",
+          "pre_approval_sources",
+          "approved_only_sources"
+        ],
+        "title": "StateCoverageBucket",
         "type": "object"
       },
       "SwitchOrgRequest": {
@@ -4167,6 +9566,31 @@
         "summary": "Switch Org",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/brands": {
+      "get": {
+        "operationId": "get_brands_v1_brands_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BrandProfileResponse"
+                  },
+                  "title": "Response Get Brands V1 Brands Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Brands",
+        "tags": [
+          "brand intelligence"
         ]
       }
     },
@@ -5778,6 +11202,48 @@
         ]
       }
     },
+    "/v1/deals/{deal_id}/graph-context": {
+      "get": {
+        "operationId": "get_deal_graph_context_v1_deals__deal_id__graph_context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityGraphContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Deal Graph Context",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
     "/v1/deals/{deal_id}/match-buy-boxes": {
       "get": {
         "operationId": "match_deal_to_buy_boxes_v1_deals__deal_id__match_buy_boxes_get",
@@ -6046,6 +11512,130 @@
         ]
       }
     },
+    "/v1/deals/{deal_id}/nearby-parcel-searches": {
+      "get": {
+        "operationId": "get_search_history_v1_deals__deal_id__nearby_parcel_searches_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NearbyParcelSearchSummary"
+                  },
+                  "title": "Response Get Search History V1 Deals  Deal Id  Nearby Parcel Searches Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Search History",
+        "tags": [
+          "nearby parcels"
+        ]
+      },
+      "post": {
+        "operationId": "create_search_v1_deals__deal_id__nearby_parcel_searches_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NearbyParcelSearchCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyParcelSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Search",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
     "/v1/deals/{deal_id}/outputs": {
       "get": {
         "operationId": "get_outputs_v1_deals__deal_id__outputs_get",
@@ -6085,6 +11675,64 @@
         "summary": "Get Outputs",
         "tags": [
           "assumptions"
+        ]
+      }
+    },
+    "/v1/deals/{deal_id}/permit-brand-matches": {
+      "get": {
+        "operationId": "get_deal_permit_brand_matches_v1_deals__deal_id__permit_brand_matches_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PermitBrandMatchResponse"
+                  },
+                  "title": "Response Get Deal Permit Brand Matches V1 Deals  Deal Id  Permit Brand Matches Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Deal Permit Brand Matches",
+        "tags": [
+          "brand intelligence"
         ]
       }
     },
@@ -6447,6 +12095,1337 @@
         "summary": "Delete Document",
         "tags": [
           "documents"
+        ]
+      }
+    },
+    "/v1/graph/entities": {
+      "get": {
+        "operationId": "search_graph_entities_v1_graph_entities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GraphEntitySearchResponse"
+                  },
+                  "title": "Response Search Graph Entities V1 Graph Entities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Graph Entities",
+        "tags": [
+          "graph"
+        ]
+      },
+      "post": {
+        "operationId": "create_entity_v1_graph_entities_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphEntityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphEntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Entity",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/entities/{entity_id}": {
+      "get": {
+        "operationId": "get_entity_v1_graph_entities__entity_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphEntityDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Entity",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/entities/{entity_id}/related": {
+      "get": {
+        "operationId": "related_entities_v1_graph_entities__entity_id__related_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GraphRelatedEntityResponse"
+                  },
+                  "title": "Response Related Entities V1 Graph Entities  Entity Id  Related Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Related Entities",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/paths": {
+      "get": {
+        "operationId": "relationship_paths_v1_graph_paths_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source_entity_id",
+            "required": true,
+            "schema": {
+              "title": "Source Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_entity_id",
+            "required": true,
+            "schema": {
+              "title": "Target Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_depth",
+            "required": false,
+            "schema": {
+              "default": 4,
+              "maximum": 6,
+              "minimum": 1,
+              "title": "Max Depth",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GraphPathResponse"
+                  },
+                  "title": "Response Relationship Paths V1 Graph Paths Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Relationship Paths",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/relationships": {
+      "post": {
+        "operationId": "add_relationship_v1_graph_relationships_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphRelationshipCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphRelationshipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Relationship",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/ingestion/candidates": {
+      "get": {
+        "operationId": "get_ingestion_candidates_v1_ingestion_candidates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IngestionCandidateResponse"
+                  },
+                  "title": "Response Get Ingestion Candidates V1 Ingestion Candidates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ingestion Candidates",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/candidates/{candidate_key}/canary": {
+      "post": {
+        "operationId": "canary_candidate_v1_ingestion_candidates__candidate_key__canary_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_key",
+            "required": true,
+            "schema": {
+              "title": "Candidate Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceCanaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateCanaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Canary Candidate",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/candidates/{candidate_key}/canary-history": {
+      "get": {
+        "operationId": "get_candidate_canary_history_v1_ingestion_candidates__candidate_key__canary_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_key",
+            "required": true,
+            "schema": {
+              "title": "Candidate Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CandidateCanaryAttemptResponse"
+                  },
+                  "title": "Response Get Candidate Canary History V1 Ingestion Candidates  Candidate Key  Canary History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Candidate Canary History",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/candidates/{candidate_key}/promote": {
+      "post": {
+        "operationId": "promote_candidate_v1_ingestion_candidates__candidate_key__promote_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_key",
+            "required": true,
+            "schema": {
+              "title": "Candidate Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionSourceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Promote Candidate",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/coverage": {
+      "get": {
+        "operationId": "get_ingestion_coverage_v1_ingestion_coverage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Ingestion Coverage",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/health": {
+      "get": {
+        "operationId": "get_ingestion_health_v1_ingestion_health_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourceHealthResponse"
+                  },
+                  "title": "Response Get Ingestion Health V1 Ingestion Health Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ingestion Health",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/permits": {
+      "get": {
+        "operationId": "get_permits_v1_ingestion_permits_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "approval_stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(pre_approval|approved)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Approval Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PermitRecordResponse"
+                  },
+                  "title": "Response Get Permits V1 Ingestion Permits Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Permits",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/permits/{permit_id}": {
+      "get": {
+        "operationId": "get_permit_v1_ingestion_permits__permit_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "permit_id",
+            "required": true,
+            "schema": {
+              "title": "Permit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermitDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Permit",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/reliability-summary": {
+      "get": {
+        "operationId": "get_ingestion_reliability_summary_v1_ingestion_reliability_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionReliabilitySummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Ingestion Reliability Summary",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/runs": {
+      "get": {
+        "operationId": "get_runs_v1_ingestion_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IngestionRunResponse"
+                  },
+                  "title": "Response Get Runs V1 Ingestion Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Runs",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/sources": {
+      "get": {
+        "operationId": "get_sources_v1_ingestion_sources_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IngestionSourceResponse"
+                  },
+                  "title": "Response Get Sources V1 Ingestion Sources Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Sources",
+        "tags": [
+          "ingestion"
+        ]
+      },
+      "post": {
+        "operationId": "add_source_v1_ingestion_sources_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionSourceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionSourceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Source",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/sources/{source_id}": {
+      "patch": {
+        "operationId": "patch_source_v1_ingestion_sources__source_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionSourceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionSourceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Source",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/sources/{source_id}/canary": {
+      "post": {
+        "operationId": "canary_source_v1_ingestion_sources__source_id__canary_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceCanaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCanaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Canary Source",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/sources/{source_id}/health": {
+      "get": {
+        "operationId": "get_source_health_v1_ingestion_sources__source_id__health_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Source Health",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/sources/{source_id}/runs": {
+      "post": {
+        "operationId": "run_source_v1_ingestion_sources__source_id__runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Source",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/nearby-parcel-searches/{search_id}": {
+      "get": {
+        "operationId": "get_search_v1_nearby_parcel_searches__search_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "search_id",
+            "required": true,
+            "schema": {
+              "title": "Search Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyParcelSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Search",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/opportunities/{opportunity_id}/graph-context": {
+      "get": {
+        "operationId": "get_opportunity_graph_context_v1_opportunities__opportunity_id__graph_context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "opportunity_id",
+            "required": true,
+            "schema": {
+              "title": "Opportunity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityGraphContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Opportunity Graph Context",
+        "tags": [
+          "graph"
         ]
       }
     },
@@ -6947,6 +13926,513 @@
         "summary": "List Follow Ups",
         "tags": [
           "activities"
+        ]
+      }
+    },
+    "/v1/parcel-candidates/{candidate_id}": {
+      "patch": {
+        "operationId": "patch_candidate_v1_parcel_candidates__candidate_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NearbyParcelCandidateReview"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyParcelCandidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Candidate",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/parcel-candidates/{candidate_id}/assignment": {
+      "patch": {
+        "operationId": "assign_candidate_v1_parcel_candidates__candidate_id__assignment_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NearbyParcelCandidateAssignment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyParcelCandidateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assign Candidate",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/parcel-candidates/{candidate_id}/opportunity": {
+      "post": {
+        "operationId": "promote_candidate_v1_parcel_candidates__candidate_id__opportunity_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NearbyParcelOpportunityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyParcelOpportunityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Promote Candidate",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/parcels/{parcel_id}": {
+      "get": {
+        "operationId": "get_parcel_v1_parcels__parcel_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "parcel_id",
+            "required": true,
+            "schema": {
+              "title": "Parcel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Parcel",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/permit-brand-matches": {
+      "get": {
+        "operationId": "get_permit_brand_matches_v1_permit_brand_matches_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "review_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(candidate|confirmed|dismissed|retracted)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Review Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "approval_stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(pre_approval|approved)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Approval Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PermitBrandMatchResponse"
+                  },
+                  "title": "Response Get Permit Brand Matches V1 Permit Brand Matches Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Permit Brand Matches",
+        "tags": [
+          "brand intelligence"
+        ]
+      }
+    },
+    "/v1/permit-brand-matches/{match_id}": {
+      "patch": {
+        "operationId": "patch_permit_brand_match_v1_permit_brand_matches__match_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermitBrandMatchReview"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermitBrandMatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Permit Brand Match",
+        "tags": [
+          "brand intelligence"
+        ]
+      }
+    },
+    "/v1/permit-brand-matches/{match_id}/evidence": {
+      "get": {
+        "operationId": "get_permit_brand_match_evidence_v1_permit_brand_matches__match_id__evidence_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermitBrandMatchEvidenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Permit Brand Match Evidence",
+        "tags": [
+          "brand intelligence"
+        ]
+      }
+    },
+    "/v1/permit-brand-matches/{match_id}/opportunity": {
+      "post": {
+        "operationId": "create_opportunity_from_brand_match_v1_permit_brand_matches__match_id__opportunity_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermitBrandOpportunityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermitBrandOpportunityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Opportunity From Brand Match",
+        "tags": [
+          "brand intelligence"
         ]
       }
     },
