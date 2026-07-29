@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarClock, Database, ExternalLink, RefreshCw, Rocket, ShieldAlert, ShieldCheck } from 'lucide-react';

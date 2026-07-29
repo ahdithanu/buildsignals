@@ -12,6 +12,12 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      "/v1": {
+        target: process.env.VITE_DEV_API_PROXY || "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+    },
   },
   // Skip PostCSS during test runs. The iCloud-synced Desktop folder
   // intermittently ECANCELs the postcss.config.js read, which hangs Vitest.
@@ -29,5 +35,6 @@ export default defineConfig(({ mode }) => ({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
   },
 }));

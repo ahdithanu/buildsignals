@@ -23,8 +23,8 @@ if DATABASE_URL.startswith("postgres://"):
 #
 # Access tokens are short-lived and held in memory on the frontend (never
 # localStorage). Refresh tokens are long-lived and carried as an httpOnly
-# Secure cookie scoped to /auth/refresh, so XSS cannot read them and the
-# browser automatically attaches them only to the refresh endpoint.
+# Secure cookie scoped to /v1/auth/*, so XSS cannot read them and the
+# browser automatically attaches them only to the versioned refresh/logout endpoints.
 _DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
 SECRET_KEY = os.environ.get("SECRET_KEY", _DEFAULT_SECRET_KEY)
 
@@ -46,7 +46,7 @@ ALGORITHM = "HS256"
 # top-level navigations. In dev (http://localhost) Secure must be off or the
 # browser drops the cookie entirely.
 REFRESH_COOKIE_NAME = os.environ.get("REFRESH_COOKIE_NAME", "ds_refresh")
-REFRESH_COOKIE_PATH = "/auth"  # scoped: only /auth/refresh and /auth/logout see it
+REFRESH_COOKIE_PATH = "/v1/auth"  # scoped to versioned refresh/logout endpoints
 REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "lax").lower()
 if REFRESH_COOKIE_SAMESITE not in ("lax", "strict", "none"):
     raise RuntimeError(

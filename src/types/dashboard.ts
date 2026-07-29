@@ -26,6 +26,8 @@ export interface TopOpportunity {
   projectedIrr: number;
   status: string;
   riskLevel: string;
+  graphConnectedEntities?: number;
+  nearbyParcelSearches?: number;
 }
 
 export type AiInsight = string;

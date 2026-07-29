@@ -43,17 +43,18 @@ export default defineConfig({
       command:
         "bash -c 'cd .. && " +
         "rm -f e2e-test.db && " +
-        "DATABASE_URL=sqlite:///./e2e-test.db SECRET_KEY=e2e-secret-key-not-for-production ENVIRONMENT=ci alembic upgrade head && " +
-        "DATABASE_URL=sqlite:///./e2e-test.db SECRET_KEY=e2e-secret-key-not-for-production ENVIRONMENT=ci ALLOW_ANONYMOUS=false " +
+        "DATABASE_URL=sqlite:///./e2e-test.db SECRET_KEY=e2e-secret-key-not-for-production ENVIRONMENT=development alembic upgrade head && " +
+        "DATABASE_URL=sqlite:///./e2e-test.db SECRET_KEY=e2e-secret-key-not-for-production ENVIRONMENT=development python3 seed.py && " +
+        "DATABASE_URL=sqlite:///./e2e-test.db SECRET_KEY=e2e-secret-key-not-for-production ENVIRONMENT=development ALLOW_ANONYMOUS=false REFRESH_COOKIE_SECURE=false " +
         "LOGIN_RATE_LIMIT=100000 REGISTER_RATE_LIMIT=100000 REFRESH_RATE_LIMIT=100000 GLOBAL_RATE_LIMIT=1000000 " +
-        "uvicorn app.main:app --port 8000'",
+        "uvicorn app.main:app --host 0.0.0.0 --port 8000'",
       url: "http://localhost:8000/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
     {
       // Frontend dev server.
-      command: "cd .. && npm run dev",
+      command: "cd .. && VITE_API_BASE_URL=http://localhost:8080 npm run dev",
       url: "http://localhost:8080",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

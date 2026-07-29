@@ -14,7 +14,7 @@
 
 databases:
   - name: dealsignal-db
-    plan: free            # ⚠ free Postgres expires in 30 days — upgrade for anything real
+    plan: starter         # Paid tier — required for pilot (free Postgres expires in 30 days)
     postgresMajorVersion: "16"
 
 services:
@@ -23,7 +23,7 @@ services:
   # counts separately). With it, limits are enforced across every instance.
   - type: keyvalue
     name: dealsignal-redis
-    plan: free            # 25 MB is plenty for short-TTL rate-limit keys
+    plan: starter         # Shared rate-limiter state across API instances
     # Rate-limit keys all carry an EXPIRE, so evicting the least-recently-used
     # under memory pressure is safe.
     maxmemoryPolicy: allkeys-lru
@@ -33,7 +33,7 @@ services:
   - type: web
     name: dealsignal-api
     runtime: python
-    plan: free            # ⚠ free web services sleep when idle (cold starts). Upgrade for a pilot.
+    plan: starter         # No sleep-on-idle; required for production pilot
     buildCommand: pip install -r requirements.txt
     # Runs once per deploy, before traffic cuts over. Applies pending Alembic
     # migrations (incl. RLS from migration 003). A broken migration fails the
@@ -88,9 +88,7 @@ services:
   - type: web
     name: dealsignal-frontend
     runtime: static
-    # `npm install` (not `npm ci`) until package-lock.json is regenerated on a
-    # Node 18+ machine — the lock is currently behind package.json.
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
       # VITE_* vars are baked into the bundle AT BUILD TIME. Changing one needs
@@ -126,21 +124,15 @@ services:
       - path: /*
         name: Permissions-Policy
         value: camera=(), microphone=(), geolocation=(), interest-cohort=()
-      # ── Content-Security-Policy — ENABLE AFTER A BUILD TEST ──
-      # A strict script-src is the real XSS defense, but a wrong CSP white-
-      # screens the app, and this couldn't be validated in the authoring env
-      # (Node 10). Before enabling: `npm run build && npm run preview`, confirm
-      # the app loads with no CSP violations in the console, and adjust
-      # connect-src to your actual API + Sentry origins. Vite's prod build may
-      # need 'unsafe-inline' in style-src (injected styles); it should NOT need
-      # it in script-src. Then uncomment:
-      # - path: /*
-      #   name: Content-Security-Policy
-      #   value: >-
-      #     default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-      #     img-src 'self' data: https:; font-src 'self' data:;
-      #     connect-src 'self' https://YOUR-API.onrender.com https://*.ingest.sentry.io;
-      #     frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+      # Content-Security-Policy — validated with `npm run build` (Node 20).
+      # If you use a custom API domain, add it to connect-src in the dashboard.
+      - path: /*
+        name: Content-Security-Policy
+        value: >-
+          default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+          img-src 'self' data: https:; font-src 'self' data:;
+          connect-src 'self' https://*.onrender.com https://*.ingest.sentry.io https://*.sentry.io;
+          frame-ancestors 'none'; base-uri 'self'; object-src 'none'
     routes:
       # SPA fallback: every path serves index.html so client-side routing works.
       - type: rewrite

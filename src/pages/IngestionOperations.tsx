@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCandidateCanaryHistory, useIngestionHealth, usePromoteIngestionCandidate } from '@/hooks/useIngestionHealth';
 import { useToast } from '@/hooks/use-toast';
 import { stateCodeFromJurisdiction } from '@/lib/jurisdiction';
-import { buildIngestionReliabilitySummary } from '@/lib/ingestionReliability';
+import { buildIngestionReliabilitySummary, resolveIngestionReliabilitySummary } from '@/lib/ingestionReliability';
 import { cn } from '@/lib/utils';
 import type { CandidateCanaryAttempt, IngestionCandidate, SourceHealth, SourceHealthStatus } from '@/types/ingestion';
 
@@ -402,7 +402,7 @@ export default function IngestionOperations() {
   const sources = data?.sources ?? [];
   const candidates = data?.candidates ?? [];
   const coverage = data?.coverage;
-  const reliability = data?.reliability ?? buildIngestionReliabilitySummary(sources, candidates);
+  const reliability = resolveIngestionReliabilitySummary(sources, candidates, data?.reliability);
   const canManage = role === 'admin';
   const activeCanaryId = canary.isPending ? canary.variables?.sourceId : undefined;
   const activeCandidateCanaryKey = candidateCanary.isPending ? candidateCanary.variables?.candidateKey : undefined;

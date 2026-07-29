@@ -1,9 +1,21 @@
-import type { IngestionCandidate, SourceHealth } from '@/types/ingestion';
+import type { IngestionCandidate, IngestionReliabilitySummary, SourceHealth } from '@/types/ingestion';
+
+export type UiReliabilitySummary = {
+  healthy: number;
+  attention: number;
+  critical: number;
+  queued: number;
+  blocked: number;
+  staleRuns: number;
+  stalledCursors: number;
+  failedRetryCanaries: number;
+  watchlistSources: SourceHealth[] | IngestionReliabilitySummary['watchlist_sources'];
+};
 
 export function buildIngestionReliabilitySummary(
   sources: SourceHealth[],
   candidates: IngestionCandidate[],
-) {
+): UiReliabilitySummary {
   const healthy = sources.filter((source) => source.status === 'healthy').length;
   const attention = sources.filter((source) => source.status === 'degraded').length;
   const critical = sources.filter((source) => source.status === 'critical' || source.status === 'unknown').length;
@@ -26,5 +38,28 @@ export function buildIngestionReliabilitySummary(
     stalledCursors,
     failedRetryCanaries,
     watchlistSources,
+  };
+}
+
+export function resolveIngestionReliabilitySummary(
+  sources: SourceHealth[],
+  candidates: IngestionCandidate[],
+  apiSummary?: IngestionReliabilitySummary | null,
+): UiReliabilitySummary {
+  const local = buildIngestionReliabilitySummary(sources, candidates);
+  if (!apiSummary) {
+    return local;
+  }
+  return {
+    ...local,
+    healthy: apiSummary.healthy_sources,
+    attention: apiSummary.attention_sources,
+    critical: apiSummary.critical_sources,
+    staleRuns: apiSummary.stale_runs,
+    stalledCursors: apiSummary.stalled_cursors,
+    failedRetryCanaries: apiSummary.failed_retry_canaries,
+    watchlistSources: apiSummary.watchlist_sources?.length
+      ? apiSummary.watchlist_sources
+      : local.watchlistSources,
   };
 }

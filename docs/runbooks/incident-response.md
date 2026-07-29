@@ -3,9 +3,9 @@
 What to do when production is broken. Optimized for the 2am case: skim the
 severity table, find your symptom, act. Depth is in the linked runbooks.
 
-> **Fill in before relying on this:** the on-call rotation, the phone/paging
-> tool, and the status-page URL are marked `TODO` below. A runbook with a
-> placeholder pager is a runbook that fails when you need it.
+> **Before first production incident:** replace the `[CONFIGURE]` placeholders
+> in §On-call with your org's rotation, paging tool, and status page. Until
+> then, treat `#dealsignal-incidents` as the paging channel.
 
 ---
 
@@ -59,7 +59,8 @@ are **Sev-1 regardless of user impact** — see §5.
 
 - **Internal:** `#dealsignal-incidents`. Post on declare, on status change, and
   on resolve. Timestamp updates so the postmortem timeline writes itself.
-- **External (Sev-1/2):** update the status page — **TODO: status-page URL**.
+- **External (Sev-1/2):** update the status page at **[CONFIGURE: status page URL]**
+  (e.g. `https://status.dealsignal.com` via Instatus, Statuspage, or Better Uptime).
   Say what's affected and that you're on it; don't speculate on cause or ETA.
 - **Cadence:** Sev-1 → update at least every 30 min even if it's "still
   investigating." Silence reads as "nobody's handling it."
@@ -102,9 +103,23 @@ page, stand down the page.
 
 ## On-call
 
-- **Rotation:** TODO — name the current on-call and where the schedule lives.
-- **Paging:** TODO — phone tree or paging tool (PagerDuty/Opsgenie/etc.).
-- **Escalation:** TODO — who to wake if the primary doesn't ack in N minutes.
+Replace `[CONFIGURE]` fields before relying on this in production.
+
+- **Rotation:** [CONFIGURE: e.g. PagerDuty schedule "DealSignal Primary"] — link:
+  `[CONFIGURE: schedule URL]`
+- **Primary on-call (today):** [CONFIGURE: name + phone/Slack]
+- **Secondary / backup:** [CONFIGURE: name + phone/Slack]
+- **Paging:** [CONFIGURE: PagerDuty / Opsgenie service name]. Ack window: **5 min**.
+- **Escalation:** If primary doesn't ack in 5 min → page secondary. If neither
+  acks in 10 min → page [CONFIGURE: engineering lead / CTO].
+- **Status page admin:** [CONFIGURE: who can post external updates]
+
+**Setup checklist (one-time):**
+
+1. Create PagerDuty/Opsgenie service with Slack + SMS/phone routes.
+2. Import on-call calendar (weekly rotation recommended for pilot).
+3. Connect Sentry + Render deploy-failure webhooks to the paging service.
+4. Create public status page; store URL above and in `docs/operations.md`.
 
 | What broke | Who |
 |---|---|

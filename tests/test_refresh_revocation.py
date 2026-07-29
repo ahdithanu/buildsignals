@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.config import REFRESH_COOKIE_NAME
+from app.config import REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from app.services.account_lockout import lockout
 from app.services.rate_limiter import limiter
 
@@ -36,7 +36,7 @@ REGISTER = {
 
 
 def _register(client):
-    r = client.post("/auth/register", json=REGISTER)
+    r = client.post("/v1/auth/register", json=REGISTER)
     assert r.status_code == 201, r.text
     return r
 
@@ -52,11 +52,11 @@ def test_logout_all_revokes_outstanding_refresh_cookie(client):
     assert original_refresh is not None
 
     # Sanity: /auth/me works pre-revocation.
-    me = client.get("/auth/me", headers=_auth_headers(access))
+    me = client.get("/v1/auth/me", headers=_auth_headers(access))
     assert me.status_code == 200, me.text
 
     # Logout-all: should return 204 and bump token_version.
-    out = client.post("/auth/logout-all", headers=_auth_headers(access))
+    out = client.post("/v1/auth/logout-all", headers=_auth_headers(access))
     assert out.status_code == 204, out.text
 
     # The clearing Set-Cookie should be present on the response.
@@ -66,8 +66,8 @@ def test_logout_all_revokes_outstanding_refresh_cookie(client):
     # The TestClient's cookie jar follows Set-Cookie semantics, but to make
     # the assertion airtight we re-attach the captured original cookie and
     # confirm /auth/refresh rejects it.
-    client.cookies.set(REFRESH_COOKIE_NAME, original_refresh, path="/auth")
-    refreshed = client.post("/auth/refresh")
+    client.cookies.set(REFRESH_COOKIE_NAME, original_refresh, path=REFRESH_COOKIE_PATH)
+    refreshed = client.post("/v1/auth/refresh")
     assert refreshed.status_code == 401
     assert "revoke" in refreshed.json()["detail"].lower()
 
@@ -76,30 +76,30 @@ def test_fresh_login_after_logout_all_still_works(client):
     r = _register(client)
     access = r.json()["access_token"]
 
-    out = client.post("/auth/logout-all", headers=_auth_headers(access))
+    out = client.post("/v1/auth/logout-all", headers=_auth_headers(access))
     assert out.status_code == 204
 
     client.cookies.clear()
     # Brand-new login mints a cookie at the new token_version → must succeed.
     login = client.post(
-        "/auth/login",
+        "/v1/auth/login",
         json={"email": REGISTER["email"], "password": REGISTER["password"]},
     )
     assert login.status_code == 200, login.text
 
     # And that fresh session can refresh just fine.
-    refreshed = client.post("/auth/refresh")
+    refreshed = client.post("/v1/auth/refresh")
     assert refreshed.status_code == 200, refreshed.text
 
 
 def test_logout_all_requires_auth(client):
-    r = client.post("/auth/logout-all")
+    r = client.post("/v1/auth/logout-all")
     assert r.status_code == 401
 
 
 def test_refresh_still_works_when_token_version_matches(client):
     """Sanity: the version check doesn't break the normal refresh flow."""
     _register(client)
-    r = client.post("/auth/refresh")
+    r = client.post("/v1/auth/refresh")
     assert r.status_code == 200, r.text
     assert r.json().get("access_token")

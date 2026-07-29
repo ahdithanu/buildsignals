@@ -14,6 +14,9 @@ describe("<NationalCoverageCard>", () => {
             candidate_count: 13,
             jurisdiction_count: 18,
             retailer_opening_source_count: 9,
+            retailer_opening_sources: [
+              { source_key: "austin_tx_permits", source_name: "Austin Permits", jurisdiction: "Austin, TX", signal_stage: "pre_approval" },
+            ],
             approved_only_sources: [
               { source_key: "detroit_mi_bseed_building_permits", source_name: "Detroit BSEED Building Permits", jurisdiction: "Detroit, MI", signal_stage: "approved_only" },
             ],
@@ -22,6 +25,14 @@ describe("<NationalCoverageCard>", () => {
             live_signal_stage_counts: {
               pre_approval_and_approved: 28,
               approved_only: 14,
+            },
+            live_signal_sources_by_stage: {
+              pre_approval_and_approved: [
+                { source_key: "austin_tx_permits", source_name: "Austin Permits", jurisdiction: "Austin, TX", signal_stage: "pre_approval" },
+              ],
+              approved_only: [
+                { source_key: "detroit_mi_bseed_building_permits", source_name: "Detroit BSEED Building Permits", jurisdiction: "Detroit, MI", signal_stage: "approved_only" },
+              ],
             },
             candidate_status_counts: {
               operational_retry: 5,

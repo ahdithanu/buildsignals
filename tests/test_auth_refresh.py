@@ -2,7 +2,7 @@
 
 Covers the security-critical properties of /auth/refresh and /auth/logout:
 
-- Login/register set an httpOnly refresh cookie scoped to /auth.
+- Login/register set an httpOnly refresh cookie scoped to the versioned auth path.
 - The refresh cookie is httpOnly (no Set-Cookie without HttpOnly).
 - /auth/refresh returns a new access token AND rotates the cookie.
 - /auth/refresh with no cookie → 401.
@@ -13,7 +13,7 @@ Covers the security-critical properties of /auth/refresh and /auth/logout:
 """
 from __future__ import annotations
 
-from app.config import REFRESH_COOKIE_NAME
+from app.config import REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
 from app.services.security import (
     create_access_token,
     create_refresh_token,
@@ -30,7 +30,7 @@ REGISTER = {
 
 
 def _register(client):
-    r = client.post("/auth/register", json=REGISTER)
+    r = client.post("/v1/auth/register", json=REGISTER)
     assert r.status_code == 201, r.text
     return r
 
@@ -47,7 +47,7 @@ def test_register_sets_httponly_refresh_cookie(client):
     set_cookie = r.headers.get("set-cookie", "")
     assert REFRESH_COOKIE_NAME in set_cookie
     assert "HttpOnly" in set_cookie
-    assert "Path=/auth" in set_cookie
+    assert f"Path={REFRESH_COOKIE_PATH}" in set_cookie
 
 
 def test_login_sets_refresh_cookie(client):
@@ -55,7 +55,7 @@ def test_login_sets_refresh_cookie(client):
     client.cookies.clear()  # simulate fresh browser
 
     r = client.post(
-        "/auth/login",
+        "/v1/auth/login",
         json={"email": REGISTER["email"], "password": REGISTER["password"]},
     )
     assert r.status_code == 200
@@ -71,7 +71,7 @@ def test_refresh_rotates_cookie_and_issues_new_access_token(client):
     original_refresh = client.cookies.get(REFRESH_COOKIE_NAME)
     assert original_refresh is not None
 
-    r2 = client.post("/auth/refresh")
+    r2 = client.post("/v1/auth/refresh")
     assert r2.status_code == 200, r2.text
     new_access = r2.json()["access_token"]
     new_refresh = client.cookies.get(REFRESH_COOKIE_NAME)
@@ -86,14 +86,14 @@ def test_refresh_rotates_cookie_and_issues_new_access_token(client):
 
 def test_refresh_without_cookie_returns_401(client):
     # Fresh client, never logged in — no cookie.
-    r = client.post("/auth/refresh")
+    r = client.post("/v1/auth/refresh")
     assert r.status_code == 401
     assert "refresh" in r.json()["detail"].lower()
 
 
 def test_refresh_with_tampered_cookie_returns_401_and_clears_it(client):
-    client.cookies.set(REFRESH_COOKIE_NAME, "not.a.valid.jwt", path="/auth")
-    r = client.post("/auth/refresh")
+    client.cookies.set(REFRESH_COOKIE_NAME, "not.a.valid.jwt", path=REFRESH_COOKIE_PATH)
+    r = client.post("/v1/auth/refresh")
     assert r.status_code == 401
 
     # Server should have sent a clearing Set-Cookie.
@@ -116,8 +116,8 @@ def test_refresh_token_cannot_be_used_as_bearer():
 
 def test_refresh_endpoint_rejects_access_token_as_cookie(client):
     access = create_access_token(user_id="u", org_id="o")
-    client.cookies.set(REFRESH_COOKIE_NAME, access, path="/auth")
-    r = client.post("/auth/refresh")
+    client.cookies.set(REFRESH_COOKIE_NAME, access, path=REFRESH_COOKIE_PATH)
+    r = client.post("/v1/auth/refresh")
     assert r.status_code == 401
 
 
@@ -128,7 +128,7 @@ def test_logout_clears_the_refresh_cookie(client):
     _register(client)
     assert REFRESH_COOKIE_NAME in client.cookies
 
-    r = client.post("/auth/logout")
+    r = client.post("/v1/auth/logout")
     assert r.status_code == 204
 
     # The clearing directive should be present even if httpx's jar
@@ -138,5 +138,5 @@ def test_logout_clears_the_refresh_cookie(client):
 
 
 def test_logout_without_session_is_idempotent(client):
-    r = client.post("/auth/logout")
+    r = client.post("/v1/auth/logout")
     assert r.status_code == 204

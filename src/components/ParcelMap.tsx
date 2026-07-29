@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { MapPinned, Map as MapIcon, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ParcelMapPointTone = 'anchor' | 'candidate' | 'highlight';
+export type ParcelMapPointTone = 'anchor' | 'candidate' | 'highlight';
 
 export interface ParcelMapPoint {
   id: string;
@@ -72,7 +72,7 @@ function extractBoundaryRings(boundary: unknown): BoundaryRing[] {
     if (firstFeature) {
       polygons.push(...extractBoundaryRings(getObjectValue(firstFeature, 'geometry') ?? firstFeature));
     }
-    return polygons;
+    return polygons as BoundaryRing[];
   }
   if (type === 'feature') {
     return extractBoundaryRings(getObjectValue(geometry, 'geometry'));
