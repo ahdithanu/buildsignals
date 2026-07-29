@@ -2,20 +2,22 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import List, Optional
 from uuid import uuid4
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
-    Enum as SAEnum,
     Float,
     ForeignKey,
     Index,
-    JSON,
     String,
     Text,
     UniqueConstraint,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

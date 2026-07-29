@@ -9,17 +9,17 @@ from sqlalchemy import or_
 from app.db import SessionLocal
 from app.models.ingestion import IngestionSource
 from app.models.organization import Organization
+from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.catalog import load_catalog, sync_catalog
 from app.services.ingestion.health import (
     evaluate_source_health,
     resolve_resume_checkpoint,
     validate_source_canary,
 )
-from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.service import execute_source_run, list_sources
 from app.utils.org_scope import (
-    RequestContext,
     SYSTEM_USER_ID,
+    RequestContext,
     active_query,
     reset_current_context,
     set_current_context,

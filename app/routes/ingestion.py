@@ -12,32 +12,41 @@ from app.models.ingestion import (
     PermitRecord,
 )
 from app.models.organization_membership import MemberRole
+from app.schemas.graph import (
+    GraphEntityResponse,
+    GraphRelatedEntityResponse,
+    GraphRelationshipResponse,
+)
 from app.schemas.ingestion import (
-    CandidateCanaryResponse,
     CandidateCanaryAttemptResponse,
-    IngestionCoverageResponse,
+    CandidateCanaryResponse,
     IngestionCandidateResponse,
+    IngestionCoverageResponse,
+    IngestionReliabilitySummaryResponse,
     IngestionRunRequest,
     IngestionRunResponse,
-    PermitDetailResponse,
     IngestionSourceCreate,
     IngestionSourceResponse,
     IngestionSourceUpdate,
-    PermitRecordResponse,
+    PermitDetailResponse,
     PermitEventResponse,
+    PermitRecordResponse,
     SourceCanaryRequest,
     SourceCanaryResponse,
-    IngestionReliabilitySummaryResponse,
     SourceHealthResponse,
 )
-from app.schemas.graph import GraphEntityDetailResponse, GraphEntityResponse, GraphRelatedEntityResponse, GraphRelationshipResponse
-from app.services.ingestion.catalog import load_candidate_catalog, summarize_coverage
-from app.services.ingestion.catalog import normalize_state_code
+from app.services.brand_intelligence import list_permit_brand_matches
+from app.services.graph_service import entity_for_record, relationships_for_entity
+from app.services.ingestion.catalog import (
+    load_candidate_catalog,
+    normalize_state_code,
+    summarize_coverage,
+)
 from app.services.ingestion.health import (
     evaluate_source_health,
     list_candidate_canary_attempts,
-    summarize_ingestion_reliability,
     record_candidate_canary_attempt,
+    summarize_ingestion_reliability,
     validate_candidate_source_canary,
     validate_source_canary,
 )
@@ -45,17 +54,14 @@ from app.services.ingestion.service import (
     ActiveRunConflict,
     create_source,
     execute_source_run,
-    get_source,
     get_permit_detail,
+    get_source,
     list_sources,
     promote_candidate_to_source,
     update_source,
 )
-from app.services.brand_intelligence import list_permit_brand_matches
-from app.services.graph_service import entity_for_record, relationships_for_entity
 from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query
-
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
 

@@ -15,8 +15,8 @@ from app.models.ingestion import (
     RawSourceRecord,
 )
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
-from app.services.ingestion.connectors import build_connector
 from app.services.ingestion.connector_config import resolve_connector_config_dates
+from app.services.ingestion.connectors import build_connector
 from app.services.ingestion.normalization import (
     missing_required_source_fields,
     normalize_parcel,

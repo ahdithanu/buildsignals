@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.models.parcel import ParcelRecord
 from app.utils.org_scope import active_query, get_org_id
 
-
 EARTH_RADIUS_MILES = 3958.7613
 
 

@@ -5,12 +5,12 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+import app.services.ingestion.service as ingestion_service
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
 from app.models.ingestion import IngestionRun, PermitEvent, PermitRecord, RawSourceRecord
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.connectors import FetchEnvelope
-from app.services.ingestion.service import ActiveRunConflict, _claim_source_run, execute_source_run
-import app.services.ingestion.service as ingestion_service
+from app.services.ingestion.service import _claim_source_run, execute_source_run
 
 
 def _source_payload(csv_path: str) -> dict:

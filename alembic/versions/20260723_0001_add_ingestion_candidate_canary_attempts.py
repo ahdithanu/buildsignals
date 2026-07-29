@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column("candidate_key", sa.String(length=120), nullable=False),
         sa.Column("candidate_name", sa.String(length=255), nullable=False),
         sa.Column("sample_size", sa.Integer(), nullable=False, server_default=sa.text("10")),
-        sa.Column("ok", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("ok", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("records_fetched", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("records_valid", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("records_failed", sa.Integer(), nullable=False, server_default=sa.text("0")),

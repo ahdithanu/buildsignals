@@ -6,12 +6,12 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.brand import PermitBrandMatch
 from app.models.deal import Deal
-from app.models.organization_membership import OrganizationMembership
 from app.models.graph import GraphEntityType, GraphRelationshipType
+from app.models.organization_membership import OrganizationMembership
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelRecord
+from app.models.user import User
 from app.schemas.deal import DealCreate
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
-from app.models.user import User
 from app.services.audit_service import log_change
 from app.services.brand_intelligence import list_deal_brand_matches
 from app.services.deal_service import create_deal_with_defaults
@@ -160,12 +160,16 @@ def get_nearby_parcel_search(
     return active_query(db.query(NearbyParcelSearch), NearbyParcelSearch).options(
         joinedload(NearbyParcelSearch.candidates)
         .joinedload(NearbyParcelCandidate.parcel)
-        .joinedload(ParcelRecord.facts)
+        .joinedload(ParcelRecord.source),
+        joinedload(NearbyParcelSearch.candidates)
+        .joinedload(NearbyParcelCandidate.parcel)
+        .joinedload(ParcelRecord.facts),
     ).filter(NearbyParcelSearch.id == search_id).first()
 
 
 def get_parcel_detail(db: Session, parcel_id: str) -> ParcelRecord | None:
     return active_query(db.query(ParcelRecord), ParcelRecord).options(
+        joinedload(ParcelRecord.source),
         joinedload(ParcelRecord.facts),
         joinedload(ParcelRecord.candidates)
         .joinedload(NearbyParcelCandidate.search)
@@ -267,7 +271,8 @@ def review_nearby_parcel_candidate(
     candidate = active_query(
         db.query(NearbyParcelCandidate), NearbyParcelCandidate
     ).options(
-        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts)
+        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.source),
+        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts),
     ).filter(NearbyParcelCandidate.id == candidate_id).first()
     if candidate is None:
         return None
@@ -296,7 +301,8 @@ def assign_nearby_parcel_candidate(
     candidate = active_query(
         db.query(NearbyParcelCandidate), NearbyParcelCandidate
     ).options(
-        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts)
+        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.source),
+        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts),
     ).filter(NearbyParcelCandidate.id == candidate_id).first()
     if candidate is None:
         return None
@@ -361,6 +367,7 @@ def promote_nearby_parcel_candidate_to_deal(
         db.query(NearbyParcelCandidate), NearbyParcelCandidate
     ).options(
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.deal),
+        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.source),
         joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts),
     ).filter(NearbyParcelCandidate.id == candidate_id).first()
     if candidate is None:

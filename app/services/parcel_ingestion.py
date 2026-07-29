@@ -11,7 +11,6 @@ from app.models.parcel import ParcelFact, ParcelRecord
 from app.services.graph_service import normalize_address
 from app.utils.org_scope import active_query, get_org_id
 
-
 PARCEL_FIELDS = {
     "parcel_group_id", "jurisdiction", "county", "state", "address", "city", "postal_code",
     "latitude", "longitude", "land_area_sq_ft", "improvement_area_sq_ft",

@@ -9,9 +9,9 @@ from app.models.ingestion import (
     RawSourceRecord,
     SourceFieldMapping,
 )
-from app.services.ingestion.connectors import FetchEnvelope
-from app.services.ingestion.connector_config import resolve_connector_config_dates
 from app.services.ingestion.catalog import load_candidate_catalog, load_catalog
+from app.services.ingestion.connector_config import resolve_connector_config_dates
+from app.services.ingestion.connectors import FetchEnvelope
 from app.services.ingestion.health import (
     CandidateCanaryResult,
     evaluate_source_health,

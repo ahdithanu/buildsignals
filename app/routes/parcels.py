@@ -6,34 +6,36 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.graph import GraphEntity, GraphEntityLink
 from app.models.organization_membership import MemberRole
+from app.schemas.graph import (
+    GraphEntityResponse,
+    GraphRelatedEntityResponse,
+    GraphRelationshipResponse,
+)
 from app.schemas.parcel import (
     NearbyParcelCandidateAssignment,
     NearbyParcelCandidateResponse,
     NearbyParcelCandidateReview,
     NearbyParcelOpportunityCreate,
     NearbyParcelOpportunityResponse,
-    ParcelDetailResponse,
     NearbyParcelSearchCreate,
     NearbyParcelSearchResponse,
     NearbyParcelSearchSummary,
+    ParcelDetailResponse,
     ParcelSearchHitResponse,
 )
-from app.schemas.graph import GraphEntityResponse, GraphRelatedEntityResponse, GraphRelationshipResponse
+from app.services.deal_service import deal_to_detail_response
+from app.services.graph_service import relationships_for_entity
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,
     create_nearby_parcel_search,
-    get_parcel_detail,
     get_nearby_parcel_search,
+    get_parcel_detail,
     list_nearby_parcel_searches,
     promote_nearby_parcel_candidate_to_deal,
     review_nearby_parcel_candidate,
 )
-from app.services.deal_service import deal_to_detail_response
-from app.services.graph_service import relationships_for_entity
-from app.utils.auth_deps import get_current_user
-from app.utils.auth_deps import require_role
+from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
-
 
 router = APIRouter(tags=["nearby parcels"])
 
@@ -72,17 +74,6 @@ def get_parcel(parcel_id: str, db: Session = Depends(get_db)):
         GraphEntityLink.record_type == "parcel",
         GraphEntityLink.record_id == parcel.id,
     ).first()
-    graph_related = []
-    if graph_entity is not None:
-        graph_related = [
-            GraphRelatedEntityResponse(
-                entity=GraphEntityResponse.model_validate(entity),
-                relationship=GraphRelationshipResponse.model_validate(relationship),
-                direction=direction,
-            )
-            for relationship, entity, direction in relationships_for_entity(db, graph_entity.id)
-        ]
-
     return ParcelDetailResponse(
         parcel=parcel,
         facts=list(parcel.facts),

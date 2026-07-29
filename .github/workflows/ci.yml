@@ -19,7 +19,8 @@ jobs:
       TEST_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
     services:
       postgres:
-        image: postgres:16
+        # Nearby-parcel migrations require PostGIS (geography centroid + GIST index).
+        image: postgis/postgis:16-3.4
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

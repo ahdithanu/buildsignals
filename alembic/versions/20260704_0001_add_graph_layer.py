@@ -8,15 +8,16 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision = "20260704_0001"
-down_revision = "003"
+down_revision = "006_add_password_reset_tokens"
 branch_labels = None
 depends_on = None
 
 
-entity_type = sa.Enum(
+ENTITY_TYPES = (
     "opportunity",
     "permit",
     "parcel",
@@ -32,10 +33,9 @@ entity_type = sa.Enum(
     "company",
     "person",
     "source_record",
-    name="graphentitytype",
 )
 
-relationship_type = sa.Enum(
+RELATIONSHIP_TYPES = (
     "located_on",
     "owns",
     "owned_by",
@@ -50,8 +50,19 @@ relationship_type = sa.Enum(
     "financed_by",
     "brokered_by",
     "related_to",
-    name="graphrelationshiptype",
 )
+
+
+def _entity_type_enum(*, create_type: bool = True) -> postgresql.ENUM:
+    return postgresql.ENUM(*ENTITY_TYPES, name="graphentitytype", create_type=create_type)
+
+
+def _relationship_type_enum(*, create_type: bool = True) -> postgresql.ENUM:
+    return postgresql.ENUM(*RELATIONSHIP_TYPES, name="graphrelationshiptype", create_type=create_type)
+
+
+entity_type = _entity_type_enum()
+relationship_type = _relationship_type_enum()
 
 TENANT_TABLES = (
     "graph_entities",
@@ -79,13 +90,16 @@ def _enable_rls() -> None:
 
 
 def upgrade() -> None:
-    entity_type.create(op.get_bind(), checkfirst=True)
-    relationship_type.create(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    entity_type.create(bind, checkfirst=True)
+    relationship_type.create(bind, checkfirst=True)
+    entity_type_col = _entity_type_enum(create_type=False)
+    relationship_type_col = _relationship_type_enum(create_type=False)
 
     op.create_table(
         "graph_entities",
         sa.Column("id", sa.String(length=36), nullable=False),
-        sa.Column("entity_type", entity_type, nullable=False),
+        sa.Column("entity_type", entity_type_col, nullable=False),
         sa.Column("display_name", sa.String(length=255), nullable=False),
         sa.Column("normalized_name", sa.String(length=255), nullable=False),
         sa.Column("normalized_address", sa.String(length=500), nullable=True),
@@ -164,7 +178,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(length=36), nullable=False),
         sa.Column("source_entity_id", sa.String(length=36), nullable=False),
         sa.Column("target_entity_id", sa.String(length=36), nullable=False),
-        sa.Column("relationship_type", relationship_type, nullable=False),
+        sa.Column("relationship_type", relationship_type_col, nullable=False),
         sa.Column("confidence", sa.Float(), nullable=False),
         sa.Column("source_system", sa.String(length=100), nullable=True),
         sa.Column("source_id", sa.String(length=255), nullable=True),

@@ -6,6 +6,7 @@ from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -13,7 +14,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    JSON,
     Numeric,
     String,
     Text,
@@ -96,9 +96,12 @@ class ParcelRecord(OrgMixin, Base):
 
     @property
     def boundary_geometry(self) -> dict | None:
-        from app.services.parcel_geometry import resolve_parcel_boundary_geometry
+        from app.services.parcel_geometry import resolve_display_boundary_geometry
 
-        return resolve_parcel_boundary_geometry(self.attributes)
+        export_policy = None
+        if self.source is not None and isinstance(self.source.settings, dict):
+            export_policy = self.source.settings.get("export_policy")
+        return resolve_display_boundary_geometry(self.attributes, export_policy)
 
 
 class ParcelFact(OrgMixin, Base):

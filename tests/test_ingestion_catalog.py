@@ -7,10 +7,14 @@ from types import SimpleNamespace
 import pytest
 
 from app.models.ingestion import IngestionSource, SourceFieldMapping
-from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.schemas.ingestion import FieldMappingCreate, IngestionSourceCreate
-from app.services.ingestion.catalog import load_candidate_catalog, load_catalog, sync_catalog
-from app.services.ingestion.catalog import summarize_coverage
+from app.schemas.ingestion_candidate import IngestionSourceCandidate
+from app.services.ingestion.catalog import (
+    load_candidate_catalog,
+    load_catalog,
+    summarize_coverage,
+    sync_catalog,
+)
 from app.services.ingestion.health import validate_candidate_source_canary
 from app.services.ingestion.normalization import (
     missing_required_source_fields,

@@ -58,8 +58,29 @@ def _geojson_polygon(geometry: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def export_policy_allows_boundary_display(export_policy: str | None) -> bool:
+    """Return True when a source license permits derived parcel footprint display."""
+    if not isinstance(export_policy, str) or not export_policy.strip():
+        return False
+
+    policy = export_policy.casefold()
+    blocked_markers = (
+        "situs_only",
+        "parcel_id_only",
+        "centroid_and_case",
+        "no_raw_geometry_export",
+    )
+    if any(marker in policy for marker in blocked_markers):
+        return False
+
+    return (
+        "nearby_parcel_context" in policy
+        or "derived_parcel_context" in policy
+    )
+
+
 def resolve_parcel_boundary_geometry(attributes: dict[str, Any] | None) -> dict[str, Any] | None:
-    """Return a GeoJSON polygon for map display when ingestion retained boundary geometry."""
+    """Return a GeoJSON polygon when ingestion retained boundary geometry."""
     if not isinstance(attributes, dict):
         return None
 
@@ -87,3 +108,13 @@ def resolve_parcel_boundary_geometry(attributes: dict[str, Any] | None) -> dict[
         return resolve_parcel_boundary_geometry({"geometry": nested})
 
     return None
+
+
+def resolve_display_boundary_geometry(
+    attributes: dict[str, Any] | None,
+    export_policy: str | None,
+) -> dict[str, Any] | None:
+    """Return boundary geometry only when the source export policy allows map display."""
+    if not export_policy_allows_boundary_display(export_policy):
+        return None
+    return resolve_parcel_boundary_geometry(attributes)

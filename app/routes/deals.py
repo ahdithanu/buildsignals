@@ -5,8 +5,6 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.deal import Deal
-from app.models.deal_assumptions import DealAssumptions
-from app.models.deal_outputs import DealOutputs
 from app.models.organization_membership import MemberRole
 from app.schemas.assumptions import AssumptionsResponse
 from app.schemas.deal import (
@@ -18,9 +16,10 @@ from app.schemas.deal import (
 )
 from app.schemas.outputs import OutputsResponse
 from app.services.audit_service import log_change, snapshot_fields
+from app.services.deal_service import create_deal_with_defaults
 from app.services.normalization_service import normalize_property_type
 from app.utils.auth_deps import require_role
-from app.utils.org_scope import active_query, get_org_id
+from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -74,19 +73,7 @@ def list_deals(
     dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
 )
 def create_deal(payload: DealCreate, db: Session = Depends(get_db)):
-    deal = Deal(**payload.model_dump())
-    deal.organization_id = get_org_id()
-    deal.property_type = normalize_property_type(deal.property_type)
-    db.add(deal)
-    db.flush()  # get deal.id
-
-    # auto-create empty assumptions + outputs rows
-    assumptions = DealAssumptions(deal_id=deal.id)
-    assumptions.organization_id = get_org_id()
-    outputs = DealOutputs(deal_id=deal.id)
-    outputs.organization_id = get_org_id()
-    db.add(assumptions)
-    db.add(outputs)
+    deal = create_deal_with_defaults(db, payload)
     db.commit()
 
     log_change(db, "deal", deal.id, "create", new_values={"name": deal.name})
@@ -157,17 +144,7 @@ def delete_deal(deal_id: str, db: Session = Depends(get_db)):
 def import_deals(payloads: list[DealCreate], db: Session = Depends(get_db)):
     results = []
     for payload in payloads:
-        deal = Deal(**payload.model_dump())
-        deal.organization_id = get_org_id()
-        deal.property_type = normalize_property_type(deal.property_type)
-        db.add(deal)
-        db.flush()
-        assumptions = DealAssumptions(deal_id=deal.id)
-        assumptions.organization_id = get_org_id()
-        outputs = DealOutputs(deal_id=deal.id)
-        outputs.organization_id = get_org_id()
-        db.add(assumptions)
-        db.add(outputs)
+        deal = create_deal_with_defaults(db, payload)
         db.flush()
         db.refresh(deal)
         results.append(_deal_to_detail(deal))

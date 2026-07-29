@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.models.deal import Deal
 from app.models.graph import GraphEntityType, GraphRelationshipType
 from app.models.ingestion import IngestionRun, IngestionSource, PermitRecord, RawSourceRecord
-from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch
-from app.models.parcel import ParcelFact, ParcelRecord
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
 from app.services.graph_service import create_relationship, link_entity_to_record, resolve_entity
 
@@ -28,6 +26,9 @@ def test_parcel_detail_returns_facts_and_search_context(client, db):
         name="Test Parcels",
         adapter="csv",
         record_type="parcel",
+        settings={
+            "export_policy": "derived_nearby_parcel_context_only_no_raw_test_resale",
+        },
     )
     db.add(source)
     db.flush()

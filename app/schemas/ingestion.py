@@ -267,25 +267,6 @@ class IngestionCoverageResponse(BaseModel):
     missing_states: list[str]
 
 
-class ReliabilityWatchlistItemResponse(BaseModel):
-    source_id: str
-    source_name: str
-    status: str
-    active_run_stale: bool
-    cursor_stalled: bool
-    reasons: list[str]
-
-
-class IngestionReliabilitySummaryResponse(BaseModel):
-    healthy_sources: int
-    attention_sources: int
-    critical_sources: int
-    stale_runs: int
-    stalled_cursors: int
-    failed_retry_canaries: int
-    watchlist_sources: list[ReliabilityWatchlistItemResponse]
-
-
 class IngestionRunResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

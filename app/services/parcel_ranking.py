@@ -6,7 +6,6 @@ from typing import Any, Iterable
 
 from app.models.parcel import ParcelFact, ParcelRecord
 
-
 RANKER_VERSION = "developer-v1"
 RANKER_VERSIONS = {
     "developer": RANKER_VERSION,
