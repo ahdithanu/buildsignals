@@ -19,7 +19,7 @@ from app.services.audit_service import log_change, snapshot_fields
 from app.services.deal_service import create_deal_with_defaults
 from app.services.normalization_service import normalize_property_type
 from app.utils.auth_deps import require_role
-from app.utils.org_scope import active_query, get_org_id
+from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
