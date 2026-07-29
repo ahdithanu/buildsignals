@@ -7710,6 +7710,17 @@
             "title": "Cursor Stalled",
             "type": "boolean"
           },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
           "reasons": {
             "items": {
               "type": "string"
