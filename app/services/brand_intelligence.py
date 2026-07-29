@@ -373,6 +373,10 @@ def list_deal_brand_matches(
     *,
     limit: int = 20,
 ) -> list[PermitBrandMatchResponse]:
+    deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()
+    if deal is None:
+        return []
+
     deal_entities = active_query(db.query(GraphEntity), GraphEntity).join(
         GraphEntityLink, GraphEntityLink.entity_id == GraphEntity.id
     ).filter(
@@ -385,10 +389,17 @@ def list_deal_brand_matches(
         for entity in deal_entities
         if entity.address and entity.city and entity.state
     }
+    deal_location_key = normalize_address(deal.address, deal.city, deal.state)
+    if deal_location_key:
+        location_keys.add(deal_location_key)
     location_keys.discard(None)
     if location_keys:
         cities = {entity.city for entity in deal_entities if entity.city}
         states = {entity.state for entity in deal_entities if entity.state}
+        if deal.city:
+            cities.add(deal.city)
+        if deal.state:
+            states.add(deal.state)
         candidates = active_query(db.query(GraphEntity), GraphEntity).filter(
             GraphEntity.entity_type == GraphEntityType.property,
             GraphEntity.city.in_(cities),
@@ -401,7 +412,7 @@ def list_deal_brand_matches(
             and normalize_address(entity.address, entity.city, entity.state) in location_keys
         )
     if not property_entity_ids:
-        return []
+        return _direct_brand_matches_for_deal(db, deal, limit=limit)
     permit_entity_ids = [
         row.source_entity_id
         for row in active_query(db.query(GraphRelationship), GraphRelationship).filter(
@@ -411,7 +422,7 @@ def list_deal_brand_matches(
         ).all()
     ]
     if not permit_entity_ids:
-        return []
+        return _direct_brand_matches_for_deal(db, deal, limit=limit)
     permit_ids = [
         row.record_id
         for row in active_query(db.query(GraphEntityLink), GraphEntityLink).filter(
@@ -420,7 +431,7 @@ def list_deal_brand_matches(
         ).all()
     ]
     if not permit_ids:
-        return []
+        return _direct_brand_matches_for_deal(db, deal, limit=limit)
     matches = active_query(db.query(PermitBrandMatch), PermitBrandMatch).options(
         joinedload(PermitBrandMatch.brand),
         joinedload(PermitBrandMatch.permit),
@@ -794,6 +805,40 @@ def _linked_deals_for_matches(
             key=lambda item: item.name.lower(),
         )
     return linked_by_match
+
+
+def _direct_brand_matches_for_deal(
+    db: Session,
+    deal: Deal,
+    *,
+    limit: int = 20,
+) -> list[PermitBrandMatchResponse]:
+    location_key = normalize_address(deal.address, deal.city, deal.state)
+    if not location_key or not deal.city or not deal.state:
+        return []
+
+    candidate_permits = active_query(db.query(PermitRecord), PermitRecord).filter(
+        PermitRecord.city == deal.city,
+        PermitRecord.state == deal.state,
+    ).all()
+    permit_ids = [
+        permit.id
+        for permit in candidate_permits
+        if normalize_address(permit.address, permit.city, permit.state) == location_key
+    ]
+    if not permit_ids:
+        return []
+
+    matches = active_query(db.query(PermitBrandMatch), PermitBrandMatch).options(
+        joinedload(PermitBrandMatch.brand),
+        joinedload(PermitBrandMatch.permit),
+    ).filter(
+        PermitBrandMatch.permit_id.in_(permit_ids),
+        PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
+    ).order_by(
+        PermitBrandMatch.confidence.desc(), PermitBrandMatch.first_seen_at.desc()
+    ).limit(limit).all()
+    return _serialize_brand_matches(db, matches)
 
 
 def _direct_deals_for_matches(
