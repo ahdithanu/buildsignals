@@ -106,7 +106,7 @@ describe("ApiClient — auth integration", () => {
 
     // Second call must be POST /auth/refresh.
     const [refreshUrl, refreshInit] = fetchMock.mock.calls[1];
-    expect(refreshUrl).toBe("http://api.test/auth/refresh");
+    expect(refreshUrl).toBe("http://api.test/v1/auth/refresh");
     expect(refreshInit.method).toBe("POST");
 
     // Retry used the new token.

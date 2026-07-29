@@ -12,6 +12,8 @@ name: frontend
 # reverting the gate. Then add `push: { branches: [main] }` below.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
   pull_request:
     paths:
       - "src/**"
@@ -39,11 +41,7 @@ jobs:
           cache: "npm"
 
       - name: Install deps
-        # NOTE: `npm install`, not `npm ci`, on purpose — package-lock.json is
-        # currently behind package.json (@playwright/test was added in an env
-        # that couldn't regenerate the lock). Switch back to `npm ci` once the
-        # lock is regenerated on a Node 18+ machine (`npm install` + commit).
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       # Ordered cheapest → most expensive so a fast failure surfaces first.
       - name: Lint

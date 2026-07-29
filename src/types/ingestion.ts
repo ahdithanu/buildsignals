@@ -194,6 +194,7 @@ export interface RetailerOpeningCoverageSource {
   jurisdiction?: string | null;
   signal_stage?: string | null;
   official_landing_page?: string | null;
+  license?: string | null;
 }
 
 export interface ApprovedOnlyCoverageSource {

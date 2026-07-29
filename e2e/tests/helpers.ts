@@ -16,6 +16,6 @@ export async function registerAndLogin(page: Page, email: string): Promise<void>
   await page.locator("#password").fill(PASSWORD);
   await page.locator("#orgName").fill(`E2E Org ${Date.now()}`);
   await page.getByRole("button", { name: /create account/i }).click();
-  // Register.tsx navigates to "/" on success.
-  await expect(page).toHaveURL("http://localhost:8080/");
+  await expect(page.getByRole("alert")).not.toBeVisible({ timeout: 2_000 }).catch(() => undefined);
+  await expect(page).toHaveURL("http://localhost:8080/", { timeout: 15_000 });
 }

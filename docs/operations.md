@@ -29,3 +29,27 @@ To enable in production, set `SENTRY_DSN` in the Render service environment.
 4. Runs the full `pytest` suite.
 
 See `docs/backups.md` for backup and restore procedures.
+
+## On-call & paging
+
+Operational contacts live in [runbooks/incident-response.md](runbooks/incident-response.md#on-call).
+Fill in the `[CONFIGURE]` placeholders before production launch:
+
+| Item | Where to configure |
+|------|-------------------|
+| On-call rotation | PagerDuty / Opsgenie schedule |
+| Status page URL | Instatus / Statuspage / Better Uptime |
+| Incident Slack | `#dealsignal-incidents` |
+| Monitoring dashboards | See [monitoring.md](monitoring.md) |
+
+## Pre-commit (local)
+
+Catch CI failures before push:
+
+```bash
+pip install pre-commit && pre-commit install
+pre-commit run --all-files   # on demand
+```
+
+Hooks mirror backend lint (ruff), secret scan (gitleaks), and file hygiene.
+See `.pre-commit-config.yaml`.

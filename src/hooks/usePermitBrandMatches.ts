@@ -41,7 +41,7 @@ export function useCreateOpportunityFromBrandMatch() {
 
 export function usePermitBrandMatchQueue(params: PermitBrandMatchListParams) {
   const query = useQuery({
-    queryKey: queryKeys.brands.matches(params),
+    queryKey: queryKeys.brands.matches(params as Record<string, unknown>),
     queryFn: () => brandsApi.list(params),
     retry: 1,
     staleTime: 15_000,

@@ -46,5 +46,5 @@ test("create a deal and see it in the inbox list", async ({ page }) => {
     .click();
 
   // The new deal should appear in the list.
-  await expect(page.getByText(dealName)).toBeVisible();
+  await expect(page.getByRole("cell", { name: dealName })).toBeVisible();
 });

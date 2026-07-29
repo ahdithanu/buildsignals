@@ -86,7 +86,19 @@ check state, then `alembic upgrade head` or a targeted `alembic upgrade
 
 ## Smoke test — ~2 minutes
 
-After the API service goes green:
+After the API service goes green, run the automated script:
+
+```bash
+BASE=https://api.dealsignal.com ./scripts/smoke-test.sh
+# With auth (requires a seeded smoke user in the vault):
+BASE=https://api.dealsignal.com \
+  SMOKE_EMAIL=smoke@dealsignal.com \
+  SMOKE_PASSWORD='<from vault>' \
+  FRONTEND=https://app.dealsignal.com \
+  ./scripts/smoke-test.sh
+```
+
+Manual equivalent:
 
 ```bash
 BASE=https://api.dealsignal.com     # adjust per environment
@@ -97,12 +109,12 @@ curl -sf $BASE/health/deep | jq .   # exercises the DB; 503 if Postgres is unrea
 curl -sf $BASE/openapi.json | jq '.info.version'
 
 # Login round-trip — proves DB, JWT, and cookie wiring are healthy
-curl -sf -X POST $BASE/auth/login \
+curl -sf -X POST $BASE/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"smoke@dealsignal.com","password":"<from vault>"}' \
   -c /tmp/c.txt \
   | jq '.access_token | length'
-grep ds_refresh /tmp/c.txt   # refresh cookie present
+grep ds_refresh /tmp/c.txt   # refresh cookie present (path /v1/auth)
 ```
 
 Frontend smoke: open `https://app.dealsignal.com`, log in, load `/deals`.

@@ -4,12 +4,10 @@ Real-estate acquisition intelligence — a multi-tenant platform for sourcing,
 underwriting, and tracking commercial real-estate deals. FastAPI backend,
 React/Vite frontend, Postgres.
 
-> **Status:** pilot. Security, auth, and CI are production-grade; see
-> `docs/` for the operational picture and known gaps.
->
-> ⚠️ **Frontend changes pending validation:** a batch of frontend fixes was
-> authored on Node 10 and hasn't been built/run. Before shipping to users,
-> work through [VALIDATION.md](VALIDATION.md) on a Node 18+ machine.
+> **Status:** pilot. Security, auth, and CI are production-grade; track
+> readiness in [docs/enterprise_readiness.md](docs/enterprise_readiness.md).
+> Automated frontend gates (lint, typecheck, test, build, E2E) are green;
+> manual QA in [VALIDATION.md](VALIDATION.md) §2 remains before user-facing release.
 
 ---
 
@@ -150,6 +148,12 @@ docs/                runbooks and operational docs — see below
 | [docs/secrets.md](docs/secrets.md) | Secret inventory, rotation, leaked-secret playbook |
 | [docs/operations.md](docs/operations.md) | Env vars, CI overview |
 | [docs/slo.md](docs/slo.md) | Service level objectives + error budget |
+| [docs/enterprise_readiness.md](docs/enterprise_readiness.md) | Production readiness checklist (living tracker) |
+| [docs/monitoring.md](docs/monitoring.md) | Dashboards, alerts, uptime setup |
+| [docs/staging.md](docs/staging.md) | Non-production environment setup |
+| [docs/accessibility.md](docs/accessibility.md) | Accessibility statement |
+| [VALIDATION.md](VALIDATION.md) | Frontend release gate (automated + manual QA) |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes |
 | [SECURITY.md](SECURITY.md) | Vulnerability disclosure |
 
 ---

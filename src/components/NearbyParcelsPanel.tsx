@@ -6,7 +6,7 @@ import { useOrganizationMembers } from '@/hooks/useOrganizationMembers';
 import { usePermitBrandMatches } from '@/hooks/usePermitBrandMatches';
 import { useNearbyParcels } from '@/hooks/useNearbyParcels';
 import { useToast } from '@/hooks/use-toast';
-import { ParcelMap } from '@/components/ParcelMap';
+import { ParcelMap, type ParcelMapPoint, type ParcelMapPointTone } from '@/components/ParcelMap';
 import type { NearbyParcelCandidate, ParcelPersona } from '@/types/parcel';
 
 const PERSONAS: Array<{ value: ParcelPersona; label: string }> = [
@@ -303,12 +303,12 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
   const latest = search.data;
   const bestCandidate = latest?.candidates[0];
   const activeAnchor = anchors.find((match) => match.id === anchorId) || anchors[0];
-  const mapPoints = latest?.candidates.map((candidate, index) => ({
+  const mapPoints: ParcelMapPoint[] = latest?.candidates.map((candidate, index) => ({
     id: candidate.id,
     label: candidate.parcel.address || candidate.parcel.external_parcel_id,
     latitude: candidate.parcel.latitude,
     longitude: candidate.parcel.longitude,
-    tone: index === 0 ? 'highlight' : 'candidate',
+    tone: (index === 0 ? 'highlight' : 'candidate') as ParcelMapPointTone,
     subtitle: `${Math.round(candidate.score)} score`,
     distanceMiles: candidate.distance_miles,
     boundary: candidate.parcel.boundary_geometry ?? undefined,

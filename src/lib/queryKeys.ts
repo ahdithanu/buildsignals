@@ -29,4 +29,31 @@ export const queryKeys = {
     recentSignals: ['dashboard', 'recent-signals'] as const,
     aiInsights: ['dashboard', 'ai-insights'] as const,
   },
+  brands: {
+    all: ['brands'] as const,
+    matches: (params?: Record<string, unknown>) => ['brands', 'matches', params] as const,
+    forDeal: (dealId: string) => ['brands', 'deal', dealId] as const,
+    evidence: (matchId: string) => ['brands', 'evidence', matchId] as const,
+  },
+  parcels: {
+    detail: (parcelId: string) => ['parcels', 'detail', parcelId] as const,
+    history: (dealId: string) => ['parcels', 'history', dealId] as const,
+    search: (searchId: string) => ['parcels', 'search', searchId] as const,
+  },
+  graph: {
+    opportunityContext: (dealId: string) => ['graph', 'opportunity', dealId] as const,
+    entityDetail: (entityId: string) => ['graph', 'entity', entityId] as const,
+    entitySearch: (query: string, entityType?: string) =>
+      ['graph', 'search', query, entityType ?? 'all'] as const,
+  },
+  organizations: {
+    members: (orgId: string) => ['organizations', 'members', orgId] as const,
+  },
+  ingestion: {
+    health: (state?: string | null) => ['ingestion', 'health', state ?? 'all'] as const,
+    coverage: ['ingestion', 'coverage'] as const,
+    permitDetail: (permitId: string) => ['ingestion', 'permits', permitId] as const,
+    candidateCanaryHistory: (candidateKey: string) =>
+      ['ingestion', 'candidate-canary-history', candidateKey] as const,
+  },
 } as const;

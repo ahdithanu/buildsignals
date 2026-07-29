@@ -12,18 +12,18 @@ function formatCount(value: number) {
 }
 
 export function GraphCoverageCard({ opportunities }: GraphCoverageCardProps) {
-  const connectedDeals = opportunities.filter((deal) => deal.graphConnectedEntities > 0);
-  const connectedEntities = connectedDeals.reduce((sum, deal) => sum + deal.graphConnectedEntities, 0);
-  const parcelSearches = opportunities.reduce((sum, deal) => sum + deal.nearbyParcelSearches, 0);
+  const connectedDeals = opportunities.filter((deal) => (deal.graphConnectedEntities ?? 0) > 0);
+  const connectedEntities = connectedDeals.reduce((sum, deal) => sum + (deal.graphConnectedEntities ?? 0), 0);
+  const parcelSearches = opportunities.reduce((sum, deal) => sum + (deal.nearbyParcelSearches ?? 0), 0);
   const topConnectedDeals = [...connectedDeals]
-    .sort((a, b) => b.graphConnectedEntities - a.graphConnectedEntities)
+    .sort((a, b) => (b.graphConnectedEntities ?? 0) - (a.graphConnectedEntities ?? 0))
     .slice(0, 3);
   const bestParcelDeal = [...opportunities]
-    .filter((deal) => deal.nearbyParcelSearches > 0)
+    .filter((deal) => (deal.nearbyParcelSearches ?? 0) > 0)
     .sort((a, b) => {
-      const parcelDiff = b.nearbyParcelSearches - a.nearbyParcelSearches;
+      const parcelDiff = (b.nearbyParcelSearches ?? 0) - (a.nearbyParcelSearches ?? 0);
       if (parcelDiff !== 0) return parcelDiff;
-      return b.graphConnectedEntities - a.graphConnectedEntities;
+      return (b.graphConnectedEntities ?? 0) - (a.graphConnectedEntities ?? 0);
     })[0];
 
   return (

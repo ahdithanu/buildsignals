@@ -7,10 +7,11 @@ import type {
   PermitBrandMatch,
   PermitBrandMatchListParams,
 } from '@/types/brand';
+import type { NearbyParcelSearchSummary } from '@/types/parcel';
 
 export const brandsApi = {
   list: (params?: PermitBrandMatchListParams): Promise<PermitBrandMatch[]> =>
-    apiClient.get<PermitBrandMatch[]>('/permit-brand-matches', params),
+    apiClient.get<PermitBrandMatch[]>('/permit-brand-matches', params as Record<string, string | number | boolean | undefined>),
   forDeal: (dealId: string): Promise<PermitBrandMatch[]> =>
     apiClient.get<PermitBrandMatch[]>(`/deals/${dealId}/permit-brand-matches`),
   evidence: (matchId: string): Promise<PermitBrandMatchEvidence> =>
@@ -24,13 +25,15 @@ export const brandsApi = {
       match_id: string;
       created: boolean;
       deal: Record<string, unknown>;
+      nearby_parcel_search?: Record<string, unknown> | null;
+      nearby_parcel_searches?: Record<string, unknown>[];
     }>(`/permit-brand-matches/${matchId}/opportunity`, name ? { name } : {});
     return {
       match_id: raw.match_id,
       created: raw.created,
       deal: mapDeal(raw.deal),
-      nearby_parcel_search: raw.nearby_parcel_search ?? null,
-      nearby_parcel_searches: raw.nearby_parcel_searches ?? [],
+      nearby_parcel_search: (raw.nearby_parcel_search as unknown as NearbyParcelSearchSummary | null | undefined) ?? null,
+      nearby_parcel_searches: (raw.nearby_parcel_searches as unknown as NearbyParcelSearchSummary[] | undefined) ?? [],
     };
   },
 };
