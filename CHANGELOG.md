@@ -6,7 +6,13 @@ All notable changes to DealSignal are documented here. Format follows
 ## [Unreleased]
 
 ### Added
-- Enterprise readiness checklist (`docs/enterprise_readiness.md`)
+- Staging Render blueprint (`render-staging.yaml`)
+- Uptime probe script and scheduled GitHub workflow (`scripts/uptime-check.sh`)
+- Pre-commit CI workflow
+- Postmortem template and ops log
+- Example Prometheus alert rules
+
+## [1.1.0] — 2026-07-29
 - Post-deploy smoke test script (`scripts/smoke-test.sh`)
 - Frontend CI workflow (lint, typecheck, vitest, build)
 - Playwright E2E CI workflow (auth + deal flows)

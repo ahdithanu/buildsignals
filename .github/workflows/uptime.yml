@@ -1,0 +1,31 @@
+name: uptime
+
+# Probes production (or staging) API health on a schedule. Configure the
+# repository secret UPTIME_BASE_URL (e.g. https://dealsignal-api.onrender.com).
+# On failure, the workflow goes red — wire GitHub notifications or a webhook
+# to your paging tool.
+#
+# Also available via workflow_dispatch for manual checks after deploy.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deep health check
+        env:
+          BASE: ${{ secrets.UPTIME_BASE_URL }}
+        run: |
+          if [[ -z "$BASE" ]]; then
+            echo "UPTIME_BASE_URL secret not set — skipping (configure in repo settings)."
+            exit 0
+          fi
+          chmod +x scripts/uptime-check.sh
+          ./scripts/uptime-check.sh --deep
