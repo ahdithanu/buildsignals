@@ -151,6 +151,8 @@ docs/                runbooks and operational docs — see below
 | [docs/enterprise_readiness.md](docs/enterprise_readiness.md) | Production readiness checklist (living tracker) |
 | [docs/monitoring.md](docs/monitoring.md) | Dashboards, alerts, uptime setup |
 | [docs/staging.md](docs/staging.md) | Non-production environment setup |
+| [docs/ops-log.md](docs/ops-log.md) | Ops drill and incident log |
+| [docs/templates/postmortem.md](docs/templates/postmortem.md) | Postmortem template |
 | [docs/accessibility.md](docs/accessibility.md) | Accessibility statement |
 | [VALIDATION.md](VALIDATION.md) | Frontend release gate (automated + manual QA) |
 | [CHANGELOG.md](CHANGELOG.md) | Release notes |

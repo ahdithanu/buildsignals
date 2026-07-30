@@ -4,7 +4,7 @@ DealSignal is committed to making our platform usable by people with
 disabilities. This statement describes our current conformance status and
 contact path for accessibility feedback.
 
-**Last updated:** 2026-07-29  
+**Last updated:** 2026-07-29
 **Applies to:** DealSignal web application (app.dealsignal.com)
 
 ---

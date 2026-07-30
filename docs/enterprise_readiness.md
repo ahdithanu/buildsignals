@@ -31,7 +31,7 @@ ship. IDs match the tiers used in planning conversations.
 | B3 | Frontend CI on `main` push | ✅ | `.github/workflows/frontend.yml` |
 | B4 | E2E CI on pull request | ✅ | `.github/workflows/e2e.yml` |
 | B5 | `npm ci` in frontend workflows | ✅ | Lock file in sync |
-| B6 | Pre-commit hooks adopted locally | 🟡 | `.pre-commit-config.yaml` exists; run `pre-commit install` |
+| B6 | Pre-commit hooks adopted locally | ✅ | CI workflow + `pre-commit install` locally |
 | B7 | OpenAPI drift check | ✅ | `.github/workflows/openapi.yml` |
 | B8 | Dependabot backlog triaged | 🟡 | Weekly schedule configured; triage open PRs weekly |
 
@@ -63,9 +63,9 @@ ship. IDs match the tiers used in planning conversations.
 | D2 | Prometheus `/metrics` | ✅ | Bearer token protected |
 | D3 | Request ID tracing | ✅ | `X-Request-ID` middleware |
 | D4 | SLO targets documented | ✅ | `docs/slo.md` |
-| D5 | Grafana/Datadog dashboards | ⬜ | See `docs/monitoring.md` setup guide |
-| D6 | Alerting + error-budget burn | ⬜ | Wire uptime + 5xx alerts per `docs/monitoring.md` |
-| D7 | External uptime monitor on `/health/deep` | ⬜ | Point Better Uptime / Pingdom at deep health |
+| D5 | Grafana/Datadog dashboards | 🟡 | Example alert rules in `docs/prometheus/alerts.example.yml` |
+| D6 | Alerting + error-budget burn | 🟡 | Example rules + monitoring guide |
+| D7 | External uptime monitor on `/health/deep` | ✅ | `scripts/uptime-check.sh` + `.github/workflows/uptime.yml` |
 | D8 | Customer-facing SLA | 🔒 | Legal + business decision |
 
 ---
@@ -91,7 +91,7 @@ ship. IDs match the tiers used in planning conversations.
 |----|------|--------|-------|
 | F1 | Backup procedures documented | ✅ | `docs/backups.md` |
 | F2 | Render Postgres automated backups | 🟡 | Included on paid plans; verify retention |
-| F3 | Restore drill (quarterly) | ⬜ | Schedule first drill; log in ops notes |
+| F3 | Restore drill (quarterly) | 🟡 | Procedure in `docs/backups.md`; log in `docs/ops-log.md` |
 | F4 | Point-in-time recovery tested | ⬜ | Requires paid Postgres + drill |
 | F5 | Cross-region DR | ⬜ | Not required for pilot; document RTO/RPO targets first |
 
@@ -105,8 +105,8 @@ ship. IDs match the tiers used in planning conversations.
 | G2 | Local dev (SQLite + Vite proxy) | ✅ | README |
 | G3 | CI throwaway DBs | ✅ | SQLite + PostGIS Postgres service |
 | G4 | AWS deploy path documented | ✅ | `docs/runbooks/deploy-aws.md` |
-| G5 | Staging environment | ⬜ | Duplicate blueprint with `ENVIRONMENT=staging` |
-| G6 | Staging data policy | ⬜ | Synthetic/seed only; no prod PII |
+| G5 | Staging environment | ✅ | `render-staging.yaml` + `docs/staging.md` |
+| G6 | Staging data policy | ✅ | Documented in `docs/staging.md` |
 
 ---
 

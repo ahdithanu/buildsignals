@@ -10,6 +10,16 @@ what to wire externally.
 
 **Target:** `/health/deep` on the production API (not shallow `/health`).
 
+**In-repo automation:** `.github/workflows/uptime.yml` runs every 5 minutes when
+the repository secret `UPTIME_BASE_URL` is set (e.g. `https://dealsignal-api.onrender.com`).
+Uses `scripts/uptime-check.sh --deep`.
+
+**Manual / cron:**
+
+```bash
+BASE=https://YOUR-API.onrender.com ./scripts/uptime-check.sh --deep
+```
+
 | Check | Interval | Timeout | Alert if |
 |-------|----------|---------|----------|
 | Deep health | 1 min | 10s | 2 consecutive failures |
@@ -81,7 +91,7 @@ From `docs/slo.md` — 99.5% availability ≈ 3.6h/month budget.
 | Budget exhausted | Critical | Feature freeze |
 
 Wire the 5xx rate query above to your paging tool with thresholds aligned
-to these tiers.
+to these tiers. Example rules: [`docs/prometheus/alerts.example.yml`](prometheus/alerts.example.yml).
 
 ---
 

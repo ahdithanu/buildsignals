@@ -1,6 +1,6 @@
 # ADR 002: Refresh token in httpOnly cookie (not localStorage)
 
-**Status:** Accepted  
+**Status:** Accepted
 **Date:** 2026-07-29
 
 ## Context
@@ -17,7 +17,7 @@ tokens in cookies.
 
 ## Consequences
 
-**Positive:** XSS cannot read refresh tokens.  
+**Positive:** XSS cannot read refresh tokens.
 **Negative:** Full-page navigation requires working cookie path + CORS credentials.
 E2E and production must use same-site or correct CORS/cookie config.
 
