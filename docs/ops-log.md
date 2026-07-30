@@ -7,9 +7,9 @@ Append new entries at the top.
 
 ## YYYY-MM-DD — [Title]
 
-**Type:** restore drill / incident / deploy / config change  
-**Owner:**  
-**Outcome:** pass / fail / partial  
+**Type:** restore drill / incident / deploy / config change
+**Owner:**
+**Outcome:** pass / fail / partial
 
 ### What we did
 
@@ -27,9 +27,9 @@ Append new entries at the top.
 
 ## Example — 2026-Q3 restore drill
 
-**Type:** restore drill  
-**Owner:** @backend-oncall  
-**Outcome:** pass  
+**Type:** restore drill
+**Owner:** @backend-oncall
+**Outcome:** pass
 
 ### What we did
 

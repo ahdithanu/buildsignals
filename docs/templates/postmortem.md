@@ -1,9 +1,9 @@
 # Postmortem — [INCIDENT TITLE]
 
-**Date:** YYYY-MM-DD  
-**Severity:** Sev-1 / Sev-2 / Sev-3  
-**Authors:**  
-**Status:** Draft / Final  
+**Date:** YYYY-MM-DD
+**Severity:** Sev-1 / Sev-2 / Sev-3
+**Authors:**
+**Status:** Draft / Final
 
 ---
 
