@@ -17,7 +17,7 @@ Guide for standing up a non-production Render stack (enterprise checklist G5–G
 1. **Duplicate the blueprint** in Render with a new name, e.g. `dealsignal-staging`.
    Use [`render-staging.yaml`](../render-staging.yaml) at the repo root — it creates
    isolated `*-staging` Postgres, Redis, API, and frontend services with
-   `ENVIRONMENT=staging`.
+   `ENVIRONMENT=staging`. Step-by-step: [`docs/runbooks/staging-deploy.md`](runbooks/staging-deploy.md).
 2. Override env vars:
 
    | Variable | Staging value |

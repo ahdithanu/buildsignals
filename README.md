@@ -150,7 +150,9 @@ docs/                runbooks and operational docs — see below
 | [docs/slo.md](docs/slo.md) | Service level objectives + error budget |
 | [docs/enterprise_readiness.md](docs/enterprise_readiness.md) | Production readiness checklist (living tracker) |
 | [docs/monitoring.md](docs/monitoring.md) | Dashboards, alerts, uptime setup |
-| [docs/staging.md](docs/staging.md) | Non-production environment setup |
+| [docs/staging.md](docs/staging.md) | Staging environment policy |
+| [docs/runbooks/staging-deploy.md](docs/runbooks/staging-deploy.md) | One-time Render staging blueprint setup |
+| [infra/README.md](infra/README.md) | Uptime URL config + staging env hints |
 | [docs/ops-log.md](docs/ops-log.md) | Ops drill and incident log |
 | [docs/templates/postmortem.md](docs/templates/postmortem.md) | Postmortem template |
 | [docs/accessibility.md](docs/accessibility.md) | Accessibility statement |
