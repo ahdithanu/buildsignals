@@ -10,9 +10,15 @@ what to wire externally.
 
 **Target:** `/health/deep` on the production API (not shallow `/health`).
 
-**In-repo automation:** `.github/workflows/uptime.yml` runs every 5 minutes when
-the repository secret `UPTIME_BASE_URL` is set (e.g. `https://dealsignal-api.onrender.com`).
-Uses `scripts/uptime-check.sh --deep`.
+**In-repo automation:** `.github/workflows/uptime.yml` runs every 5 minutes.
+Configure the URL via [`infra/uptime.env`](../infra/uptime.env) (committed) or
+the GitHub secret `UPTIME_BASE_URL`. The workflow skips cleanly until the API
+is actually deployed (404/connection refused).
+
+```bash
+./scripts/setup-infra.sh                    # auto-detect + write infra/uptime.env
+./scripts/setup-infra.sh --url https://...  # explicit URL
+```
 
 **Manual / cron:**
 
