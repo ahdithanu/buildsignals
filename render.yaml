@@ -84,6 +84,40 @@ services:
       # NOTE: ALLOW_ANONYMOUS is intentionally NOT set here. Production forces
       # it false; the app refuses to start if you set it true.
 
+  # ── Daily ingestion (permits + parcels) ────────────────────────────────────
+  # Syncs catalog.json and runs all active sources. Separate from the web
+  # service so long fetches don't contend with API request latency.
+  # See docs/runbooks/ingestion-scheduling.md
+  - type: cron
+    name: dealsignal-ingestion
+    runtime: python
+    plan: starter
+    schedule: "0 6 * * *"   # 06:00 UTC daily
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./scripts/daily-ingestion.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: dealsignal-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: INGESTION_ORGANIZATION
+        value: default-org
+      - key: INGESTION_MAX_PAGES_PER_SOURCE
+        value: "10"
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
   # ── Frontend (static site) ─────────────────────────────────────────────────
   - type: web
     name: dealsignal-frontend

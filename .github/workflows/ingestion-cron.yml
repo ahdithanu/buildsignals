@@ -1,0 +1,54 @@
+name: ingestion-cron
+
+# Daily permit/parcel ingestion for non-Render deployments (AWS, local cron, etc.).
+# Render users should use the cron service in render.yaml instead.
+#
+# Requires repository secret INGESTION_DATABASE_URL (PostgreSQL connection string).
+# Optional: INGESTION_CRON_SECRET_KEY (≥32 chars; defaults to a CI-only placeholder).
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      max_pages_per_source:
+        description: Max pages per source (1-100)
+        required: false
+        default: "10"
+      organization:
+        description: Organization slug or id
+        required: false
+        default: "default-org"
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      DATABASE_URL: ${{ secrets.INGESTION_DATABASE_URL }}
+      SECRET_KEY: ${{ secrets.INGESTION_CRON_SECRET_KEY }}
+      ENVIRONMENT: ci
+      INGESTION_ORGANIZATION: ${{ github.event.inputs.organization || 'default-org' }}
+      INGESTION_MAX_PAGES_PER_SOURCE: ${{ github.event.inputs.max_pages_per_source || '10' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily ingestion
+        run: |
+          if [[ -z "${DATABASE_URL:-}" ]]; then
+            echo "INGESTION_DATABASE_URL secret not set — skipping (configure for AWS/manual cron)."
+            exit 0
+          fi
+          if [[ -z "${SECRET_KEY:-}" ]]; then
+            export SECRET_KEY="ci-ingestion-cron-secret-key-not-for-jwt-signing"
+          fi
+          chmod +x scripts/daily-ingestion.sh
+          ./scripts/daily-ingestion.sh

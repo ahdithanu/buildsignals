@@ -65,7 +65,7 @@ ship. IDs match the tiers used in planning conversations.
 | D4 | SLO targets documented | ✅ | `docs/slo.md` |
 | D5 | Grafana/Datadog dashboards | 🟡 | Example alert rules in `docs/prometheus/alerts.example.yml` |
 | D6 | Alerting + error-budget burn | 🟡 | Example rules + monitoring guide |
-| D7 | External uptime monitor on `/health/deep` | ✅ | `scripts/uptime-check.sh` + `.github/workflows/uptime.yml` |
+| D7 | External uptime monitor on `/health/deep` | ✅ | `infra/uptime.env` + `scripts/setup-infra.sh` + uptime workflow |
 | D8 | Customer-facing SLA | 🔒 | Legal + business decision |
 
 ---
@@ -120,7 +120,7 @@ ship. IDs match the tiers used in planning conversations.
 | H4 | Parcel map unit/integration tests | ✅ | `parcel-map.test.tsx`, `nearby-parcels-panel.test.tsx`, etc. |
 | H5 | API versioning (`/v1`) | ✅ | Middleware + versioned routes |
 | H6 | Data retention policy | ✅ | `docs/data-retention.md` |
-| H7 | Audit log | ✅ | `audit_log` table + routes |
+| H8 | Scheduled permit/parcel ingestion | ✅ | Render cron + `scripts/daily-ingestion.sh` + GHA workflow |
 
 ---
 

@@ -6,6 +6,7 @@ All notable changes to DealSignal are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+- Daily permit ingestion cron (`scripts/daily-ingestion.sh`, Render cron, GitHub Actions)
 - Staging Render blueprint (`render-staging.yaml`)
 - Uptime probe script and scheduled GitHub workflow (`scripts/uptime-check.sh`)
 - Pre-commit CI workflow
