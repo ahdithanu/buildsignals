@@ -6,14 +6,24 @@ All notable changes to DealSignal are documented here. Format follows
 ## [Unreleased]
 
 ### Added
+- Docker `ingest` entrypoint for AWS ECS scheduled ingestion tasks
+- AWS-first ingestion scheduling docs (`deploy-aws.md` §9)
+
+## [1.2.0] — 2026-07-31
+
+### Added
 - Daily permit ingestion cron (`scripts/daily-ingestion.sh`, Render cron, GitHub Actions)
 - Staging Render blueprint (`render-staging.yaml`)
 - Uptime probe script and scheduled GitHub workflow (`scripts/uptime-check.sh`)
 - Pre-commit CI workflow
 - Postmortem template and ops log
 - Example Prometheus alert rules
+- `infra/uptime.env` and staging deploy runbook
 
 ## [1.1.0] — 2026-07-29
+
+### Added
+- Enterprise readiness checklist and ops documentation
 - Post-deploy smoke test script (`scripts/smoke-test.sh`)
 - Frontend CI workflow (lint, typecheck, vitest, build)
 - Playwright E2E CI workflow (auth + deal flows)
@@ -37,5 +47,6 @@ All notable changes to DealSignal are documented here. Format follows
 Initial pilot release: multi-tenant deal platform with auth, RLS, ingestion,
 parcel discovery, and underwriting workflows.
 
-[Unreleased]: https://github.com/ahdithanu/cre-deal-intelligence/compare/main...cursor/enterprise-readiness-9bac
+[Unreleased]: https://github.com/ahdithanu/cre-deal-intelligence/compare/main...cursor/aws-ingestion-scheduling-9bac
+[1.2.0]: https://github.com/ahdithanu/cre-deal-intelligence/compare/v1.1.0...main
 [1.0.0]: https://github.com/ahdithanu/cre-deal-intelligence/releases/tag/v1.0.0

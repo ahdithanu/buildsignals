@@ -5,6 +5,7 @@
 # Build:  docker build -t dealsignal-api .
 # Serve:  docker run -p 8000:8000 --env-file .env dealsignal-api
 # Migrate: docker run --env-file .env dealsignal-api migrate   # one-off, see runbook
+# Ingest: docker run --env-file .env dealsignal-api ingest     # daily cron, see runbook
 FROM python:3.11-slim AS base
 
 # - PYTHONDONTWRITEBYTECODE/UNBUFFERED: standard container hygiene.
