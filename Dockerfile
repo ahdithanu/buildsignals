@@ -25,8 +25,9 @@ COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
 COPY seed.py .
+COPY scripts/daily-ingestion.sh scripts/daily-ingestion.sh
 COPY docker-entrypoint.sh .
-RUN chmod +x docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh scripts/daily-ingestion.sh
 
 # Run as non-root.
 RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app

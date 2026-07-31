@@ -1,10 +1,10 @@
 name: ingestion-cron
 
-# Daily permit/parcel ingestion for non-Render deployments (AWS, local cron, etc.).
-# Render users should use the cron service in render.yaml instead.
+# Daily permit/parcel ingestion — primary path for AWS (App Runner / ECS).
+# Set INGESTION_DATABASE_URL to your RDS connection string.
+# Optional: INGESTION_CRON_SECRET_KEY (≥32 chars).
 #
-# Requires repository secret INGESTION_DATABASE_URL (PostgreSQL connection string).
-# Optional: INGESTION_CRON_SECRET_KEY (≥32 chars; defaults to a CI-only placeholder).
+# Render users can use the cron service in render.yaml instead.
 
 on:
   schedule:

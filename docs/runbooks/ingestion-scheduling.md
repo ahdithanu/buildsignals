@@ -1,61 +1,53 @@
 # Scheduled permit & parcel ingestion
 
 DealSignal ingests **78 permit feeds** and **38 parcel feeds** from
-`app/services/ingestion/catalog.json`. Runs are on-demand by default; this
-doc covers turning on **daily automated ingestion**.
+`app/services/ingestion/catalog.json`. Each run syncs the catalog, then fetches
+and normalizes records for every active source.
+
+---
+
+## AWS (primary for App Runner / ECS deploys)
+
+### Option A — ECS Fargate scheduled task (recommended)
+
+Use the same ECR image as App Runner with command **`ingest`**:
+
+```bash
+docker run --rm ... dealsignal-api:latest ingest
+```
+
+Wire **EventBridge** → ECS scheduled task daily (`cron(0 6 * * ? *)`). The task
+needs the same env as App Runner: `DATABASE_URL`, `SECRET_KEY`,
+`ENVIRONMENT=production`, `CORS_ALLOWED_ORIGINS`, optional `REDIS_URL`.
+
+See [deploy-aws.md §9](deploy-aws.md#9-daily-permit-ingestion-aws) for full setup.
+
+### Option B — GitHub Actions (quickest to enable)
+
+1. Set repo secret **`INGESTION_DATABASE_URL`** (RDS connection string).
+2. Workflow **`.github/workflows/ingestion-cron.yml`** runs at **06:00 UTC** daily.
+3. RDS must be reachable from the runner (public RDS + SG, or self-hosted runner in VPC).
+
+Manual run: Actions → **ingestion-cron** → Run workflow.
+
+**You do not need Render** for ingestion if you use either AWS option above.
+
+---
+
+## Render (alternative hosting)
+
+If you deploy via `render.yaml` instead of AWS, a cron service
+`dealsignal-ingestion` runs `./scripts/daily-ingestion.sh` daily. See
+[first-deploy.md](first-deploy.md). Skip this section if you are on AWS.
 
 ---
 
 ## What each run does
 
-1. **Catalog sync** — upsert sources from `catalog.json` into the DB
-2. **Run-all** — fetch, normalize, and persist records for every active source
-   (resumes from last checkpoint per source)
+1. **Catalog sync** — upsert sources from `catalog.json`
+2. **Run-all** — fetch/normalize/persist (resumes checkpoints per source)
 
-Default bounds: **10 pages per source** per run (~5k records/page on Socrata).
-Adjust with `INGESTION_MAX_PAGES_PER_SOURCE` (max 100).
-
----
-
-## Render (recommended)
-
-`render.yaml` includes a **cron service** `dealsignal-ingestion`:
-
-| Setting | Value |
-|---------|-------|
-| Schedule | `0 6 * * *` (06:00 UTC daily) |
-| Command | `./scripts/daily-ingestion.sh` |
-| Org | `INGESTION_ORGANIZATION=default-org` (override in dashboard) |
-
-**First-time setup after deploy:**
-
-1. Apply blueprint (includes cron job).
-2. Set `CORS_ALLOWED_ORIGINS` on the **cron service** (same as API — required
-   for `ENVIRONMENT=production` config import).
-3. In Render shell on **API** or **cron** service:
-   ```bash
-   python seed.py   # if fresh DB
-   ./scripts/daily-ingestion.sh   # manual first run
-   ```
-4. Confirm runs in **Ingestion Operations** UI or:
-   ```bash
-   python -m app.services.ingestion.cli health --organization default-org
-   ```
-
-Cron run logs: Render dashboard → `dealsignal-ingestion` → Logs.
-
----
-
-## GitHub Actions (AWS / no Render cron)
-
-`.github/workflows/ingestion-cron.yml` runs daily at 06:00 UTC when configured:
-
-| Secret | Required | Purpose |
-|--------|----------|---------|
-| `INGESTION_DATABASE_URL` | Yes | Production Postgres URL |
-| `INGESTION_CRON_SECRET_KEY` | No | ≥32 chars if you prefer not to use the CI default |
-
-Manual trigger: Actions → **ingestion-cron** → **Run workflow**.
+Defaults: **10 pages per source** (`INGESTION_MAX_PAGES_PER_SOURCE`, max 100).
 
 ---
 
@@ -66,35 +58,21 @@ export DATABASE_URL=postgresql://...
 export ENVIRONMENT=development   # or production + CORS set
 
 ./scripts/daily-ingestion.sh
-
-# Or step by step:
-python -m app.services.ingestion.cli catalog sync --organization default-org
-python -m app.services.ingestion.cli run-all --organization default-org --max-pages-per-source 10
 ```
 
-Single source:
+Or via Docker on AWS:
 
 ```bash
-python -m app.services.ingestion.cli run \
-  --organization default-org \
-  --source-key austin_tx_issued_construction_permits \
-  --max-pages 10
+docker run --rm --env-file .env.production $ECR_IMAGE ingest
 ```
-
----
-
-## Staging
-
-`render-staging.yaml` includes `dealsignal-ingestion-staging` (daily, 5 pages/source).
-Use synthetic data only — see `docs/staging.md`.
 
 ---
 
 ## Monitoring
 
-- **UI:** `/ingestion-operations` — source health, last run age, failures
+- **UI:** `/ingestion-operations`
 - **CLI:** `python -m app.services.ingestion.cli health --organization default-org --json`
-- **Alerting:** wire Sentry or page on cron job failure in Render / GitHub Actions
+- **Alerting:** ECS task failure → SNS; GHA failure → GitHub notifications
 
 ---
 
@@ -103,8 +81,8 @@ Use synthetic data only — see `docs/staging.md`.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `INGESTION_ORGANIZATION` | `default-org` | Target org slug or UUID |
-| `INGESTION_MAX_PAGES_PER_SOURCE` | `10` | Pages fetched per source per run |
-| `INGESTION_STAGE` | `all` | Filter: `all`, `pre_approval_and_approved`, `approved_only` |
+| `INGESTION_MAX_PAGES_PER_SOURCE` | `10` | Pages per source per run |
+| `INGESTION_STAGE` | `all` | `all`, `pre_approval_and_approved`, `approved_only` |
 
 ---
 
@@ -112,8 +90,8 @@ Use synthetic data only — see `docs/staging.md`.
 
 | Symptom | Fix |
 |---------|-----|
-| Cron exits immediately with CORS error | Set `CORS_ALLOWED_ORIGINS` on cron service env |
+| CORS / config crash with `ENVIRONMENT=production` | Set `CORS_ALLOWED_ORIGINS` on the ingest task |
+| GHA skips with "secret not set" | Add `INGESTION_DATABASE_URL` in GitHub repo secrets |
+| ECS task can't reach RDS | SG / VPC — same network rules as App Runner |
 | No sources listed | Run `catalog sync` first |
-| All sources `unknown` health | No completed runs yet — trigger manual run |
-| Run timeout on Render | Reduce `INGESTION_MAX_PAGES_PER_SOURCE` or split by stage |
-| 409 ActiveRunConflict | Previous run still marked running — check `ingestion_runs` table |
+| 409 ActiveRunConflict | Stale run in `ingestion_runs` — investigate before retry |
