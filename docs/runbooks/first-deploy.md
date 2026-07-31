@@ -146,6 +146,10 @@ curl -s -o /dev/null -w '%{http_code}\n' $BASE/metrics          # 401 (token req
       `SELECT rolsuper FROM pg_roles WHERE rolname = current_user;` → must be
       `f`. (App-layer org scoping still applies either way, but RLS is the
       defense-in-depth backstop and you want it real.)
+- [ ] **Enable daily permit ingestion:** set `CORS_ALLOWED_ORIGINS` on the
+      `dealsignal-ingestion` cron service (same value as API), then run
+      `./scripts/daily-ingestion.sh` once manually. See
+      [ingestion-scheduling.md](ingestion-scheduling.md).
 
 From here on, deploying is just merging to `main`. Read [deploy.md](deploy.md)
 before the first routine deploy.

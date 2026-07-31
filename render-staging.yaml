@@ -54,6 +54,36 @@ services:
       - key: SENTRY_DSN
         sync: false
 
+  - type: cron
+    name: dealsignal-ingestion-staging
+    runtime: python
+    plan: starter
+    schedule: "0 7 * * *"   # 07:00 UTC daily (offset from prod)
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./scripts/daily-ingestion.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: staging
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db-staging
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: dealsignal-redis-staging
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: INGESTION_ORGANIZATION
+        value: default-org
+      - key: INGESTION_MAX_PAGES_PER_SOURCE
+        value: "5"
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
   - type: web
     name: dealsignal-frontend-staging
     runtime: static
