@@ -31,7 +31,7 @@ jobs:
       INGESTION_ORGANIZATION: ${{ github.event.inputs.organization || 'default-org' }}
       INGESTION_MAX_PAGES_PER_SOURCE: ${{ github.event.inputs.max_pages_per_source || '10' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
