@@ -5,6 +5,7 @@
 # Build:  docker build -t dealsignal-api .
 # Serve:  docker run -p 8000:8000 --env-file .env dealsignal-api
 # Migrate: docker run --env-file .env dealsignal-api migrate   # one-off, see runbook
+# Ingest: docker run --env-file .env dealsignal-api ingest     # daily cron, see runbook
 FROM python:3.11-slim AS base
 
 # - PYTHONDONTWRITEBYTECODE/UNBUFFERED: standard container hygiene.
@@ -25,8 +26,9 @@ COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
 COPY seed.py .
+COPY scripts/daily-ingestion.sh scripts/daily-ingestion.sh
 COPY docker-entrypoint.sh .
-RUN chmod +x docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh scripts/daily-ingestion.sh
 
 # Run as non-root.
 RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app

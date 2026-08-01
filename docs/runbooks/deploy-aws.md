@@ -208,8 +208,68 @@ go to `localhost`, `VITE_API_BASE_URL` wasn't set at build time — rebuild.
       real (custom-domain) URLs.
 - [ ] Migrations run as a one-off in the deploy pipeline, never on the web
       service (§4).
+- [ ] **Daily ingestion enabled** (§9) — catalog sync + permit feeds running.
 - [ ] On-call / status-page TODOs filled in
       ([incident-response.md](incident-response.md)).
+
+---
+
+## 9. Daily permit ingestion (AWS)
+
+The API image supports a third entrypoint command: **`ingest`**. It syncs
+`catalog.json` and runs all active permit/parcel sources (same as
+`scripts/daily-ingestion.sh`).
+
+### Option A — ECS Fargate scheduled task (recommended on AWS)
+
+Run the **same ECR image** as App Runner on a schedule via EventBridge:
+
+1. **Task definition** — same image/env as App Runner (`DATABASE_URL`,
+   `SECRET_KEY`, `REDIS_URL`, `ENVIRONMENT=production`, `CORS_ALLOWED_ORIGINS`).
+2. **Command override:** `ingest` (not `serve`).
+3. **EventBridge rule:** `cron(0 6 * * ? *)` (06:00 UTC daily).
+4. **Network:** task must reach RDS (public SG on pilot tier, or run in VPC on
+   hardened tier).
+
+One-off manual run:
+
+```bash
+docker run --rm \
+  -e DATABASE_URL=postgresql://dealsignal:<pw>@<rds-endpoint>:5432/dealsignal \
+  -e SECRET_KEY=<same-as-app-runner> \
+  -e ENVIRONMENT=production \
+  -e CORS_ALLOWED_ORIGINS=https://<cloudfront-url> \
+  -e REDIS_URL=<optional> \
+  -e INGESTION_ORGANIZATION=default-org \
+  $AWS_ACCOUNT.dkr.ecr.$REGION.amazonaws.com/dealsignal-api:latest ingest
+```
+
+Or from ECS: run task with container command `ingest`.
+
+### Option B — GitHub Actions (simplest to start)
+
+If RDS is reachable from GitHub-hosted runners (pilot tier: public RDS + SG
+allowing GitHub IP ranges, or self-hosted runner in VPC):
+
+1. Repo secret **`INGESTION_DATABASE_URL`** = same Postgres URL as App Runner.
+2. Workflow **`.github/workflows/ingestion-cron.yml`** runs daily at 06:00 UTC.
+3. Manual trigger: Actions → **ingestion-cron** → Run workflow.
+
+Skip Render entirely — that workflow is built for AWS/non-Render deploys.
+
+### First run (either option)
+
+After migrations and before relying on the schedule:
+
+```bash
+# Register org/user if fresh DB — use API register or seed.py locally against RDS
+python -m app.services.ingestion.cli catalog sync --organization default-org
+# Then trigger ingest (docker ingest, ECS task, or GHA workflow)
+```
+
+Monitor in the app at **Ingestion Operations** (`/ingestion-operations`).
+
+Full reference: [ingestion-scheduling.md](ingestion-scheduling.md).
 
 ---
 

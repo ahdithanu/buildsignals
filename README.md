@@ -19,7 +19,7 @@ React/Vite frontend, Postgres.
 | Frontend | React 18 + Vite + TypeScript, shadcn/ui, TanStack Query |
 | Database | Postgres in production; SQLite for local dev |
 | Auth | JWT access + rotating refresh cookie, TOTP 2FA |
-| Hosting | Render (web service + static site + managed Postgres) |
+| Hosting | AWS App Runner + RDS + CloudFront, or Render |
 | Errors | Sentry (backend + frontend) |
 
 ---
@@ -164,18 +164,18 @@ docs/                runbooks and operational docs — see below
 
 ## Deployment
 
-The whole stack is described by [`render.yaml`](render.yaml) — Postgres, Redis,
-the API, and the static frontend. **Standing it up the first time:**
-[docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md). **On AWS**
-(App Runner + RDS + CloudFront) instead:
-[docs/runbooks/deploy-aws.md](docs/runbooks/deploy-aws.md) — the `Dockerfile`
-runs there.
+**AWS (App Runner + RDS + CloudFront):** follow
+[`docs/runbooks/deploy-aws.md`](docs/runbooks/deploy-aws.md) — the `Dockerfile`
+image supports `serve`, `migrate`, and **`ingest`** (daily permit cron).
 
-After that, merges to `main` auto-deploy on Render; migrations run
-automatically in the pre-deploy step (`alembic upgrade head`). **Read
-[docs/runbooks/deploy.md](docs/runbooks/deploy.md) before a routine ship** — it
-covers the env-var preflight, the 2-minute smoke test, and the rollback
-decision matrix.
+**Render:** [`render.yaml`](render.yaml) blueprint —
+[`docs/runbooks/first-deploy.md`](docs/runbooks/first-deploy.md).
+
+After deploy, enable daily ingestion — on AWS see
+[deploy-aws.md §9](docs/runbooks/deploy-aws.md#9-daily-permit-ingestion-aws)
+(ECS scheduled task or GitHub Actions). Read
+[docs/runbooks/deploy.md](docs/runbooks/deploy.md) for routine ship, smoke test,
+and rollback.
 
 ## License
 
