@@ -140,6 +140,7 @@ docs/                runbooks and operational docs — see below
 |---|---|
 | [docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md) | One-time Render provisioning from scratch |
 | [docs/runbooks/deploy-aws.md](docs/runbooks/deploy-aws.md) | AWS deploy (App Runner + RDS + CloudFront) |
+| [docs/runbooks/aws-pilot-quickstart.md](docs/runbooks/aws-pilot-quickstart.md) | AWS pilot deploy — locked defaults, step-by-step |
 | [docs/runbooks/deploy.md](docs/runbooks/deploy.md) | Routine deploy, smoke test, rollback |
 | [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | Sev levels, on-call, comms, postmortem |
 | [docs/backups.md](docs/backups.md) | Backup & restore, RPO/RTO, DR drills |
