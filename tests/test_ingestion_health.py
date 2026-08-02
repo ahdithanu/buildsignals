@@ -11,7 +11,7 @@ from app.models.ingestion import (
     SourceFieldMapping,
 )
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
-from app.services.ingestion.catalog import load_candidate_catalog, load_catalog
+from app.services.ingestion.catalog import load_candidate_catalog, load_catalog, summarize_coverage
 from app.services.ingestion.connector_config import resolve_connector_config_dates
 from app.services.ingestion.connectors import FetchEnvelope
 from app.services.ingestion.health import (
@@ -20,7 +20,6 @@ from app.services.ingestion.health import (
     resolve_resume_checkpoint,
     validate_source_canary,
 )
-from app.services.ingestion.catalog import summarize_coverage
 
 
 class FakeConnector:

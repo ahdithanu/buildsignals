@@ -4,7 +4,7 @@ import re
 from collections import deque
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from sqlalchemy import func, or_, select, union_all
 from sqlalchemy.orm import Session, joinedload

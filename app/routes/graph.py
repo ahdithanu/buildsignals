@@ -18,8 +18,8 @@ from app.schemas.graph import (
     GraphEntitySearchResponse,
     GraphPathResponse,
     GraphRelatedEntityResponse,
-    GraphRelationshipDetailResponse,
     GraphRelationshipCreate,
+    GraphRelationshipDetailResponse,
     GraphRelationshipResponse,
     GraphSharedParcelSummary,
     OpportunityGraphContextResponse,
@@ -27,11 +27,11 @@ from app.schemas.graph import (
 from app.services.brand_intelligence import list_deal_brand_matches
 from app.services.graph_service import (
     create_relationship,
+    entity_merge_candidates,
     find_relationship_paths,
     get_entity_or_none,
     get_relationship_or_none,
     opportunity_context,
-    entity_merge_candidates,
     relationships_for_entity,
     resolve_entity,
     search_entities,

@@ -49,6 +49,8 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 2,
                 pre_approval_sources: 1,
                 approved_only_sources: 1,
+                priority_score: 0,
+                priority_reasons: [],
               },
               {
                 state: "MI",
@@ -57,6 +59,8 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 0,
                 pre_approval_sources: 0,
                 approved_only_sources: 1,
+                priority_score: 0,
+                priority_reasons: [],
               },
             ],
             activation_queue: [
@@ -67,6 +71,8 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 0,
                 pre_approval_sources: 0,
                 approved_only_sources: 0,
+                priority_score: 0,
+                priority_reasons: [],
               },
             ],
             rollout_queue: [

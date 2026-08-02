@@ -19,4 +19,3 @@ permit intelligence pipeline.
 - Entity resolution, aliases, evidence, and provenance
 - Official-source coverage by state and rollout priority
 - Nearby-parcel discovery as phase 2 of opportunity expansion
-
