@@ -84,6 +84,107 @@ services:
       # NOTE: ALLOW_ANONYMOUS is intentionally NOT set here. Production forces
       # it false; the app refuses to start if you set it true.
 
+  # ── Washington permit ingestion (UTC) ─────────────────────────────────────
+  # Render marks a cron execution failed when this command exits nonzero. The
+  # scheduled command syncs the production catalog, resumes both source cursors,
+  # ingests a bounded batch, and validates freshness before it exits.
+  - type: cron
+    name: dealsignal-permit-ingestion-cohort-1
+    runtime: python
+    plan: starter
+    schedule: "15 */6 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli scheduled
+      --organization "$INGESTION_ORGANIZATION"
+      --source-key washington_state_lcb_local_authority_letters
+      --source-key everett_wa_planning_application_notices
+      --source-key bend_or_planning_applications
+      --source-key bend_or_permit_applications_point
+      --source-key bend_or_permit_applications_line
+      --max-pages-per-source 10
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      # The shared config validates CORS in production even though this worker
+      # does not serve HTTP. Use the same frontend origin as the API service.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        value: data.wa.gov,www.everettwa.gov,services5.arcgis.com
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
+  # Runs between collection windows so stale data and repeated failures are
+  # surfaced without waiting for the next ingestion execution.
+  - type: cron
+    name: dealsignal-ingestion-health-cohort-1
+    runtime: python
+    plan: starter
+    schedule: "45 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli health
+      --organization "$INGESTION_ORGANIZATION"
+      --source-key washington_state_lcb_local_authority_letters
+      --source-key everett_wa_planning_application_notices
+      --source-key bend_or_planning_applications
+      --source-key bend_or_permit_applications_point
+      --source-key bend_or_permit_applications_line
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
+  # Retries only overdue runnable candidates and persists every outcome. A
+  # successful post-audit canary stops future retries but never auto-promotes.
+  - type: cron
+    name: dealsignal-ingestion-candidate-retries
+    runtime: python
+    plan: starter
+    schedule: "30 13 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli retry-candidates
+      --organization "$INGESTION_ORGANIZATION"
+      --sample-size 10
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        value: services5.arcgis.com
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
   # ── Frontend (static site) ─────────────────────────────────────────────────
   - type: web
     name: dealsignal-frontend

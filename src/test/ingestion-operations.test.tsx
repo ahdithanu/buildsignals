@@ -121,6 +121,20 @@ describe("<IngestionOperations>", () => {
               approved_only_sources: 0,
             },
           ],
+          rollout_queue: [
+            {
+              state: "TX",
+              rollout_cluster: 1,
+              rollout_label: "Texas, Washington, New York",
+              coverage_status: "live",
+              live_sources: 2,
+              candidate_sources: 0,
+              jurisdiction_count: 2,
+              priority_score: 185,
+              next_action: "add_retailer_opening_source",
+              next_action_label: "Add retailer-opening source",
+            },
+          ],
           candidate_only_state_count: 1,
           candidate_only_states: ["TX"],
           covered_state_count: 2,
@@ -189,6 +203,9 @@ describe("<IngestionOperations>", () => {
     expect(within(liveMix).getByText("approved only")).toBeInTheDocument();
     expect(screen.getByText("State leaders")).toBeInTheDocument();
     expect(screen.getByText("Next activation queue")).toBeInTheDocument();
+    expect(screen.getByText("50-state rollout queue")).toBeInTheDocument();
+    expect(screen.getByText("TX · Cluster 1")).toBeInTheDocument();
+    expect(screen.getByText("Add retailer-opening source")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Austin Plan Review Cases/i })).toHaveAttribute(
       "href",
       "/source-health/sources/source-1",
@@ -273,7 +290,11 @@ describe("<IngestionOperations>", () => {
             blocker_summary: "Retry",
             early_warning_value: "Candidate",
             candidate_source_fields: [],
-            can_run_canary: false,
+            can_run_canary: true,
+            last_canary_at: "2026-07-23T12:00:00Z",
+            last_canary_ok: true,
+            last_canary_records_valid: 5,
+            last_canary_records_failed: 0,
             last_checked_on: "2026-07-23",
             next_audit_on: "2026-07-24",
             notes: "Test",
@@ -379,7 +400,7 @@ describe("<IngestionOperations>", () => {
       "href",
       "/source-health/candidates/texas_candidate",
     );
-    expect(screen.getAllByRole("button", { name: /promote source/i })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /promote source/i })).toHaveLength(1);
     expect(screen.getByRole("link", { name: /open official source for texas candidate/i })).toHaveAttribute(
       "href",
       "https://example.com/tx",

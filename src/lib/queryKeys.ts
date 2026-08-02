@@ -29,4 +29,14 @@ export const queryKeys = {
     recentSignals: ['dashboard', 'recent-signals'] as const,
     aiInsights: ['dashboard', 'ai-insights'] as const,
   },
+  graph: {
+    entityDetail: (entityId: string) => ['graph', 'entity', entityId] as const,
+    entitySearch: (query: string, entityType?: string) =>
+      ['graph', 'search', query, entityType ?? null] as const,
+    opportunityContext: (dealId: string) => ['graph', 'opportunity-context', dealId] as const,
+    paths: (sourceEntityId: string, targetEntityId: string, maxDepth: number) =>
+      ['graph', 'paths', sourceEntityId, targetEntityId, maxDepth] as const,
+    mergeCandidates: (entityId: string) => ['graph', 'merge-candidates', entityId] as const,
+    relationshipDetail: (relationshipId: string) => ['graph', 'relationship', relationshipId] as const,
+  },
 } as const;

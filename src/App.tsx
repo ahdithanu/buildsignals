@@ -21,6 +21,7 @@ import IngestionOperations from "./pages/IngestionOperations";
 import IngestionCandidateDetail from "./pages/IngestionCandidateDetail";
 import IngestionSourceDetail from "./pages/IngestionSourceDetail";
 import GraphEntityDetail from "./pages/GraphEntityDetail";
+import GraphRelationshipDetail from "./pages/GraphRelationshipDetail";
 import GraphExplorer from "./pages/GraphExplorer";
 import ParcelDetail from "./pages/ParcelDetail";
 import Settings from "./pages/Settings";
@@ -181,6 +182,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <GraphEntityDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/graph/relationships/:relationshipId"
+              element={
+                <RequireAuth>
+                  <GraphRelationshipDetail />
                 </RequireAuth>
               }
             />

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -303,6 +304,22 @@ def prepare_mapped_record(
                 ),
                 None,
             )
+        elif transform == "regex_extract":
+            input_field = options.get("source_field", source_field)
+            pattern = options.get("pattern")
+            group = options.get("group", 1)
+            if not isinstance(input_field, str) or not input_field:
+                raise ValueError("regex_extract source_field must be a field name")
+            if not isinstance(pattern, str) or not pattern or len(pattern) > 500:
+                raise ValueError("regex_extract requires a pattern up to 500 characters")
+            if isinstance(group, bool) or not isinstance(group, (int, str)):
+                raise ValueError("regex_extract group must be an integer or named group")
+            raw_value = record.get(input_field)
+            match = re.search(pattern, str(raw_value)) if raw_value is not None else None
+            try:
+                value = match.group(group) if match else None
+            except (IndexError, KeyError) as exc:
+                raise ValueError("regex_extract group does not exist in pattern") from exc
         elif transform == "value_map":
             input_field = str(options.get("field", source_field))
             values = options.get("values")

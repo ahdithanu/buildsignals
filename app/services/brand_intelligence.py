@@ -401,7 +401,7 @@ def list_deal_brand_matches(
             and normalize_address(entity.address, entity.city, entity.state) in location_keys
         )
     if not property_entity_ids:
-        return []
+        return _direct_brand_matches_for_deal(db, deal_id, limit=limit)
     permit_entity_ids = [
         row.source_entity_id
         for row in active_query(db.query(GraphRelationship), GraphRelationship).filter(
@@ -411,7 +411,7 @@ def list_deal_brand_matches(
         ).all()
     ]
     if not permit_entity_ids:
-        return []
+        return _direct_brand_matches_for_deal(db, deal_id, limit=limit)
     permit_ids = [
         row.record_id
         for row in active_query(db.query(GraphEntityLink), GraphEntityLink).filter(
@@ -420,7 +420,7 @@ def list_deal_brand_matches(
         ).all()
     ]
     if not permit_ids:
-        return []
+        return _direct_brand_matches_for_deal(db, deal_id, limit=limit)
     matches = active_query(db.query(PermitBrandMatch), PermitBrandMatch).options(
         joinedload(PermitBrandMatch.brand),
         joinedload(PermitBrandMatch.permit),
@@ -430,6 +430,40 @@ def list_deal_brand_matches(
     ).order_by(
         PermitBrandMatch.confidence.desc(), PermitBrandMatch.first_seen_at.desc()
     ).limit(limit).all()
+    return _serialize_brand_matches(db, matches)
+
+
+def _direct_brand_matches_for_deal(
+    db: Session,
+    deal_id: str,
+    *,
+    limit: int,
+) -> list[PermitBrandMatchResponse]:
+    deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()
+    if deal is None or not deal.address or not deal.city or not deal.state:
+        return []
+    deal_location = normalize_address(deal.address, deal.city, deal.state)
+    if not deal_location:
+        return []
+    candidates = active_query(db.query(PermitBrandMatch), PermitBrandMatch).options(
+        joinedload(PermitBrandMatch.brand),
+        joinedload(PermitBrandMatch.permit),
+    ).join(PermitRecord).filter(
+        PermitRecord.city == deal.city,
+        PermitRecord.state == deal.state,
+        PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
+    ).order_by(
+        PermitBrandMatch.confidence.desc(), PermitBrandMatch.first_seen_at.desc()
+    ).all()
+    matches = [
+        match
+        for match in candidates
+        if normalize_address(
+            match.permit.address,
+            match.permit.city,
+            match.permit.state,
+        ) == deal_location
+    ][:limit]
     return _serialize_brand_matches(db, matches)
 
 

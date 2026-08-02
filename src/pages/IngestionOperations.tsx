@@ -156,13 +156,9 @@ function HealthRow({
 function CandidateRow({
   candidate,
   canManage,
-  promoting,
-  onPromote,
 }: {
   candidate: IngestionCandidate;
   canManage: boolean;
-  promoting: boolean;
-  onPromote: () => void;
 }) {
   const lastCanaryLabel = candidate.last_canary_at
     ? `${candidate.last_canary_ok ? 'Passed' : 'Failed'} ${new Date(candidate.last_canary_at).toLocaleString()}`
@@ -213,21 +209,7 @@ function CandidateRow({
         <p className="mt-1 text-muted-foreground">{candidate.early_warning_value}</p>
         <p className="mt-1 text-[11px] text-muted-foreground">{lastCanaryLabel}</p>
       </div>
-      <div className="flex justify-end">
-        {canManage && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8"
-            disabled={promoting}
-            onClick={onPromote}
-          >
-            {promoting ? <RefreshCw className="animate-spin" /> : <Rocket />}
-            Promote source
-          </Button>
-        )}
-      </div>
+      <div className="flex justify-end" aria-hidden={!canManage} />
     </article>
   );
 }
@@ -299,20 +281,7 @@ function CandidateRetryRow({
       </div>
       <div className="flex justify-end">
         <div className="flex items-center gap-2">
-          {canManage && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8"
-              disabled={promoting}
-              onClick={onPromote}
-            >
-              {promoting ? <RefreshCw className="animate-spin" /> : <Rocket />}
-              Promote source
-            </Button>
-          )}
-          {canManage && (
+          {canManage && candidate.last_canary_ok === true && (
             <Button
               type="button"
               variant="outline"
@@ -692,7 +661,7 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">State leaders</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    States with the most live and candidate sources
+                    States with the most live, candidate, and readiness signals
                   </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -705,7 +674,7 @@ export default function IngestionOperations() {
                     key={bucket.state}
                     to={`/source-health?state=${bucket.state}`}
                     className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                    title={`${bucket.live_sources} live · ${bucket.candidate_sources} candidate · ${bucket.retailer_opening_sources} retailer-opening`}
+                    title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
                   >
                     {bucket.state} · {bucket.live_sources + bucket.candidate_sources}
                   </Link>
@@ -719,6 +688,9 @@ export default function IngestionOperations() {
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     {coverage.candidate_only_state_count} states have candidate coverage but no live source yet
                   </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Ranked by candidate depth and retry readiness
+                  </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
                   loop
@@ -730,13 +702,52 @@ export default function IngestionOperations() {
                     key={bucket.state}
                     to={`/source-health?state=${bucket.state}`}
                     className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                    title={`${bucket.live_sources} live · ${bucket.candidate_sources} candidate`}
+                    title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
                   >
                     {bucket.state} · {bucket.candidate_sources}
                   </Link>
                 ))}
               </div>
+              {coverage.activation_queue[0] && (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Top priority: {coverage.activation_queue[0].state} · {(coverage.activation_queue[0].priority_reasons ?? [])[0] ?? "no reason"}
+                </p>
+              )}
             </div>
+            {(coverage.rollout_queue?.length ?? 0) > 0 && (
+              <div className="mt-4 rounded-md border bg-background px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-foreground">50-state rollout queue</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      The current {coverage.jurisdiction_count}-region footprint organized into activation clusters
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">{coverage.rollout_queue?.length} states</span>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {coverage.rollout_queue?.slice(0, 12).map((item) => (
+                    <Link
+                      key={item.state}
+                      to={`/source-health?state=${item.state}`}
+                      className="flex min-w-0 items-center justify-between gap-3 rounded-md border bg-secondary/25 px-2.5 py-2 transition-colors hover:bg-secondary/50"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-xs font-medium text-foreground">
+                          {item.state} · Cluster {item.rollout_cluster}
+                        </span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {item.next_action_label}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[10px] capitalize text-muted-foreground">
+                        {item.coverage_status}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
             {coverage.retailer_opening_sources.length > 0 && (
               <div className="mt-4 rounded-md border bg-background px-3 py-3">
                 <div className="flex items-center gap-2 text-xs font-medium text-foreground">
@@ -874,8 +885,6 @@ export default function IngestionOperations() {
                     key={candidate.key}
                     candidate={candidate}
                     canManage={canManage}
-                    promoting={activePromoteCandidateKey === candidate.key}
-                    onPromote={() => promoteCandidateSource(candidate)}
                   />
                 )
               ))

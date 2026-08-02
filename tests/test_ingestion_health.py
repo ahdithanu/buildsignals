@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 
 from app.models.ingestion import (
     IngestionCandidateCanaryAttempt,
@@ -9,6 +10,7 @@ from app.models.ingestion import (
     RawSourceRecord,
     SourceFieldMapping,
 )
+from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.ingestion.catalog import load_candidate_catalog, load_catalog
 from app.services.ingestion.connector_config import resolve_connector_config_dates
 from app.services.ingestion.connectors import FetchEnvelope
@@ -18,6 +20,7 @@ from app.services.ingestion.health import (
     resolve_resume_checkpoint,
     validate_source_canary,
 )
+from app.services.ingestion.catalog import summarize_coverage
 
 
 class FakeConnector:
@@ -33,6 +36,44 @@ class FakeConnector:
         )
 
 
+def _retry_candidate() -> IngestionSourceCandidate:
+    return IngestionSourceCandidate(
+        key="test_retry_candidate",
+        name="Test Retry Candidate",
+        adapter="csv",
+        record_type="permit",
+        jurisdiction="Test, OR",
+        base_url="https://example.test/retry.csv",
+        official_landing_page="https://example.test/retry",
+        license="Test License",
+        status="operational_retry",
+        blocker_summary="Awaiting operational validation.",
+        early_warning_value="Test pre-approval records.",
+        candidate_source_fields=["id"],
+        probe_settings={
+            "connector": {"source": "https://example.test/retry.csv", "page_size": 5},
+            "defaults": {"state": "OR", "approval_stage": "pre_approval"},
+        },
+        probe_field_mappings=[
+            {"source_field": "id", "canonical_field": "source_record_id"}
+        ],
+        last_checked_on=date(2026, 7, 1),
+        next_audit_on=date(2026, 7, 30),
+        notes="Test retry candidate.",
+    )
+
+
+def _install_retry_candidate(monkeypatch) -> IngestionSourceCandidate:
+    candidate = _retry_candidate()
+    monkeypatch.setattr(
+        "app.routes.ingestion.load_candidate_catalog", lambda: [candidate]
+    )
+    monkeypatch.setattr(
+        "app.services.ingestion.catalog.load_candidate_catalog", lambda: [candidate]
+    )
+    return candidate
+
+
 def test_connector_config_resolves_rolling_utc_date_placeholders():
     config = {
         "where": "opened <= '{utc_today_plus_7}' AND opened >= '{utc_today_minus_30}'",
@@ -46,6 +87,26 @@ def test_connector_config_resolves_rolling_utc_date_placeholders():
         "opened <= '2026-07-25T00:00:00' AND opened >= '2026-06-18T00:00:00'"
     )
     assert resolved["query"]["$where"] == "updated <= '2026-07-18T00:00:00'"
+
+
+def test_coverage_builds_a_50_state_clustered_rollout_queue():
+    coverage = summarize_coverage()
+
+    assert len(coverage.rollout_queue) == 50
+    by_state = {item.state: item for item in coverage.rollout_queue}
+    assert by_state["TX"].rollout_cluster == 1
+    assert by_state["WA"].rollout_cluster == 1
+    assert by_state["CA"].rollout_cluster == 2
+    assert by_state["CO"].rollout_cluster == 3
+    assert by_state["AK"].rollout_cluster == 4
+    assert by_state["TX"].jurisdiction_count > 0
+    assert by_state["TX"].next_action in {
+        "run_candidate_canary",
+        "add_pre_approval_source",
+        "add_retailer_opening_source",
+        "add_secondary_jurisdiction",
+    }
+    assert by_state["AK"].next_action == "discover_first_source"
 
 
 def _source(db, *, key: str = "canary_source", name: str = "Canary source"):
@@ -645,10 +706,8 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
     assert response.status_code == 200, response.text
     body = response.json()
     assert {row["key"] for row in body} == {
-        "bend_or_planning_applications",
-        "bend_or_permit_applications_point",
-        "bend_or_permit_applications_line",
-        "washington_state_lcb_local_authority_letters",
+        "san_marcos_tx_planning_application_notices",
+        "taylor_tx_development_notices",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -657,20 +716,6 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "mobile_al_build_mobile_portal",
         "evansville_in_building_commission_permits",
     }
-    bend_planning = next(row for row in body if row["key"] == "bend_or_planning_applications")
-    assert bend_planning["status"] == "operational_retry"
-    assert bend_planning["can_run_canary"] is True
-    bend_permits = next(row for row in body if row["key"] == "bend_or_permit_applications_point")
-    assert bend_permits["status"] == "operational_retry"
-    assert bend_permits["can_run_canary"] is True
-    bend_lines = next(row for row in body if row["key"] == "bend_or_permit_applications_line")
-    assert bend_lines["status"] == "operational_retry"
-    assert bend_lines["can_run_canary"] is True
-    lcb = next(row for row in body if row["key"] == "washington_state_lcb_local_authority_letters")
-    assert lcb["status"] == "operational_retry"
-    assert lcb["can_run_canary"] is True
-    assert lcb["last_checked_on"] == "2026-07-18"
-    assert lcb["next_audit_on"] == "2026-07-25"
 
 
 def test_ingestion_candidates_endpoint_filters_by_state(client):
@@ -678,16 +723,11 @@ def test_ingestion_candidates_endpoint_filters_by_state(client):
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body
-    assert all(row["jurisdiction"] == "Bend, OR" for row in body)
-    assert {row["key"] for row in body} == {
-        "bend_or_planning_applications",
-        "bend_or_permit_applications_point",
-        "bend_or_permit_applications_line",
-    }
+    assert body == []
 
 
 def test_candidate_canary_endpoint_runs_retry_probe(client, monkeypatch):
+    candidate = _install_retry_candidate(monkeypatch)
     monkeypatch.setattr(
         "app.routes.ingestion.validate_candidate_source_canary",
         lambda candidate, sample_size: CandidateCanaryResult(
@@ -705,21 +745,21 @@ def test_candidate_canary_endpoint_runs_retry_probe(client, monkeypatch):
     )
 
     response = client.post(
-        "/ingestion/candidates/washington_state_lcb_local_authority_letters/canary",
+        f"/ingestion/candidates/{candidate.key}/canary",
         json={"sample_size": 1},
     )
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["candidate_key"] == "washington_state_lcb_local_authority_letters"
+    assert body["candidate_key"] == candidate.key
     assert body["ok"] is True
     assert body["approval_stages"] == {"pre_approval": 1}
 
-    history = client.get("/ingestion/candidates/washington_state_lcb_local_authority_letters/canary-history")
+    history = client.get(f"/ingestion/candidates/{candidate.key}/canary-history")
     assert history.status_code == 200, history.text
     rows = history.json()
     assert len(rows) == 1
-    assert rows[0]["candidate_key"] == "washington_state_lcb_local_authority_letters"
+    assert rows[0]["candidate_key"] == candidate.key
     assert rows[0]["ok"] is True
 
 
@@ -734,6 +774,7 @@ def test_candidate_canary_endpoint_rejects_unrunnable_candidates(client):
 
 
 def test_ingestion_candidates_endpoint_includes_latest_canary_summary(client, monkeypatch):
+    candidate = _install_retry_candidate(monkeypatch)
     monkeypatch.setattr(
         "app.routes.ingestion.validate_candidate_source_canary",
         lambda candidate, sample_size: CandidateCanaryResult(
@@ -750,21 +791,22 @@ def test_ingestion_candidates_endpoint_includes_latest_canary_summary(client, mo
         ),
     )
     client.post(
-        "/ingestion/candidates/washington_state_lcb_local_authority_letters/canary",
+        f"/ingestion/candidates/{candidate.key}/canary",
         json={"sample_size": 1},
     )
 
     response = client.get("/ingestion/candidates")
     assert response.status_code == 200, response.text
     body = response.json()
-    lcb = next(row for row in body if row["key"] == "washington_state_lcb_local_authority_letters")
-    assert lcb["last_canary_ok"] is False
-    assert lcb["last_canary_records_valid"] == 0
-    assert lcb["last_canary_records_failed"] == 1
-    assert lcb["last_canary_at"] is not None
+    bend = next(row for row in body if row["key"] == candidate.key)
+    assert bend["last_canary_ok"] is False
+    assert bend["last_canary_records_valid"] == 0
+    assert bend["last_canary_records_failed"] == 1
+    assert bend["last_canary_at"] is not None
 
 
 def test_ingestion_candidates_endpoint_uses_most_recent_canary_attempt(client, monkeypatch):
+    candidate = _install_retry_candidate(monkeypatch)
     outcomes = iter([False, True])
 
     def fake_validate(candidate, sample_size):
@@ -784,21 +826,21 @@ def test_ingestion_candidates_endpoint_uses_most_recent_canary_attempt(client, m
 
     monkeypatch.setattr("app.routes.ingestion.validate_candidate_source_canary", fake_validate)
     client.post(
-        "/ingestion/candidates/washington_state_lcb_local_authority_letters/canary",
+        f"/ingestion/candidates/{candidate.key}/canary",
         json={"sample_size": 1},
     )
     client.post(
-        "/ingestion/candidates/washington_state_lcb_local_authority_letters/canary",
+        f"/ingestion/candidates/{candidate.key}/canary",
         json={"sample_size": 1},
     )
 
     response = client.get("/ingestion/candidates")
     assert response.status_code == 200, response.text
     body = response.json()
-    lcb = next(row for row in body if row["key"] == "washington_state_lcb_local_authority_letters")
-    assert lcb["last_canary_ok"] is True
-    assert lcb["last_canary_records_valid"] == 1
-    assert lcb["last_canary_records_failed"] == 0
+    bend = next(row for row in body if row["key"] == candidate.key)
+    assert bend["last_canary_ok"] is True
+    assert bend["last_canary_records_valid"] == 1
+    assert bend["last_canary_records_failed"] == 0
 
 
 def test_ingestion_coverage_endpoint_reports_catalog_footprint(client):
@@ -811,10 +853,12 @@ def test_ingestion_coverage_endpoint_reports_catalog_footprint(client):
     assert body["jurisdiction_count"] > 0
     assert body["pre_approval_source_count"] > 0
     assert body["approved_only_source_count"] > 0
-    assert body["retailer_opening_source_count"] == 2
+    assert body["retailer_opening_source_count"] == 4
     assert {row["source_key"] for row in body["retailer_opening_sources"]} == {
+        "new_york_state_sla_pending_licenses",
         "texas_comptroller_sales_tax_locations",
         "washington_dc_basic_business_licenses_retail_openings",
+        "washington_state_lcb_local_authority_letters",
     }
     assert body["approved_only_sources"]
     assert any(row["source_key"] == "detroit_mi_bseed_building_permits" for row in body["approved_only_sources"])
@@ -828,8 +872,71 @@ def test_ingestion_coverage_endpoint_reports_catalog_footprint(client):
     assert len(body["missing_states"]) == body["missing_state_count"]
 
 
-def test_ingestion_candidate_promotion_creates_source_with_probe_context(client):
-    candidate = next(entry for entry in load_candidate_catalog() if entry.status == "operational_retry")
+def test_ingestion_coverage_prioritizes_activation_queue_by_readiness(monkeypatch):
+    monkeypatch.setattr("app.services.ingestion.catalog.load_catalog", lambda: [])
+
+    def candidate(key: str, jurisdiction: str, status: str):
+        return SimpleNamespace(
+            key=key,
+            name=key.replace("_", " ").title(),
+            adapter="test",
+            record_type="permit",
+            jurisdiction=jurisdiction,
+            base_url="https://example.test",
+            official_landing_page="https://example.test",
+            license="Public",
+            status=status,
+            blocker_summary="blocked",
+            early_warning_value="value",
+            candidate_source_fields=[],
+            probe_settings=None,
+            probe_field_mappings=[],
+            can_run_canary=False,
+            last_checked_on=datetime(2026, 7, 1).date(),
+            next_audit_on=datetime(2026, 7, 2).date(),
+            notes="notes",
+            model_dump=lambda: {"state": jurisdiction},
+        )
+
+    monkeypatch.setattr(
+        "app.services.ingestion.catalog.load_candidate_catalog",
+        lambda: [
+            candidate("texas_retry", "Texas", "operational_retry"),
+            candidate("florida_queue_1", "Florida", "queued"),
+            candidate("florida_queue_2", "Florida", "queued"),
+        ],
+    )
+
+    summary = summarize_coverage()
+
+    assert [bucket.state for bucket in summary.activation_queue] == ["FL", "TX"]
+    assert summary.activation_queue[0].priority_score > summary.activation_queue[1].priority_score
+    assert summary.activation_queue[0].priority_reasons
+
+
+def test_ingestion_candidate_promotion_creates_source_with_probe_context(client, monkeypatch):
+    candidate = _install_retry_candidate(monkeypatch)
+    coverage_before = client.get("/ingestion/coverage").json()
+    monkeypatch.setattr(
+        "app.routes.ingestion.validate_candidate_source_canary",
+        lambda candidate, sample_size: CandidateCanaryResult(
+            candidate_key=candidate.key,
+            candidate_name=candidate.name,
+            ok=True,
+            records_fetched=1,
+            records_valid=1,
+            records_failed=0,
+            approval_stages={"pre_approval": 1},
+            sample_record_ids=["ABC-1"],
+            next_checkpoint=None,
+            errors=[],
+        ),
+    )
+    canary = client.post(
+        f"/ingestion/candidates/{candidate.key}/canary",
+        json={"sample_size": 1},
+    )
+    assert canary.status_code == 200, canary.text
 
     response = client.post(f"/ingestion/candidates/{candidate.key}/promote")
 
@@ -840,9 +947,30 @@ def test_ingestion_candidate_promotion_creates_source_with_probe_context(client)
     assert body["is_active"] is True
     assert body["settings"]["candidate_key"] == candidate.key
     assert body["settings"]["candidate_status"] == candidate.status
-    assert body["settings"]["reconciliation_mode"] == "candidate_promoted"
+    assert body["settings"]["reconciliation_mode"] == candidate.probe_settings.get(
+        "reconciliation_mode", "candidate_promoted"
+    )
+    assert body["settings"]["connector"]["page_size"] == (
+        candidate.production_page_size
+        or candidate.probe_settings["connector"]["page_size"]
+    )
     assert body["field_mappings"]
 
     sources = client.get("/ingestion/sources").json()
     promoted = next(source for source in sources if source["key"] == candidate.key)
     assert promoted["id"] == body["id"]
+
+    candidates = client.get("/ingestion/candidates").json()
+    assert candidate.key not in {row["key"] for row in candidates}
+    coverage_after = client.get("/ingestion/coverage").json()
+    assert coverage_after["live_source_count"] == coverage_before["live_source_count"] + 1
+    assert coverage_after["candidate_count"] == coverage_before["candidate_count"] - 1
+
+
+def test_ingestion_candidate_promotion_requires_successful_canary(client, monkeypatch):
+    candidate = _install_retry_candidate(monkeypatch)
+
+    response = client.post(f"/ingestion/candidates/{candidate.key}/promote")
+
+    assert response.status_code == 422, response.text
+    assert "successful persisted canary" in response.json()["detail"]

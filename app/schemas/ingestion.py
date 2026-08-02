@@ -152,6 +152,7 @@ class IngestionCandidateResponse(BaseModel):
     blocker_summary: str
     early_warning_value: str
     candidate_source_fields: list[str]
+    production_page_size: Optional[int] = None
     can_run_canary: bool = False
     last_canary_at: Optional[datetime] = None
     last_canary_ok: Optional[bool] = None
@@ -226,6 +227,21 @@ class StateCoverageBucket(BaseModel):
     retailer_opening_sources: int
     pre_approval_sources: int
     approved_only_sources: int
+    priority_score: int
+    priority_reasons: list[str]
+
+
+class StateRolloutItem(BaseModel):
+    state: str
+    rollout_cluster: int
+    rollout_label: str
+    coverage_status: str
+    live_sources: int
+    candidate_sources: int
+    jurisdiction_count: int
+    priority_score: int
+    next_action: str
+    next_action_label: str
 
 
 class RetailerOpeningCoverageSourceResponse(BaseModel):
@@ -259,6 +275,7 @@ class IngestionCoverageResponse(BaseModel):
     top_jurisdictions: list[CoverageJurisdictionBucket]
     state_buckets: list[StateCoverageBucket]
     activation_queue: list[StateCoverageBucket]
+    rollout_queue: list[StateRolloutItem]
     candidate_only_state_count: int
     candidate_only_states: list[str]
     covered_state_count: int
