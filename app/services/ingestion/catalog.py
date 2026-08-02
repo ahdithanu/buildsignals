@@ -16,6 +16,7 @@ from app.services.ingestion.service import create_source, update_source
 from app.utils.org_scope import active_query
 
 DEFAULT_CATALOG_PATH = Path(__file__).with_name("catalog.json")
+PROMOTED_CATALOG_PATH = Path(__file__).with_name("promoted_catalog.json")
 DEFAULT_CANDIDATE_CATALOG_PATH = Path(__file__).with_name("candidate_catalog.json")
 _CATALOG_ADAPTER = TypeAdapter(list[IngestionSourceCreate])
 _CANDIDATE_CATALOG_ADAPTER = TypeAdapter(list[IngestionSourceCandidate])
@@ -125,6 +126,17 @@ _STATE_BY_NAME = {
     "washington state": "WA",
 }
 _STATE_SUFFIX = re.compile(r",\s*([A-Z]{2})\s*$")
+ROLLOUT_CLUSTERS = {
+    "TX": (1, "Texas, Washington, New York"),
+    "WA": (1, "Texas, Washington, New York"),
+    "NY": (1, "Texas, Washington, New York"),
+    "CA": (2, "California, North Carolina, Florida"),
+    "NC": (2, "California, North Carolina, Florida"),
+    "FL": (2, "California, North Carolina, Florida"),
+    "CO": (3, "Colorado, Massachusetts, Maryland"),
+    "MA": (3, "Colorado, Massachusetts, Maryland"),
+    "MD": (3, "Colorado, Massachusetts, Maryland"),
+}
 
 
 @dataclass(frozen=True)
@@ -142,6 +154,22 @@ class StateCoverageBucket:
     retailer_opening_sources: int
     pre_approval_sources: int
     approved_only_sources: int
+    priority_score: int
+    priority_reasons: list[str]
+
+
+@dataclass(frozen=True)
+class StateRolloutItem:
+    state: str
+    rollout_cluster: int
+    rollout_label: str
+    coverage_status: str
+    live_sources: int
+    candidate_sources: int
+    jurisdiction_count: int
+    priority_score: int
+    next_action: str
+    next_action_label: str
 
 
 @dataclass(frozen=True)
@@ -178,6 +206,7 @@ class IngestionCoverageSummary:
     top_jurisdictions: list[CoverageJurisdictionBucket]
     state_buckets: list[StateCoverageBucket]
     activation_queue: list[StateCoverageBucket]
+    rollout_queue: list[StateRolloutItem]
     candidate_only_state_count: int
     candidate_only_states: list[str]
     covered_state_count: int
@@ -196,6 +225,11 @@ class CatalogSyncResult:
 def load_catalog(path: Path | str | None = None) -> list[IngestionSourceCreate]:
     catalog_path = Path(path) if path else DEFAULT_CATALOG_PATH
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    if path is None and PROMOTED_CATALOG_PATH.exists():
+        promoted = json.loads(PROMOTED_CATALOG_PATH.read_text(encoding="utf-8"))
+        if not isinstance(promoted, list):
+            raise ValueError("Promoted ingestion catalog must contain a JSON list")
+        payload.extend(promoted)
     entries = _CATALOG_ADAPTER.validate_python(payload)
     keys = [entry.key for entry in entries]
     duplicates = sorted({key for key in keys if keys.count(key) > 1})
@@ -232,6 +266,9 @@ def load_catalog(path: Path | str | None = None) -> list[IngestionSourceCreate]:
 def load_candidate_catalog(path: Path | str | None = None) -> list[IngestionSourceCandidate]:
     catalog_path = Path(path) if path else DEFAULT_CANDIDATE_CATALOG_PATH
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    if path is None:
+        production_keys = {entry.key for entry in load_catalog()}
+        payload = [entry for entry in payload if entry.get("key") not in production_keys]
     entries = _CANDIDATE_CATALOG_ADAPTER.validate_python(payload)
     keys = [entry.key for entry in entries]
     duplicates = sorted({key for key in keys if keys.count(key) > 1})
@@ -261,14 +298,26 @@ def load_candidate_catalog(path: Path | str | None = None) -> list[IngestionSour
     return entries
 
 
-def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
-    live_catalog = load_catalog()
-    candidates = load_candidate_catalog()
+def summarize_coverage(
+    limit: int = 10,
+    live_sources: Iterable[IngestionSource] | None = None,
+) -> IngestionCoverageSummary:
+    live_by_key: dict[str, IngestionSourceCreate | IngestionSource] = {
+        entry.key: entry for entry in load_catalog()
+    }
+    for source in live_sources or ():
+        if source.is_active:
+            live_by_key[source.key] = source
+    live_catalog = list(live_by_key.values())
+    candidates = [
+        entry for entry in load_candidate_catalog() if entry.key not in live_by_key
+    ]
     live_signal_stage_counts: dict[str, int] = {}
     live_signal_sources_by_stage: dict[str, list[RetailerOpeningCoverageSource]] = {}
     candidate_status_counts: dict[str, int] = {}
     jurisdictions: dict[str, dict[str, int]] = {}
     state_buckets: dict[str, dict[str, int]] = {}
+    state_jurisdictions: dict[str, set[str]] = {}
     retailer_opening_sources: list[RetailerOpeningCoverageSource] = []
     approved_only_sources: list[ApprovedOnlyCoverageSource] = []
     covered_states: set[str] = set()
@@ -318,6 +367,7 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         state_code = extract_state_code(entry.jurisdiction, entry.settings or {})
         if state_code:
             covered_states.add(state_code)
+            state_jurisdictions.setdefault(state_code, set()).add(jurisdiction)
             state_bucket = state_buckets.setdefault(
                 state_code,
                 {
@@ -326,6 +376,7 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
                     "retailer_opening_sources": 0,
                     "pre_approval_sources": 0,
                     "approved_only_sources": 0,
+                    "candidate_status_counts": {},
                 },
             )
             state_bucket["live_sources"] += 1
@@ -344,6 +395,7 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         state_code = extract_state_code(entry.jurisdiction, entry.model_dump())
         if state_code:
             covered_states.add(state_code)
+            state_jurisdictions.setdefault(state_code, set()).add(jurisdiction)
             state_bucket = state_buckets.setdefault(
                 state_code,
                 {
@@ -352,9 +404,17 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
                     "retailer_opening_sources": 0,
                     "pre_approval_sources": 0,
                     "approved_only_sources": 0,
+                    "candidate_status_counts": {},
                 },
             )
             state_bucket["candidate_sources"] += 1
+            candidate_status_counts_by_state = state_bucket["candidate_status_counts"]
+            candidate_status_counts_by_state[entry.status] = candidate_status_counts_by_state.get(entry.status, 0) + 1
+
+    scored_states: list[tuple[str, dict[str, int], int, list[str]]] = []
+    for state, bucket in state_buckets.items():
+        score, reasons = _score_state_bucket(bucket)
+        scored_states.append((state, bucket, score, reasons))
 
     sorted_jurisdictions = sorted(
         jurisdictions.items(),
@@ -370,12 +430,8 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         for jurisdiction, bucket in sorted_jurisdictions[:limit]
     ]
     sorted_states = sorted(
-        state_buckets.items(),
-        key=lambda item: (
-            item[1]["live_sources"] + item[1]["candidate_sources"],
-            item[1]["retailer_opening_sources"],
-            item[0],
-        ),
+        scored_states,
+        key=lambda item: (item[2], item[1]["live_sources"] + item[1]["candidate_sources"], item[0]),
         reverse=True,
     )
     state_buckets_list = [
@@ -386,13 +442,10 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
             retailer_opening_sources=bucket["retailer_opening_sources"],
             pre_approval_sources=bucket["pre_approval_sources"],
             approved_only_sources=bucket["approved_only_sources"],
+            priority_score=score,
+            priority_reasons=reasons,
         )
-        for state, bucket in sorted_states[:limit]
-    ]
-    candidate_only_states = [
-        state
-        for state, bucket in sorted_states
-        if bucket["candidate_sources"] > 0 and bucket["live_sources"] == 0
+        for state, bucket, score, reasons in sorted_states[:limit]
     ]
     activation_queue = [
         StateCoverageBucket(
@@ -402,11 +455,15 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
             retailer_opening_sources=bucket["retailer_opening_sources"],
             pre_approval_sources=bucket["pre_approval_sources"],
             approved_only_sources=bucket["approved_only_sources"],
+            priority_score=score,
+            priority_reasons=reasons,
         )
-        for state, bucket in sorted_states
+        for state, bucket, score, reasons in sorted_states
         if bucket["candidate_sources"] > 0 and bucket["live_sources"] == 0
     ]
+    candidate_only_states = [bucket.state for bucket in activation_queue]
     missing_states = [state for state in US_STATE_CODES if state not in covered_states]
+    rollout_queue = _build_rollout_queue(state_buckets, state_jurisdictions)
     return IngestionCoverageSummary(
         live_source_count=len(live_catalog),
         candidate_count=len(candidates),
@@ -422,6 +479,7 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         top_jurisdictions=top_jurisdictions,
         state_buckets=state_buckets_list,
         activation_queue=activation_queue,
+        rollout_queue=rollout_queue,
         candidate_only_state_count=len(activation_queue),
         candidate_only_states=candidate_only_states,
         covered_state_count=len(covered_states),
@@ -429,6 +487,136 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         covered_states=sorted(covered_states),
         missing_states=missing_states,
     )
+
+
+def _build_rollout_queue(
+    state_buckets: dict[str, dict[str, int]],
+    state_jurisdictions: dict[str, set[str]],
+) -> list[StateRolloutItem]:
+    items: list[StateRolloutItem] = []
+    for state in US_STATE_CODES:
+        bucket = state_buckets.get(
+            state,
+            {
+                "live_sources": 0,
+                "candidate_sources": 0,
+                "retailer_opening_sources": 0,
+                "pre_approval_sources": 0,
+                "approved_only_sources": 0,
+                "candidate_status_counts": {},
+            },
+        )
+        score, _ = _score_state_bucket(bucket)
+        cluster, label = ROLLOUT_CLUSTERS.get(state, (4, "Nationwide expansion queue"))
+        next_action, next_action_label = _state_next_action(bucket)
+        live_sources = int(bucket["live_sources"])
+        candidate_sources = int(bucket["candidate_sources"])
+        coverage_status = (
+            "live"
+            if live_sources > 0
+            else "candidate"
+            if candidate_sources > 0
+            else "uncovered"
+        )
+        items.append(
+            StateRolloutItem(
+                state=state,
+                rollout_cluster=cluster,
+                rollout_label=label,
+                coverage_status=coverage_status,
+                live_sources=live_sources,
+                candidate_sources=candidate_sources,
+                jurisdiction_count=len(state_jurisdictions.get(state, set())),
+                priority_score=score,
+                next_action=next_action,
+                next_action_label=next_action_label,
+            )
+        )
+    return sorted(
+        items,
+        key=lambda item: (
+            item.rollout_cluster,
+            -_next_action_priority(item.next_action),
+            -item.priority_score,
+            item.state,
+        ),
+    )
+
+
+def _state_next_action(bucket: dict[str, int | dict[str, int]]) -> tuple[str, str]:
+    live_sources = int(bucket["live_sources"])
+    candidate_sources = int(bucket["candidate_sources"])
+    retailer_opening_sources = int(bucket["retailer_opening_sources"])
+    pre_approval_sources = int(bucket["pre_approval_sources"])
+    statuses = bucket.get("candidate_status_counts", {})
+    if isinstance(statuses, dict) and int(statuses.get("operational_retry", 0)) > 0:
+        return "run_candidate_canary", "Run candidate canary"
+    if live_sources == 0 and candidate_sources > 0:
+        return "resolve_candidate_blocker", "Resolve candidate blocker"
+    if live_sources == 0:
+        return "discover_first_source", "Discover first official source"
+    if pre_approval_sources == 0:
+        return "add_pre_approval_source", "Add pre-approval source"
+    if retailer_opening_sources == 0:
+        return "add_retailer_opening_source", "Add retailer-opening source"
+    return "add_secondary_jurisdiction", "Add secondary jurisdiction"
+
+
+def _next_action_priority(action: str) -> int:
+    return {
+        "run_candidate_canary": 6,
+        "resolve_candidate_blocker": 5,
+        "add_pre_approval_source": 4,
+        "add_retailer_opening_source": 3,
+        "add_secondary_jurisdiction": 2,
+        "discover_first_source": 1,
+    }.get(action, 0)
+
+
+def _score_state_bucket(bucket: dict[str, int | dict[str, int]]) -> tuple[int, list[str]]:
+    live_sources = int(bucket["live_sources"])
+    candidate_sources = int(bucket["candidate_sources"])
+    retailer_opening_sources = int(bucket["retailer_opening_sources"])
+    pre_approval_sources = int(bucket["pre_approval_sources"])
+    approved_only_sources = int(bucket["approved_only_sources"])
+    candidate_status_counts = bucket.get("candidate_status_counts", {})
+    score = 0
+    reasons: list[str] = []
+
+    if live_sources > 0:
+        score += live_sources * 60
+        reasons.append(f"{live_sources} live source{'s' if live_sources != 1 else ''}")
+    if candidate_sources > 0:
+        score += candidate_sources * 100
+        reasons.append(f"{candidate_sources} candidate source{'s' if candidate_sources != 1 else ''}")
+    if retailer_opening_sources > 0:
+        score += retailer_opening_sources * 40
+        reasons.append(f"{retailer_opening_sources} retailer-opening source{'s' if retailer_opening_sources != 1 else ''}")
+    if pre_approval_sources > 0:
+        score += pre_approval_sources * 25
+        reasons.append(f"{pre_approval_sources} pre-approval source{'s' if pre_approval_sources != 1 else ''}")
+    if approved_only_sources > 0:
+        score += approved_only_sources * 10
+        reasons.append(f"{approved_only_sources} approved-only source{'s' if approved_only_sources != 1 else ''}")
+
+    status_weights = {
+        "operational_retry": 50,
+        "queued": 30,
+        "freshness_hold": 20,
+        "lifecycle_hold": 10,
+        "technical_hold": 5,
+        "legal_hold": 1,
+    }
+    if isinstance(candidate_status_counts, dict):
+        for status, weight in status_weights.items():
+            count = int(candidate_status_counts.get(status, 0))
+            if count > 0:
+                score += count * weight
+                reasons.append(f"{count} {status.replace('_', ' ')}")
+
+    if not reasons:
+        reasons.append("No coverage signals yet")
+    return score, reasons
 
 
 def normalize_state_code(value: str | None) -> str | None:
@@ -632,10 +820,13 @@ def _validate_opening_signal_metadata(entry: IngestionSourceCreate) -> None:
     if settings.get("retailer_opening_signal") is not True:
         return
 
-    if settings.get("signal_stage") != "approved_only":
+    if settings.get("signal_stage") not in {
+        "approved_only",
+        "pre_approval_and_approved",
+    }:
         raise ValueError(
             f"Catalog source {entry.key} retailer_opening_signal sources must be "
-            "approved_only"
+            "approved_only or pre_approval_and_approved"
         )
 
     opening_field = settings.get("opening_signal_date_field")

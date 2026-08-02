@@ -19,6 +19,7 @@ from .csv import CSVConnector, CsvConnector
 from .factory import build_connector
 from .json_array import JSONArrayConnector
 from .opendatasoft import OpenDataSoftConnector, OpenDataSoftV2Connector
+from .rss import RSSConnector
 from .socrata import SocrataConnector
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "OpenDataSoftV2Connector",
     "Record",
     "RetryingHttpClient",
+    "RSSConnector",
     "SocrataConnector",
     "build_connector",
 ]

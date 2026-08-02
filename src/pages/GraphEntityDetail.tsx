@@ -4,9 +4,10 @@ import { Layout } from "@/components/Layout";
 import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
 import { Badge } from "@/components/ui/badge";
 import { useGraphEntity } from "@/hooks/useGraphEntity";
+import { useGraphEntityMergeCandidates } from "@/hooks/useGraphEntityMergeCandidates";
 import { useGraphPaths } from "@/hooks/useGraphPaths";
 import type { GraphEntityDetail } from "@/types/graph";
-import { ArrowLeft, ChevronRight, Link2, Network, Route, Search, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, ChevronRight, Link2, Network, Route, Search, Tag } from "lucide-react";
 
 function relationshipLabel(value: string) {
   return value.replace(/_/g, " ");
@@ -55,6 +56,10 @@ function entityHref(item: GraphEntityDetail["related"][number]) {
   return `/graph/entities/${item.entity.id}`;
 }
 
+function relationshipHref(relationshipId: string) {
+  return `/graph/relationships/${relationshipId}`;
+}
+
 function groupRelatedEntities(related: GraphEntityDetail["related"]) {
   const grouped = new Map<string, GraphEntityDetail["related"]>();
   const order: string[] = [];
@@ -76,6 +81,7 @@ export default function GraphEntityDetail() {
   const { entityId } = useParams();
   const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useGraphEntity(entityId);
+  const { data: mergeCandidates = [] } = useGraphEntityMergeCandidates(entityId);
   const pathTargets = useMemo(() => data?.related.map((item) => item.entity) ?? [], [data]);
   const relatedGroups = useMemo(() => (data ? groupRelatedEntities(data.related) : []), [data]);
   const [targetEntityId, setTargetEntityId] = useState<string>("");
@@ -174,6 +180,42 @@ export default function GraphEntityDetail() {
                     <span key={alias} className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground">
                       {alias}
                     </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-md border bg-card p-4 card-shadow">
+              <div className="mb-3 flex items-center gap-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Merge Candidates</h3>
+              </div>
+              {mergeCandidates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No likely duplicates found right now.</p>
+              ) : (
+                <div className="space-y-2">
+                  {mergeCandidates.map((candidate) => (
+                    <div key={candidate.entity.id} className="rounded-md border bg-secondary/20 px-3 py-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <Link
+                            to={`/graph/entities/${candidate.entity.id}`}
+                            className="truncate text-sm font-medium text-foreground hover:underline"
+                          >
+                            {candidate.entity.display_name}
+                          </Link>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {candidate.entity.entity_type.replace(/_/g, " ")} · {Math.round(candidate.score * 100)}% match
+                          </p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            {candidate.reasons.join(" · ")}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="shrink-0">
+                          Review
+                        </Badge>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -282,6 +324,13 @@ export default function GraphEntityDetail() {
                                 year: "numeric",
                               })}
                             </span>
+                            <Link
+                              to={relationshipHref(item.relationship.id)}
+                              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-0.5 text-[11px] text-foreground transition-colors hover:bg-secondary/50"
+                            >
+                              <ArrowRightLeft className="h-3 w-3" />
+                              Open relationship
+                            </Link>
                           </div>
                           {item.relationship.evidence[0] && (
                             <p

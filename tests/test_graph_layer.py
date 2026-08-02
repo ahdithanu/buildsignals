@@ -48,7 +48,10 @@ def test_entity_creation_deduplicates_source_identity_and_aliases(client, db):
         row.normalized_alias for row in db.query(GraphEntityAlias).all()
     }
     assert {"acme development", "acme dev"}.issubset(aliases)
-    assert db.query(GraphEntity).one().confidence == 1.0
+    entity = db.query(GraphEntity).one()
+    assert entity.confidence == 1.0
+    assert entity.display_name == "ACME DEVELOPMENT, INC."
+    assert "acme development" in aliases
 
 
 def test_property_resolution_uses_normalized_address(client, db):
@@ -125,6 +128,34 @@ def test_official_parcel_ids_remain_distinct_at_a_shared_condo_address(client, d
     assert db.query(GraphEntity).count() == 2
 
 
+def test_official_permit_ids_with_shared_source_prefix_remain_distinct(client, db):
+    first = _entity(
+        client,
+        entity_type="permit",
+        display_name="statewide_license_feed:432561",
+        source_system="statewide_license_feed",
+        source_id="statewide_license_feed:432561",
+        address="100 First St",
+        city="Seattle",
+        state="WA",
+    )
+    second = _entity(
+        client,
+        entity_type="permit",
+        display_name="statewide_license_feed:444618",
+        source_system="statewide_license_feed",
+        source_id="statewide_license_feed:444618",
+        address="200 Second St",
+        city="Tacoma",
+        state="WA",
+    )
+
+    assert second["id"] != first["id"]
+    assert db.query(GraphEntity).filter(
+        GraphEntity.entity_type == GraphEntityType.permit
+    ).count() == 2
+
+
 def test_alias_source_identity_does_not_merge_different_entity_types(client, db):
     developer = _entity(
         client,
@@ -143,6 +174,67 @@ def test_alias_source_identity_does_not_merge_different_entity_types(client, db)
 
     assert developer["id"] != owner["id"]
     assert db.query(GraphEntity).count() == 2
+
+
+def test_attribute_aliases_help_deduplicate_messy_source_payloads(client, db):
+    first = _entity(
+        client,
+        entity_type="developer",
+        display_name="Riverstone Holdings LLC",
+        source_system="registry",
+        source_id="dev-riverstone-1",
+        aliases=["Riverstone"],
+        attributes={
+            "company_name": "Riverstone Urban Partners",
+            "legal_name": "Riverstone Holdings LLC",
+        },
+    )
+    duplicate = _entity(
+        client,
+        entity_type="developer",
+        display_name="RSP",
+        source_system="permit_feed",
+        source_id="dev-riverstone-2",
+        attributes={
+            "alternate_names": ["Riverstone Urban Partners"],
+        },
+    )
+
+    assert duplicate["id"] == first["id"]
+    assert db.query(GraphEntity).count() == 1
+    aliases = {
+        row.normalized_alias for row in db.query(GraphEntityAlias).all()
+    }
+    assert "riverstone urban" in aliases
+    assert "rsp" in aliases
+
+
+def test_unit_address_variants_normalize_to_the_same_property(client, db):
+    first = _entity(
+        client,
+        entity_type="property",
+        display_name="Commerce Center Suite 200",
+        source_system=None,
+        source_id=None,
+        address="500 Commerce Drive Suite 200",
+        city="Austin",
+        state="TX",
+        zip_code="78701",
+    )
+    second = _entity(
+        client,
+        entity_type="property",
+        display_name="Commerce Center Unit 200",
+        source_system="assessor",
+        source_id="parcel-500",
+        address="500 Commerce Dr. #200",
+        city="Austin",
+        state="TX",
+        zip_code="78701",
+    )
+
+    assert second["id"] == first["id"]
+    assert db.query(GraphEntity).count() == 1
 
 
 def test_fuzzy_resolution_uses_name_blocking_beyond_first_page(client, db):
@@ -285,6 +377,14 @@ def test_relationship_upsert_preserves_evidence_and_supports_graph_queries(clien
     ]
     assert paths.json()[0]["relationships"][0]["id"] == relationship["id"]
 
+    relationship_detail = client.get(f"/graph/relationships/{relationship['id']}")
+    assert relationship_detail.status_code == 200, relationship_detail.text
+    detail_body = relationship_detail.json()
+    assert detail_body["relationship"]["id"] == relationship["id"]
+    assert detail_body["source_entity"]["id"] == property_entity["id"]
+    assert detail_body["target_entity"]["id"] == developer["id"]
+    assert detail_body["relationship"]["evidence"][0]["source_id"] == "filing-1"
+
 
 def test_relationship_requires_source_evidence(client):
     source = _entity(client, source_id="source")
@@ -345,6 +445,47 @@ def test_graph_entity_search_matches_aliases_and_filters_type(client):
     assert filtered.status_code == 200, filtered.text
     assert len(filtered.json()) == 1
     assert filtered.json()[0]["entity_type"] == "owner"
+
+
+def test_merge_candidate_endpoint_surfaces_likely_duplicates(client, db):
+    from app.models.graph import GraphEntity
+
+    source = GraphEntity(
+        organization_id="default-org",
+        entity_type="developer",
+        display_name="Summit Development Group LLC",
+        normalized_name="summit development group",
+        source_system="registry",
+        source_id="dev-summit-1",
+        address="700 Main Street",
+        city="Austin",
+        state="TX",
+        zip_code="78701",
+        confidence=0.92,
+    )
+    duplicate = GraphEntity(
+        organization_id="default-org",
+        entity_type="developer",
+        display_name="Summit Development Group",
+        normalized_name="summit development group",
+        source_system="permit_feed",
+        source_id="dev-summit-2",
+        address="700 Main St",
+        city="Austin",
+        state="TX",
+        zip_code="78701",
+        confidence=0.86,
+    )
+    db.add(source)
+    db.add(duplicate)
+    db.commit()
+
+    response = client.get(f"/graph/entities/{source.id}/merge-candidates")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body[0]["entity"]["id"] == duplicate.id
+    assert body[0]["score"] >= 0.9
+    assert "exact normalized name match" in body[0]["reasons"] or "alias match" in body[0]["reasons"]
 
 
 def test_graph_detail_related_entities_and_paths_are_exposed_via_api(client):

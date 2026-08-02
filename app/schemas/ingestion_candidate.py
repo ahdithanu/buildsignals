@@ -38,6 +38,7 @@ class IngestionSourceCandidate(BaseModel):
     candidate_source_fields: list[str] = Field(default_factory=list, max_length=50)
     probe_settings: dict[str, Any] | None = None
     probe_field_mappings: list[CandidateFieldMapping] = Field(default_factory=list)
+    production_page_size: int | None = Field(default=None, ge=1, le=10000)
     can_run_canary: bool = False
     last_checked_on: date
     next_audit_on: date

@@ -12,6 +12,7 @@ from .ckan import CKANConnector
 from .csv import CSVConnector
 from .json_array import JSONArrayConnector
 from .opendatasoft import OpenDataSoftConnector
+from .rss import RSSConnector
 from .socrata import SocrataConnector
 
 
@@ -65,6 +66,14 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             _required(config, "endpoint"),
             max_records=int(config.get("max_records", 10000)),
             query=_mapping(config.get("query")),
+            **common,
+        )
+    if connector_type in {"rss", "rss2", "atom"}:
+        return RSSConnector(
+            _required(config, "endpoint"),
+            max_records=int(config.get("max_records", 1000)),
+            query=_mapping(config.get("query")),
+            headers=_public_headers(config),
             **common,
         )
     if connector_type in {"opendatasoft", "opendatasoft_v2"}:

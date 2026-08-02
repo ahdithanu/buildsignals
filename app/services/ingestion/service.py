@@ -191,6 +191,10 @@ def update_source(db: Session, source: IngestionSource, payload: IngestionSource
 
 def _candidate_to_source_payload(candidate: IngestionSourceCandidate) -> IngestionSourceCreate:
     settings = dict(candidate.probe_settings or {})
+    if candidate.production_page_size is not None:
+        connector = dict(settings.get("connector") or {})
+        connector["page_size"] = candidate.production_page_size
+        settings["connector"] = connector
     settings.setdefault("official_landing_page", candidate.official_landing_page)
     settings.setdefault("license", candidate.license)
     if candidate.probe_settings and candidate.probe_settings.get("signal_stage"):

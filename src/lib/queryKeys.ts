@@ -45,6 +45,11 @@ export const queryKeys = {
     entityDetail: (entityId: string) => ['graph', 'entity', entityId] as const,
     entitySearch: (query: string, entityType?: string) =>
       ['graph', 'search', query, entityType ?? 'all'] as const,
+    paths: (sourceEntityId: string, targetEntityId: string, maxDepth: number) =>
+      ['graph', 'paths', sourceEntityId, targetEntityId, maxDepth] as const,
+    mergeCandidates: (entityId: string) => ['graph', 'merge-candidates', entityId] as const,
+    relationshipDetail: (relationshipId: string) =>
+      ['graph', 'relationship', relationshipId] as const,
   },
   organizations: {
     members: (orgId: string) => ['organizations', 'members', orgId] as const,
