@@ -1098,6 +1098,28 @@
             "title": "External Record Id",
             "type": "string"
           },
+          "last_observed_age_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "title": "Last Observed Age Hours"
+          },
+          "last_observed_at": {
+            "format": "date-time",
+            "title": "Last Observed At",
+            "type": "string"
+          },
+          "observation_recorded": {
+            "default": true,
+            "title": "Observation Recorded",
+            "type": "boolean"
+          },
           "payload_excerpt": {
             "additionalProperties": true,
             "title": "Payload Excerpt",
@@ -1190,12 +1212,14 @@
           "external_record_id",
           "content_hash",
           "received_at",
+          "last_observed_at",
           "source_updated_at",
           "source_key",
           "source_name",
           "source_url",
           "payload_excerpt",
           "received_age_hours",
+          "last_observed_age_hours",
           "source_lag_hours"
         ],
         "title": "BrandMatchRawEvidence",
