@@ -4,6 +4,9 @@
 
 Direct brand aliases remain the strongest permit signal, but early filings often name only a shell owner or the professionals building the site. The stealth detector uses repeated project-party history from human-confirmed brand permits to identify those unnamed filings without presenting a shared contractor as proof.
 
+Direct alias detection also evaluates the canonical applicant name at 96% base confidence. This covers applicant-company, permit-holder, petitioner, legal-name, and establishment DBA fields already normalized by source connectors while retaining the same retail-context and lifecycle gates as project-name detection.
+Applicant detections retain the general `exact_alias` rule and add `exact_applicant_alias` so evidence consumers can distinguish this source field without a new workflow.
+
 ## Data Flow
 
 1. Normal ingestion stores the immutable source record and canonical permit.

@@ -40,6 +40,7 @@ def _source_payload(csv_path: str, key: str = "retail_filings") -> dict:
         "state": "state",
         "parcel": "parcel_id",
         "filed": "filed_at",
+        "applicant": "applicant_name",
         "contractor": "contractor_name",
         "architect": "architect_name",
     }
@@ -64,13 +65,14 @@ def _write_filing(
     project: str = "Coffee tenant improvement",
     description: str = "Interior retail build-out for Starbucks Coffee",
     owner: str = "",
+    applicant: str = "",
     contractor: str = "",
     architect: str = "",
     stage: str = "pre_approval",
 ) -> None:
     path.write_text(
-        "id,application_no,stage,type,status,project,description,address,city,state,parcel,filed,owner,contractor,architect\n"
-        f'1,APP-1,{stage},Commercial Retail,Under Review,"{project}","{description}",100 Main St,Austin,TX,P-1,2026-07-01,"{owner}","{contractor}","{architect}"\n'
+        "id,application_no,stage,type,status,project,description,address,city,state,parcel,filed,owner,applicant,contractor,architect\n"
+        f'1,APP-1,{stage},Commercial Retail,Under Review,"{project}","{description}",100 Main St,Austin,TX,P-1,2026-07-01,"{owner}","{applicant}","{contractor}","{architect}"\n'
     )
 
 
@@ -162,6 +164,58 @@ def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, db, t
     assert db.query(GraphRelationship).filter(
         GraphRelationship.attributes["brand_match_id"].as_string() == match.id
     ).one().is_current is False
+
+
+def test_applicant_company_alias_is_high_confidence_direct_evidence(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    csv_path = tmp_path / "applicant-brand.csv"
+    _write_filing(
+        csv_path,
+        project="Confidential tenant improvement",
+        description="Commercial retail tenant build out",
+        applicant="Starbucks Coffee Company",
+    )
+
+    _ingest(client, csv_path, key="applicant_brand")
+
+    match = db.query(PermitBrandMatch).one()
+    assert match.brand.key == "starbucks"
+    assert match.matched_field == "applicant_name"
+    assert match.matched_fields == ["applicant_name"]
+    assert match.confidence == 0.96
+    assert "Starbucks" in match.excerpt
+    assert "exact_alias" in match.rule_ids
+    assert "exact_applicant_alias" in match.rule_ids
+    response = client.get("/permit-brand-matches?detection_method=direct_alias")
+    assert response.status_code == 200, response.text
+    assert response.json()[0]["signal_quality"] == "applicant_dba"
+    assert response.json()[0]["signal_quality_label"] == "Applicant DBA"
+    assert response.json()[0]["detection_method"] == "direct_alias"
+    assert response.json()[0]["permit"]["applicant_name"] == "Starbucks Coffee Company"
+
+    evidence = client.get(f"/permit-brand-matches/{match.id}/evidence")
+    assert evidence.status_code == 200, evidence.text
+    assert evidence.json()["matched_field"] == "applicant_name"
+    assert evidence.json()["signal_quality"] == "applicant_dba"
+    assert evidence.json()["permit"]["applicant_name"] == "Starbucks Coffee Company"
+    assert evidence.json()["latest_evidence"]["payload_excerpt"]["applicant"] == "Starbucks Coffee Company"
+
+
+def test_applicant_alias_in_negative_context_does_not_create_candidate(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    csv_path = tmp_path / "former-applicant-brand.csv"
+    _write_filing(
+        csv_path,
+        project="Confidential tenant improvement",
+        description="Commercial retail tenant build out",
+        applicant="Formerly Starbucks Coffee Company",
+    )
+
+    _ingest(client, csv_path, key="former_applicant_brand")
+
+    assert db.query(PermitBrandMatch).count() == 0
 
 
 def test_confirmed_party_history_detects_unnamed_stealth_retailer(client, db, tmp_path):

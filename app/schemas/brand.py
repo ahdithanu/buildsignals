@@ -50,6 +50,7 @@ class BrandPermitSummary(BaseModel):
     approval_stage: Optional[Literal["pre_approval", "approved"]]
     status: Optional[str]
     project_name: Optional[str]
+    applicant_name: Optional[str]
     description: Optional[str]
     address: Optional[str]
     city: Optional[str]
@@ -99,6 +100,8 @@ class PermitBrandMatchResponse(BaseModel):
     def signal_quality(self) -> str:
         if self.matched_field == "historical_parties":
             return "historical_party"
+        if self.matched_field == "applicant_name":
+            return "applicant_dba"
         if self.matched_field == "project_name" and self.permit.permit_type == "Restaurant permit applicant":
             return "applicant_dba"
         if self.matched_field == "project_name":

@@ -48,6 +48,7 @@ STEALTH_DETECTOR_VERSION = "stealth-retailer-v1"
 MINIMUM_CONFIDENCE = 0.70
 FIELD_CONFIDENCE = {
     "project_name": 0.98,
+    "applicant_name": 0.96,
     "description": 0.92,
     "proposed_use": 0.85,
     "occupancy_type": 0.80,
@@ -84,7 +85,21 @@ RETAIL_CONTEXT_TERMS = (
     "sign",
     "sales tax permit",
 )
-NEGATIVE_CONTEXTS = ("adjacent to", "near", "formerly", "across from", "next to")
+NEGATIVE_CONTEXTS = (
+    "adjacent to",
+    "near",
+    "former",
+    "formerly",
+    "across from",
+    "next to",
+    "removal of",
+    "remove",
+    "relocation from",
+    "relocating from",
+    "landlord for",
+    "sign facing",
+    "competitor to",
+)
 PARTY_FIELDS = (
     "applicant_name",
     "owner_name",
@@ -265,7 +280,10 @@ def detect_permit_brands(
                 excerpt=_excerpt(value, alias.alias),
                 confidence=confidence,
                 matched_fields=matched_fields,
-                rule_ids=tuple(_rule_ids(opening_signal)),
+                rule_ids=tuple(
+                    _rule_ids(opening_signal)
+                    + (["exact_applicant_alias"] if field == "applicant_name" else [])
+                ),
             )
             current = best_by_brand.get(alias.brand_id)
             if current is None or detection.confidence > current.confidence:
@@ -1126,6 +1144,8 @@ def _payload_excerpt(payload: dict, match: PermitBrandMatch) -> dict[str, object
     blocked_fragments = ("phone", "email", "fax", "violation")
     priority = (
         "dba", "project_name", "business", "tenant", "applicant",
+        "applicant_name", "applicant_business_name", "applicant_company_name",
+        "applicant_organization_name", "legalname", "entityname",
         "work_desc", "description", "use_desc", "cuisine_description",
         "status_desc", "status", "inspection_date", "inspection_type",
         "action", "record_date", "submitted_date", "issue_date",
