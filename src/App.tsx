@@ -24,6 +24,7 @@ import GraphEntityDetail from "./pages/GraphEntityDetail";
 import GraphRelationshipDetail from "./pages/GraphRelationshipDetail";
 import GraphExplorer from "./pages/GraphExplorer";
 import ParcelDetail from "./pages/ParcelDetail";
+import AcquisitionRadar from "./pages/AcquisitionRadar";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import Team from "./pages/Team";
@@ -198,6 +199,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <GraphExplorer />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/acquisition-radar"
+              element={
+                <RequireAuth>
+                  <AcquisitionRadar />
                 </RequireAuth>
               }
             />

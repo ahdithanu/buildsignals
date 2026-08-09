@@ -137,3 +137,50 @@ class NearbyParcelOpportunityResponse(BaseModel):
     created: bool
     candidate_id: str
     deal: DealDetailResponse
+
+
+class AcquisitionRadarSignalResponse(BaseModel):
+    candidate_id: str
+    search_id: str
+    deal_id: str
+    deal_name: str
+    persona: str
+    approval_stage: Optional[str] = None
+    signal_confidence: Optional[float] = None
+    distance_miles: float
+    candidate_score: float
+    created_at: datetime
+
+
+class AcquisitionRadarItemResponse(BaseModel):
+    parcel: ParcelSummaryResponse
+    candidate_id: str
+    radar_score: float
+    best_candidate_score: float
+    score_confidence: float
+    appearance_count: int
+    opportunity_count: int
+    personas: list[str]
+    review_status: str
+    assigned_to_user_id: Optional[str] = None
+    assigned_to_name: Optional[str] = None
+    latest_signal_at: datetime
+    reasons: list[str]
+    cautions: list[str]
+    signals: list[AcquisitionRadarSignalResponse]
+
+
+class AcquisitionRadarSummaryResponse(BaseModel):
+    total_parcels: int
+    shortlisted_parcels: int
+    multi_opportunity_parcels: int
+    assigned_parcels: int
+    state_count: int
+
+
+class AcquisitionRadarResponse(BaseModel):
+    items: list[AcquisitionRadarItemResponse]
+    total: int
+    limit: int
+    offset: int
+    summary: AcquisitionRadarSummaryResponse

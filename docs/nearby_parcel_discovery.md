@@ -206,6 +206,7 @@ graph path traversal so distance queries use spatial indexes.
 - `GET /deals/{deal_id}/nearby-parcel-searches`
 - `GET /nearby-parcel-searches/{search_id}`
 - `PATCH /parcel-candidates/{candidate_id}`
+- `GET /acquisition-radar`
 
 Search input includes `radius_miles`, persona, minimum parcel area, land-use or
 zoning filters, ownership filters, and result limit. Responses include distance,
@@ -217,7 +218,7 @@ The opportunity page currently includes a `Nearby Parcels` panel with bounded
 radius, buyer lens, evidence freshness, and shortlist/dismiss actions. The
 panel can start from a geocoded pre-approval retailer signal or a confirmed
 signal, and confirmed opportunity creation now seeds the same parcel context
-automatically for linked deals. The planned map workspace adds:
+automatically for linked deals. The implemented workspace includes:
 
 - map and synchronized sortable result table
 - radius control capped at 5 miles
@@ -225,6 +226,10 @@ automatically for linked deals. The planned map workspace adds:
 - zoning, size, ownership-tenure, and improvement filters
 - score explanation and source evidence drawer
 - shortlist/dismiss actions and broker/developer export
+
+The organization-wide Acquisition Radar deduplicates these candidates across
+opportunities and ranks them by parcel fit, evidence confidence, connected
+signal confidence, repeated opportunity exposure, review state, and freshness.
 
 No parcel becomes an opportunity automatically. Promotion is an explicit user
 action that preserves the originating search, ranking version, and evidence.

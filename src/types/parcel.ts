@@ -126,3 +126,58 @@ export interface ParcelDetail {
   graph_entity?: GraphEntity | null;
   graph_related: GraphRelatedEntity[];
 }
+
+export interface AcquisitionRadarSignal {
+  candidate_id: string;
+  search_id: string;
+  deal_id: string;
+  deal_name: string;
+  persona: ParcelPersona;
+  approval_stage?: string | null;
+  signal_confidence?: number | null;
+  distance_miles: number;
+  candidate_score: number;
+  created_at: string;
+}
+
+export interface AcquisitionRadarItem {
+  parcel: ParcelSummary;
+  candidate_id: string;
+  radar_score: number;
+  best_candidate_score: number;
+  score_confidence: number;
+  appearance_count: number;
+  opportunity_count: number;
+  personas: ParcelPersona[];
+  review_status: ParcelReviewStatus;
+  assigned_to_user_id?: string | null;
+  assigned_to_name?: string | null;
+  latest_signal_at: string;
+  reasons: string[];
+  cautions: string[];
+  signals: AcquisitionRadarSignal[];
+}
+
+export interface AcquisitionRadarResponse {
+  items: AcquisitionRadarItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  summary: {
+    total_parcels: number;
+    shortlisted_parcels: number;
+    multi_opportunity_parcels: number;
+    assigned_parcels: number;
+    state_count: number;
+  };
+}
+
+export interface AcquisitionRadarParams {
+  q?: string;
+  state?: string;
+  persona?: ParcelPersona;
+  review_status?: ParcelReviewStatus;
+  assignment?: 'assigned' | 'unassigned';
+  limit?: number;
+  offset?: number;
+}

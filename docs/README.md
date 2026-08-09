@@ -10,6 +10,7 @@ permit intelligence pipeline.
 - [Nationwide source coverage and state rollout map](./nationwide_source_coverage.md)
 - [Permit ingestion decision log](./permit_ingestion.md)
 - [Nearby parcel discovery](./nearby_parcel_discovery.md)
+- [Acquisition Radar](./acquisition_radar.md)
 - [Source onboarding decisions](./source_onboarding_decisions.md)
 - [Parcel source onboarding decisions](./parcel_source_onboarding_decisions.md)
 

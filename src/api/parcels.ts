@@ -8,10 +8,17 @@ import type {
   NearbyParcelSearch,
   NearbyParcelSearchCreate,
   NearbyParcelSearchSummary,
+  AcquisitionRadarParams,
+  AcquisitionRadarResponse,
   ParcelReviewStatus,
 } from '@/types/parcel';
 
 export const parcelsApi = {
+  radar: (params?: AcquisitionRadarParams): Promise<AcquisitionRadarResponse> =>
+    apiClient.get<AcquisitionRadarResponse>(
+      '/acquisition-radar',
+      params as Record<string, string | number | boolean | undefined>,
+    ),
   history: (dealId: string): Promise<NearbyParcelSearchSummary[]> =>
     apiClient.get<NearbyParcelSearchSummary[]>(`/deals/${dealId}/nearby-parcel-searches`),
   get: (searchId: string): Promise<NearbyParcelSearch> =>
