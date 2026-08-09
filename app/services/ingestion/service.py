@@ -32,7 +32,7 @@ from app.models.parcel import ParcelRecord
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
 from app.schemas.ingestion import IngestionSourceCreate, IngestionSourceUpdate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
-from app.services.brand_intelligence import detect_permit_brands
+from app.services.brand_intelligence import detect_permit_brands, rebuild_brand_party_fingerprints
 from app.services.graph_service import create_relationship, link_entity_to_record, resolve_entity
 from app.services.ingestion.connector_config import resolve_connector_config_dates
 from app.services.ingestion.connectors import ConnectorResponseError, build_connector
@@ -673,6 +673,17 @@ def _persist_permit(
                 attributes={"snapshot_id": snapshot_id},
             ))
             detect_permit_brands(db, permit, raw)
+            confirmed_brand_ids = {
+                brand_id
+                for (brand_id,) in active_query(
+                    db.query(PermitBrandMatch.brand_id), PermitBrandMatch
+                ).filter(
+                    PermitBrandMatch.permit_id == permit.id,
+                    PermitBrandMatch.review_status == "confirmed",
+                ).all()
+            }
+            for brand_id in confirmed_brand_ids:
+                rebuild_brand_party_fingerprints(db, brand_id)
             _project_permit_to_graph(db, source, permit, raw)
             return permit, "reprocessed"
         return permit, "unchanged"
@@ -944,10 +955,15 @@ def _retire_missing_snapshot_records(
             PermitBrandMatch.permit_id == permit.id,
             PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
         ).all()
+        confirmed_brand_ids = {
+            match.brand_id for match in matches if match.review_status == "confirmed"
+        }
         for match in matches:
-            match.review_status = "retracted"
-            match.last_seen_at = now
+            if match.review_status == "candidate":
+                match.review_status = "retracted"
         _expire_permit_relationships(db, source, permit)
+        for brand_id in confirmed_brand_ids:
+            rebuild_brand_party_fingerprints(db, brand_id)
     db.flush()
     return len(unique_permits)
 
@@ -1261,6 +1277,8 @@ def _relate(
         attributes={
             "permit_record_id": permit.id,
             "role": role,
+            "source_record_active": True,
+            "retired_from_source_snapshot": False,
             **(attributes or {}),
         },
         evidence=[GraphEvidenceCreate(
@@ -1349,5 +1367,11 @@ def _expire_permit_relationships(
         GraphRelationship.is_current.is_(True),
     ).all()
     for relationship in relationships:
+        relationship.attributes = {
+            **(relationship.attributes or {}),
+            "source_record_active": False,
+            "retired_from_source_snapshot": True,
+        }
         relationship.is_current = False
         relationship.valid_to = now
+        relationship.last_verified_at = now

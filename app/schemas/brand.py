@@ -186,6 +186,11 @@ class PermitBrandMatchResponse(BaseModel):
             "stale": "Dormant filing",
         }[self.freshness]
 
+    @computed_field
+    @property
+    def needs_reverification(self) -> bool:
+        return self.review_status == "confirmed" and not self.permit.is_active
+
 
 class PermitBrandMatchReview(BaseModel):
     review_status: Literal["confirmed", "dismissed", "candidate"]
@@ -284,6 +289,7 @@ class PermitBrandMatchEvidenceResponse(BaseModel):
     rule_ids: list[str] = Field(default_factory=list)
     detector_version: str
     detection_method: Literal["direct_alias", "historical_party"]
+    needs_reverification: bool = False
     first_seen_at: datetime
     last_seen_at: datetime
     linked_deals: list[LinkedDealSummary] = Field(default_factory=list)

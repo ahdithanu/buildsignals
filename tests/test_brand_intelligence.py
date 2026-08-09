@@ -1076,6 +1076,78 @@ def test_snapshot_retirement_retracts_brand_signal_and_reappearance_restores_can
     assert db.get(GraphRelationship, relationship.id).is_current is True
 
 
+def test_snapshot_retirement_preserves_confirmed_match_for_reverification(
+    client, db, tmp_path
+):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    csv_path = tmp_path / "confirmed-retired-brand.csv"
+    _write_filing(
+        csv_path,
+        owner="Stealth Coffee Holdings LLC",
+        contractor="Northstar Retail Builders",
+    )
+    payload = _source_payload(str(csv_path), key="confirmed_retired_brand")
+    payload["settings"]["reconciliation_mode"] = "daily_full_snapshot"
+    payload["settings"]["allow_empty_snapshot"] = True
+    payload["settings"]["max_snapshot_retirement_fraction"] = 1.0
+    source = client.post("/ingestion/sources", json=payload).json()
+    client.post(f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1})
+    match = db.query(PermitBrandMatch).one()
+    confirmed = client.patch(
+        f"/permit-brand-matches/{match.id}", json={"review_status": "confirmed"}
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    relationship = db.query(GraphRelationship).filter(
+        GraphRelationship.attributes["brand_match_id"].as_string() == match.id
+    ).one()
+    assert any(row.is_active for row in db.query(BrandPartyFingerprint).all())
+
+    csv_path.write_text(
+        "id,application_no,stage,type,status,project,description,address,city,state,parcel,filed,owner\n"
+    )
+    retired = client.post(
+        f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1}
+    )
+    assert retired.status_code == 201, retired.text
+    db.expire_all()
+
+    preserved = db.query(PermitBrandMatch).one()
+    assert preserved.review_status == "confirmed"
+    assert preserved.permit.is_active is False
+    retired_relationship = db.get(GraphRelationship, relationship.id)
+    assert retired_relationship.is_current is False
+    assert retired_relationship.attributes["source_record_active"] is False
+    assert retired_relationship.attributes["retired_from_source_snapshot"] is True
+    assert all(not row.is_active for row in db.query(BrandPartyFingerprint).all())
+    listed = client.get("/permit-brand-matches?review_status=confirmed")
+    assert listed.status_code == 200, listed.text
+    assert listed.json()[0]["needs_reverification"] is True
+    evidence = client.get(f"/permit-brand-matches/{match.id}/evidence")
+    assert evidence.status_code == 200, evidence.text
+    assert evidence.json()["needs_reverification"] is True
+
+    _write_filing(
+        csv_path,
+        owner="Stealth Coffee Holdings LLC",
+        contractor="Northstar Retail Builders",
+    )
+    restored = client.post(
+        f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1}
+    )
+    assert restored.status_code == 201, restored.text
+    db.expire_all()
+    assert db.query(PermitBrandMatch).one().review_status == "confirmed"
+    assert db.query(PermitRecord).one().is_active is True
+    restored_relationship = db.get(GraphRelationship, relationship.id)
+    assert restored_relationship.is_current is True
+    assert restored_relationship.attributes["source_record_active"] is True
+    assert restored_relationship.attributes["retired_from_source_snapshot"] is False
+    assert any(row.is_active for row in db.query(BrandPartyFingerprint).all())
+    relisted = client.get("/permit-brand-matches?review_status=confirmed")
+    assert relisted.json()[0]["needs_reverification"] is False
+
+
 def test_brand_match_can_create_evidence_backed_opportunity(client, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
