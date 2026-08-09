@@ -1144,6 +1144,23 @@
             "title": "Source Name",
             "type": "string"
           },
+          "source_timestamp_label": {
+            "default": "Source timestamp",
+            "title": "Source Timestamp Label",
+            "type": "string"
+          },
+          "source_timestamp_semantics": {
+            "default": "ingestion_observed_at",
+            "enum": [
+              "record_updated_at",
+              "dataset_refreshed_at",
+              "filing_event_at",
+              "ingestion_observed_at",
+              "unclassified_source_timestamp"
+            ],
+            "title": "Source Timestamp Semantics",
+            "type": "string"
+          },
           "source_updated_at": {
             "anyOf": [
               {
@@ -8636,6 +8653,33 @@
             ],
             "title": "Cursor Updated At"
           },
+          "freshness_label": {
+            "default": "Collection observed",
+            "title": "Freshness Label",
+            "type": "string"
+          },
+          "freshness_semantics": {
+            "default": "ingestion_observed_at",
+            "enum": [
+              "record_updated_at",
+              "dataset_refreshed_at",
+              "filing_event_at",
+              "ingestion_observed_at",
+              "unclassified_source_timestamp"
+            ],
+            "title": "Freshness Semantics",
+            "type": "string"
+          },
+          "freshness_sla_configured": {
+            "default": false,
+            "title": "Freshness Sla Configured",
+            "type": "boolean"
+          },
+          "freshness_sla_hours": {
+            "default": 36.0,
+            "title": "Freshness Sla Hours",
+            "type": "number"
+          },
           "heartbeat_age_seconds": {
             "anyOf": [
               {
@@ -8801,6 +8845,11 @@
               }
             ],
             "title": "Source Watermark At"
+          },
+          "source_watermark_enforced": {
+            "default": false,
+            "title": "Source Watermark Enforced",
+            "type": "boolean"
           },
           "status": {
             "enum": [
