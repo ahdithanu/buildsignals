@@ -1184,6 +1184,59 @@
         "title": "BrandMatchRawEvidence",
         "type": "object"
       },
+      "BrandPartyFingerprintEvidence": {
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "evidence_count": {
+            "title": "Evidence Count",
+            "type": "integer"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "party_type": {
+            "title": "Party Type",
+            "type": "string"
+          },
+          "source_match_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Match Ids",
+            "type": "array"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "party_type",
+          "display_name",
+          "state",
+          "evidence_count",
+          "confidence",
+          "last_verified_at"
+        ],
+        "title": "BrandPartyFingerprintEvidence",
+        "type": "object"
+      },
       "BrandPermitSummary": {
         "properties": {
           "address": {
@@ -6810,6 +6863,14 @@
             "title": "Confidence",
             "type": "number"
           },
+          "detection_method": {
+            "enum": [
+              "direct_alias",
+              "historical_party"
+            ],
+            "title": "Detection Method",
+            "type": "string"
+          },
           "detector_version": {
             "title": "Detector Version",
             "type": "string"
@@ -6836,6 +6897,13 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "inference_evidence": {
+            "items": {
+              "$ref": "#/components/schemas/BrandPartyFingerprintEvidence"
+            },
+            "title": "Inference Evidence",
+            "type": "array"
           },
           "last_seen_at": {
             "format": "date-time",
@@ -6913,6 +6981,7 @@
           "signal_quality_label",
           "signal_quality_note",
           "detector_version",
+          "detection_method",
           "first_seen_at",
           "last_seen_at",
           "first_evidence",
@@ -6929,6 +6998,11 @@
           "confidence": {
             "title": "Confidence",
             "type": "number"
+          },
+          "detection_method": {
+            "readOnly": true,
+            "title": "Detection Method",
+            "type": "string"
           },
           "detector_version": {
             "title": "Detector Version",
@@ -7027,6 +7101,7 @@
           "last_seen_at",
           "brand",
           "permit",
+          "detection_method",
           "signal_quality",
           "signal_quality_label",
           "signal_quality_note"
@@ -14857,6 +14932,23 @@
                 }
               ],
               "title": "Approval Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "detection_method",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(direct_alias|historical_party)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Detection Method"
             }
           },
           {
