@@ -6988,6 +6988,11 @@
             "title": "Matched Fields",
             "type": "array"
           },
+          "needs_reverification": {
+            "default": false,
+            "title": "Needs Reverification",
+            "type": "boolean"
+          },
           "permit": {
             "$ref": "#/components/schemas/BrandPermitSummary"
           },
@@ -7123,6 +7128,11 @@
             "title": "Matched Fields",
             "type": "array"
           },
+          "needs_reverification": {
+            "readOnly": true,
+            "title": "Needs Reverification",
+            "type": "boolean"
+          },
           "permit": {
             "$ref": "#/components/schemas/BrandPermitSummary"
           },
@@ -7188,7 +7198,8 @@
           "freshness_date",
           "signal_age_days",
           "freshness",
-          "freshness_label"
+          "freshness_label",
+          "needs_reverification"
         ],
         "title": "PermitBrandMatchResponse",
         "type": "object"
