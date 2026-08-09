@@ -3352,6 +3352,30 @@
         "title": "GraphEntityDetailResponse",
         "type": "object"
       },
+      "GraphEntityMergeCandidateResponse": {
+        "properties": {
+          "entity": {
+            "$ref": "#/components/schemas/GraphEntityResponse"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "entity",
+          "score"
+        ],
+        "title": "GraphEntityMergeCandidateResponse",
+        "type": "object"
+      },
       "GraphEntityResponse": {
         "properties": {
           "address": {
@@ -3936,6 +3960,26 @@
         "title": "GraphRelationshipCreate",
         "type": "object"
       },
+      "GraphRelationshipDetailResponse": {
+        "properties": {
+          "relationship": {
+            "$ref": "#/components/schemas/GraphRelationshipResponse"
+          },
+          "source_entity": {
+            "$ref": "#/components/schemas/GraphEntityResponse"
+          },
+          "target_entity": {
+            "$ref": "#/components/schemas/GraphEntityResponse"
+          }
+        },
+        "required": [
+          "relationship",
+          "source_entity",
+          "target_entity"
+        ],
+        "title": "GraphRelationshipDetailResponse",
+        "type": "object"
+      },
       "GraphRelationshipEvidenceResponse": {
         "properties": {
           "confidence": {
@@ -4367,6 +4411,17 @@
             "title": "Official Landing Page",
             "type": "string"
           },
+          "production_page_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Production Page Size"
+          },
           "record_type": {
             "enum": [
               "permit",
@@ -4512,6 +4567,13 @@
             "title": "Retailer Opening Sources",
             "type": "array"
           },
+          "rollout_queue": {
+            "items": {
+              "$ref": "#/components/schemas/StateRolloutItem"
+            },
+            "title": "Rollout Queue",
+            "type": "array"
+          },
           "state_buckets": {
             "items": {
               "$ref": "#/components/schemas/StateCoverageBucket"
@@ -4542,6 +4604,7 @@
           "top_jurisdictions",
           "state_buckets",
           "activation_queue",
+          "rollout_queue",
           "candidate_only_state_count",
           "candidate_only_states",
           "covered_state_count",
@@ -8393,6 +8456,17 @@
             "title": "Pre Approval Sources",
             "type": "integer"
           },
+          "priority_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Priority Reasons",
+            "type": "array"
+          },
+          "priority_score": {
+            "title": "Priority Score",
+            "type": "integer"
+          },
           "retailer_opening_sources": {
             "title": "Retailer Opening Sources",
             "type": "integer"
@@ -8408,9 +8482,69 @@
           "candidate_sources",
           "retailer_opening_sources",
           "pre_approval_sources",
-          "approved_only_sources"
+          "approved_only_sources",
+          "priority_score",
+          "priority_reasons"
         ],
         "title": "StateCoverageBucket",
+        "type": "object"
+      },
+      "StateRolloutItem": {
+        "properties": {
+          "candidate_sources": {
+            "title": "Candidate Sources",
+            "type": "integer"
+          },
+          "coverage_status": {
+            "title": "Coverage Status",
+            "type": "string"
+          },
+          "jurisdiction_count": {
+            "title": "Jurisdiction Count",
+            "type": "integer"
+          },
+          "live_sources": {
+            "title": "Live Sources",
+            "type": "integer"
+          },
+          "next_action": {
+            "title": "Next Action",
+            "type": "string"
+          },
+          "next_action_label": {
+            "title": "Next Action Label",
+            "type": "string"
+          },
+          "priority_score": {
+            "title": "Priority Score",
+            "type": "integer"
+          },
+          "rollout_cluster": {
+            "title": "Rollout Cluster",
+            "type": "integer"
+          },
+          "rollout_label": {
+            "title": "Rollout Label",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "rollout_cluster",
+          "rollout_label",
+          "coverage_status",
+          "live_sources",
+          "candidate_sources",
+          "jurisdiction_count",
+          "priority_score",
+          "next_action",
+          "next_action_label"
+        ],
+        "title": "StateRolloutItem",
         "type": "object"
       },
       "SwitchOrgRequest": {
@@ -12283,6 +12417,76 @@
         ]
       }
     },
+    "/v1/graph/entities/{entity_id}/merge-candidates": {
+      "get": {
+        "operationId": "merge_candidates_v1_graph_entities__entity_id__merge_candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "minimum_score",
+            "required": false,
+            "schema": {
+              "default": 0.6,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Minimum Score",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GraphEntityMergeCandidateResponse"
+                  },
+                  "title": "Response Merge Candidates V1 Graph Entities  Entity Id  Merge Candidates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Merge Candidates",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
     "/v1/graph/entities/{entity_id}/related": {
       "get": {
         "operationId": "related_entities_v1_graph_entities__entity_id__related_get",
@@ -12450,6 +12654,48 @@
           }
         },
         "summary": "Add Relationship",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/relationships/{relationship_id}": {
+      "get": {
+        "operationId": "get_relationship_v1_graph_relationships__relationship_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "relationship_id",
+            "required": true,
+            "schema": {
+              "title": "Relationship Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphRelationshipDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Relationship",
         "tags": [
           "graph"
         ]
