@@ -125,10 +125,20 @@ function EvidenceBlock({ title, evidence }: { title: string; evidence: BrandMatc
           <span className="break-all text-foreground">{evidence.external_record_id}</span>
           <span className="text-muted-foreground">Snapshot captured</span>
           <span className="text-foreground">{formatDateTime(evidence.received_at)}</span>
+          <span className="text-muted-foreground">
+            Last observed{evidence.observation_recorded === false ? ' (capture fallback)' : ''}
+          </span>
+          <span className="text-foreground">
+            {formatDateTime(evidence.last_observed_at || evidence.received_at)}
+          </span>
           <span className="text-muted-foreground">{evidence.source_timestamp_label || 'Publisher timestamp'}</span>
           <span className="text-foreground">{formatDateTime(evidence.source_updated_at)}</span>
           <span className="text-muted-foreground">Snapshot age</span>
           <span className="text-foreground">{ageLabel(evidence.received_age_hours)}</span>
+          <span className="text-muted-foreground">Observation age</span>
+          <span className="text-foreground">
+            {ageLabel(evidence.last_observed_age_hours ?? evidence.received_age_hours)}
+          </span>
           <span className="text-muted-foreground">
             {evidence.source_timestamp_label || 'Source timestamp'} age
           </span>

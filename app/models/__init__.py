@@ -28,6 +28,7 @@ from app.models.ingestion import (  # noqa
     PermitEvent,
     PermitRecord,
     RawSourceRecord,
+    RawSourceRecordObservation,
     SourceFieldMapping,
 )
 from app.models.brand import (  # noqa

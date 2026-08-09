@@ -771,6 +771,9 @@ def test_nyc_dohmh_catalog_run_creates_preinspection_dba_brand_candidate(
     assert body["latest_evidence"]["source_key"] == "new_york_ny_dohmh_restaurant_permit_applicants"
     assert body["latest_evidence"]["external_record_id"] == "row-shake-shack"
     assert body["latest_evidence"]["received_age_hours"] >= 0
+    assert body["latest_evidence"]["last_observed_at"] >= body["latest_evidence"]["received_at"]
+    assert body["latest_evidence"]["last_observed_age_hours"] >= 0
+    assert body["latest_evidence"]["observation_recorded"] is True
     assert body["latest_evidence"]["source_lag_hours"] is None
     assert body["latest_evidence"]["source_timestamp_semantics"] == "ingestion_observed_at"
     assert body["latest_evidence"]["source_timestamp_label"] == "Source timestamp"
@@ -1270,6 +1273,14 @@ def test_confirming_linked_brand_match_seeds_nearby_parcel_searches(client, db):
     )
     db.add(match)
     db.commit()
+
+    evidence = client.get(f"/permit-brand-matches/{match.id}/evidence")
+    assert evidence.status_code == 200, evidence.text
+    assert (
+        evidence.json()["latest_evidence"]["last_observed_at"]
+        == evidence.json()["latest_evidence"]["received_at"]
+    )
+    assert evidence.json()["latest_evidence"]["observation_recorded"] is False
 
     response = client.patch(
         f"/permit-brand-matches/{match.id}",

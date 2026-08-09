@@ -23,12 +23,14 @@ describe("<PermitBrandEvidenceSheet>", () => {
           external_record_id: "permit-2",
           content_hash: "hash-2",
           received_at: "2026-07-23T12:00:00Z",
+          last_observed_at: "2026-07-23T14:00:00Z",
           source_updated_at: "2026-07-23T11:00:00Z",
           source_key: "city_permits",
           source_name: "City Permits",
           source_url: "https://example.gov/permit/2",
           payload_excerpt: { project_name: "Looped Retail Group" },
           received_age_hours: 2,
+          last_observed_age_hours: 0.5,
           source_lag_hours: -2,
           source_timestamp_semantics: "dataset_refreshed_at",
           source_timestamp_label: "Publisher dataset refresh",
@@ -38,12 +40,14 @@ describe("<PermitBrandEvidenceSheet>", () => {
           external_record_id: "permit-1",
           content_hash: "hash-1",
           received_at: "2026-07-22T12:00:00Z",
+          last_observed_at: "2026-07-23T14:00:00Z",
           source_updated_at: "2026-07-22T11:00:00Z",
           source_key: "city_permits",
           source_name: "City Permits",
           source_url: "https://example.gov/permit/1",
           payload_excerpt: { project_name: "Looped Retail Group" },
           received_age_hours: 26,
+          last_observed_age_hours: 0.5,
           source_lag_hours: 27,
           source_timestamp_semantics: "dataset_refreshed_at",
           source_timestamp_label: "Publisher dataset refresh",
@@ -175,8 +179,10 @@ describe("<PermitBrandEvidenceSheet>", () => {
 
     expect(screen.getByText("Graph Context")).toBeInTheDocument();
     expect(screen.getAllByText("Snapshot captured").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Last observed").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Publisher dataset refresh").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Snapshot age").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Observation age").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Publisher dataset refresh age").length).toBeGreaterThan(0);
     expect(screen.getByText("Clock skew detected")).toBeInTheDocument();
     expect(screen.getByText("Stealth inference")).toBeInTheDocument();

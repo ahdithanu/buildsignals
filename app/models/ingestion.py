@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -167,6 +168,12 @@ class RawSourceRecord(OrgMixin, Base):
         ),
         Index("ix_raw_source_record_lookup", "source_id", "external_record_id", "received_at"),
         Index("ix_raw_source_record_run", "run_id", "received_at"),
+        Index(
+            "uq_raw_source_record_id_org",
+            "id",
+            "organization_id",
+            unique=True,
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -189,12 +196,45 @@ class RawSourceRecord(OrgMixin, Base):
         "PermitRecord", back_populates="latest_raw_record", foreign_keys="[PermitRecord.latest_raw_record_id]"
     )
     permit_events: Mapped[list["PermitEvent"]] = relationship("PermitEvent", back_populates="raw_record")
+    observation: Mapped[Optional["RawSourceRecordObservation"]] = relationship(
+        "RawSourceRecordObservation",
+        back_populates="raw_record",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
+    )
 
 
 @event.listens_for(RawSourceRecord, "before_update")
 @event.listens_for(RawSourceRecord, "before_delete")
 def _prevent_raw_source_record_mutation(*_args: object) -> None:
     raise ValueError("RawSourceRecord rows are immutable")
+
+
+class RawSourceRecordObservation(OrgMixin, Base):
+    """Mutable last-seen state for an immutable raw content version."""
+
+    __tablename__ = "raw_source_record_observations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["raw_source_record_id", "organization_id"],
+            ["raw_source_records.id", "raw_source_records.organization_id"],
+            ondelete="CASCADE",
+            name="fk_raw_observation_record_org",
+        ),
+    )
+
+    raw_source_record_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+    last_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    raw_record: Mapped["RawSourceRecord"] = relationship(
+        "RawSourceRecord", back_populates="observation"
+    )
 
 
 class PermitRecord(OrgMixin, Base):

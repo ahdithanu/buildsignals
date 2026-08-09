@@ -110,7 +110,11 @@ class ParcelFact(OrgMixin, Base):
     __tablename__ = "parcel_facts"
     __table_args__ = (
         UniqueConstraint(
-            "parcel_id", "fact_type", "raw_source_record_id", name="uq_parcel_fact_source_version"
+            "parcel_id",
+            "fact_type",
+            "raw_source_record_id",
+            "valid_from",
+            name="uq_parcel_fact_source_occurrence",
         ),
         Index("ix_parcel_fact_current", "organization_id", "parcel_id", "fact_type", "is_current"),
         Index("ix_parcel_fact_observed", "parcel_id", "observed_at"),

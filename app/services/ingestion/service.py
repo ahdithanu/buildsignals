@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 from uuid import uuid4
 
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -26,6 +26,7 @@ from app.models.ingestion import (
     PermitEvent,
     PermitRecord,
     RawSourceRecord,
+    RawSourceRecordObservation,
     SourceFieldMapping,
 )
 from app.models.parcel import ParcelRecord
@@ -653,7 +654,28 @@ def _persist_permit(
     ).first()
 
     raw_was_existing = raw is not None
-    if raw is not None and permit is not None and permit.normalization_hash == normalization_hash:
+    if raw is None:
+        raw = RawSourceRecord(
+            organization_id=get_org_id(),
+            source_id=source.id,
+            run_id=run_id,
+            external_record_id=normalized.source_record_id,
+            record_type=source.record_type,
+            content_hash=normalized.fingerprint,
+            payload=_json_safe(source_record),
+            source_updated_at=_source_updated_at(source, source_record),
+            received_at=fetched_at,
+        )
+        db.add(raw)
+        db.flush()
+    _touch_raw_observation(db, raw, fetched_at)
+
+    if (
+        raw_was_existing
+        and permit is not None
+        and permit.latest_raw_record_id == raw.id
+        and permit.normalization_hash == normalization_hash
+    ):
         was_inactive = not permit.is_active
         permit.last_seen_at = fetched_at
         permit.last_seen_snapshot_id = snapshot_id
@@ -687,21 +709,6 @@ def _persist_permit(
             _project_permit_to_graph(db, source, permit, raw)
             return permit, "reprocessed"
         return permit, "unchanged"
-
-    if raw is None:
-        raw = RawSourceRecord(
-            organization_id=get_org_id(),
-            source_id=source.id,
-            run_id=run_id,
-            external_record_id=normalized.source_record_id,
-            record_type=source.record_type,
-            content_hash=normalized.fingerprint,
-            payload=_json_safe(source_record),
-            source_updated_at=_source_updated_at(source, source_record),
-            received_at=fetched_at,
-        )
-        db.add(raw)
-        db.flush()
 
     values = {key: value for key, value in normalized.values.items() if key in PERMIT_COLUMNS}
     values["attributes"] = normalized.unmapped or None
@@ -748,7 +755,11 @@ def _persist_permit(
         organization_id=get_org_id(),
         permit_id=permit.id,
         raw_source_record_id=raw.id,
-        source_event_id=f"{normalized.fingerprint}:{normalization_hash}",
+        source_event_id=(
+            f"{normalized.fingerprint}:{normalization_hash}:reobserved:{fetched_at.isoformat()}"
+            if raw_was_existing
+            else f"{normalized.fingerprint}:{normalization_hash}"
+        ),
         event_type=event_type,
         status=permit.status,
         approval_stage=permit.approval_stage,
@@ -781,16 +792,7 @@ def _persist_parcel(
         ParcelRecord.source_id == source.id,
         ParcelRecord.external_parcel_id == normalized.source_record_id,
     ).first()
-    if raw is not None and parcel is not None and parcel.normalization_hash == normalization_hash:
-        was_inactive = not parcel.is_active
-        parcel.last_seen_at = fetched_at
-        parcel.last_verified_at = fetched_at
-        parcel.last_seen_snapshot_id = snapshot_id
-        parcel.is_active = True
-        parcel.retired_at = None
-        _project_parcel_to_graph(db, source, parcel, raw)
-        return parcel, "reprocessed" if was_inactive else "unchanged"
-
+    raw_was_existing = raw is not None
     if raw is None:
         raw = RawSourceRecord(
             organization_id=get_org_id(),
@@ -805,6 +807,22 @@ def _persist_parcel(
         )
         db.add(raw)
         db.flush()
+    _touch_raw_observation(db, raw, fetched_at)
+
+    if (
+        raw_was_existing
+        and parcel is not None
+        and parcel.latest_raw_record_id == raw.id
+        and parcel.normalization_hash == normalization_hash
+    ):
+        was_inactive = not parcel.is_active
+        parcel.last_seen_at = fetched_at
+        parcel.last_verified_at = fetched_at
+        parcel.last_seen_snapshot_id = snapshot_id
+        parcel.is_active = True
+        parcel.retired_at = None
+        _project_parcel_to_graph(db, source, parcel, raw)
+        return parcel, "reprocessed" if was_inactive else "unchanged"
 
     values = normalized.values
     facts = _parcel_facts(values, source, fetched_at)
@@ -822,6 +840,78 @@ def _persist_parcel(
     )
     _project_parcel_to_graph(db, source, parcel, raw)
     return parcel, action
+
+
+def _touch_raw_observation(
+    db: Session,
+    raw: RawSourceRecord,
+    observed_at: datetime,
+) -> RawSourceRecordObservation:
+    values = {
+        "organization_id": get_org_id(),
+        "raw_source_record_id": raw.id,
+        "last_observed_at": observed_at,
+    }
+    dialect_name = db.get_bind().dialect.name
+    table = RawSourceRecordObservation.__table__
+    if dialect_name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert
+
+        statement = insert(table).values(**values)
+        statement = statement.on_conflict_do_update(
+            index_elements=[table.c.raw_source_record_id],
+            set_={
+                "last_observed_at": func.greatest(
+                    table.c.last_observed_at,
+                    statement.excluded.last_observed_at,
+                )
+            },
+        )
+        db.execute(statement)
+    elif dialect_name == "sqlite":
+        from sqlalchemy.dialects.sqlite import insert
+
+        statement = insert(table).values(**values)
+        statement = statement.on_conflict_do_update(
+            index_elements=[table.c.raw_source_record_id],
+            set_={
+                "last_observed_at": func.max(
+                    table.c.last_observed_at,
+                    statement.excluded.last_observed_at,
+                )
+            },
+        )
+        db.execute(statement)
+    else:
+        return _touch_raw_observation_fallback(db, raw, observed_at)
+
+    return active_query(
+        db.query(RawSourceRecordObservation), RawSourceRecordObservation
+    ).populate_existing().filter(
+        RawSourceRecordObservation.raw_source_record_id == raw.id
+    ).one()
+
+
+def _touch_raw_observation_fallback(
+    db: Session,
+    raw: RawSourceRecord,
+    observed_at: datetime,
+) -> RawSourceRecordObservation:
+    observation = active_query(
+        db.query(RawSourceRecordObservation), RawSourceRecordObservation
+    ).filter(
+        RawSourceRecordObservation.raw_source_record_id == raw.id
+    ).first()
+    if observation is None:
+        observation = RawSourceRecordObservation(
+            organization_id=get_org_id(),
+            raw_source_record_id=raw.id,
+            last_observed_at=observed_at,
+        )
+        db.add(observation)
+    elif _as_utc(observed_at) > _as_utc(observation.last_observed_at):
+        observation.last_observed_at = observed_at
+    return observation
 
 
 def _parcel_facts(
