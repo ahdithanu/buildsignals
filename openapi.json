@@ -3234,6 +3234,17 @@
               }
             ],
             "title": "Transform Options"
+          },
+          "value_semantics": {
+            "default": "unknown",
+            "enum": [
+              "unknown",
+              "business_dba",
+              "legal_entity",
+              "person"
+            ],
+            "title": "Value Semantics",
+            "type": "string"
           }
         },
         "required": [
@@ -3319,6 +3330,17 @@
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
+            "type": "string"
+          },
+          "value_semantics": {
+            "default": "unknown",
+            "enum": [
+              "unknown",
+              "business_dba",
+              "legal_entity",
+              "person"
+            ],
+            "title": "Value Semantics",
             "type": "string"
           }
         },
