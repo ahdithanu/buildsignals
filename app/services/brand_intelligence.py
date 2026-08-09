@@ -475,6 +475,7 @@ def rebuild_brand_party_fingerprints(db: Session, brand_id: str) -> None:
         PermitBrandMatch.brand_id == brand_id,
         PermitBrandMatch.review_status == "confirmed",
         PermitBrandMatch.matched_field != "historical_parties",
+        PermitBrandMatch.permit.has(PermitRecord.is_active.is_(True)),
     ).all()
     grouped: dict[tuple[str, str, str], FingerprintAccumulator] = {}
     for match in matches:
@@ -755,6 +756,7 @@ def get_brand_match_evidence(
         rule_ids=match.rule_ids or [],
         detector_version=match.detector_version,
         detection_method=summary.detection_method,
+        needs_reverification=summary.needs_reverification,
         first_seen_at=match.first_seen_at,
         last_seen_at=match.last_seen_at,
         linked_deals=_linked_deals_for_matches(db, [match]).get(match.id, []),

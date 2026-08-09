@@ -83,6 +83,7 @@ export interface PermitBrandMatch {
   freshness_date?: string;
   freshness_label?: string;
   signal_age_days?: number;
+  needs_reverification?: boolean;
   first_seen_at: string;
   last_seen_at: string;
   brand: BrandProfile;
@@ -147,6 +148,7 @@ export interface PermitBrandMatchEvidence {
   excerpt: string;
   detector_version: string;
   detection_method: BrandDetectionMethod;
+  needs_reverification?: boolean;
   signal_quality: PermitBrandMatch['signal_quality'];
   signal_quality_label: string;
   signal_quality_note: string;

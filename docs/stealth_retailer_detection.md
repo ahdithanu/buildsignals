@@ -48,6 +48,8 @@ Retailer-match responses expose a freshness date, age in days, tier, and label. 
 
 The review queue groups lifecycle activity into broad bands, then ranks confidence within each band. It shows `Fresh filing` (0-30 days), `Active filing` (31-90), `Aging filing` (91-180), or `Dormant filing` (over 180 days). Responses separately expose the permit's last-observed timestamp, so an old filing that remains published is not presented as a new event or confused with source health. Freshness is an operational ranking signal only: it does not reduce stored confidence, rewrite evidence, retract a relationship, or override a human confirmation.
 
+When a full source snapshot no longer contains a permit, machine-generated candidates are retracted but human-confirmed matches remain confirmed. The permit becomes inactive, its current source relationships expire with snapshot-retirement provenance, and the response exposes `needs_reverification`. Retired permits are excluded from party-fingerprint training until they reappear, preventing stale confirmed evidence from driving new stealth inferences.
+
 ## Tradeoffs And Scaling Path
 
 Materializing fingerprints adds a small write cost when reviewers change a decision, but keeps nationwide ingestion reads indexed and bounded. State scoping is intentionally conservative and may miss a highly distinctive national team operating in a new state.

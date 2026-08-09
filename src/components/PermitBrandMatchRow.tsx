@@ -101,6 +101,11 @@ export function PermitBrandMatchRow({
                 {match.freshness_label}
               </span>
             )}
+            {match.needs_reverification && (
+              <span className="rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
+                Reverification needed
+              </span>
+            )}
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
