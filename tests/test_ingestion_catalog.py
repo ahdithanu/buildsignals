@@ -25,6 +25,25 @@ from app.services.ingestion.normalization import (
 from app.services.ingestion.service import _normalization_hash, execute_source_run
 
 
+def test_production_permit_sources_declare_freshness_contracts():
+    entries = [entry for entry in load_catalog() if entry.record_type == "permit"]
+
+    assert entries
+    assert all(entry.settings["freshness_sla_hours"] > 0 for entry in entries)
+    for entry in entries:
+        freshness_field = entry.settings.get("freshness_field")
+        if freshness_field:
+            assert entry.settings["freshness_semantics"] in {
+                "record_updated_at",
+                "dataset_refreshed_at",
+                "filing_event_at",
+            }
+    by_key = {entry.key: entry for entry in entries}
+    assert by_key["buffalo_ny_planning_zoning_approvals"].settings[
+        "freshness_semantics"
+    ] == "filing_event_at"
+
+
 def test_applicant_mappings_declare_conservative_value_semantics():
     applicant_mappings = {
         (entry.key, mapping.source_field): mapping.value_semantics

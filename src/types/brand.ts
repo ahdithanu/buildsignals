@@ -103,6 +103,8 @@ export interface BrandMatchRawEvidence {
   payload_excerpt: Record<string, string | number | boolean>;
   received_age_hours?: number | null;
   source_lag_hours?: number | null;
+  source_timestamp_semantics?: 'record_updated_at' | 'dataset_refreshed_at' | 'filing_event_at' | 'ingestion_observed_at' | 'unclassified_source_timestamp';
+  source_timestamp_label?: string;
 }
 
 export interface BrandMatchGraphContext {

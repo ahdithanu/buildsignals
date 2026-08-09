@@ -258,7 +258,10 @@ def load_catalog(path: Path | str | None = None) -> list[IngestionSourceCreate]:
             )
         _validate_suppressed_fields(entry)
         _validate_field_allowlist(entry)
-        _validate_freshness_metadata(entry)
+        _validate_freshness_metadata(
+            entry,
+            require_contract=path is None and entry.record_type == "permit",
+        )
         _validate_opening_signal_metadata(entry)
     return entries
 
@@ -742,12 +745,28 @@ def _validate_field_allowlist(entry: IngestionSourceCreate) -> None:
             )
 
 
-def _validate_freshness_metadata(entry: IngestionSourceCreate) -> None:
+def _validate_freshness_metadata(
+    entry: IngestionSourceCreate,
+    *,
+    require_contract: bool = False,
+) -> None:
     settings = entry.settings or {}
     freshness_field = settings.get("freshness_field")
+    freshness_semantics = settings.get("freshness_semantics")
     candidate = settings.get("freshness_field_candidate")
     hold = settings.get("freshness_enforcement_hold")
     freshness_probe = settings.get("canary_freshness_probe")
+    sla_hours = settings.get("freshness_sla_hours")
+
+    valid_sla = (
+        isinstance(sla_hours, (int, float))
+        and not isinstance(sla_hours, bool)
+        and sla_hours > 0
+    )
+    if require_contract and not valid_sla:
+        raise ValueError(
+            f"Catalog source {entry.key} requires positive freshness_sla_hours"
+        )
 
     if freshness_probe is not None:
         if not isinstance(freshness_probe, dict):
@@ -792,6 +811,15 @@ def _validate_freshness_metadata(entry: IngestionSourceCreate) -> None:
                 f"Catalog source {entry.key} freshness_field_candidate requires a "
                 "freshness_enforcement_hold"
             )
+        if require_contract and freshness_semantics not in {
+            "record_updated_at",
+            "dataset_refreshed_at",
+            "filing_event_at",
+        }:
+            raise ValueError(
+                f"Catalog source {entry.key} freshness_field_candidate requires "
+                "freshness_semantics"
+            )
         _validate_fetched_field(entry, candidate, "freshness_field_candidate")
         return
 
@@ -802,15 +830,27 @@ def _validate_freshness_metadata(entry: IngestionSourceCreate) -> None:
         )
 
     if freshness_field is None:
+        if freshness_semantics not in (None, "ingestion_observed_at"):
+            raise ValueError(
+                f"Catalog source {entry.key} without freshness_field must use "
+                "freshness_semantics ingestion_observed_at"
+            )
         return
     if not isinstance(freshness_field, str) or not freshness_field.strip():
         raise ValueError(
             f"Catalog source {entry.key} freshness_field must be a non-empty string"
         )
-    sla_hours = settings.get("freshness_sla_hours")
-    if not isinstance(sla_hours, (int, float)) or sla_hours <= 0:
+    if valid_sla is False:
         raise ValueError(
             f"Catalog source {entry.key} freshness_field requires positive freshness_sla_hours"
+        )
+    if require_contract and freshness_semantics not in {
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+    }:
+        raise ValueError(
+            f"Catalog source {entry.key} freshness_field requires freshness_semantics"
         )
     _validate_fetched_field(entry, freshness_field, "freshness_field")
 

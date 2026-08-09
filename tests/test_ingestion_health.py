@@ -224,6 +224,7 @@ def test_canary_accepts_recent_declared_freshness_field(db, monkeypatch):
         **source.settings,
         "freshness_field": "updated_at",
         "freshness_sla_hours": 24,
+        "freshness_semantics": "record_updated_at",
     }
     monkeypatch.setattr(
         "app.services.ingestion.health.build_connector",
@@ -250,6 +251,7 @@ def test_canary_fails_stale_declared_freshness_field(db, monkeypatch):
         **source.settings,
         "freshness_field": "updated_at",
         "freshness_sla_hours": 24,
+        "freshness_semantics": "record_updated_at",
     }
     monkeypatch.setattr(
         "app.services.ingestion.health.build_connector",
@@ -266,7 +268,33 @@ def test_canary_fails_stale_declared_freshness_field(db, monkeypatch):
 
     assert result.ok is False
     assert result.records_valid == 1
-    assert "Latest canary source watermark is 54.0 hours old" in result.errors[0]
+    assert "Latest canary publisher record update is 54.0 hours old" in result.errors[0]
+
+
+def test_canary_accepts_old_filing_event_from_quiet_source(db, monkeypatch):
+    source = _source(db)
+    now = datetime(2026, 7, 18, 12, tzinfo=timezone.utc)
+    source.settings = {
+        **source.settings,
+        "freshness_field": "filed_at",
+        "freshness_sla_hours": 24,
+        "freshness_semantics": "filing_event_at",
+    }
+    monkeypatch.setattr(
+        "app.services.ingestion.health.build_connector",
+        lambda adapter, config: FakeConnector([
+            {
+                "id": "quiet-filing",
+                "stage": "pre_approval",
+                "filed_at": "2026-06-01T12:00:00.000",
+            }
+        ]),
+    )
+
+    result = validate_source_canary(source, sample_size=1, now=now)
+
+    assert result.ok is True
+    assert result.errors == []
 
 
 def test_canary_freshness_probe_allows_stable_main_pagination(db, monkeypatch):
@@ -276,6 +304,7 @@ def test_canary_freshness_probe_allows_stable_main_pagination(db, monkeypatch):
         **source.settings,
         "freshness_field": "updated_at",
         "freshness_sla_hours": 24,
+        "freshness_semantics": "record_updated_at",
         "canary_freshness_probe": {
             "sample_size": 1,
             "connector": {"order_by": "updated_at DESC", "keyset_fields": []},
@@ -318,6 +347,7 @@ def test_canary_freshness_probe_fails_when_latest_rows_are_stale(db, monkeypatch
         **source.settings,
         "freshness_field": "updated_at",
         "freshness_sla_hours": 24,
+        "freshness_semantics": "record_updated_at",
         "canary_freshness_probe": {
             "sample_size": 1,
             "connector": {"order_by": "updated_at DESC", "keyset_fields": []},
@@ -346,7 +376,7 @@ def test_canary_freshness_probe_fails_when_latest_rows_are_stale(db, monkeypatch
     result = validate_source_canary(source, sample_size=1, now=now)
 
     assert result.ok is False
-    assert "freshness_probe: Latest canary source watermark is 54.0 hours old" in result.errors[0]
+    assert "freshness_probe: Latest canary publisher record update is 54.0 hours old" in result.errors[0]
 
 
 def test_canary_stage_probe_validates_targeted_lifecycle_records(db, monkeypatch):
@@ -498,6 +528,10 @@ def test_source_health_endpoint_is_tenant_scoped_and_serializable(client, db):
     assert response.json()["official_landing_page"] == "https://example.test/records"
     assert response.json()["attribution_required"] is True
     assert response.json()["share_alike_review_required"] is True
+    assert response.json()["freshness_sla_hours"] == 36
+    assert response.json()["freshness_sla_configured"] is False
+    assert response.json()["freshness_semantics"] == "ingestion_observed_at"
+    assert response.json()["source_watermark_enforced"] is False
     assert response.json()["status"] == "unknown"
 
 
@@ -631,7 +665,11 @@ def test_health_marks_recovered_source_degraded_for_historical_failures(db):
 def test_health_marks_stale_source_watermark_degraded(db):
     source = _source(db)
     now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)
-    source.settings = {**(source.settings or {}), "freshness_sla_hours": 24}
+    source.settings = {
+        **(source.settings or {}),
+        "freshness_sla_hours": 24,
+        "freshness_semantics": "record_updated_at",
+    }
     run = IngestionRun(
         organization_id="default-org",
         source_id=source.id,
@@ -661,7 +699,95 @@ def test_health_marks_stale_source_watermark_degraded(db):
 
     assert health.status == "degraded"
     assert health.source_lag_hours == 30
-    assert any("source watermark" in reason for reason in health.reasons)
+    assert health.freshness_sla_hours == 24
+    assert health.freshness_sla_configured is True
+    assert health.freshness_semantics == "record_updated_at"
+    assert health.freshness_label == "Publisher record update"
+    assert health.source_watermark_enforced is True
+    assert any("Publisher record update" in reason for reason in health.reasons)
+
+
+def test_health_does_not_treat_quiet_filing_activity_as_source_failure(db):
+    source = _source(db)
+    now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)
+    source.settings = {
+        **(source.settings or {}),
+        "freshness_sla_hours": 24,
+        "freshness_semantics": "filing_event_at",
+    }
+    run = IngestionRun(
+        organization_id="default-org",
+        source_id=source.id,
+        status="completed",
+        trigger="scheduled",
+        started_at=now - timedelta(hours=1),
+        completed_at=now - timedelta(minutes=55),
+        records_seen=1,
+        records_failed=0,
+    )
+    db.add(run)
+    db.flush()
+    db.add(RawSourceRecord(
+        organization_id="default-org",
+        source_id=source.id,
+        run_id=run.id,
+        external_record_id="quiet-filing",
+        record_type="permit",
+        content_hash="quiet-filing",
+        payload={"id": "quiet-filing"},
+        source_updated_at=now - timedelta(days=30),
+        received_at=now - timedelta(minutes=55),
+    ))
+    db.flush()
+
+    health = evaluate_source_health(db, source, now=now)
+
+    assert health.status == "healthy"
+    assert health.source_lag_hours == 720
+    assert health.freshness_label == "Latest filing event"
+    assert health.source_watermark_enforced is False
+
+
+def test_health_labels_legacy_and_invalid_custom_semantics_as_unclassified(db):
+    source = _source(db)
+    now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)
+    source.settings = {
+        **(source.settings or {}),
+        "freshness_field": "updated_at",
+        "freshness_sla_hours": 24,
+        "freshness_semantics": "publisher_magic_clock",
+    }
+    run = IngestionRun(
+        organization_id="default-org",
+        source_id=source.id,
+        status="completed",
+        trigger="scheduled",
+        started_at=now - timedelta(hours=1),
+        completed_at=now - timedelta(minutes=55),
+        records_seen=1,
+        records_failed=0,
+    )
+    db.add(run)
+    db.flush()
+    db.add(RawSourceRecord(
+        organization_id="default-org",
+        source_id=source.id,
+        run_id=run.id,
+        external_record_id="legacy",
+        record_type="permit",
+        content_hash="legacy",
+        payload={"id": "legacy"},
+        source_updated_at=now - timedelta(hours=30),
+        received_at=now - timedelta(minutes=55),
+    ))
+    db.flush()
+
+    health = evaluate_source_health(db, source, now=now)
+
+    assert health.status == "degraded"
+    assert health.freshness_semantics == "unclassified_source_timestamp"
+    assert health.freshness_label == "Unclassified publisher timestamp"
+    assert health.source_watermark_enforced is True
 
 
 def test_health_keeps_latest_failure_critical(db):

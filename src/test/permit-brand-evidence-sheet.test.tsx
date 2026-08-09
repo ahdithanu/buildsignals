@@ -29,7 +29,9 @@ describe("<PermitBrandEvidenceSheet>", () => {
           source_url: "https://example.gov/permit/2",
           payload_excerpt: { project_name: "Looped Retail Group" },
           received_age_hours: 2,
-          source_lag_hours: 3,
+          source_lag_hours: -2,
+          source_timestamp_semantics: "dataset_refreshed_at",
+          source_timestamp_label: "Publisher dataset refresh",
         },
         first_evidence: {
           raw_record_id: "raw-1",
@@ -43,6 +45,8 @@ describe("<PermitBrandEvidenceSheet>", () => {
           payload_excerpt: { project_name: "Looped Retail Group" },
           received_age_hours: 26,
           source_lag_hours: 27,
+          source_timestamp_semantics: "dataset_refreshed_at",
+          source_timestamp_label: "Publisher dataset refresh",
         },
         graph_context: [
           {
@@ -170,6 +174,11 @@ describe("<PermitBrandEvidenceSheet>", () => {
     fireEvent.click(screen.getByRole("button", { name: /evidence/i }));
 
     expect(screen.getByText("Graph Context")).toBeInTheDocument();
+    expect(screen.getAllByText("Snapshot captured").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Publisher dataset refresh").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Snapshot age").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Publisher dataset refresh age").length).toBeGreaterThan(0);
+    expect(screen.getByText("Clock skew detected")).toBeInTheDocument();
     expect(screen.getByText("Stealth inference")).toBeInTheDocument();
     expect(screen.getByText("Historical party inference")).toBeInTheDocument();
     expect(screen.getByText("Inferred from party fields")).toBeInTheDocument();

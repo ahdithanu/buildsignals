@@ -7,6 +7,8 @@
     "jurisdiction": "Austin, TX",
     "base_url": "https://data.austintexas.gov/resource/3syk-w9eu.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.austintexas.gov/d/3syk-w9eu",
       "license": "City of Austin Open Data Terms of Use",
       "refresh_frequency": "daily",
@@ -54,6 +56,8 @@
     "jurisdiction": "Seattle, WA",
     "base_url": "https://data.seattle.gov/resource/76t5-zqzr.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.seattle.gov/d/76t5-zqzr",
       "license": "Public Domain",
       "refresh_frequency": "daily",
@@ -469,6 +473,8 @@
     "jurisdiction": "Chicago, IL",
     "base_url": "https://data.cityofchicago.org/resource/ydr8-5enu.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.cityofchicago.org/d/ydr8-5enu",
       "license": "City of Chicago Data Portal Terms of Use",
       "refresh_frequency": "daily",
@@ -511,6 +517,8 @@
     "jurisdiction": "New York City, NY",
     "base_url": "https://data.cityofnewyork.us/resource/rbx6-tga4.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.cityofnewyork.us/d/rbx6-tga4",
       "license": "NYC Open Data Terms of Use",
       "refresh_frequency": "daily",
@@ -554,6 +562,8 @@
     "jurisdiction": "Austin, TX",
     "base_url": "https://data.austintexas.gov/resource/n8ck-xkda.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.austintexas.gov/d/n8ck-xkda",
       "license": "Public Domain U.S. Government",
       "refresh_frequency": "daily",
@@ -606,6 +616,7 @@
       "license": "NYC Open Data Terms of Use",
       "refresh_frequency": "daily",
       "freshness_field": "current_status_date",
+      "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 96,
       "canary_freshness_probe": {
         "sample_size": 5,
@@ -703,6 +714,8 @@
     "jurisdiction": "Austin, TX",
     "base_url": "https://data.austintexas.gov/resource/mavg-96ck.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.austintexas.gov/d/mavg-96ck",
       "license": "Public Domain",
       "refresh_frequency": "daily",
@@ -784,6 +797,8 @@
     "jurisdiction": "New York City, NY",
     "base_url": "https://data.cityofnewyork.us/resource/ic3t-wcy2.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.cityofnewyork.us/d/ic3t-wcy2",
       "license": "NYC Open Data Terms of Use",
       "refresh_frequency": "daily",
@@ -834,6 +849,8 @@
     "jurisdiction": "New Orleans, LA",
     "base_url": "https://data.nola.gov/resource/72f9-bi28.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.nola.gov/d/72f9-bi28",
       "license": "Creative Commons CC0 1.0 Universal (Public Domain Dedication)",
       "refresh_frequency": "daily",
@@ -962,6 +979,7 @@
       "refresh_frequency": "daily",
       "canary_required_fields": ["permit_number", "description", "street_name", "status", "data_loaded_at"],
       "freshness_field": "data_loaded_at",
+      "freshness_semantics": "dataset_refreshed_at",
       "freshness_sla_hours": 36,
       "reconciliation_mode": "keyset_incremental_with_periodic_full",
       "signal_stage": "pre_approval_and_approved",
@@ -1180,6 +1198,8 @@
     "jurisdiction": "Boulder, CO",
     "base_url": "https://services.arcgis.com/ePKBjXrBZ2vEEgWd/arcgis/rest/services/Construction_Permits/FeatureServer/0/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://open-data.bouldercolorado.gov/datasets/e3ff6248e4a547bcba31025d2c5c9fee",
       "license": "Creative Commons CC0 1.0 Universal (Public Domain Dedication)",
       "refresh_frequency": "daily",
@@ -1232,6 +1252,7 @@
       "attribution_required": true,
       "refresh_frequency": "as_needed_with_daily_canary",
       "freshness_field": "LASTUPDATE",
+      "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 720,
       "canary_freshness_probe": {
         "sample_size": 5,
@@ -1325,6 +1346,8 @@
     "jurisdiction": "Denver, CO",
     "base_url": "https://services1.arcgis.com/zdB7qR0BtYrg0Xpl/arcgis/rest/services/ODC_DEV_COMMERCIALCONSTPERMIT_P/FeatureServer/317/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=00050dc30e0d4b3794fd2e16bd244c27",
       "license": "Creative Commons Attribution 3.0 United States (CC BY 3.0 US)",
       "license_url": "https://creativecommons.org/licenses/by/3.0/us/",
@@ -1371,6 +1394,8 @@
     "jurisdiction": "Denver, CO",
     "base_url": "https://services1.arcgis.com/zdB7qR0BtYrg0Xpl/arcgis/rest/services/ODC_DEV_RESIDENTIALCONSTPERMIT_P/FeatureServer/316/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=00050dc30e0d4b3794fd2e16bd244c27",
       "license": "Creative Commons Attribution 3.0 United States (CC BY 3.0 US)",
       "license_url": "https://creativecommons.org/licenses/by/3.0/us/",
@@ -1417,6 +1442,8 @@
     "jurisdiction": "Denver, CO",
     "base_url": "https://services1.arcgis.com/zdB7qR0BtYrg0Xpl/arcgis/rest/services/ODC_DEV_DEMOLITIONPERMIT_P/FeatureServer/318/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=00050dc30e0d4b3794fd2e16bd244c27",
       "license": "Creative Commons Attribution 3.0 United States (CC BY 3.0 US)",
       "license_url": "https://creativecommons.org/licenses/by/3.0/us/",
@@ -1463,6 +1490,8 @@
     "jurisdiction": "Somerville, MA",
     "base_url": "https://data.somervillema.gov/resource/nneb-s3f7.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.somervillema.gov/d/nneb-s3f7",
       "license": "Open Data Commons Open Database License (ODbL) 1.0",
       "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
@@ -1517,6 +1546,8 @@
     "jurisdiction": "San Diego, CA",
     "base_url": "https://seshat.datasd.org/development_permits/approvals_created_2026_datasd.csv",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.sandiego.gov/datasets/development-permits/",
       "license": "Open Data Commons Public Domain Dedication and License (PDDL) 1.0",
       "license_url": "https://opendefinition.org/licenses/odc-pddl/",
@@ -1567,6 +1598,8 @@
     "jurisdiction": "Cleveland, OH",
     "base_url": "https://services3.arcgis.com/dty2kHktVXHrqO8i/arcgis/rest/services/Building_Permit_Application_Tasks/FeatureServer/0/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.clevelandohio.gov/api/search/v1/collections/all/items/cea944491b6042418cd316b1b5ea281b",
       "license": "Open Data Commons Open Database License (ODbL) 1.0",
       "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
@@ -1695,6 +1728,8 @@
     "jurisdiction": "Portland, OR",
     "base_url": "https://www.portlandmaps.com/arcgis/rest/services/Public/BDS_Permit/FeatureServer/22/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.portlandmaps.com/arcgis/rest/services/Public/BDS_Permit/FeatureServer/22",
       "license": "Open Data Commons Public Domain Dedication and License (PDDL) 1.0",
       "license_url": "https://opendatacommons.org/licenses/pddl/1-0/",
@@ -1745,6 +1780,8 @@
     "jurisdiction": "Pittsburgh, PA",
     "base_url": "https://data.wprdc.org/api/3/action/datastore_search",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.wprdc.org/dataset/pli-permits",
       "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
       "license_url": "https://creativecommons.org/licenses/by/4.0/",
@@ -1792,6 +1829,8 @@
     "jurisdiction": "Milwaukee, WI",
     "base_url": "https://data.milwaukee.gov/api/3/action/datastore_search",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.milwaukee.gov/dataset/buildingpermits",
       "license": "Creative Commons Attribution",
       "license_url": "https://opendefinition.org/licenses/cc-by/",
@@ -1839,6 +1878,8 @@
     "jurisdiction": "Minneapolis, MN",
     "base_url": "https://services.arcgis.com/afSMGVsC7QlRK1kZ/arcgis/rest/services/CCS_Permits/FeatureServer/0/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=91d7cc54f31a45b0982fca5117f16a0f",
       "license": "City of Minneapolis open data copyright waiver",
       "license_url": "https://www.minneapolismn.gov/government/charter-and-code-of-ordinances/city-policies/open-data-policy/",
@@ -1894,6 +1935,8 @@
     "jurisdiction": "St. Louis, MO",
     "base_url": "https://www.stlcitypermits.com/API/Occupancy/GetCommercialOccupancyInspections",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.stlouis-mo.gov/data/datasets/dataset.cfm?id=110",
       "license": "City of St. Louis public open data",
       "license_url": "https://dynamic.stlouis-mo.gov/opendata/terms.cfm",
@@ -1939,6 +1982,8 @@
     "jurisdiction": "Louisville / Jefferson County, KY",
     "base_url": "https://services1.arcgis.com/79kfd2K6fskCAkyg/arcgis/rest/services/active_construction_permits/FeatureServer/0/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=0251a88cefdc4ab3a0d85943074e6d7b",
       "license": "ODC Public Domain Dedication and License (PDDL) 1.0",
       "license_url": "https://louisville-metro-opendata-lojic.hub.arcgis.com/pages/terms-of-use-and-license",
@@ -1995,6 +2040,8 @@
     "jurisdiction": "Montgomery County, MD",
     "base_url": "https://data.montgomerycountymd.gov/resource/7ate-xrxm.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.montgomerycountymd.gov/d/7ate-xrxm",
       "license": "Public Domain",
       "refresh_frequency": "daily",
@@ -2108,6 +2155,8 @@
     "jurisdiction": "Henderson, NV",
     "base_url": "https://maps.cityofhenderson.com/arcgis/rest/services/public/OpenDevPermits/MapServer/2/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://maps.cityofhenderson.com/arcgis/rest/services/public/OpenDevPermits/MapServer/2",
       "license": "Public Domain under City of Henderson Open Data Policy",
       "license_url": "https://www.cityofhenderson.com/home/showpublisheddocument/4341/637477667739530000",
@@ -3522,6 +3571,7 @@
       "attribution_required": true,
       "refresh_frequency": "daily",
       "freshness_field": "DATAREFRESHEDON",
+      "freshness_semantics": "dataset_refreshed_at",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "CUSTOMERNUMBER", "LICENSESTATUS", "PREMISEADDRESS", "DATAREFRESHEDON"],
       "reconciliation_mode": "daily_recent_snapshot_with_monthly_full_snapshot",
@@ -6726,6 +6776,7 @@
       "refresh_frequency": "daily",
       "freshness_sla_hours": 96,
       "freshness_field_candidate": "refresh_time",
+      "freshness_semantics": "dataset_refreshed_at",
       "freshness_enforcement_hold": "Live publisher refresh_time observed on 2026-07-18 was 2026-07-12, exceeding the configured 96-hour SLA; keep refresh_time selected and required, but do not enforce it as freshness_field until the publisher currentness stabilizes.",
       "canary_required_fields": ["permit_nbr", "primary_address", "permit_sub_type", "status_desc", "submitted_date", "refresh_time"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -7089,6 +7140,7 @@
       "attribution_required": true,
       "refresh_frequency": "nightly_source_with_daily_canary",
       "freshness_field": "DATE_OPENED",
+      "freshness_semantics": "filing_event_at",
       "freshness_sla_hours": 720,
       "canary_freshness_probe": {
         "sample_size": 5,
@@ -7181,6 +7233,7 @@
       "attribution_required": true,
       "refresh_frequency": "daily",
       "freshness_field": "resultdttm",
+      "freshness_semantics": "filing_event_at",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["uniqueid", "reviewtype", "result", "resultdttm", "address", "prclid"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -7272,6 +7325,7 @@
       "attribution_required": true,
       "refresh_frequency": "daily",
       "freshness_field": "received_date",
+      "freshness_semantics": "filing_event_at",
       "freshness_sla_hours": 96,
       "canary_freshness_probe": {
         "sample_size": 5,
@@ -7434,6 +7488,7 @@
       "signal_stage": "pre_approval_and_approved",
       "reconciliation_mode": "daily_rolling_window_incremental",
       "freshness_field": "systemdate",
+      "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 168,
       "retailer_opening_signal": true,
       "opening_signal_date_field": "applicationdate",
@@ -7578,6 +7633,7 @@
       "signal_stage": "pre_approval_and_approved",
       "reconciliation_mode": "rss_recent_window",
       "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at",
       "freshness_sla_hours": 336,
       "record_filters": [
         {

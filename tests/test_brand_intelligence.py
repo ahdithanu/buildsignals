@@ -772,6 +772,8 @@ def test_nyc_dohmh_catalog_run_creates_preinspection_dba_brand_candidate(
     assert body["latest_evidence"]["external_record_id"] == "row-shake-shack"
     assert body["latest_evidence"]["received_age_hours"] >= 0
     assert body["latest_evidence"]["source_lag_hours"] is None
+    assert body["latest_evidence"]["source_timestamp_semantics"] == "ingestion_observed_at"
+    assert body["latest_evidence"]["source_timestamp_label"] == "Source timestamp"
     assert body["latest_evidence"]["payload_excerpt"]["dba"] == "SHAKE SHACK"
     assert body["latest_evidence"]["payload_excerpt"]["camis"] == "50199999"
     assert "phone" not in body["latest_evidence"]["payload_excerpt"]

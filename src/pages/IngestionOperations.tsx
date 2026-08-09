@@ -35,6 +35,7 @@ const candidateStatusStyles: Record<IngestionCandidate['status'], string> = {
 
 function ageLabel(hours?: number | null) {
   if (hours === null || hours === undefined) return 'No completed run';
+  if (hours < 0) return 'Clock skew detected';
   if (hours < 1) return 'Less than 1 hour ago';
   if (hours < 48) return `${Math.round(hours)} hours ago`;
   return `${Math.round(hours / 24)} days ago`;
@@ -122,6 +123,15 @@ function HealthRow({
       <div className="text-xs">
         <p className="font-medium text-foreground">{ageLabel(source.ingestion_age_hours)}</p>
         <p className="mt-0.5 text-muted-foreground">Last successful collection</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Collection SLA: {source.freshness_sla_hours ?? 36}h
+          {source.freshness_sla_configured === false ? ' (default)' : ''}
+        </p>
+        {source.freshness_semantics && source.freshness_semantics !== 'ingestion_observed_at' && (
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {source.freshness_label}: {source.source_watermark_enforced ? 'health signal' : 'activity context only'}
+          </p>
+        )}
       </div>
       <div className="text-xs">
         <p className="font-medium text-foreground">{failureLabel(source)}</p>

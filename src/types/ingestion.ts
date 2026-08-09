@@ -30,6 +30,11 @@ export interface SourceHealth {
   ingestion_age_hours?: number | null;
   source_watermark_at?: string | null;
   source_lag_hours?: number | null;
+  freshness_sla_hours?: number;
+  freshness_sla_configured?: boolean;
+  freshness_semantics?: 'record_updated_at' | 'dataset_refreshed_at' | 'filing_event_at' | 'ingestion_observed_at' | 'unclassified_source_timestamp';
+  freshness_label?: string;
+  source_watermark_enforced?: boolean;
   terminal_runs: number;
   unhealthy_runs: number;
   run_failure_rate?: number | null;

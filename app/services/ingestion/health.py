@@ -73,6 +73,11 @@ class SourceHealthResult:
     cursor_updated_at: datetime | None
     cursor_stalled: bool
     reasons: list[str]
+    freshness_sla_hours: float = 36.0
+    freshness_sla_configured: bool = False
+    freshness_semantics: str = "ingestion_observed_at"
+    freshness_label: str = "Collection observed"
+    source_watermark_enforced: bool = False
 
 
 @dataclass(frozen=True)
@@ -188,7 +193,36 @@ def evaluate_source_health(
         and all(run.checkpoint == partials[0].checkpoint for run in partials[1:])
     )
 
-    sla_hours = float((source.settings or {}).get("freshness_sla_hours", 36))
+    settings = source.settings or {}
+    configured_sla = settings.get("freshness_sla_hours")
+    freshness_sla_configured = isinstance(configured_sla, (int, float)) and not isinstance(
+        configured_sla, bool
+    ) and configured_sla > 0
+    sla_hours = float(configured_sla) if freshness_sla_configured else 36.0
+    configured_semantics = settings.get("freshness_semantics")
+    if configured_semantics in {
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+        "ingestion_observed_at",
+    }:
+        freshness_semantics = str(configured_semantics)
+    elif settings.get("freshness_field"):
+        freshness_semantics = "unclassified_source_timestamp"
+    else:
+        freshness_semantics = "ingestion_observed_at"
+    freshness_label = {
+        "record_updated_at": "Publisher record update",
+        "dataset_refreshed_at": "Publisher dataset refresh",
+        "filing_event_at": "Latest filing event",
+        "ingestion_observed_at": "Collection observed",
+        "unclassified_source_timestamp": "Unclassified publisher timestamp",
+    }.get(freshness_semantics, "Publisher timestamp")
+    source_watermark_enforced = freshness_semantics in {
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "unclassified_source_timestamp",
+    }
     critical_hours = max(48.0, sla_hours * 4 / 3)
     reasons: list[str] = []
     status = "healthy"
@@ -201,12 +235,17 @@ def evaluate_source_health(
     elif ingestion_age is not None and ingestion_age > sla_hours:
         status = "degraded"
         reasons.append(f"Latest successful ingestion exceeds the {sla_hours:g}-hour SLA")
-    if source_lag is not None and source_lag > critical_hours:
+    if source_watermark_enforced and source_lag is not None and source_lag > critical_hours:
         status = "critical"
-        reasons.append(f"Latest source watermark is {source_lag:.1f} hours old")
-    elif source_lag is not None and source_lag > sla_hours and status == "healthy":
+        reasons.append(f"{freshness_label} is {source_lag:.1f} hours old")
+    elif (
+        source_watermark_enforced
+        and source_lag is not None
+        and source_lag > sla_hours
+        and status == "healthy"
+    ):
         status = "degraded"
-        reasons.append(f"Latest source watermark exceeds the {sla_hours:g}-hour SLA")
+        reasons.append(f"{freshness_label} exceeds the {sla_hours:g}-hour SLA")
     if cursor_stalled:
         status = "critical"
         reasons.append("Checkpoint did not advance across three partial runs")
@@ -262,6 +301,11 @@ def evaluate_source_health(
         cursor_updated_at=cursor_run.completed_at if cursor_run else None,
         cursor_stalled=cursor_stalled,
         reasons=reasons,
+        freshness_sla_hours=sla_hours,
+        freshness_sla_configured=freshness_sla_configured,
+        freshness_semantics=freshness_semantics,
+        freshness_label=freshness_label,
+        source_watermark_enforced=source_watermark_enforced,
     )
 
 
@@ -701,9 +745,16 @@ def _freshness_errors(
     newest = max(_as_utc(value) for value in watermarks)
     lag_hours = _hours_between(now, newest)
     sla_hours = float(settings.get("freshness_sla_hours", 36))
+    freshness_label = {
+        "record_updated_at": "publisher record update",
+        "dataset_refreshed_at": "publisher dataset refresh",
+        "filing_event_at": "filing event",
+    }.get(str(settings.get("freshness_semantics")), "publisher timestamp")
+    if settings.get("freshness_semantics") == "filing_event_at":
+        return []
     if lag_hours > sla_hours:
         return [
-            f"{error_prefix}Latest canary source watermark is {lag_hours:.1f} "
+            f"{error_prefix}Latest canary {freshness_label} is {lag_hours:.1f} "
             f"hours old; exceeds the {sla_hours:g}-hour SLA"
         ]
     return []

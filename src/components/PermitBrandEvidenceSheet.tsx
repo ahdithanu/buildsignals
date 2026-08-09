@@ -34,6 +34,7 @@ function formatDateTime(value?: string | null) {
 
 function ageLabel(hours?: number | null) {
   if (hours === null || hours === undefined) return 'Unavailable';
+  if (hours < 0) return 'Clock skew detected';
   if (hours < 1) return 'Fresh this hour';
   if (hours < 48) return `${Math.round(hours)}h old`;
   return `${Math.round(hours / 24)}d old`;
@@ -122,13 +123,15 @@ function EvidenceBlock({ title, evidence }: { title: string; evidence: BrandMatc
         <div className="grid grid-cols-[112px_1fr] gap-x-3 gap-y-1">
           <span className="text-muted-foreground">Record</span>
           <span className="break-all text-foreground">{evidence.external_record_id}</span>
-          <span className="text-muted-foreground">Received</span>
+          <span className="text-muted-foreground">Snapshot captured</span>
           <span className="text-foreground">{formatDateTime(evidence.received_at)}</span>
-          <span className="text-muted-foreground">Source update</span>
+          <span className="text-muted-foreground">{evidence.source_timestamp_label || 'Publisher timestamp'}</span>
           <span className="text-foreground">{formatDateTime(evidence.source_updated_at)}</span>
-          <span className="text-muted-foreground">Received age</span>
+          <span className="text-muted-foreground">Snapshot age</span>
           <span className="text-foreground">{ageLabel(evidence.received_age_hours)}</span>
-          <span className="text-muted-foreground">Source lag</span>
+          <span className="text-muted-foreground">
+            {evidence.source_timestamp_label || 'Source timestamp'} age
+          </span>
           <span className="text-foreground">{ageLabel(evidence.source_lag_hours)}</span>
           <span className="text-muted-foreground">Hash</span>
           <span className="break-all font-mono text-[10px] text-muted-foreground">
