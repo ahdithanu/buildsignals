@@ -213,6 +213,8 @@ class BrandMatchRawEvidence(BaseModel):
     external_record_id: str
     content_hash: str
     received_at: datetime
+    last_observed_at: datetime
+    observation_recorded: bool = True
     source_updated_at: Optional[datetime]
     source_key: str
     source_name: str
@@ -231,6 +233,11 @@ class BrandMatchRawEvidence(BaseModel):
     @property
     def received_age_hours(self) -> Optional[float]:
         return _age_hours(self.received_at)
+
+    @computed_field
+    @property
+    def last_observed_age_hours(self) -> Optional[float]:
+        return _age_hours(self.last_observed_at)
 
     @computed_field
     @property

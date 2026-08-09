@@ -768,6 +768,13 @@ The same operations response includes jurisdiction, source license, and
 attribution/share-alike flags so reuse obligations remain visible during daily
 source operations instead of living only in catalog configuration.
 
+Raw source payloads remain immutable and content-addressed. Each raw version has
+a separate observation row whose `last_observed_at` advances when identical
+content is collected again. `received_at` therefore means the version's first
+capture, while `last_observed_at` means the latest successful observation of
+that exact version. This retains currentness without storing a duplicate raw
+payload for every unchanged nationwide collection.
+
 The Source Health page also shows a coverage footprint summary derived from
 the checked-in catalogs. It counts live sources, candidate sources, and the
 jurisdictions they cover so the expansion queue can be reviewed as a national

@@ -114,7 +114,8 @@ def upsert_parcel_snapshot(
         unchanged = next(
             (
                 fact for fact in current
-                if fact.raw_source_record_id == raw_record.id and fact.value == incoming.value
+                if fact.raw_source_record_id == raw_record.id
+                and fact.value == incoming.value
             ),
             None,
         )
@@ -138,7 +139,7 @@ def upsert_parcel_snapshot(
             confidence=incoming.confidence,
             observed_at=observed_at,
             last_verified_at=now,
-            valid_from=observed_at,
+            valid_from=now,
             is_current=True,
         ))
     db.flush()

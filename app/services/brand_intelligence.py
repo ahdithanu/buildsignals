@@ -735,7 +735,9 @@ def get_brand_match_evidence(
         joinedload(PermitBrandMatch.brand),
         joinedload(PermitBrandMatch.permit),
         joinedload(PermitBrandMatch.first_raw_record).joinedload(RawSourceRecord.source),
+        joinedload(PermitBrandMatch.first_raw_record).joinedload(RawSourceRecord.observation),
         joinedload(PermitBrandMatch.latest_raw_record).joinedload(RawSourceRecord.source),
+        joinedload(PermitBrandMatch.latest_raw_record).joinedload(RawSourceRecord.observation),
     ).filter(PermitBrandMatch.id == match_id).first()
     if match is None:
         return None
@@ -969,6 +971,10 @@ def _raw_evidence(
         external_record_id=raw.external_record_id,
         content_hash=raw.content_hash,
         received_at=raw.received_at,
+        last_observed_at=(
+            raw.observation.last_observed_at if raw.observation else raw.received_at
+        ),
+        observation_recorded=raw.observation is not None,
         source_updated_at=raw.source_updated_at,
         source_key=source.key,
         source_name=source.name,

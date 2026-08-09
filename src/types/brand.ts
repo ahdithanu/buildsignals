@@ -96,12 +96,15 @@ export interface BrandMatchRawEvidence {
   external_record_id: string;
   content_hash: string;
   received_at: string;
+  last_observed_at?: string;
+  observation_recorded?: boolean;
   source_updated_at?: string | null;
   source_key: string;
   source_name: string;
   source_url?: string | null;
   payload_excerpt: Record<string, string | number | boolean>;
   received_age_hours?: number | null;
+  last_observed_age_hours?: number | null;
   source_lag_hours?: number | null;
   source_timestamp_semantics?: 'record_updated_at' | 'dataset_refreshed_at' | 'filing_event_at' | 'ingestion_observed_at' | 'unclassified_source_timestamp';
   source_timestamp_label?: string;

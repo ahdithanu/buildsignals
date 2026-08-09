@@ -7,7 +7,11 @@ import app.services.ingestion.service as ingestion_service
 from app.models.audit_log import AuditLog
 from app.models.brand import PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
-from app.models.ingestion import IngestionSource, RawSourceRecord
+from app.models.ingestion import (
+    IngestionSource,
+    RawSourceRecord,
+    RawSourceRecordObservation,
+)
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
@@ -1021,6 +1025,8 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert db.query(GraphRelationshipEvidence).filter(
         GraphRelationshipEvidence.relationship_id == owner_relationship.id
     ).count() == 1
+    first_observed_at = db.query(RawSourceRecordObservation).one().last_observed_at
+    first_raw_id = db.query(RawSourceRecord).one().id
 
     unchanged = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
     assert unchanged.status_code == 201, unchanged.text
@@ -1031,6 +1037,55 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert len(relationships) == 1
     assert relationships[0].id == owner_relationship.id
     assert relationships[0].is_current is True
+    assert db.query(RawSourceRecord).count() == 1
+    assert db.query(RawSourceRecordObservation).count() == 1
+    assert (
+        db.query(RawSourceRecordObservation).one().last_observed_at
+        > first_observed_at
+    )
+
+    csv_path.write_text(
+        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,900000,100000,Replacement Owner LLC\n"
+    )
+    changed = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert changed.status_code == 201, changed.text
+    assert changed.json()["records_updated"] == 1
+    assert db.query(RawSourceRecord).count() == 2
+    assert db.query(RawSourceRecordObservation).count() == 2
+    assert db.query(ParcelFact).filter(
+        ParcelFact.fact_type == "ownership",
+        ParcelFact.is_current.is_(True),
+    ).one().value["owner_name"] == "Replacement Owner LLC"
+
+    csv_path.write_text(
+        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,900000,100000,Original Owner LLC\n"
+    )
+    reverted = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert reverted.status_code == 201, reverted.text
+    assert reverted.json()["records_updated"] == 1
+    db.expire_all()
+    parcel = db.query(ParcelRecord).one()
+    assert parcel.latest_raw_record_id == first_raw_id
+    current_ownership = db.query(ParcelFact).filter(
+        ParcelFact.fact_type == "ownership",
+        ParcelFact.is_current.is_(True),
+    ).one()
+    assert current_ownership.raw_source_record_id == first_raw_id
+    assert current_ownership.value["owner_name"] == "Original Owner LLC"
+    ownership_versions = db.query(ParcelFact).filter(
+        ParcelFact.fact_type == "ownership"
+    ).order_by(ParcelFact.valid_from.asc()).all()
+    assert len(ownership_versions) == 3
+    assert ownership_versions[0].raw_source_record_id == first_raw_id
+    assert ownership_versions[0].valid_to is not None
+    assert ownership_versions[1].valid_to is not None
+    assert ownership_versions[2].raw_source_record_id == first_raw_id
+    assert ownership_versions[2].valid_to is None
+    assert ownership_versions[2].is_current is True
+    assert db.query(RawSourceRecord).count() == 2
+    assert db.query(RawSourceRecordObservation).count() == 2
 
     csv_path.write_text(
         "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
