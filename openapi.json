@@ -40,6 +40,252 @@
         "title": "AIInsight",
         "type": "object"
       },
+      "AcquisitionRadarItemResponse": {
+        "properties": {
+          "appearance_count": {
+            "title": "Appearance Count",
+            "type": "integer"
+          },
+          "assigned_to_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To Name"
+          },
+          "assigned_to_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To User Id"
+          },
+          "best_candidate_score": {
+            "title": "Best Candidate Score",
+            "type": "number"
+          },
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "cautions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cautions",
+            "type": "array"
+          },
+          "latest_signal_at": {
+            "format": "date-time",
+            "title": "Latest Signal At",
+            "type": "string"
+          },
+          "opportunity_count": {
+            "title": "Opportunity Count",
+            "type": "integer"
+          },
+          "parcel": {
+            "$ref": "#/components/schemas/ParcelSummaryResponse"
+          },
+          "personas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Personas",
+            "type": "array"
+          },
+          "radar_score": {
+            "title": "Radar Score",
+            "type": "number"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
+          "score_confidence": {
+            "title": "Score Confidence",
+            "type": "number"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/AcquisitionRadarSignalResponse"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "parcel",
+          "candidate_id",
+          "radar_score",
+          "best_candidate_score",
+          "score_confidence",
+          "appearance_count",
+          "opportunity_count",
+          "personas",
+          "review_status",
+          "latest_signal_at",
+          "reasons",
+          "cautions",
+          "signals"
+        ],
+        "title": "AcquisitionRadarItemResponse",
+        "type": "object"
+      },
+      "AcquisitionRadarResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AcquisitionRadarItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/AcquisitionRadarSummaryResponse"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "summary"
+        ],
+        "title": "AcquisitionRadarResponse",
+        "type": "object"
+      },
+      "AcquisitionRadarSignalResponse": {
+        "properties": {
+          "approval_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Stage"
+          },
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "candidate_score": {
+            "title": "Candidate Score",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deal_id": {
+            "title": "Deal Id",
+            "type": "string"
+          },
+          "deal_name": {
+            "title": "Deal Name",
+            "type": "string"
+          },
+          "distance_miles": {
+            "title": "Distance Miles",
+            "type": "number"
+          },
+          "persona": {
+            "title": "Persona",
+            "type": "string"
+          },
+          "search_id": {
+            "title": "Search Id",
+            "type": "string"
+          },
+          "signal_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Confidence"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "search_id",
+          "deal_id",
+          "deal_name",
+          "persona",
+          "distance_miles",
+          "candidate_score",
+          "created_at"
+        ],
+        "title": "AcquisitionRadarSignalResponse",
+        "type": "object"
+      },
+      "AcquisitionRadarSummaryResponse": {
+        "properties": {
+          "assigned_parcels": {
+            "title": "Assigned Parcels",
+            "type": "integer"
+          },
+          "multi_opportunity_parcels": {
+            "title": "Multi Opportunity Parcels",
+            "type": "integer"
+          },
+          "shortlisted_parcels": {
+            "title": "Shortlisted Parcels",
+            "type": "integer"
+          },
+          "state_count": {
+            "title": "State Count",
+            "type": "integer"
+          },
+          "total_parcels": {
+            "title": "Total Parcels",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_parcels",
+          "shortlisted_parcels",
+          "multi_opportunity_parcels",
+          "assigned_parcels",
+          "state_count"
+        ],
+        "title": "AcquisitionRadarSummaryResponse",
+        "type": "object"
+      },
       "ActivityCreate": {
         "properties": {
           "activity_type": {
@@ -8845,6 +9091,149 @@
         "summary": "Prometheus Metrics",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/acquisition-radar": {
+      "get": {
+        "operationId": "get_acquisition_radar_v1_acquisition_radar_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "persona",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(developer|broker|realtor)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Persona"
+            }
+          },
+          {
+            "in": "query",
+            "name": "review_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(candidate|shortlisted|dismissed)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Review Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(assigned|unassigned)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assignment"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcquisitionRadarResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Acquisition Radar",
+        "tags": [
+          "nearby parcels"
         ]
       }
     },
