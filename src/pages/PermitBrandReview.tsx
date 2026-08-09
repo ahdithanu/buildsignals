@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import type {
   BrandDetectionMethod,
+  BrandMatchFreshness,
   BrandMatchApprovalStage,
   BrandMatchReviewStatus,
   PermitBrandMatchListParams,
@@ -26,6 +27,7 @@ import type {
 type StatusFilter = BrandMatchReviewStatus | 'all';
 type StageFilter = BrandMatchApprovalStage | 'all';
 type MethodFilter = BrandDetectionMethod | 'all';
+type FreshnessFilter = BrandMatchFreshness | 'all';
 
 const statusFilters: Array<{ value: StatusFilter; label: string }> = [
   { value: 'candidate', label: 'Needs review' },
@@ -62,6 +64,12 @@ function parseLimitFilter(value: string | null): number {
   return limitOptions.includes(parsed) ? parsed : 100;
 }
 
+function parseFreshnessFilter(value: string | null): FreshnessFilter {
+  return value === 'fresh' || value === 'active' || value === 'aging' || value === 'stale'
+    ? value
+    : 'all';
+}
+
 function LinkCard({ href, label, value }: { href: string; label: string; value: number }) {
   return (
     <Link
@@ -80,6 +88,7 @@ export default function PermitBrandReview() {
   const [status, setStatus] = useState<StatusFilter>(() => parseStatusFilter(searchParams.get('status')));
   const [stage, setStage] = useState<StageFilter>(() => parseStageFilter(searchParams.get('stage')));
   const [method, setMethod] = useState<MethodFilter>(() => parseMethodFilter(searchParams.get('detection_method')));
+  const [freshness, setFreshness] = useState<FreshnessFilter>(() => parseFreshnessFilter(searchParams.get('freshness')));
   const [limit, setLimit] = useState(() => parseLimitFilter(searchParams.get('limit')));
   const { toast } = useToast();
   const { role } = useAuth();
@@ -89,6 +98,7 @@ export default function PermitBrandReview() {
     setStatus(parseStatusFilter(searchParams.get('status')));
     setStage(parseStageFilter(searchParams.get('stage')));
     setMethod(parseMethodFilter(searchParams.get('detection_method')));
+    setFreshness(parseFreshnessFilter(searchParams.get('freshness')));
     setLimit(parseLimitFilter(searchParams.get('limit')));
   }, [searchParams]);
 
@@ -96,8 +106,10 @@ export default function PermitBrandReview() {
     review_status: status === 'all' ? undefined : status,
     approval_stage: stage === 'all' ? undefined : stage,
     detection_method: method === 'all' ? undefined : method,
+    freshness: freshness === 'all' ? undefined : freshness,
+    sort_by: 'freshness',
     limit,
-  }), [status, stage, method, limit]);
+  }), [status, stage, method, freshness, limit]);
 
   const { data, isLoading, isFetching, error, refetch, review, createOpportunity } = usePermitBrandMatchQueue(params);
   const matches = data ?? [];
@@ -113,19 +125,22 @@ export default function PermitBrandReview() {
     params.set('status', status === 'all' ? 'candidate' : status);
     params.set('stage', nextStage);
     if (method !== 'all') params.set('detection_method', method);
+    if (freshness !== 'all') params.set('freshness', freshness);
     params.set('limit', String(limit));
     return `/permit-review?${params.toString()}`;
   };
 
-  const syncQueryParams = (next: Partial<{ status: StatusFilter; stage: StageFilter; method: MethodFilter; limit: number }>) => {
+  const syncQueryParams = (next: Partial<{ status: StatusFilter; stage: StageFilter; method: MethodFilter; freshness: FreshnessFilter; limit: number }>) => {
     const nextStatus = next.status ?? status;
     const nextStage = next.stage ?? stage;
     const nextMethod = next.method ?? method;
+    const nextFreshness = next.freshness ?? freshness;
     const nextLimit = next.limit ?? limit;
     const params = new URLSearchParams();
     if (nextStatus !== 'candidate') params.set('status', nextStatus);
     if (nextStage !== 'all') params.set('stage', nextStage);
     if (nextMethod !== 'all') params.set('detection_method', nextMethod);
+    if (nextFreshness !== 'all') params.set('freshness', nextFreshness);
     if (nextLimit !== 100) params.set('limit', String(nextLimit));
     setSearchParams(params, { replace: true });
   };
@@ -251,6 +266,25 @@ export default function PermitBrandReview() {
 
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="hidden h-4 w-4 text-muted-foreground sm:block" />
+            <Select
+              value={freshness}
+              onValueChange={(value) => {
+                const nextFreshness = value as FreshnessFilter;
+                setFreshness(nextFreshness);
+                syncQueryParams({ freshness: nextFreshness });
+              }}
+            >
+              <SelectTrigger className="h-8 w-[142px] text-xs" aria-label="Signal freshness">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All activity</SelectItem>
+                <SelectItem value="fresh">Fresh: 0-30d</SelectItem>
+                <SelectItem value="active">Active: 31-90d</SelectItem>
+                <SelectItem value="aging">Aging: 91-180d</SelectItem>
+                <SelectItem value="stale">Dormant: 180d+</SelectItem>
+              </SelectContent>
+            </Select>
             <Select
               value={stage}
               onValueChange={(value) => {

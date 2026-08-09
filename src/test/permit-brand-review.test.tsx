@@ -128,7 +128,33 @@ describe("<PermitBrandReview>", () => {
     expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({
       approval_stage: "approved",
       review_status: "candidate",
+      sort_by: "freshness",
       limit: 100,
+    });
+  });
+
+  it("honors the freshness filter and requests freshness ranking", () => {
+    (usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      isFetching: false,
+      refetch: vi.fn(),
+      review: { isPending: false, mutate: vi.fn(), variables: undefined },
+      createOpportunity: { isPending: false, mutate: vi.fn(), variables: undefined },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/permit-review?freshness=stale"]}>
+        <PermitBrandReview />
+      </MemoryRouter>,
+    );
+
+    const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
+    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({
+      freshness: "stale",
+      sort_by: "freshness",
+      review_status: "candidate",
     });
   });
 

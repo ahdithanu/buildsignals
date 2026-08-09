@@ -32,6 +32,13 @@ const statusStyles: Record<BrandMatchReviewStatus, string> = {
   retracted: 'border-red-200 bg-red-50 text-red-700',
 };
 
+const freshnessStyles = {
+  fresh: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  active: 'border-sky-200 bg-sky-50 text-sky-800',
+  aging: 'border-amber-200 bg-amber-50 text-amber-800',
+  stale: 'border-border bg-secondary text-muted-foreground',
+};
+
 function formatDate(value?: string | null) {
   if (!value) return 'Filing date unavailable';
   const date = new Date(value);
@@ -86,6 +93,14 @@ export function PermitBrandMatchRow({
                 Stealth inference
               </span>
             )}
+            {match.freshness && (
+              <span className={cn(
+                'rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
+                freshnessStyles[match.freshness],
+              )}>
+                {match.freshness_label}
+              </span>
+            )}
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -101,6 +116,9 @@ export function PermitBrandMatchRow({
               <CalendarDays className="h-3.5 w-3.5" />
               {formatDate(match.permit.filed_at)}
             </span>
+            {match.permit.last_observed_at && (
+              <span>Last observed {formatDate(match.permit.last_observed_at)}</span>
+            )}
           </div>
 
           <blockquote className="mt-3 border-l-2 border-accent bg-secondary/50 px-3 py-2 text-sm leading-5 text-foreground">
@@ -111,6 +129,9 @@ export function PermitBrandMatchRow({
             <span>{Math.round(match.confidence * 100)}% confidence</span>
             <span title={match.signal_quality_note}>{match.signal_quality_label}</span>
             <span>{match.detection_method === 'historical_party' ? 'Historical party match' : 'Direct alias match'}</span>
+            {typeof match.signal_age_days === 'number' && (
+              <span>{match.signal_age_days === 0 ? 'Filed today' : `${match.signal_age_days} days since activity`}</span>
+            )}
             <span>Alias: {match.matched_alias}</span>
             <span>Matched in {match.matched_fields.length > 0 ? match.matched_fields.join(', ').replace(/_/g, ' ') : match.matched_field.replace(/_/g, ' ')}</span>
             {permitDetail && (

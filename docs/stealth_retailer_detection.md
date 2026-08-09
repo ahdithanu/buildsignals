@@ -42,6 +42,12 @@ The resulting `PermitBrandMatch` stores `historical_parties` as the matched fiel
 
 `GET /permit-brand-matches` accepts `detection_method=direct_alias|historical_party`. Responses expose the computed detection method and label historical matches as `Stealth party inference`. The existing Permit Brand Review page adds Direct and Stealth filters, a stealth count, row badges, and detailed inference rules in the evidence sheet.
 
+### Signal freshness
+
+Retailer-match responses expose a freshness date, age in days, tier, and label. The date uses the permit's source-reported status update when available, then the filing date, then the first detection timestamp. This prevents a routine ingestion refresh from making an old filing look new.
+
+The review queue groups lifecycle activity into broad bands, then ranks confidence within each band. It shows `Fresh filing` (0-30 days), `Active filing` (31-90), `Aging filing` (91-180), or `Dormant filing` (over 180 days). Responses separately expose the permit's last-observed timestamp, so an old filing that remains published is not presented as a new event or confused with source health. Freshness is an operational ranking signal only: it does not reduce stored confidence, rewrite evidence, retract a relationship, or override a human confirmation.
+
 ## Tradeoffs And Scaling Path
 
 Materializing fingerprints adds a small write cost when reviewers change a decision, but keeps nationwide ingestion reads indexed and bounded. State scoping is intentionally conservative and may miss a highly distinctive national team operating in a new state.

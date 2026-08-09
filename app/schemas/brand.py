@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -63,6 +63,8 @@ class BrandPermitSummary(BaseModel):
     latitude: Optional[float]
     longitude: Optional[float]
     filed_at: Optional[datetime]
+    status_updated_at: Optional[datetime]
+    last_observed_at: datetime = Field(validation_alias="last_seen_at")
     source_url: Optional[str]
 
 
@@ -139,6 +141,50 @@ class PermitBrandMatchResponse(BaseModel):
             "historical_party": "Multiple project parties repeat a distinctive pattern from human-confirmed brand permits.",
         }
         return notes[self.signal_quality]
+
+    @computed_field
+    @property
+    def freshness_date(self) -> datetime:
+        future_limit = datetime.now(timezone.utc) + timedelta(days=1)
+        for value in (self.permit.status_updated_at, self.permit.filed_at):
+            if value is None:
+                continue
+            timestamp = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+            if timestamp.astimezone(timezone.utc) <= future_limit:
+                return value
+        return self.first_seen_at
+
+    @computed_field
+    @property
+    def signal_age_days(self) -> int:
+        value = self.freshness_date
+        timestamp = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - timestamp.astimezone(timezone.utc)
+        return max(0, age.days)
+
+    @computed_field
+    @property
+    def freshness(self) -> Literal["fresh", "active", "aging", "stale"]:
+        value = self.freshness_date
+        timestamp = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - timestamp.astimezone(timezone.utc)
+        if age <= timedelta(days=30):
+            return "fresh"
+        if age <= timedelta(days=90):
+            return "active"
+        if age <= timedelta(days=180):
+            return "aging"
+        return "stale"
+
+    @computed_field
+    @property
+    def freshness_label(self) -> str:
+        return {
+            "fresh": "Fresh filing",
+            "active": "Active filing",
+            "aging": "Aging filing",
+            "stale": "Dormant filing",
+        }[self.freshness]
 
 
 class PermitBrandMatchReview(BaseModel):
