@@ -45,6 +45,9 @@ def get_permit_brand_matches(
     approval_stage: str | None = Query(
         default=None, pattern=r"^(pre_approval|approved)$"
     ),
+    detection_method: str | None = Query(
+        default=None, pattern=r"^(direct_alias|historical_party)$"
+    ),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
@@ -52,6 +55,7 @@ def get_permit_brand_matches(
         db,
         review_status=review_status,
         approval_stage=approval_stage,
+        detection_method=detection_method,
         limit=limit,
     )
 

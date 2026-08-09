@@ -97,6 +97,10 @@ Two important projected sources now feed that context:
 - Confirmed opportunity creation and confirmation now seed nearby parcel
   searches when a geocoded signal is available, and the API returns that
   parcel context immediately instead of hiding it behind a second user action.
+- Human-confirmed direct brand matches also build state-scoped project-party
+  fingerprints. Two independent repeated parties can surface an unnamed filing
+  as a conservative stealth-retailer candidate; the scoring and safeguards are
+  documented in `docs/stealth_retailer_detection.md`.
 
 The graph context route also backfills existing deal contacts on read, so older opportunities pick up contact-derived graph nodes even if the contact predates the projection logic.
 

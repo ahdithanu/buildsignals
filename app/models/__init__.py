@@ -30,7 +30,12 @@ from app.models.ingestion import (  # noqa
     RawSourceRecord,
     SourceFieldMapping,
 )
-from app.models.brand import BrandAlias, BrandProfile, PermitBrandMatch  # noqa
+from app.models.brand import (  # noqa
+    BrandAlias,
+    BrandPartyFingerprint,
+    BrandProfile,
+    PermitBrandMatch,
+)
 from app.models.parcel import (  # noqa
     NearbyParcelCandidate,
     NearbyParcelSearch,

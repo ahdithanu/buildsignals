@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import app.services.ingestion.service as ingestion_service
-from app.models.brand import BrandAlias, BrandProfile, PermitBrandMatch
+from app.models.brand import BrandAlias, BrandPartyFingerprint, BrandProfile, PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
 from app.models.ingestion import PermitRecord
 from app.models.parcel import NearbyParcelSearch
@@ -40,6 +40,8 @@ def _source_payload(csv_path: str, key: str = "retail_filings") -> dict:
         "state": "state",
         "parcel": "parcel_id",
         "filed": "filed_at",
+        "contractor": "contractor_name",
+        "architect": "architect_name",
     }
     return {
         "key": key,
@@ -62,11 +64,13 @@ def _write_filing(
     project: str = "Coffee tenant improvement",
     description: str = "Interior retail build-out for Starbucks Coffee",
     owner: str = "",
+    contractor: str = "",
+    architect: str = "",
     stage: str = "pre_approval",
 ) -> None:
     path.write_text(
-        "id,application_no,stage,type,status,project,description,address,city,state,parcel,filed,owner\n"
-        f'1,APP-1,{stage},Commercial Retail,Under Review,"{project}","{description}",100 Main St,Austin,TX,P-1,2026-07-01,"{owner}"\n'
+        "id,application_no,stage,type,status,project,description,address,city,state,parcel,filed,owner,contractor,architect\n"
+        f'1,APP-1,{stage},Commercial Retail,Under Review,"{project}","{description}",100 Main St,Austin,TX,P-1,2026-07-01,"{owner}","{contractor}","{architect}"\n'
     )
 
 
@@ -158,6 +162,98 @@ def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, db, t
     assert db.query(GraphRelationship).filter(
         GraphRelationship.attributes["brand_match_id"].as_string() == match.id
     ).one().is_current is False
+
+
+def test_confirmed_party_history_detects_unnamed_stealth_retailer(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+
+    for index in range(2):
+        csv_path = tmp_path / f"confirmed-starbucks-{index}.csv"
+        _write_filing(
+            csv_path,
+            description="Starbucks coffee tenant improvement",
+            contractor="Northstar Retail Builders",
+            architect="Studio Twenty One",
+        )
+        _ingest(client, csv_path, key=f"confirmed_starbucks_{index}")
+        match = db.query(PermitBrandMatch).filter(
+            PermitBrandMatch.matched_field == "description",
+            PermitBrandMatch.review_status == "candidate",
+        ).one()
+        response = client.patch(
+            f"/permit-brand-matches/{match.id}", json={"review_status": "confirmed"}
+        )
+        assert response.status_code == 200, response.text
+
+    fingerprints = db.query(BrandPartyFingerprint).filter(
+        BrandPartyFingerprint.evidence_count == 2,
+        BrandPartyFingerprint.is_active.is_(True),
+    ).all()
+    assert {row.party_type for row in fingerprints} >= {"contractor_name", "architect_name"}
+    assert all(len(row.source_match_ids) == 2 for row in fingerprints)
+
+    stealth_path = tmp_path / "unnamed-retailer.csv"
+    _write_filing(
+        stealth_path,
+        project="Confidential tenant improvement",
+        description="Retail tenant build out with drive-through service",
+        contractor="Northstar Retail Builders",
+        architect="Studio Twenty One",
+    )
+    _ingest(client, stealth_path, key="unnamed_retailer")
+
+    inferred = db.query(PermitBrandMatch).filter(
+        PermitBrandMatch.matched_field == "historical_parties"
+    ).one()
+    assert inferred.brand.key == "starbucks"
+    assert inferred.detector_version == "stealth-retailer-v1"
+    assert inferred.confidence < 0.90
+    assert inferred.matched_fields == ["architect_name", "contractor_name"]
+    assert "multiple_independent_parties" in inferred.rule_ids
+
+    listed = client.get(
+        "/permit-brand-matches?detection_method=historical_party&review_status=candidate"
+    )
+    assert listed.status_code == 200, listed.text
+    assert [row["id"] for row in listed.json()] == [inferred.id]
+    assert listed.json()[0]["detection_method"] == "historical_party"
+    assert listed.json()[0]["signal_quality"] == "historical_party"
+
+    evidence = client.get(f"/permit-brand-matches/{inferred.id}/evidence")
+    assert evidence.status_code == 200, evidence.text
+    history = evidence.json()["inference_evidence"]
+    assert {row["party_type"] for row in history} == {"architect_name", "contractor_name"}
+    assert all(row["evidence_count"] == 2 for row in history)
+    assert all(len(row["source_match_ids"]) == 2 for row in history)
+
+
+def test_single_historical_party_never_surfaces_prediction(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    brand = db.query(BrandProfile).filter(BrandProfile.key == "starbucks").one()
+    db.add(BrandPartyFingerprint(
+        organization_id="default-org",
+        brand_id=brand.id,
+        party_type="contractor_name",
+        normalized_name="northstar retail builders",
+        display_name="Northstar Retail Builders",
+        state="TX",
+        evidence_count=4,
+        source_match_ids=["one", "two", "three", "four"],
+        confidence=0.84,
+    ))
+    db.commit()
+
+    csv_path = tmp_path / "one-party-only.csv"
+    _write_filing(
+        csv_path,
+        project="Confidential retail tenant",
+        description="Retail tenant build out",
+        contractor="Northstar Retail Builders",
+    )
+    _ingest(client, csv_path, key="one_party_only")
+    assert db.query(PermitBrandMatch).count() == 0
 
 
 def test_expanded_catalog_detects_named_preapproval_retailers(client, db, tmp_path):

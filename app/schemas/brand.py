@@ -91,7 +91,14 @@ class PermitBrandMatchResponse(BaseModel):
 
     @computed_field
     @property
+    def detection_method(self) -> str:
+        return "historical_party" if self.matched_field == "historical_parties" else "direct_alias"
+
+    @computed_field
+    @property
     def signal_quality(self) -> str:
+        if self.matched_field == "historical_parties":
+            return "historical_party"
         if self.matched_field == "project_name" and self.permit.permit_type == "Restaurant permit applicant":
             return "applicant_dba"
         if self.matched_field == "project_name":
@@ -108,6 +115,7 @@ class PermitBrandMatchResponse(BaseModel):
             "direct_project_name": "Direct project name",
             "description_context": "Description context",
             "supporting_context": "Supporting context",
+            "historical_party": "Stealth party inference",
         }
         return labels[self.signal_quality]
 
@@ -119,6 +127,7 @@ class PermitBrandMatchResponse(BaseModel):
             "direct_project_name": "Brand appears in the project or business name field.",
             "description_context": "Brand appears in work-description text and needs human review.",
             "supporting_context": "Brand appears in a supporting permit context field.",
+            "historical_party": "Multiple project parties repeat a distinctive pattern from human-confirmed brand permits.",
         }
         return notes[self.signal_quality]
 
@@ -194,6 +203,16 @@ class BrandMatchGraphContext(BaseModel):
     evidence_preview: Optional[EvidencePreview] = None
 
 
+class BrandPartyFingerprintEvidence(BaseModel):
+    party_type: str
+    display_name: str
+    state: Optional[str]
+    evidence_count: int
+    source_match_ids: list[str] = Field(default_factory=list)
+    confidence: float
+    last_verified_at: datetime
+
+
 class PermitBrandMatchEvidenceResponse(BaseModel):
     id: str
     brand: BrandProfileResponse
@@ -209,12 +228,14 @@ class PermitBrandMatchEvidenceResponse(BaseModel):
     signal_quality_note: str
     rule_ids: list[str] = Field(default_factory=list)
     detector_version: str
+    detection_method: Literal["direct_alias", "historical_party"]
     first_seen_at: datetime
     last_seen_at: datetime
     linked_deals: list[LinkedDealSummary] = Field(default_factory=list)
     first_evidence: BrandMatchRawEvidence
     latest_evidence: BrandMatchRawEvidence
     graph_context: list[BrandMatchGraphContext] = Field(default_factory=list)
+    inference_evidence: list[BrandPartyFingerprintEvidence] = Field(default_factory=list)
 
 
 def _age_hours(value: Optional[datetime]) -> Optional[float]:

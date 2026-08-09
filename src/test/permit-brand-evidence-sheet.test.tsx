@@ -77,6 +77,17 @@ describe("<PermitBrandEvidenceSheet>", () => {
             last_verified_at: "2026-07-23T12:00:00Z",
           },
         ],
+        inference_evidence: [
+          {
+            party_type: "contractor_name",
+            display_name: "Northstar Retail Builders",
+            state: "TX",
+            evidence_count: 3,
+            source_match_ids: ["match-1", "match-2", "match-3"],
+            confidence: 0.8,
+            last_verified_at: "2026-07-23T12:00:00Z",
+          },
+        ],
       },
       isLoading: false,
       error: null,
@@ -126,14 +137,15 @@ describe("<PermitBrandEvidenceSheet>", () => {
             review_status: "candidate",
             confidence: 0.93,
             matched_alias: "Looped Retail Group",
-            matched_field: "project_name",
-            matched_fields: ["project_name"],
-            rule_ids: ["exact_alias"],
+            matched_field: "historical_parties",
+            matched_fields: ["contractor_name", "architect_name"],
+            rule_ids: ["historical_party_overlap", "stable_location"],
             excerpt: "Looped Retail Group permit filing",
-            detector_version: "brand-alias-v1",
-            signal_quality: "direct_project_name",
-            signal_quality_label: "Direct project name",
-            signal_quality_note: "Brand appears in the project or business name field.",
+            detector_version: "stealth-retailer-v1",
+            detection_method: "historical_party",
+            signal_quality: "historical_party",
+            signal_quality_label: "Historical party",
+            signal_quality_note: "Parties on this filing have prior brand history.",
             first_seen_at: "2026-07-22T12:00:00Z",
             last_seen_at: "2026-07-23T12:00:00Z",
             linked_deals: [{ id: "deal-1", name: "Signal Site" }],
@@ -158,6 +170,15 @@ describe("<PermitBrandEvidenceSheet>", () => {
     fireEvent.click(screen.getByRole("button", { name: /evidence/i }));
 
     expect(screen.getByText("Graph Context")).toBeInTheDocument();
+    expect(screen.getByText("Stealth inference")).toBeInTheDocument();
+    expect(screen.getByText("Historical party inference")).toBeInTheDocument();
+    expect(screen.getByText("Inferred from party fields")).toBeInTheDocument();
+    expect(screen.getAllByText("contractor name, architect name").length).toBeGreaterThan(0);
+    expect(screen.getByText("Inference rules")).toBeInTheDocument();
+    expect(screen.getByText("historical party overlap, stable location")).toBeInTheDocument();
+    expect(screen.getByText("Confirmed party history")).toBeInTheDocument();
+    expect(screen.getByText("Northstar Retail Builders")).toBeInTheDocument();
+    expect(screen.getByText("3 confirmed permits")).toBeInTheDocument();
     expect(
       screen.getAllByRole("link", { name: "Permit APP-100" }).map((link) => link.getAttribute("href")),
     ).toEqual(expect.arrayContaining(["/permits/permit-1"]));

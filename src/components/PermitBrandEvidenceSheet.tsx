@@ -43,6 +43,10 @@ function formatRelationshipType(value: string) {
   return value.replace(/_/g, ' ');
 }
 
+function formatField(value: string) {
+  return value.replace(/_/g, ' ');
+}
+
 function entityHref(entity: { id: string; entity_type: string; attributes?: Record<string, unknown> | null }) {
   if (entity.entity_type === 'parcel') {
     const parcelRecordId = entity.attributes?.parcel_record_id;
@@ -215,7 +219,11 @@ export function PermitBrandEvidenceSheet({ match, compact = false }: PermitBrand
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{match.brand.name}</SheetTitle>
-          <SheetDescription>{match.signal_quality_note}</SheetDescription>
+          <SheetDescription>
+            {match.detection_method === 'historical_party'
+              ? 'Stealth inference from parties connected to prior retailer filings.'
+              : match.signal_quality_note}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-5 space-y-4">
@@ -230,6 +238,11 @@ export function PermitBrandEvidenceSheet({ match, compact = false }: PermitBrand
               <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
                 {match.review_status}
               </span>
+              {match.detection_method === 'historical_party' && (
+                <span className="rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">
+                  Stealth inference
+                </span>
+              )}
             </div>
             <blockquote className="mt-3 border-l-2 border-accent px-3 text-sm text-foreground">
               {match.excerpt}
@@ -238,7 +251,17 @@ export function PermitBrandEvidenceSheet({ match, compact = false }: PermitBrand
               <span className="text-muted-foreground">Alias</span>
               <span>{match.matched_alias}</span>
               <span className="text-muted-foreground">Matched field</span>
-              <span>{match.matched_fields.length ? match.matched_fields.join(', ') : match.matched_field}</span>
+              <span>{match.matched_fields.length ? match.matched_fields.map(formatField).join(', ') : formatField(match.matched_field)}</span>
+              <span className="text-muted-foreground">Detection method</span>
+              <span>{match.detection_method === 'historical_party' ? 'Historical party inference' : 'Direct alias match'}</span>
+              {match.detection_method === 'historical_party' && (
+                <>
+                  <span className="text-muted-foreground">Inferred from party fields</span>
+                  <span>{match.matched_fields.length ? match.matched_fields.map(formatField).join(', ') : formatField(match.matched_field)}</span>
+                  <span className="text-muted-foreground">Inference rules</span>
+                  <span>{match.rule_ids.length ? match.rule_ids.map(formatField).join(', ') : 'No inference rules reported'}</span>
+                </>
+              )}
               <span className="text-muted-foreground">Detector</span>
               <span>{match.detector_version}</span>
             </div>
@@ -260,6 +283,29 @@ export function PermitBrandEvidenceSheet({ match, compact = false }: PermitBrand
           )}
           {data && (
             <>
+              {data.inference_evidence.length > 0 && (
+                <section className="rounded-md border bg-card">
+                  <div className="border-b px-3 py-2">
+                    <p className="text-xs font-medium text-foreground">Confirmed party history</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">Direct matches supporting this inference</p>
+                  </div>
+                  <div className="divide-y">
+                    {data.inference_evidence.map((item) => (
+                      <div key={`${item.party_type}:${item.display_name}`} className="flex items-start justify-between gap-3 px-3 py-2 text-xs">
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">{item.display_name}</p>
+                          <p className="text-[11px] text-muted-foreground">{formatField(item.party_type)}{item.state ? ` / ${item.state}` : ''}</p>
+                        </div>
+                        <div className="shrink-0 text-right text-[11px] text-muted-foreground">
+                          <p>{item.evidence_count} confirmed permits</p>
+                          <p>{Math.round(item.confidence * 100)}% pattern confidence</p>
+                          <p>Verified {formatDateTime(item.last_verified_at)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
               <EvidenceBlock title="Latest Evidence" evidence={data.latest_evidence} />
               {data.first_evidence.raw_record_id !== data.latest_evidence.raw_record_id && (
                 <EvidenceBlock title="First Evidence" evidence={data.first_evidence} />
