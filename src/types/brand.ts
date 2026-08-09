@@ -71,7 +71,7 @@ export interface PermitBrandMatch {
   excerpt: string;
   detector_version: string;
   detection_method: BrandDetectionMethod;
-  signal_quality: 'applicant_dba' | 'direct_project_name' | 'description_context' | 'supporting_context' | 'historical_party';
+  signal_quality: 'applicant_dba' | 'applicant_legal_entity' | 'direct_project_name' | 'description_context' | 'supporting_context' | 'historical_party';
   signal_quality_label: string;
   signal_quality_note: string;
   first_seen_at: string;

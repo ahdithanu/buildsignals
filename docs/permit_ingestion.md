@@ -776,6 +776,21 @@ States that have candidate coverage but no live source are surfaced as the next
 activation queue, which keeps research and production onboarding connected.
 
 Agency-specific variations belong in source configuration and field mappings.
+
+### Field value semantics
+
+Every field mapping can declare `value_semantics` as `unknown`, `business_dba`,
+`legal_entity`, or `person`. The declaration describes the shape of
+the value, not the permit domain, and is preserved through catalog sync and the
+source API. It lets downstream intelligence distinguish a company DBA from an
+individual applicant without hardcoding a jurisdiction into detection logic.
+
+Use `business_dba` only for a published DBA or establishment-name field,
+`legal_entity` for an authoritative registered business name, and `person` for
+explicitly joined first/last names. Generic applicant, company, petitioner,
+permit-holder, professional, and mixed-role fields remain `unknown` until source
+documentation establishes otherwise. New mappings default to `unknown`, which
+cannot create an applicant-only retailer candidate.
 A new jurisdiction should normally require configuration, not new application
 code.
 

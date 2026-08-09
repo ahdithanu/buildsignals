@@ -101,7 +101,9 @@ class PermitBrandMatchResponse(BaseModel):
         if self.matched_field == "historical_parties":
             return "historical_party"
         if self.matched_field == "applicant_name":
-            return "applicant_dba"
+            if "applicant_business_dba_source" in self.rule_ids:
+                return "applicant_dba"
+            return "applicant_legal_entity"
         if self.matched_field == "project_name" and self.permit.permit_type == "Restaurant permit applicant":
             return "applicant_dba"
         if self.matched_field == "project_name":
@@ -115,6 +117,7 @@ class PermitBrandMatchResponse(BaseModel):
     def signal_quality_label(self) -> str:
         labels = {
             "applicant_dba": "Applicant DBA",
+            "applicant_legal_entity": "Applicant legal entity",
             "direct_project_name": "Direct project name",
             "description_context": "Description context",
             "supporting_context": "Supporting context",
@@ -127,6 +130,9 @@ class PermitBrandMatchResponse(BaseModel):
     def signal_quality_note(self) -> str:
         notes = {
             "applicant_dba": "Brand appears as the applicant or establishment name before approval activity.",
+            "applicant_legal_entity": (
+                "Brand appears as the applicant's declared legal entity before approval activity."
+            ),
             "direct_project_name": "Brand appears in the project or business name field.",
             "description_context": "Brand appears in work-description text and needs human review.",
             "supporting_context": "Brand appears in a supporting permit context field.",

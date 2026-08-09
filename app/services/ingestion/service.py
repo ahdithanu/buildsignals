@@ -1297,6 +1297,7 @@ def _normalization_hash(source: IngestionSource) -> str:
                 {
                     "source_field": row.source_field,
                     "canonical_field": row.canonical_field,
+                    "value_semantics": row.value_semantics,
                     "transform": row.transform,
                     "transform_options": row.transform_options,
                     "default_value": row.default_value,

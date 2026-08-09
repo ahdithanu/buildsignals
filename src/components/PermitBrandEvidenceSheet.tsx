@@ -252,9 +252,11 @@ export function PermitBrandEvidenceSheet({ match, compact = false }: PermitBrand
               <span>{match.matched_alias}</span>
               <span className="text-muted-foreground">Matched field</span>
               <span>{match.matched_fields.length ? match.matched_fields.map(formatField).join(', ') : formatField(match.matched_field)}</span>
-              {match.signal_quality === 'applicant_dba' && match.permit.applicant_name && (
+              {['applicant_dba', 'applicant_legal_entity'].includes(match.signal_quality) && match.permit.applicant_name && (
                 <>
-                  <span className="text-muted-foreground">Applicant / DBA</span>
+                  <span className="text-muted-foreground">
+                    {match.signal_quality === 'applicant_dba' ? 'Applicant / DBA' : 'Applicant legal entity'}
+                  </span>
                   <span>{match.permit.applicant_name}</span>
                 </>
               )}
