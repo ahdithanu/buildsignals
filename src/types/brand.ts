@@ -43,6 +43,7 @@ export interface BrandPermitSummary {
   approval_stage?: BrandMatchApprovalStage | null;
   status?: string | null;
   project_name?: string | null;
+  applicant_name?: string | null;
   description?: string | null;
   address?: string | null;
   city?: string | null;
