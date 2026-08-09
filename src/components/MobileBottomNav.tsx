@@ -1,10 +1,10 @@
-import { LayoutDashboard, Inbox, Calculator, Kanban, Radio } from "lucide-react";
+import { LayoutDashboard, Inbox, Kanban, Radar, Radio } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
 const items = [
   { label: "Dashboard", url: "/", icon: LayoutDashboard },
   { label: "Inbox", url: "/inbox", icon: Inbox },
-  { label: "Underwriting", url: "/underwriting", icon: Calculator },
+  { label: "Radar", url: "/acquisition-radar", icon: Radar },
   { label: "Pipeline", url: "/pipeline", icon: Kanban },
   { label: "Signals", url: "/signals", icon: Radio },
 ];

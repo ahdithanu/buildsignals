@@ -12,6 +12,7 @@ from app.schemas.graph import (
     GraphRelationshipResponse,
 )
 from app.schemas.parcel import (
+    AcquisitionRadarResponse,
     NearbyParcelCandidateAssignment,
     NearbyParcelCandidateResponse,
     NearbyParcelCandidateReview,
@@ -30,6 +31,7 @@ from app.services.parcel_service import (
     create_nearby_parcel_search,
     get_nearby_parcel_search,
     get_parcel_detail,
+    list_acquisition_radar,
     list_nearby_parcel_searches,
     promote_nearby_parcel_candidate_to_deal,
     review_nearby_parcel_candidate,
@@ -38,6 +40,29 @@ from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(tags=["nearby parcels"])
+
+
+@router.get("/acquisition-radar", response_model=AcquisitionRadarResponse)
+def get_acquisition_radar(
+    q: str | None = Query(default=None, min_length=1, max_length=200),
+    state: str | None = Query(default=None, min_length=2, max_length=2),
+    persona: str | None = Query(default=None, pattern="^(developer|broker|realtor)$"),
+    review_status: str | None = Query(default=None, pattern="^(candidate|shortlisted|dismissed)$"),
+    assignment: str | None = Query(default=None, pattern="^(assigned|unassigned)$"),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    return list_acquisition_radar(
+        db,
+        query=q,
+        state=state,
+        persona=persona,
+        review_status=review_status,
+        assignment=assignment,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/parcels/{parcel_id}", response_model=ParcelDetailResponse)

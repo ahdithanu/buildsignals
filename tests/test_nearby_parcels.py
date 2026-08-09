@@ -10,7 +10,7 @@ from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEv
 from app.models.ingestion import IngestionSource, RawSourceRecord
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
-from app.models.parcel import ParcelFact, ParcelRecord
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
 from app.models.user import User
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.catalog import load_catalog
@@ -272,6 +272,107 @@ def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tm
         assert persona_body["ranker_version"] == f"{persona}-v2"
         assert persona_body["candidates"][0]["explanation"]["ranker_version"] == f"{persona}-v2"
         assert "No owner willingness to sell" in persona_body["candidates"][0]["explanation"]["cautions"][0]
+
+
+def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcels(
+    client, db, tmp_path
+):
+    deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
+    source = db.get(IngestionSource, source_data["id"])
+    raw = db.query(RawSourceRecord).one()
+    parcel = _add_parcel(
+        db,
+        source.id,
+        raw.id,
+        "P-RADAR",
+        -97.735,
+        land_area_sq_ft=80_000,
+        land_value=1_000_000,
+        improvement_value=100_000,
+        zoning_code="Commercial Retail",
+        land_use="Retail",
+    )
+    db.commit()
+    first_response = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "developer",
+        },
+    )
+    assert first_response.status_code == 201, first_response.text
+    first = db.get(NearbyParcelSearch, first_response.json()["id"])
+    first_candidate = db.query(NearbyParcelCandidate).filter_by(
+        search_id=first.id,
+        parcel_id=parcel.id,
+    ).one()
+
+    second_deal = client.post("/deals", json={
+        "name": "Second Main Street signal",
+        "address": "200 Main Street",
+        "city": "Austin",
+        "state": "TX",
+        "zip_code": "78701",
+        "property_type": "retail",
+    }).json()
+    second_search = NearbyParcelSearch(
+        organization_id="default-org",
+        deal_id=second_deal["id"],
+        anchor_brand_match_id=first.anchor_brand_match_id,
+        anchor_permit_id=first.anchor_permit_id,
+        anchor_latitude=first.anchor_latitude,
+        anchor_longitude=first.anchor_longitude,
+        radius_miles=first.radius_miles,
+        persona="broker",
+        filters={},
+        result_limit=25,
+        as_of=datetime.now(timezone.utc),
+        ranker_version="broker-v2",
+    )
+    db.add(second_search)
+    db.flush()
+    db.add(NearbyParcelCandidate(
+        organization_id="default-org",
+        search_id=second_search.id,
+        parcel_id=parcel.id,
+        rank=1,
+        distance_miles=0.4,
+        score=88,
+        score_confidence=0.92,
+        explanation={"reasons": ["Repeated market signal"], "cautions": []},
+        review_status="shortlisted",
+        ranker_version="broker-v2",
+    ))
+    db.commit()
+
+    response = client.get("/acquisition-radar?state=TX")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total"] == 1
+    assert body["summary"] == {
+        "total_parcels": 1,
+        "shortlisted_parcels": 1,
+        "multi_opportunity_parcels": 1,
+        "assigned_parcels": 0,
+        "state_count": 1,
+    }
+    item = body["items"][0]
+    assert item["parcel"]["external_parcel_id"] == "P-RADAR"
+    assert item["opportunity_count"] == 2
+    assert item["appearance_count"] == 2
+    assert item["personas"] == ["broker", "developer"]
+    assert item["review_status"] == "shortlisted"
+    assert item["radar_score"] > first_candidate.score * 0.45
+    assert {signal["deal_name"] for signal in item["signals"]} == {
+        "Main Street signal",
+        "Second Main Street signal",
+    }
+    assert "Appears near 2 opportunities" in item["reasons"]
+
+    filtered = client.get("/acquisition-radar?persona=developer&review_status=candidate")
+    assert filtered.status_code == 200
+    assert filtered.json()["items"][0]["opportunity_count"] == 1
 
 
 def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path):

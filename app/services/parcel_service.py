@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import case, desc, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.brand import PermitBrandMatch
@@ -29,6 +30,236 @@ from app.utils.org_scope import active_query, get_org_id
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+def _radar_candidate_query(
+    db: Session,
+    *,
+    query: str | None = None,
+    state: str | None = None,
+    persona: str | None = None,
+    review_status: str | None = None,
+    assignment: str | None = None,
+):
+    rows = active_query(db.query(NearbyParcelCandidate), NearbyParcelCandidate).join(
+        NearbyParcelSearch, NearbyParcelCandidate.search_id == NearbyParcelSearch.id
+    ).join(ParcelRecord, NearbyParcelCandidate.parcel_id == ParcelRecord.id).outerjoin(
+        PermitBrandMatch,
+        NearbyParcelSearch.anchor_brand_match_id == PermitBrandMatch.id,
+    )
+    if query:
+        pattern = f"%{query.strip()}%"
+        rows = rows.join(Deal, NearbyParcelSearch.deal_id == Deal.id).filter(or_(
+            ParcelRecord.external_parcel_id.ilike(pattern),
+            ParcelRecord.address.ilike(pattern),
+            ParcelRecord.city.ilike(pattern),
+            ParcelRecord.county.ilike(pattern),
+            Deal.name.ilike(pattern),
+        ))
+    if state:
+        rows = rows.filter(func.upper(ParcelRecord.state) == state.strip().upper())
+    if persona:
+        rows = rows.filter(NearbyParcelSearch.persona == persona)
+    if review_status:
+        rows = rows.filter(NearbyParcelCandidate.review_status == review_status)
+    if assignment == "assigned":
+        rows = rows.filter(NearbyParcelCandidate.assigned_to_user_id.isnot(None))
+    elif assignment == "unassigned":
+        rows = rows.filter(NearbyParcelCandidate.assigned_to_user_id.is_(None))
+    return rows
+
+
+def list_acquisition_radar(
+    db: Session,
+    *,
+    query: str | None = None,
+    state: str | None = None,
+    persona: str | None = None,
+    review_status: str | None = None,
+    assignment: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    """Return a tenant-scoped, deduplicated acquisition queue over parcel searches."""
+    now = utcnow()
+    base = _radar_candidate_query(
+        db,
+        query=query,
+        state=state,
+        persona=persona,
+        review_status=review_status,
+        assignment=assignment,
+    )
+    grouped = base.with_entities(
+        ParcelRecord.id.label("parcel_id"),
+        ParcelRecord.state.label("state"),
+        func.max(NearbyParcelCandidate.score).label("best_score"),
+        func.max(NearbyParcelCandidate.score_confidence).label("best_confidence"),
+        func.max(PermitBrandMatch.confidence).label("signal_confidence"),
+        func.count(NearbyParcelCandidate.id).label("appearance_count"),
+        func.count(func.distinct(NearbyParcelSearch.deal_id)).label("opportunity_count"),
+        func.max(NearbyParcelSearch.created_at).label("latest_signal_at"),
+        func.max(ParcelRecord.last_verified_at).label("last_verified_at"),
+        func.sum(case((NearbyParcelCandidate.review_status == "shortlisted", 1), else_=0)).label(
+            "shortlisted_count"
+        ),
+        func.sum(case((NearbyParcelCandidate.assigned_to_user_id.isnot(None), 1), else_=0)).label(
+            "assigned_count"
+        ),
+    ).group_by(ParcelRecord.id, ParcelRecord.state).subquery()
+
+    opportunity_points = case(
+        (grouped.c.opportunity_count >= 3, 15.0),
+        (grouped.c.opportunity_count == 2, 10.0),
+        else_=5.0,
+    )
+    freshness_points = case(
+        (grouped.c.last_verified_at >= now - timedelta(days=30), 5.0),
+        (grouped.c.last_verified_at >= now - timedelta(days=90), 2.0),
+        else_=0.0,
+    )
+    radar_score = (
+        grouped.c.best_score * 0.45
+        + grouped.c.best_confidence * 15.0
+        + func.coalesce(grouped.c.signal_confidence, 0.0) * 15.0
+        + opportunity_points
+        + case((grouped.c.shortlisted_count > 0, 5.0), else_=0.0)
+        + freshness_points
+    ).label("radar_score")
+
+    total = db.query(func.count()).select_from(grouped).scalar() or 0
+    summary_row = db.query(
+        func.sum(case((grouped.c.shortlisted_count > 0, 1), else_=0)),
+        func.sum(case((grouped.c.opportunity_count > 1, 1), else_=0)),
+        func.sum(case((grouped.c.assigned_count > 0, 1), else_=0)),
+        func.count(func.distinct(grouped.c.state)),
+    ).one()
+    ranked_rows = db.query(grouped, radar_score).order_by(
+        desc(radar_score), desc(grouped.c.opportunity_count), desc(grouped.c.latest_signal_at)
+    ).offset(offset).limit(limit).all()
+    parcel_ids = [row.parcel_id for row in ranked_rows]
+    if not parcel_ids:
+        return {
+            "items": [],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "summary": {
+                "total_parcels": total,
+                "shortlisted_parcels": int(summary_row[0] or 0),
+                "multi_opportunity_parcels": int(summary_row[1] or 0),
+                "assigned_parcels": int(summary_row[2] or 0),
+                "state_count": int(summary_row[3] or 0),
+            },
+        }
+
+    candidates = _radar_candidate_query(
+        db,
+        query=query,
+        state=state,
+        persona=persona,
+        review_status=review_status,
+        assignment=assignment,
+    ).options(
+        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.source),
+        joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.deal),
+        joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_brand_match),
+        joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_permit),
+    ).filter(NearbyParcelCandidate.parcel_id.in_(parcel_ids)).all()
+    by_parcel: dict[str, list[NearbyParcelCandidate]] = {}
+    for candidate in candidates:
+        by_parcel.setdefault(candidate.parcel_id, []).append(candidate)
+
+    items = []
+    for aggregate in ranked_rows:
+        parcel_candidates = by_parcel.get(aggregate.parcel_id, [])
+        parcel_candidates.sort(
+            key=lambda item: (
+                item.review_status == "shortlisted",
+                item.score,
+                item.search.created_at,
+            ),
+            reverse=True,
+        )
+        if not parcel_candidates:
+            continue
+        representative = parcel_candidates[0]
+        signal_confidence = float(aggregate.signal_confidence or 0.0)
+        final_score = min(100.0, float(aggregate.radar_score))
+        opportunity_count = int(aggregate.opportunity_count)
+        personas = sorted({candidate.search.persona for candidate in parcel_candidates})
+        reasons = [f"Best parcel fit is {float(aggregate.best_score):.0f}/100"]
+        if opportunity_count > 1:
+            reasons.append(f"Appears near {opportunity_count} opportunities")
+        if signal_confidence:
+            reasons.append(f"Strongest connected signal is {signal_confidence * 100:.0f}% confidence")
+        if aggregate.shortlisted_count:
+            reasons.append("Already shortlisted by the acquisition team")
+        if _as_utc(aggregate.last_verified_at) >= now - timedelta(days=30):
+            reasons.append("Parcel evidence verified within 30 days")
+        cautions = list(dict.fromkeys(
+            caution
+            for candidate in parcel_candidates
+            for caution in (candidate.explanation or {}).get("cautions", [])
+        ))[:3]
+        review = "shortlisted" if aggregate.shortlisted_count else (
+            "candidate" if any(item.review_status == "candidate" for item in parcel_candidates) else "dismissed"
+        )
+        signals = []
+        seen_deals = set()
+        for candidate in sorted(parcel_candidates, key=lambda item: item.search.created_at, reverse=True):
+            if candidate.search.deal_id in seen_deals:
+                continue
+            seen_deals.add(candidate.search.deal_id)
+            match = candidate.search.anchor_brand_match
+            permit = candidate.search.anchor_permit
+            signals.append({
+                "candidate_id": candidate.id,
+                "search_id": candidate.search_id,
+                "deal_id": candidate.search.deal_id,
+                "deal_name": candidate.search.deal.name,
+                "persona": candidate.search.persona,
+                "approval_stage": permit.approval_stage if permit else None,
+                "signal_confidence": match.confidence if match else None,
+                "distance_miles": candidate.distance_miles,
+                "candidate_score": candidate.score,
+                "created_at": candidate.search.created_at,
+            })
+        items.append({
+            "parcel": representative.parcel,
+            "candidate_id": representative.id,
+            "radar_score": round(final_score, 1),
+            "best_candidate_score": float(aggregate.best_score),
+            "score_confidence": float(aggregate.best_confidence),
+            "appearance_count": int(aggregate.appearance_count),
+            "opportunity_count": opportunity_count,
+            "personas": personas,
+            "review_status": review,
+            "assigned_to_user_id": representative.assigned_to_user_id,
+            "assigned_to_name": representative.assigned_to_name,
+            "latest_signal_at": aggregate.latest_signal_at,
+            "reasons": reasons,
+            "cautions": cautions,
+            "signals": signals,
+        })
+    items.sort(key=lambda item: (-item["radar_score"], -item["opportunity_count"], item["parcel"].external_parcel_id))
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "summary": {
+            "total_parcels": total,
+            "shortlisted_parcels": int(summary_row[0] or 0),
+            "multi_opportunity_parcels": int(summary_row[1] or 0),
+            "assigned_parcels": int(summary_row[2] or 0),
+            "state_count": int(summary_row[3] or 0),
+        },
+    }
 
 
 def create_nearby_parcel_search(
