@@ -1,5 +1,6 @@
 export type BrandMatchReviewStatus = 'candidate' | 'confirmed' | 'dismissed' | 'retracted';
 export type BrandMatchApprovalStage = 'pre_approval' | 'approved';
+export type BrandDetectionMethod = 'direct_alias' | 'historical_party';
 
 import type { Deal } from './deal';
 import type { NearbyParcelSearchSummary } from './parcel';
@@ -7,6 +8,7 @@ import type { NearbyParcelSearchSummary } from './parcel';
 export interface PermitBrandMatchListParams {
   review_status?: BrandMatchReviewStatus;
   approval_stage?: BrandMatchApprovalStage;
+  detection_method?: BrandDetectionMethod;
   limit?: number;
 }
 
@@ -67,7 +69,8 @@ export interface PermitBrandMatch {
   rule_ids: string[];
   excerpt: string;
   detector_version: string;
-  signal_quality: 'applicant_dba' | 'direct_project_name' | 'description_context' | 'supporting_context';
+  detection_method: BrandDetectionMethod;
+  signal_quality: 'applicant_dba' | 'direct_project_name' | 'description_context' | 'supporting_context' | 'historical_party';
   signal_quality_label: string;
   signal_quality_note: string;
   first_seen_at: string;
@@ -133,6 +136,7 @@ export interface PermitBrandMatchEvidence {
   matched_fields: string[];
   excerpt: string;
   detector_version: string;
+  detection_method: BrandDetectionMethod;
   signal_quality: PermitBrandMatch['signal_quality'];
   signal_quality_label: string;
   signal_quality_note: string;
@@ -143,4 +147,15 @@ export interface PermitBrandMatchEvidence {
   first_evidence: BrandMatchRawEvidence;
   latest_evidence: BrandMatchRawEvidence;
   graph_context: BrandMatchGraphContext[];
+  inference_evidence: BrandPartyFingerprintEvidence[];
+}
+
+export interface BrandPartyFingerprintEvidence {
+  party_type: string;
+  display_name: string;
+  state?: string | null;
+  evidence_count: number;
+  source_match_ids: string[];
+  confidence: number;
+  last_verified_at: string;
 }

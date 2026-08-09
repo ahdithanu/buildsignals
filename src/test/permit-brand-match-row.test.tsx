@@ -24,9 +24,10 @@ describe("<PermitBrandMatchRow>", () => {
             rule_ids: ["rule-1"],
             excerpt: "Chipotle tenant improvement filing",
             detector_version: "brand-alias-v1",
-            signal_quality: "description_context",
-            signal_quality_label: "Description context",
-            signal_quality_note: "Brand appears in description text.",
+            detection_method: "historical_party",
+            signal_quality: "historical_party",
+            signal_quality_label: "Historical party",
+            signal_quality_note: "Parties on this filing have prior brand history.",
             first_seen_at: "2026-07-18T00:00:00Z",
             last_seen_at: "2026-07-18T00:00:00Z",
             brand: { id: "brand-1", key: "chipotle", name: "Chipotle", priority: 5, is_active: true },
@@ -46,6 +47,8 @@ describe("<PermitBrandMatchRow>", () => {
     );
 
     expect(screen.getByText("Chipotle")).toBeInTheDocument();
+    expect(screen.getByText("Stealth inference")).toBeInTheDocument();
+    expect(screen.getByText("Historical party match")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open permit/i })).toHaveAttribute(
       "href",
       "/permits/permit-1",

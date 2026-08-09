@@ -81,6 +81,11 @@ export function PermitBrandMatchRow({
             )}>
               {stage}
             </span>
+            {match.detection_method === 'historical_party' && (
+              <span className="rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">
+                Stealth inference
+              </span>
+            )}
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -105,6 +110,7 @@ export function PermitBrandMatchRow({
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
             <span>{Math.round(match.confidence * 100)}% confidence</span>
             <span title={match.signal_quality_note}>{match.signal_quality_label}</span>
+            <span>{match.detection_method === 'historical_party' ? 'Historical party match' : 'Direct alias match'}</span>
             <span>Alias: {match.matched_alias}</span>
             <span>Matched in {match.matched_fields.length > 0 ? match.matched_fields.join(', ').replace(/_/g, ' ') : match.matched_field.replace(/_/g, ' ')}</span>
             {permitDetail && (

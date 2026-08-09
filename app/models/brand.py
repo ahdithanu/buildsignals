@@ -11,6 +11,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -54,6 +55,9 @@ class BrandProfile(OrgMixin, Base):
     permit_matches: Mapped[list["PermitBrandMatch"]] = relationship(
         "PermitBrandMatch", back_populates="brand"
     )
+    party_fingerprints: Mapped[list["BrandPartyFingerprint"]] = relationship(
+        "BrandPartyFingerprint", back_populates="brand", cascade="all, delete-orphan"
+    )
 
 
 class BrandAlias(OrgMixin, Base):
@@ -82,6 +86,63 @@ class BrandAlias(OrgMixin, Base):
     )
 
     brand: Mapped[BrandProfile] = relationship("BrandProfile", back_populates="aliases")
+
+
+class BrandPartyFingerprint(OrgMixin, Base):
+    """An evidence-backed professional or shell-entity association for a brand."""
+
+    __tablename__ = "brand_party_fingerprints"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "brand_id",
+            "party_type",
+            "normalized_name",
+            "state",
+            name="uq_brand_party_fingerprint_identity",
+        ),
+        Index(
+            "ix_brand_party_fingerprint_brand_type_active",
+            "brand_id",
+            "party_type",
+            "is_active",
+        ),
+        Index(
+            "ix_brand_party_fingerprint_org_name_state",
+            "organization_id",
+            "normalized_name",
+            "state",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    brand_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("brand_profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    party_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    normalized_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    state: Mapped[str] = mapped_column(String(50), default="", nullable=False)
+    evidence_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    source_match_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    last_verified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    brand: Mapped[BrandProfile] = relationship(
+        "BrandProfile", back_populates="party_fingerprints"
+    )
 
 
 class PermitBrandMatch(OrgMixin, Base):
