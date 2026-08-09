@@ -135,6 +135,44 @@ def test_csv_run_is_idempotent_and_versions_corrections(client, db, tmp_path):
     assert db.query(PermitRecord).one().status == "Issued"
 
 
+def test_raw_source_record_rejects_orm_mutation(client, db, tmp_path):
+    csv_path = tmp_path / "permits.csv"
+    _write_csv(csv_path)
+    source = client.post(
+        "/ingestion/sources", json=_source_payload(str(csv_path))
+    ).json()
+    response = client.post(
+        f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1}
+    )
+    assert response.status_code == 201, response.text
+
+    raw = db.query(RawSourceRecord).one()
+    raw.payload = {"tampered": True}
+    with pytest.raises(ValueError, match="RawSourceRecord rows are immutable"):
+        db.commit()
+    db.rollback()
+
+    raw = db.query(RawSourceRecord).one()
+    unreferenced = RawSourceRecord(
+        organization_id=raw.organization_id,
+        source_id=raw.source_id,
+        run_id=raw.run_id,
+        external_record_id="unreferenced-record",
+        record_type="permit",
+        content_hash="unreferenced-hash",
+        payload={"id": "unreferenced-record"},
+        received_at=datetime.now(timezone.utc),
+    )
+    db.add(unreferenced)
+    db.commit()
+
+    db.delete(unreferenced)
+    with pytest.raises(ValueError, match="RawSourceRecord rows are immutable"):
+        db.commit()
+    db.rollback()
+    assert db.query(RawSourceRecord).count() == 2
+
+
 def test_source_record_filters_skip_out_of_scope_rows(client, db, tmp_path):
     csv_path = tmp_path / "permits.csv"
     csv_path.write_text(

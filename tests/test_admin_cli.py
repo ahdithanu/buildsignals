@@ -96,6 +96,7 @@ def test_revoke_sessions_bumps_token_version(org_with_two_admins):
         ).all()
         assert len(rows) == 1
         assert rows[0].actor_id is None
+        assert rows[0].organization_id == org_with_two_admins["org_id"]
         assert "reason" in (rows[0].new_values or "")
 
 
@@ -127,3 +128,8 @@ def test_deactivate_revokes_sessions_and_deactivates(org_with_two_admins):
         user = db.query(User).filter(User.email == email).first()
         assert user.is_active is False
         assert user.token_version == before + 1
+        audit = db.query(AuditLog).filter(
+            AuditLog.entity_id == user.id,
+            AuditLog.action == "admin_deactivate",
+        ).one()
+        assert audit.organization_id == org_with_two_admins["org_id"]
