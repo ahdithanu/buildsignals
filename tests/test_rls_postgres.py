@@ -25,6 +25,7 @@ import uuid
 
 import pytest
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import sessionmaker
 
 POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
@@ -168,3 +169,85 @@ def test_rls_blocks_when_app_current_org_unset(pg_engine):
     finally:
         s.rollback()
         s.close()
+
+
+def test_raw_record_trigger_blocks_direct_mutation_but_allows_org_erasure(
+    pg_session,
+):
+    org_id = f"raw-guard-{uuid.uuid4().hex[:8]}"
+    source_id = str(uuid.uuid4())
+    run_id = str(uuid.uuid4())
+    raw_id = str(uuid.uuid4())
+
+    pg_session.execute(
+        text("INSERT INTO organizations (id, name, slug) VALUES (:id, :n, :s)"),
+        {"id": org_id, "n": "Raw Guard", "s": org_id},
+    )
+    pg_session.commit()
+    pg_session.execute(
+        text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id}
+    )
+    pg_session.execute(text(
+        "INSERT INTO ingestion_sources "
+        "(id, key, name, adapter, record_type, organization_id) "
+        "VALUES (:id, :key, 'Raw Guard', 'csv', 'permit', :org)"
+    ), {"id": source_id, "key": org_id, "org": org_id})
+    pg_session.execute(text(
+        "INSERT INTO ingestion_runs "
+        "(id, source_id, status, trigger, organization_id) "
+        "VALUES (:id, :source, 'completed', 'manual', :org)"
+    ), {"id": run_id, "source": source_id, "org": org_id})
+    pg_session.execute(text(
+        "INSERT INTO raw_source_records "
+        "(id, source_id, run_id, external_record_id, record_type, content_hash, "
+        "payload, received_at, organization_id) VALUES "
+        "(:id, :source, :run, 'record-1', 'permit', 'hash-1', "
+        "'{}', CURRENT_TIMESTAMP, :org)"
+    ), {"id": raw_id, "source": source_id, "run": run_id, "org": org_id})
+    pg_session.execute(text(
+        "INSERT INTO raw_source_record_observations "
+        "(raw_source_record_id, last_observed_at, organization_id) "
+        "VALUES (:id, CURRENT_TIMESTAMP, :org)"
+    ), {"id": raw_id, "org": org_id})
+    pg_session.commit()
+
+    pg_session.execute(
+        text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id}
+    )
+    pg_session.execute(text(
+        "UPDATE raw_source_record_observations "
+        "SET last_observed_at = CURRENT_TIMESTAMP "
+        "WHERE raw_source_record_id = :id"
+    ), {"id": raw_id})
+    pg_session.commit()
+
+    pg_session.execute(text("CREATE TEMP TABLE organizations (id text)"))
+    pg_session.commit()
+
+    for statement, parameters in (
+        (
+            "UPDATE raw_source_records "
+            "SET payload = '{\"tampered\": true}' WHERE id = :id",
+            {"id": raw_id},
+        ),
+        ("DELETE FROM raw_source_records WHERE id = :id", {"id": raw_id}),
+        ("TRUNCATE raw_source_records CASCADE", {}),
+    ):
+        pg_session.execute(
+            text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id}
+        )
+        with pytest.raises(DBAPIError, match="raw_source_records are immutable"):
+            pg_session.execute(text(statement), parameters)
+        pg_session.rollback()
+
+    pg_session.execute(
+        text("DELETE FROM public.organizations WHERE id = :id"), {"id": org_id}
+    )
+    pg_session.commit()
+    pg_session.execute(
+        text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id}
+    )
+    assert pg_session.execute(
+        text("SELECT count(*) FROM raw_source_records WHERE id = :id"),
+        {"id": raw_id},
+    ).scalar_one() == 0

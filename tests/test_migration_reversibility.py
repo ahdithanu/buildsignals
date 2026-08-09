@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -179,6 +180,44 @@ def test_raw_observation_migration_backfills_existing_versions(tmp_path):
                 "AND o.last_observed_at = r.received_at"
             )).scalar_one()
         assert backfilled == 1
+
+        with engine.begin() as connection:
+            connection.execute(text(
+                "UPDATE raw_source_record_observations "
+                "SET last_observed_at = '2026-08-10 12:00:00' "
+                "WHERE raw_source_record_id = 'raw-1'"
+            ))
+        with engine.connect() as connection:
+            observed_at = connection.execute(text(
+                "SELECT last_observed_at FROM raw_source_record_observations "
+                "WHERE raw_source_record_id = 'raw-1'"
+            )).scalar_one()
+        assert str(observed_at).startswith("2026-08-10 12:00:00")
+
+        with pytest.raises(IntegrityError, match="raw_source_records are immutable"):
+            with engine.begin() as connection:
+                connection.execute(text(
+                    "UPDATE raw_source_records SET payload = '{\"changed\": true}' "
+                    "WHERE id = 'raw-1'"
+                ))
+        with pytest.raises(IntegrityError, match="raw_source_records are immutable"):
+            with engine.begin() as connection:
+                connection.execute(text(
+                    "DELETE FROM raw_source_records WHERE id = 'raw-1'"
+                ))
+
+        with engine.connect() as connection:
+            connection.execute(text("PRAGMA foreign_keys = ON"))
+            connection.commit()
+            connection.execute(text(
+                "DELETE FROM organizations WHERE id = 'default-org'"
+            ))
+            connection.commit()
+        with engine.connect() as connection:
+            remaining_raw = connection.execute(text(
+                "SELECT count(*) FROM raw_source_records WHERE id = 'raw-1'"
+            )).scalar_one()
+        assert remaining_raw == 0
     finally:
         engine.dispose()
 
@@ -201,6 +240,17 @@ def test_postgres_round_trip_leaves_no_orphaned_enum_types():
     # step that regresses if a downgrade forgets to DROP TYPE.
     assert _alembic("downgrade", "base", db_url=_PG_URL).returncode == 0
     assert _alembic("upgrade", "head", db_url=_PG_URL).returncode == 0
+    engine = create_engine(_PG_URL, future=True)
+    try:
+        with engine.connect() as conn:
+            raw_guard_count = conn.execute(text(
+                "SELECT count(*) FROM pg_trigger "
+                "WHERE tgname = 'trg_raw_source_records_immutable' "
+                "AND NOT tgisinternal"
+            )).scalar_one()
+        assert raw_guard_count == 1
+    finally:
+        engine.dispose()
     down = _alembic("downgrade", "base", db_url=_PG_URL)
     assert down.returncode == 0, f"downgrade base failed:\n{down.stderr}"
 

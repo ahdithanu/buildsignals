@@ -57,6 +57,19 @@ def _confirm(args: argparse.Namespace, action: str) -> None:
         )
 
 
+def _user_audit_org_id(db: Session, user_id: str) -> Optional[str]:
+    membership = (
+        db.query(OrganizationMembership)
+        .filter(OrganizationMembership.user_id == user_id)
+        .order_by(
+            OrganizationMembership.is_default.desc(),
+            OrganizationMembership.joined_at.asc(),
+        )
+        .first()
+    )
+    return membership.organization_id if membership else None
+
+
 def _audit(
     db: Session,
     entity_type: str,
@@ -122,6 +135,7 @@ def cmd_revoke_sessions(args: argparse.Namespace) -> int:
         _audit(
             db, "user", user.id, "revoke_sessions",
             reason=args.reason,
+            org_id=_user_audit_org_id(db, user.id),
             extra={"old_token_version": old_version, "new_token_version": user.token_version},
         )
         print(f"revoked all sessions for {user.email} (token_version {old_version} → {user.token_version})")
@@ -145,6 +159,7 @@ def cmd_reset_2fa(args: argparse.Namespace) -> int:
         _audit(
             db, "user", user.id, "reset_2fa",
             reason=args.reason,
+            org_id=_user_audit_org_id(db, user.id),
         )
         print(f"cleared 2FA for {user.email}; they must re-enroll on next login")
     return 0
@@ -215,6 +230,7 @@ def cmd_deactivate(args: argparse.Namespace) -> int:
         _audit(
             db, "user", user.id, "deactivate",
             reason=args.reason,
+            org_id=_user_audit_org_id(db, user.id),
         )
         print(f"deactivated {user.email}; existing sessions revoked")
     return 0

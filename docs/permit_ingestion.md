@@ -775,6 +775,15 @@ capture, while `last_observed_at` means the latest successful observation of
 that exact version. This retains currentness without storing a duplicate raw
 payload for every unchanged nationwide collection.
 
+Immutability is enforced twice: SQLAlchemy rejects ORM updates and deletes, and
+database triggers reject direct SQL or bulk mutations in PostgreSQL and SQLite,
+including PostgreSQL table truncation.
+Operational freshness must be written to the observation sidecar; correcting a
+source record creates or reuses another content-addressed raw version instead of
+rewriting evidence already used by permits, parcel facts, or graph relationships.
+The only delete exception is the database cascade from deleting the owning
+organization, preserving the platform's tenant-erasure workflow.
+
 The Source Health page also shows a coverage footprint summary derived from
 the checked-in catalogs. It counts live sources, candidate sources, and the
 jurisdictions they cover so the expansion queue can be reviewed as a national
