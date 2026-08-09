@@ -1250,6 +1250,17 @@
             ],
             "title": "Address"
           },
+          "applicant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applicant Name"
+          },
           "application_number": {
             "anyOf": [
               {
@@ -1459,6 +1470,7 @@
           "approval_stage",
           "status",
           "project_name",
+          "applicant_name",
           "description",
           "address",
           "city",
