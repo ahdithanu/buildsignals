@@ -20,7 +20,7 @@ from app.models.graph import (
     GraphRelationship,
     GraphRelationshipType,
 )
-from app.models.ingestion import PermitRecord, RawSourceRecord
+from app.models.ingestion import PermitRecord, RawSourceRecord, SourceFieldMapping
 from app.models.signal import Signal
 from app.schemas.brand import (
     BrandDefinition,
@@ -43,7 +43,7 @@ from app.services.normalization_service import normalize_signal_type
 from app.utils.org_scope import active_query, get_org_id
 
 DEFAULT_BRAND_CATALOG_PATH = Path(__file__).with_name("brand_catalog.json")
-DETECTOR_VERSION = "brand-alias-v1"
+DETECTOR_VERSION = "brand-alias-v2"
 STEALTH_DETECTOR_VERSION = "stealth-retailer-v1"
 MINIMUM_CONFIDENCE = 0.70
 FIELD_CONFIDENCE = {
@@ -52,6 +52,12 @@ FIELD_CONFIDENCE = {
     "description": 0.92,
     "proposed_use": 0.85,
     "occupancy_type": 0.80,
+}
+APPLICANT_SEMANTIC_CONFIDENCE = {
+    "business_dba": 0.97,
+    "legal_entity": 0.92,
+    "unknown": 0.0,
+    "person": 0.0,
 }
 CONTEXT_FIELDS = (
     "description",
@@ -121,6 +127,10 @@ TERMINAL_PREAPPROVAL_STATUS_TERMS = (
     "rejected",
     "suspended",
 )
+APPLICANT_LEGAL_SUFFIXES = {
+    "co", "company", "corp", "corporation", "inc", "incorporated",
+    "llc", "llp", "lp", "ltd", "limited", "pllc",
+}
 _CATALOG_ADAPTER = TypeAdapter(list[BrandDefinition])
 
 
@@ -238,9 +248,13 @@ def detect_permit_brands(
         BrandAlias.is_active.is_(True),
         BrandProfile.is_active.is_(True),
     ).all()
+    applicant_semantics = _applicant_value_semantics(db, permit)
+    field_confidence = dict(FIELD_CONFIDENCE)
+    field_confidence["applicant_name"] = APPLICANT_SEMANTIC_CONFIDENCE[applicant_semantics]
     fields = {
         field: value
-        for field in FIELD_CONFIDENCE
+        for field, confidence in field_confidence.items()
+        if confidence >= MINIMUM_CONFIDENCE
         if (value := getattr(permit, field, None)) and isinstance(value, str)
     }
     combined = _normalize_text(" ".join(fields.values()))
@@ -264,13 +278,17 @@ def detect_permit_brands(
             field
             for field, value in fields.items()
             if _contains(_normalize_text(value), normalized_alias)
+            and (
+                field != "applicant_name"
+                or _is_exact_applicant_alias(value, normalized_alias)
+            )
             and not _negative_alias_context(value, normalized_alias)
         )
         if len(matched_fields) < alias.minimum_field_matches:
             continue
         for field in matched_fields:
             value = fields[field]
-            confidence = round(FIELD_CONFIDENCE[field] * alias.confidence, 4)
+            confidence = round(field_confidence[field] * alias.confidence, 4)
             if confidence < MINIMUM_CONFIDENCE:
                 continue
             detection = Detection(
@@ -283,6 +301,11 @@ def detect_permit_brands(
                 rule_ids=tuple(
                     _rule_ids(opening_signal)
                     + (["exact_applicant_alias"] if field == "applicant_name" else [])
+                    + (
+                        [f"applicant_{applicant_semantics}_source"]
+                        if field == "applicant_name"
+                        else []
+                    )
                 ),
             )
             current = best_by_brand.get(alias.brand_id)
@@ -325,7 +348,10 @@ def detect_permit_brands(
             match.last_seen_at = now
             if match.review_status == "retracted":
                 match.review_status = "candidate"
-            if detection.confidence >= match.confidence:
+            if (
+                detection.detector_version != match.detector_version
+                or detection.confidence >= match.confidence
+            ):
                 match.confidence = detection.confidence
                 match.matched_alias = detection.alias.alias if detection.alias else "Confirmed party pattern"
                 match.matched_field = detection.field
@@ -348,6 +374,24 @@ def detect_permit_brands(
         match.last_seen_at = now
     db.flush()
     return matches
+
+
+def _applicant_value_semantics(db: Session, permit: PermitRecord) -> str:
+    """Return the declared meaning of the source field normalized as applicant_name."""
+    semantics = {
+        value
+        for (value,) in active_query(
+            db.query(SourceFieldMapping.value_semantics), SourceFieldMapping
+        ).filter(
+            SourceFieldMapping.source_id == permit.source_id,
+            SourceFieldMapping.canonical_field == "applicant_name",
+            SourceFieldMapping.is_active.is_(True),
+        ).all()
+    }
+    if len(semantics) == 1:
+        return semantics.pop()
+    # Multiple alternative mappings cannot establish which source value won.
+    return "unknown"
 
 
 def _historical_party_detections(
@@ -1250,6 +1294,17 @@ def _normalize_text(value: str) -> str:
 
 def _contains(text: str, alias: str) -> bool:
     return bool(alias) and f" {alias} " in f" {text} "
+
+
+def _is_exact_applicant_alias(value: str, alias: str) -> bool:
+    """Accept an alias as the whole applicant value, allowing only legal suffixes."""
+    normalized = _normalize_text(value)
+    if normalized == alias:
+        return True
+    if not normalized.startswith(f"{alias} "):
+        return False
+    suffix = normalized[len(alias):].split()
+    return bool(suffix) and all(token in APPLICANT_LEGAL_SUFFIXES for token in suffix)
 
 
 def _excerpt(value: str, alias: str, radius: int = 180) -> str:

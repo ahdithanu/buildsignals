@@ -194,7 +194,7 @@ describe("<PermitBrandEvidenceSheet>", () => {
     expect(screen.getByText(/permit_ingestion/i)).toBeInTheDocument();
   });
 
-  it("shows the canonical applicant for a direct DBA match", () => {
+  it("shows the canonical applicant for a direct legal-entity match", () => {
     (usePermitBrandMatchEvidence as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
         latest_evidence: {
@@ -234,16 +234,16 @@ describe("<PermitBrandEvidenceSheet>", () => {
             id: "match-applicant",
             permit_id: "permit-applicant",
             review_status: "candidate",
-            confidence: 0.96,
+            confidence: 0.92,
             matched_alias: "Starbucks",
             matched_field: "applicant_name",
             matched_fields: ["applicant_name"],
-            rule_ids: ["pre_approval", "retail_context", "exact_alias"],
+            rule_ids: ["pre_approval", "retail_context", "exact_alias", "applicant_legal_entity_source"],
             excerpt: "Starbucks Coffee Company",
             detector_version: "brand-alias-v1",
             detection_method: "direct_alias",
-            signal_quality: "applicant_dba",
-            signal_quality_label: "Applicant DBA",
+            signal_quality: "applicant_legal_entity",
+            signal_quality_label: "Applicant legal entity",
             signal_quality_note: "Brand appears as the applicant.",
             first_seen_at: "2026-07-23T12:00:00Z",
             last_seen_at: "2026-07-23T12:00:00Z",
@@ -269,7 +269,7 @@ describe("<PermitBrandEvidenceSheet>", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /evidence/i }));
 
-    expect(screen.getByText("Applicant / DBA")).toBeInTheDocument();
+    expect(screen.getAllByText("Applicant legal entity").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Starbucks Coffee Company").length).toBeGreaterThan(0);
     expect(screen.getByText("Direct alias match")).toBeInTheDocument();
     expect(screen.getByText("applicant name")).toBeInTheDocument();

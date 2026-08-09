@@ -13,6 +13,7 @@ from app.schemas.graph import GraphEntityDetailResponse, GraphRelatedEntityRespo
 class FieldMappingCreate(BaseModel):
     source_field: str = Field(min_length=1, max_length=255)
     canonical_field: str = Field(min_length=1, max_length=255)
+    value_semantics: Literal["unknown", "business_dba", "legal_entity", "person"] = "unknown"
     transform: Optional[str] = Field(default=None, max_length=100)
     transform_options: Optional[dict[str, Any]] = None
     default_value: Optional[dict[str, Any]] = None

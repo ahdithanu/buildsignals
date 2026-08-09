@@ -4,8 +4,8 @@
 
 Direct brand aliases remain the strongest permit signal, but early filings often name only a shell owner or the professionals building the site. The stealth detector uses repeated project-party history from human-confirmed brand permits to identify those unnamed filings without presenting a shared contractor as proof.
 
-Direct alias detection also evaluates the canonical applicant name at 96% base confidence. This covers applicant-company, permit-holder, petitioner, legal-name, and establishment DBA fields already normalized by source connectors while retaining the same retail-context and lifecycle gates as project-name detection.
-Applicant detections retain the general `exact_alias` rule and add `exact_applicant_alias` so evidence consumers can distinguish this source field without a new workflow.
+Direct alias detection also evaluates the canonical applicant name using the source mapping's declared value semantics. Explicit DBA fields receive 97% base confidence and authoritative legal-entity fields receive 92%. Person and unknown fields cannot create an applicant-only brand match, though they remain available as supporting evidence and for human-confirmed historical-party patterns. This retains the same retail-context and lifecycle gates as project-name detection.
+Applicant detections retain the general `exact_alias` rule, add `exact_applicant_alias`, and record an `applicant_<semantic>_source` rule so evidence consumers can distinguish the source field's meaning without a new workflow.
 
 ## Data Flow
 
@@ -28,6 +28,8 @@ The initial party vocabulary is applicant, owner, developer, contractor, archite
 - Inferred confidence is capped at 86%, below strong direct alias evidence.
 - Inferred matches never train new fingerprints, preventing feedback loops.
 - Existing retail context, stable-location, pre-approval, terminal-status, and negative-context gates still apply.
+- Applicant fields declared as personal names cannot create a direct brand candidate.
+- Unclassified applicant fields remain available as supporting context but cannot create a retailer candidate by themselves.
 - Manual confirmation and dismissal remain mandatory before the retailer is treated as verified.
 
 ## Storage And Provenance
@@ -44,4 +46,4 @@ The resulting `PermitBrandMatch` stores `historical_parties` as the matched fiel
 
 Materializing fingerprints adds a small write cost when reviewers change a decision, but keeps nationwide ingestion reads indexed and bounded. State scoping is intentionally conservative and may miss a highly distinctive national team operating in a new state.
 
-Future iterations should add source-independent corporate shell evidence, temporal and distance decay, professional license IDs, equipment and signage vocabularies with explicit catalog provenance, reviewer decision reasons, and offline precision/recall evaluation. Large deployments can move rebuilds to an event-driven worker and maintain fingerprints incrementally while preserving the same service and API contracts.
+Future iterations should add source-independent corporate shell evidence, temporal and distance decay, professional license IDs, equipment and signage vocabularies with explicit catalog provenance, reviewer decision reasons, and offline precision/recall evaluation. Field semantics can later move from mapping-level declarations to per-value classifier output when mixed source fields need finer precision. Large deployments can move rebuilds to an event-driven worker and maintain fingerprints incrementally while preserving the same service and API contracts.

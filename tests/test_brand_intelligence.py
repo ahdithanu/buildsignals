@@ -26,7 +26,12 @@ class _StaticConnector:
         )
 
 
-def _source_payload(csv_path: str, key: str = "retail_filings") -> dict:
+def _source_payload(
+    csv_path: str,
+    key: str = "retail_filings",
+    *,
+    applicant_semantics: str = "legal_entity",
+) -> dict:
     fields = {
         "id": "source_record_id",
         "application_no": "application_number",
@@ -53,7 +58,15 @@ def _source_payload(csv_path: str, key: str = "retail_filings") -> dict:
         "base_url": csv_path,
         "settings": {"connector": {"page_size": 100}},
         "field_mappings": [
-            {"source_field": source, "canonical_field": canonical}
+            {
+                "source_field": source,
+                "canonical_field": canonical,
+                **(
+                    {"value_semantics": applicant_semantics}
+                    if canonical == "applicant_name"
+                    else {}
+                ),
+            }
             for source, canonical in fields.items()
         ],
     }
@@ -128,6 +141,7 @@ def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, db, t
     assert match.brand.key == "starbucks"
     assert match.matched_field == "description"
     assert match.confidence == 0.92
+    assert match.detector_version == "brand-alias-v2"
     assert "Starbucks" in match.excerpt
     assert match.first_raw_record_id == match.latest_raw_record_id
     company = db.query(GraphEntity).filter(GraphEntity.entity_type == "company").one()
@@ -183,21 +197,21 @@ def test_applicant_company_alias_is_high_confidence_direct_evidence(client, db, 
     assert match.brand.key == "starbucks"
     assert match.matched_field == "applicant_name"
     assert match.matched_fields == ["applicant_name"]
-    assert match.confidence == 0.96
+    assert match.confidence == 0.92
     assert "Starbucks" in match.excerpt
     assert "exact_alias" in match.rule_ids
     assert "exact_applicant_alias" in match.rule_ids
     response = client.get("/permit-brand-matches?detection_method=direct_alias")
     assert response.status_code == 200, response.text
-    assert response.json()[0]["signal_quality"] == "applicant_dba"
-    assert response.json()[0]["signal_quality_label"] == "Applicant DBA"
+    assert response.json()[0]["signal_quality"] == "applicant_legal_entity"
+    assert response.json()[0]["signal_quality_label"] == "Applicant legal entity"
     assert response.json()[0]["detection_method"] == "direct_alias"
     assert response.json()[0]["permit"]["applicant_name"] == "Starbucks Coffee Company"
 
     evidence = client.get(f"/permit-brand-matches/{match.id}/evidence")
     assert evidence.status_code == 200, evidence.text
     assert evidence.json()["matched_field"] == "applicant_name"
-    assert evidence.json()["signal_quality"] == "applicant_dba"
+    assert evidence.json()["signal_quality"] == "applicant_legal_entity"
     assert evidence.json()["permit"]["applicant_name"] == "Starbucks Coffee Company"
     assert evidence.json()["latest_evidence"]["payload_excerpt"]["applicant"] == "Starbucks Coffee Company"
 
@@ -214,6 +228,129 @@ def test_applicant_alias_in_negative_context_does_not_create_candidate(client, d
     )
 
     _ingest(client, csv_path, key="former_applicant_brand")
+
+    assert db.query(PermitBrandMatch).count() == 0
+
+
+def test_person_semantic_suppresses_applicant_brand_match(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    csv_path = tmp_path / "person-applicant-brand.csv"
+    _write_filing(
+        csv_path,
+        project="Confidential tenant improvement",
+        description="Commercial retail tenant build out",
+        applicant="Starbucks Coffee Company",
+    )
+    payload = _source_payload(
+        str(csv_path),
+        key="person_applicant_brand",
+        applicant_semantics="person",
+    )
+    source = client.post("/ingestion/sources", json=payload)
+    assert source.status_code == 201, source.text
+    run = client.post(f"/ingestion/sources/{source.json()['id']}/runs", json={"max_pages": 1})
+    assert run.status_code == 201, run.text
+
+    assert db.query(PermitBrandMatch).count() == 0
+
+
+def test_unknown_applicant_semantic_is_supporting_only(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    csv_path = tmp_path / "mixed-applicant-brand.csv"
+    _write_filing(
+        csv_path,
+        project="Confidential tenant improvement",
+        description="Commercial retail tenant build out",
+        applicant="Starbucks Coffee Company",
+    )
+    payload = _source_payload(
+        str(csv_path),
+        key="unknown_applicant_brand",
+        applicant_semantics="unknown",
+    )
+    source = client.post("/ingestion/sources", json=payload)
+    assert source.status_code == 201, source.text
+    run = client.post(f"/ingestion/sources/{source.json()['id']}/runs", json={"max_pages": 1})
+    assert run.status_code == 201, run.text
+
+    assert db.query(PermitBrandMatch).count() == 0
+
+
+def test_applicant_semantic_reclassification_retracts_stale_candidate(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    csv_path = tmp_path / "reclassified-applicant-brand.csv"
+    _write_filing(
+        csv_path,
+        project="Confidential tenant improvement",
+        description="Commercial retail tenant build out",
+        applicant="Starbucks Coffee Company",
+    )
+    source_payload = _source_payload(str(csv_path), key="reclassified_applicant_brand")
+    source = client.post("/ingestion/sources", json=source_payload)
+    assert source.status_code == 201, source.text
+    source_id = source.json()["id"]
+    first_run = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert first_run.status_code == 201, first_run.text
+    assert db.query(PermitBrandMatch).one().review_status == "candidate"
+
+    unknown_mappings = _source_payload(
+        str(csv_path),
+        key="reclassified_applicant_brand",
+        applicant_semantics="unknown",
+    )["field_mappings"]
+    updated = client.patch(
+        f"/ingestion/sources/{source_id}",
+        json={"field_mappings": unknown_mappings},
+    )
+    assert updated.status_code == 200, updated.text
+    second_run = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert second_run.status_code == 201, second_run.text
+
+    db.expire_all()
+    assert db.query(PermitBrandMatch).one().review_status == "retracted"
+
+
+def test_business_dba_semantic_is_highest_applicant_evidence(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    csv_path = tmp_path / "dba-applicant-brand.csv"
+    _write_filing(
+        csv_path,
+        project="Confidential tenant improvement",
+        description="Commercial retail tenant build out",
+        applicant="Starbucks Coffee Company",
+    )
+    payload = _source_payload(
+        str(csv_path), key="dba_applicant_brand", applicant_semantics="business_dba"
+    )
+    source = client.post("/ingestion/sources", json=payload)
+    assert source.status_code == 201, source.text
+    run = client.post(f"/ingestion/sources/{source.json()['id']}/runs", json={"max_pages": 1})
+    assert run.status_code == 201, run.text
+
+    match = db.query(PermitBrandMatch).one()
+    assert match.confidence == 0.97
+    assert "applicant_business_dba_source" in match.rule_ids
+    response = client.get("/permit-brand-matches")
+    assert response.status_code == 200, response.text
+    assert response.json()[0]["signal_quality"] == "applicant_dba"
+
+
+def test_applicant_alias_must_be_the_business_identity(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    csv_path = tmp_path / "applicant-incidental-brand.csv"
+    _write_filing(
+        csv_path,
+        project="Confidential tenant improvement",
+        description="Commercial retail tenant build out",
+        applicant="Starbucks Permit Services LLC",
+    )
+
+    _ingest(client, csv_path, key="applicant_incidental_brand")
 
     assert db.query(PermitBrandMatch).count() == 0
 

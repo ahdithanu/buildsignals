@@ -22,7 +22,60 @@ from app.services.ingestion.normalization import (
     normalize_permit,
     prepare_mapped_record,
 )
-from app.services.ingestion.service import execute_source_run
+from app.services.ingestion.service import _normalization_hash, execute_source_run
+
+
+def test_applicant_mappings_declare_conservative_value_semantics():
+    applicant_mappings = {
+        (entry.key, mapping.source_field): mapping.value_semantics
+        for entry in load_catalog()
+        for mapping in entry.field_mappings
+        if mapping.canonical_field == "applicant_name"
+    }
+
+    assert len(applicant_mappings) == 23
+    assert set(applicant_mappings.values()) <= {
+        "unknown", "business_dba", "legal_entity", "person"
+    }
+    assert applicant_mappings[
+        ("new_york_ny_legacy_job_applications", "applicant_s_last_name")
+    ] == "person"
+    assert applicant_mappings[
+        ("texas_comptroller_sales_tax_locations", "__applicant_name")
+    ] == "legal_entity"
+    assert applicant_mappings[
+        ("washington_dc_basic_business_licenses_retail_openings", "ENTITYNAME")
+    ] == "legal_entity"
+    assert applicant_mappings[
+        ("new_york_state_sla_pending_licenses", "legalname")
+    ] == "legal_entity"
+    assert applicant_mappings[
+        ("new_york_ny_dob_now_job_applications", "applicant_business_name")
+    ] == "unknown"
+
+
+def test_field_semantic_change_invalidates_normalization_hash():
+    mapping = SimpleNamespace(
+        source_field="applicant",
+        canonical_field="applicant_name",
+        value_semantics="unknown",
+        transform=None,
+        transform_options=None,
+        default_value=None,
+        is_required=False,
+        is_active=True,
+    )
+    source = SimpleNamespace(
+        record_type="permit",
+        jurisdiction="Austin, TX",
+        settings={},
+        field_mappings=[mapping],
+    )
+
+    before = _normalization_hash(source)
+    mapping.value_semantics = "legal_entity"
+
+    assert _normalization_hash(source) != before
 
 
 def test_catalog_loads_first_live_source_cohort():

@@ -76,6 +76,9 @@ class SourceFieldMapping(OrgMixin, Base):
     )
     source_field: Mapped[str] = mapped_column(String(255), nullable=False)
     canonical_field: Mapped[str] = mapped_column(String(255), nullable=False)
+    value_semantics: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="unknown", server_default="unknown"
+    )
     transform: Mapped[Optional[str]] = mapped_column(String(100))
     transform_options: Mapped[Optional[dict]] = mapped_column(JSON)
     default_value: Mapped[Optional[dict]] = mapped_column(JSON)

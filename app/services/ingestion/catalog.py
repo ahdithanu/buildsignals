@@ -950,6 +950,7 @@ def _mapping_snapshot(mapping: object) -> dict:
     return {
         "source_field": mapping.source_field,
         "canonical_field": mapping.canonical_field,
+        "value_semantics": mapping.value_semantics,
         "transform": mapping.transform,
         "transform_options": mapping.transform_options,
         "default_value": mapping.default_value,
