@@ -1341,6 +1341,11 @@
             ],
             "title": "Jurisdiction"
           },
+          "last_observed_at": {
+            "format": "date-time",
+            "title": "Last Observed At",
+            "type": "string"
+          },
           "latitude": {
             "anyOf": [
               {
@@ -1440,6 +1445,18 @@
             ],
             "title": "Status"
           },
+          "status_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Updated At"
+          },
           "valuation": {
             "anyOf": [
               {
@@ -1483,6 +1500,8 @@
           "latitude",
           "longitude",
           "filed_at",
+          "status_updated_at",
+          "last_observed_at",
           "source_url"
         ],
         "title": "BrandPermitSummary",
@@ -7051,6 +7070,28 @@
             "title": "First Seen At",
             "type": "string"
           },
+          "freshness": {
+            "enum": [
+              "fresh",
+              "active",
+              "aging",
+              "stale"
+            ],
+            "readOnly": true,
+            "title": "Freshness",
+            "type": "string"
+          },
+          "freshness_date": {
+            "format": "date-time",
+            "readOnly": true,
+            "title": "Freshness Date",
+            "type": "string"
+          },
+          "freshness_label": {
+            "readOnly": true,
+            "title": "Freshness Label",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -7106,6 +7147,11 @@
             "title": "Rule Ids",
             "type": "array"
           },
+          "signal_age_days": {
+            "readOnly": true,
+            "title": "Signal Age Days",
+            "type": "integer"
+          },
           "signal_quality": {
             "readOnly": true,
             "title": "Signal Quality",
@@ -7138,7 +7184,11 @@
           "detection_method",
           "signal_quality",
           "signal_quality_label",
-          "signal_quality_note"
+          "signal_quality_note",
+          "freshness_date",
+          "signal_age_days",
+          "freshness",
+          "freshness_label"
         ],
         "title": "PermitBrandMatchResponse",
         "type": "object"
@@ -14983,6 +15033,34 @@
                 }
               ],
               "title": "Detection Method"
+            }
+          },
+          {
+            "in": "query",
+            "name": "freshness",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(fresh|active|aging|stale)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Freshness"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort_by",
+            "required": false,
+            "schema": {
+              "default": "confidence",
+              "pattern": "^(confidence|freshness)$",
+              "title": "Sort By",
+              "type": "string"
             }
           },
           {
