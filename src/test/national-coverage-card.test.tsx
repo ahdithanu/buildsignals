@@ -49,6 +49,8 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 2,
                 pre_approval_sources: 1,
                 approved_only_sources: 1,
+                priority_score: 0,
+                priority_reasons: [],
               },
               {
                 state: "MI",
@@ -57,6 +59,8 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 0,
                 pre_approval_sources: 0,
                 approved_only_sources: 1,
+                priority_score: 0,
+                priority_reasons: [],
               },
             ],
             activation_queue: [
@@ -67,6 +71,22 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 0,
                 pre_approval_sources: 0,
                 approved_only_sources: 0,
+                priority_score: 0,
+                priority_reasons: [],
+              },
+            ],
+            rollout_queue: [
+              {
+                state: "WA",
+                rollout_cluster: 1,
+                rollout_label: "Texas, Washington, New York",
+                coverage_status: "live",
+                live_sources: 5,
+                candidate_sources: 1,
+                jurisdiction_count: 4,
+                priority_score: 515,
+                next_action: "run_candidate_canary",
+                next_action_label: "Run candidate canary",
               },
             ],
             candidate_only_state_count: 1,
@@ -93,6 +113,11 @@ describe("<NationalCoverageCard>", () => {
     expect(screen.getByText("AL")).toBeInTheDocument();
     expect(screen.getByText(/state leaders/i)).toBeInTheDocument();
     expect(screen.getByText(/next activation queue/i)).toBeInTheDocument();
+    expect(screen.getByText(/rollout now/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "WA · Run candidate canary" })).toHaveAttribute(
+      "href",
+      "/source-health?state=WA",
+    );
     expect(screen.getByText("TX · 1")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "TX · 1" })).toHaveAttribute("href", "/source-health?state=TX");
     expect(screen.getByText("Detroit BSEED Building Permits")).toBeInTheDocument();

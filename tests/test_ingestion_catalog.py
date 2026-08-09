@@ -145,7 +145,12 @@ def test_catalog_loads_first_live_source_cohort():
         "hartford_ct_building_permits_lifecycle",
         "new_york_state_sla_pending_licenses",
         "detroit_mi_bseed_building_permits",
-    }
+        "washington_state_lcb_local_authority_letters",
+            "everett_wa_planning_application_notices",
+            "bend_or_planning_applications",
+            "bend_or_permit_applications_point",
+            "bend_or_permit_applications_line",
+        }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
         assert len(source_fields) == len(set(source_fields))
@@ -191,10 +196,8 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     entries = load_candidate_catalog()
 
     assert {entry.key for entry in entries} == {
-        "washington_state_lcb_local_authority_letters",
-        "bend_or_planning_applications",
-        "bend_or_permit_applications_point",
-        "bend_or_permit_applications_line",
+        "san_marcos_tx_planning_application_notices",
+        "taylor_tx_development_notices",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -205,37 +208,19 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     }
     by_key = {entry.key: entry for entry in entries}
 
-    lcb = by_key["washington_state_lcb_local_authority_letters"]
-    assert lcb.status == "operational_retry"
-    assert lcb.record_type == "permit"
-    assert lcb.last_checked_on.isoformat() == "2026-07-18"
-    assert lcb.next_audit_on.isoformat() == "2026-07-25"
-    assert "HTTP 503" in lcb.blocker_summary
-    assert "trade_name" in lcb.candidate_source_fields
-    assert lcb.can_run_canary is True
-    assert lcb.probe_settings is not None
-    assert any(
-        mapping.canonical_field == "source_record_id" and mapping.is_required
-        for mapping in lcb.probe_field_mappings
-    )
+    san_marcos = by_key["san_marcos_tx_planning_application_notices"]
+    assert san_marcos.adapter == "rss"
+    assert san_marcos.status == "freshness_hold"
+    assert san_marcos.can_run_canary is False
+    assert san_marcos.probe_settings is None
 
-    bend_planning = by_key["bend_or_planning_applications"]
-    assert bend_planning.status == "operational_retry"
-    assert bend_planning.base_url.endswith("/Planning/FeatureServer/0")
-    assert bend_planning.can_run_canary is True
-    assert "ApplicationDescription" in bend_planning.candidate_source_fields
+    taylor = by_key["taylor_tx_development_notices"]
+    assert taylor.adapter == "rss"
+    assert taylor.status == "freshness_hold"
+    assert taylor.can_run_canary is False
+    assert "before-action" in taylor.early_warning_value.casefold()
 
-    bend_permits = by_key["bend_or_permit_applications_point"]
-    assert bend_permits.status == "operational_retry"
-    assert bend_permits.base_url.endswith("/Permit_Applications_Point/FeatureServer/0")
-    assert bend_permits.can_run_canary is True
-    assert "IssueDate" in bend_permits.candidate_source_fields
-
-    bend_lines = by_key["bend_or_permit_applications_line"]
-    assert bend_lines.status == "operational_retry"
-    assert bend_lines.base_url.endswith("/Permit_Applications_Line/FeatureServer/0")
-    assert bend_lines.can_run_canary is True
-    assert "CENTERLINID" in bend_lines.candidate_source_fields
+    assert not {key for key in by_key if key.startswith("bend_or_")}
 
     orlando = by_key["orlando_fl_planning_applications"]
     assert orlando.status == "legal_hold"
@@ -464,10 +449,15 @@ def test_opening_signal_sources_declare_stage_date_and_raw_export_limits(tmp_pat
 
     assert load_catalog(path)[0].key == "opening_signal"
 
+    preapproval_payload = json.loads(json.dumps(valid_payload))
+    preapproval_payload[0]["settings"]["signal_stage"] = "pre_approval_and_approved"
+    path.write_text(json.dumps(preapproval_payload), encoding="utf-8")
+    assert load_catalog(path)[0].key == "opening_signal"
+
     invalid_payload = json.loads(json.dumps(valid_payload))
-    invalid_payload[0]["settings"]["signal_stage"] = "pre_approval_and_approved"
+    invalid_payload[0]["settings"]["signal_stage"] = "parcel_context"
     path.write_text(json.dumps(invalid_payload), encoding="utf-8")
-    with pytest.raises(ValueError, match="retailer_opening_signal sources must be approved_only"):
+    with pytest.raises(ValueError, match="approved_only or pre_approval_and_approved"):
         load_catalog(path)
 
     invalid_payload = json.loads(json.dumps(valid_payload))
@@ -2624,6 +2614,8 @@ def test_new_york_sla_pending_licenses_are_preopening_context():
     assert entry.adapter == "socrata"
     assert entry.record_type == "permit"
     assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["retailer_opening_signal"] is True
+    assert entry.settings["opening_signal_date_field"] == "received_date"
     assert "license unspecified" in entry.settings["license"]
     assert entry.settings["freshness_field"] == "received_date"
     assert entry.settings["connector"]["keyset_fields"] == ["application_id"]
@@ -5487,6 +5479,40 @@ def test_catalog_sync_is_idempotent_and_preserves_source_ids(db):
     assert db.query(SourceFieldMapping).count() == mapping_count
 
 
+def test_promoted_washington_sources_bootstrap_from_production_catalog(db):
+    keys = {
+        "washington_state_lcb_local_authority_letters",
+        "everett_wa_planning_application_notices",
+    }
+    entries = [entry for entry in load_catalog() if entry.key in keys]
+
+    first = sync_catalog(db, entries)
+    db.commit()
+    sources = {
+        source.key: source
+        for source in db.query(IngestionSource).filter(IngestionSource.key.in_(keys)).all()
+    }
+
+    assert first.created == 2
+    assert set(sources) == keys
+    assert sources["washington_state_lcb_local_authority_letters"].settings["connector"]["page_size"] == 500
+    assert sources["washington_state_lcb_local_authority_letters"].settings[
+        "reconciliation_mode"
+    ] == "daily_rolling_window_incremental"
+    assert sources["everett_wa_planning_application_notices"].settings["connector"]["page_size"] == 100
+    assert {
+        mapping.canonical_field
+        for mapping in sources["washington_state_lcb_local_authority_letters"].field_mappings
+    } >= {"source_record_id", "permit_number", "project_name", "latitude", "longitude"}
+    assert "linked_document_body" in sources[
+        "everett_wa_planning_application_notices"
+    ].settings["suppressed_fields"]
+
+    second = sync_catalog(db, entries)
+    db.commit()
+    assert second.unchanged == 2
+
+
 def test_catalog_sync_updates_mutable_fields_and_rejects_adapter_change(db):
     original = load_catalog()[0]
     sync_catalog(db, [original])
@@ -5932,6 +5958,41 @@ def test_required_first_nonempty_treats_whitespace_as_missing():
         {"state_id": " ", "local_id": "\t"},
         mappings,
     ) == ["state_id|local_id"]
+
+
+def test_regex_extract_reads_case_identity_from_another_field():
+    mapping = FieldMappingCreate(
+        source_field="__application_number",
+        canonical_field="application_number",
+        transform="regex_extract",
+        transform_options={
+            "source_field": "link",
+            "pattern": r"(?i)(rev(?:ii|iii)\d{2}-\d+)",
+        },
+    )
+
+    prepared, field_mapping = prepare_mapped_record(
+        {"link": "https://example.test/Notice-of-Application-REVII26-014"},
+        [mapping],
+    )
+
+    mapped_key = next(
+        key for key, canonical in field_mapping.items()
+        if canonical == "application_number"
+    )
+    assert prepared[mapped_key] == "REVII26-014"
+
+
+def test_regex_extract_rejects_an_unknown_capture_group():
+    mapping = FieldMappingCreate(
+        source_field="case_number",
+        canonical_field="application_number",
+        transform="regex_extract",
+        transform_options={"pattern": r"(PZ-\d+)", "group": 2},
+    )
+
+    with pytest.raises(ValueError, match="group does not exist"):
+        prepare_mapped_record({"case_number": "PZ-123"}, [mapping])
 
 
 def test_object_path_transform_can_read_list_indexes():
@@ -8255,6 +8316,90 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "SALEDATE": "07/01/2026",
             "SALEPRICE": "215000",
             "ASOFDATE": "2026-07-07",
+        },
+        "bend_or_planning_applications": {
+            "OBJECTID": 1,
+            "ApplicationNumber": "PL-26-001",
+            "ApplicationDate": 1785542400000,
+            "ApplicationDescription": "Commercial site plan",
+            "ProjectTypeCode": "SP",
+            "ApplicationTypeCode": "SITE",
+            "AppStatusDesc": "Under Review",
+            "Address": "100 NW Test Ave",
+            "TAXLOT": "17120000100",
+            "DecisionDate": None,
+            "LASTUPDATE": 1785628800000,
+            "OverallStatus": "A",
+            "centroid": {"x": -121.3153, "y": 44.0582},
+        },
+        "bend_or_permit_applications_point": {
+            "OBJECTID": 2,
+            "ApplicationNumber": "BP-26-002",
+            "ApplicationDate": 1785542400000,
+            "IssueDate": None,
+            "DateFinaled": None,
+            "SQFT": 12000,
+            "Units": 1,
+            "ProjectValuation": 1500000,
+            "ApplicationType": "TI",
+            "ApplicationStatus": "RV",
+            "BldgUse": "COM",
+            "UseDesc": "Retail",
+            "Owner": "Example Owner LLC",
+            "Address": "200 NE Test St",
+            "TAXLOT": "17120000200",
+            "LASTUPDATE": 1785628800000,
+            "OverallStatus": "A",
+            "ApplicationDescription": "Retail tenant improvement",
+            "ProposedLandUse": "Retail",
+            "geometry": {"x": -121.3001, "y": 44.0601},
+        },
+        "bend_or_permit_applications_line": {
+            "OBJECTID": 3,
+            "ApplicationNumber": "PR-26-003",
+            "ApplicationDate": 1785542400000,
+            "IssueDate": 1785628800000,
+            "DateFinaled": None,
+            "SQFT": 5000,
+            "Units": 1,
+            "ProjectValuation": 600000,
+            "ApplicationType": "INF",
+            "ApplicationStatus": "PI",
+            "StatusDesc": "Permit Issued",
+            "BldgUse": "COM",
+            "UseDesc": "Commercial",
+            "Owner": "Example Corridor LLC",
+            "Address": "NW Test Corridor",
+            "TAXLOT": "17120000300",
+            "LASTUPDATE": 1785628800000,
+            "OverallStatus": "I",
+        },
+        "washington_state_lcb_local_authority_letters": {
+            "license": "432561",
+            "applicationdate": "2026-07-31T00:00:00.000",
+            "countyname": "King",
+            "cityname": "Seattle",
+            "l_a_type": "New Application",
+            "licenseename": "Example Retail LLC",
+            "tradename": "Example Market",
+            "streetaddress": "100 Pine St",
+            "city": "Seattle",
+            "state": "WA",
+            "zipcode": "98101",
+            "privdesc01": "Grocery Store - Beer/Wine",
+            "privdesc02": None,
+            "privdesc03": None,
+            "la_posted_date": "2026-08-01T00:00:00.000",
+            "systemdate": "2026-08-01T12:00:00.000",
+            "ubi": "600000001",
+            "location": {"latitude": "47.6101", "longitude": "-122.3344"},
+        },
+        "everett_wa_planning_application_notices": {
+            "guid": "https://www.everettwa.gov/DocumentCenter/View/54345/notice/1",
+            "title": "Notice of Application",
+            "link": "https://www.everettwa.gov/DocumentCenter/View/54345/Notice-of-Application-REVII26-014",
+            "published_at": "Fri, 31 Jul 2026 15:07:37 -0800",
+            "description": "Application for replacement of two commercial storage silos.",
         },
     }
 

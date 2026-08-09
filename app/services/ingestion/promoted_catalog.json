@@ -1,0 +1,656 @@
+[
+  {
+    "key": "bend_or_planning_applications",
+    "name": "Bend Planning Applications",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Bend, OR",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Planning/FeatureServer/0",
+    "settings": {
+      "connector": {
+        "page_size": 500,
+        "where": "ApplicationNumber IS NOT NULL",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PL_RecordID,ApplicationNumber,ApplicationDate,ApplicationDescription,ProjectTypeCode,ApplicationTypeCode,AppStatus,AppStatusDesc,Address,TAXLOT,DecisionDate,LASTUPDATE,OverallStatus",
+        "order_by_fields": "LASTUPDATE DESC, OBJECTID ASC",
+        "include_geometry": false,
+        "include_centroid": true,
+        "query": {
+          "f": "json",
+          "outSR": 4326
+        }
+      },
+      "defaults": {
+        "city": "Bend",
+        "state": "OR",
+        "jurisdiction": "Bend",
+        "permit_type": "planning_application",
+        "approval_stage": "pre_approval"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {
+          "name": "bend_planning_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NULL"
+          }
+        },
+        {
+          "name": "bend_planning_approved",
+          "expected_stage": "approved",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NOT NULL"
+          }
+        }
+      ],
+      "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::planning-table",
+      "license": "Custom License",
+      "license_url": "https://data.bendoregon.gov/datasets/bendoregon::planning-table",
+      "reconciliation_mode": "nightly_full_snapshot",
+      "freshness_field": "LASTUPDATE",
+      "freshness_sla_hours": 72,
+      "refresh_frequency": "nightly",
+      "attribution_required": true,
+      "field_allowlist": [
+        "Address",
+        "AppStatus",
+        "AppStatusDesc",
+        "ApplicationDate",
+        "ApplicationDescription",
+        "ApplicationNumber",
+        "ApplicationTypeCode",
+        "DecisionDate",
+        "GNCommonID",
+        "GNMasterProjectID",
+        "LASTUPDATE",
+        "OBJECTID",
+        "OverallStatus",
+        "PL_RecordID",
+        "ProjectTypeCode",
+        "TAXLOT",
+        "centroid",
+        "geometry"
+      ],
+      "suppressed_fields": [
+        "AssignedPlanner",
+        "CREATEDBY",
+        "UPDATEDBY",
+        "GlobalID",
+        "raw_geometry_export",
+        "raw_source_export"
+      ],
+      "canary_required_fields": [
+        "OBJECTID",
+        "ApplicationNumber",
+        "ApplicationDate",
+        "LASTUPDATE"
+      ],
+      "export_policy": "derived_permit_and_planning_intelligence_only_no_raw_source_export",
+      "rights_basis": "Approved by Build Signals on 2026-08-02 for commercial storage, analysis, and customer-facing derived intelligence. Preserve City of Bend attribution, source links, currentness notices, and no raw source-replacement export.",
+      "candidate_key": "bend_or_planning_applications",
+      "candidate_status": "approved_for_production",
+      "candidate_canary_completed_on": "2026-08-02"
+    },
+    "is_active": true,
+    "field_mappings": [
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {"fields": ["ApplicationNumber"]},
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDate",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "DecisionDate",
+        "canonical_field": "approved_at",
+        "is_active": true
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "is_active": true,
+        "transform_options": {
+          "cases": [
+            {
+              "field": "DecisionDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "AppStatusDesc",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDescription",
+        "canonical_field": "description",
+        "is_active": true
+      },
+      {
+        "source_field": "Address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "TAXLOT",
+        "canonical_field": "parcel_id",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationTypeCode",
+        "canonical_field": "permit_subtype",
+        "is_active": true
+      },
+      {
+        "source_field": "ProjectTypeCode",
+        "canonical_field": "permit_type",
+        "is_active": true
+      },
+      {
+        "source_field": "OverallStatus",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "LASTUPDATE",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      },
+      {
+        "source_field": "centroid",
+        "canonical_field": "latitude",
+        "transform": "object_path",
+        "is_active": true,
+        "transform_options": {
+          "path": [
+            "y"
+          ]
+        }
+      },
+      {
+        "source_field": "__longitude",
+        "canonical_field": "longitude",
+        "transform": "object_path",
+        "is_active": true,
+        "transform_options": {
+          "source_field": "centroid",
+          "path": [
+            "x"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "key": "bend_or_permit_applications_point",
+    "name": "Bend Permit Applications Point",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Bend, OR",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Permit_Applications_Point/FeatureServer/0",
+    "settings": {
+      "connector": {
+        "page_size": 500,
+        "where": "ApplicationNumber IS NOT NULL",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,Owner,Address,TAXLOT,LASTUPDATE,OverallStatus,ApplicationDescription,ProposedLandUse",
+        "order_by_fields": "LASTUPDATE DESC, OBJECTID ASC",
+        "include_geometry": true,
+        "query": {
+          "f": "json",
+          "outSR": 4326
+        }
+      },
+      "defaults": {
+        "city": "Bend",
+        "state": "OR",
+        "jurisdiction": "Bend",
+        "permit_type": "building_permit",
+        "approval_stage": "pre_approval"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {
+          "name": "bend_permit_point_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"
+          }
+        },
+        {
+          "name": "bend_permit_point_approved",
+          "expected_stage": "approved",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"
+          }
+        }
+      ],
+      "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-point",
+      "license": "Custom License",
+      "license_url": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-point",
+      "reconciliation_mode": "nightly_full_snapshot",
+      "freshness_field": "LASTUPDATE",
+      "freshness_sla_hours": 72,
+      "refresh_frequency": "nightly",
+      "attribution_required": true,
+      "field_allowlist": [
+        "Address",
+        "ApplicationDate",
+        "ApplicationDescription",
+        "ApplicationNumber",
+        "ApplicationStatus",
+        "ApplicationType",
+        "BldgUse",
+        "DateFinaled",
+        "GNCommonID",
+        "GNMasterProjectID",
+        "IssueDate",
+        "LASTUPDATE",
+        "OBJECTID",
+        "OverallStatus",
+        "Owner",
+        "PR_RecordID",
+        "ProjectValuation",
+        "ProposedLandUse",
+        "SQFT",
+        "StatusDesc",
+        "TAXLOT",
+        "TypeDesc",
+        "Units",
+        "UseDesc",
+        "centroid",
+        "geometry"
+      ],
+      "suppressed_fields": [
+        "AssignedPlanner",
+        "CREATEDBY",
+        "UPDATEDBY",
+        "GlobalID",
+        "raw_geometry_export",
+        "raw_source_export"
+      ],
+      "canary_required_fields": [
+        "OBJECTID",
+        "ApplicationNumber",
+        "ApplicationDate",
+        "LASTUPDATE"
+      ],
+      "export_policy": "derived_permit_and_planning_intelligence_only_no_raw_source_export",
+      "rights_basis": "Approved by Build Signals on 2026-08-02 for commercial storage, analysis, and customer-facing derived intelligence. Preserve City of Bend attribution, source links, currentness notices, and no raw source-replacement export.",
+      "candidate_key": "bend_or_permit_applications_point",
+      "candidate_status": "approved_for_production",
+      "candidate_canary_completed_on": "2026-08-02"
+    },
+    "is_active": true,
+    "field_mappings": [
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {"fields": ["ApplicationNumber"]},
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDate",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "IssueDate",
+        "canonical_field": "issued_at",
+        "is_active": true
+      },
+      {
+        "source_field": "DateFinaled",
+        "canonical_field": "completed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "is_active": true,
+        "transform_options": {
+          "cases": [
+            {
+              "field": "IssueDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "ApplicationStatus",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDescription",
+        "canonical_field": "description",
+        "is_active": true
+      },
+      {
+        "source_field": "Owner",
+        "canonical_field": "owner_name",
+        "is_active": true
+      },
+      {
+        "source_field": "Address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "TAXLOT",
+        "canonical_field": "parcel_id",
+        "is_active": true
+      },
+      {
+        "source_field": "ProjectValuation",
+        "canonical_field": "valuation",
+        "is_active": true
+      },
+      {
+        "source_field": "SQFT",
+        "canonical_field": "square_feet",
+        "is_active": true
+      },
+      {
+        "source_field": "Units",
+        "canonical_field": "units",
+        "is_active": true
+      },
+      {
+        "source_field": "ProposedLandUse",
+        "canonical_field": "proposed_use",
+        "is_active": true
+      },
+      {
+        "source_field": "UseDesc",
+        "canonical_field": "occupancy_type",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationType",
+        "canonical_field": "permit_subtype",
+        "is_active": true
+      },
+      {
+        "source_field": "BldgUse",
+        "canonical_field": "permit_type",
+        "is_active": true
+      },
+      {
+        "source_field": "OverallStatus",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "LASTUPDATE",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      },
+      {
+        "source_field": "geometry",
+        "canonical_field": "latitude",
+        "transform": "object_path",
+        "is_active": true,
+        "transform_options": {
+          "path": [
+            "y"
+          ]
+        }
+      },
+      {
+        "source_field": "__longitude",
+        "canonical_field": "longitude",
+        "transform": "object_path",
+        "is_active": true,
+        "transform_options": {
+          "source_field": "geometry",
+          "path": [
+            "x"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "key": "bend_or_permit_applications_line",
+    "name": "Bend Permit Applications Line",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Bend, OR",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Permit_Applications_Line/FeatureServer/0",
+    "settings": {
+      "connector": {
+        "page_size": 500,
+        "where": "ApplicationNumber IS NOT NULL",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,BuildingCategory,DeptCode,Department,Owner,Address,TAXLOT,CENTERLINEID,LASTUPDATE,OverallStatus,Shape__Length",
+        "order_by_fields": "LASTUPDATE DESC, OBJECTID ASC",
+        "include_geometry": false,
+        "query": {
+          "f": "json",
+          "outSR": 4326
+        }
+      },
+      "defaults": {
+        "city": "Bend",
+        "state": "OR",
+        "jurisdiction": "Bend",
+        "permit_type": "building_permit",
+        "approval_stage": "pre_approval"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {
+          "name": "bend_permit_line_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"
+          }
+        },
+        {
+          "name": "bend_permit_line_approved",
+          "expected_stage": "approved",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"
+          }
+        }
+      ],
+      "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-line",
+      "license": "Custom License",
+      "license_url": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-line",
+      "reconciliation_mode": "nightly_full_snapshot",
+      "freshness_field": "LASTUPDATE",
+      "freshness_sla_hours": 72,
+      "refresh_frequency": "nightly",
+      "attribution_required": true,
+      "field_allowlist": [
+        "Address",
+        "ApplicationDate",
+        "ApplicationNumber",
+        "ApplicationStatus",
+        "ApplicationType",
+        "BldgUse",
+        "BuildingCategory",
+        "CENTERLINEID",
+        "DateFinaled",
+        "Department",
+        "DeptCode",
+        "GNCommonID",
+        "GNMasterProjectID",
+        "IssueDate",
+        "LASTUPDATE",
+        "OBJECTID",
+        "OverallStatus",
+        "Owner",
+        "PR_RecordID",
+        "ProjectValuation",
+        "SQFT",
+        "Shape__Length",
+        "StatusDesc",
+        "TAXLOT",
+        "TypeDesc",
+        "Units",
+        "UseDesc",
+        "centroid",
+        "geometry"
+      ],
+      "suppressed_fields": [
+        "AssignedPlanner",
+        "CREATEDBY",
+        "UPDATEDBY",
+        "GlobalID",
+        "raw_geometry_export",
+        "raw_source_export"
+      ],
+      "canary_required_fields": [
+        "OBJECTID",
+        "ApplicationNumber",
+        "ApplicationDate",
+        "LASTUPDATE"
+      ],
+      "export_policy": "derived_permit_and_planning_intelligence_only_no_raw_source_export",
+      "rights_basis": "Approved by Build Signals on 2026-08-02 for commercial storage, analysis, and customer-facing derived intelligence. Preserve City of Bend attribution, source links, currentness notices, and no raw source-replacement export.",
+      "candidate_key": "bend_or_permit_applications_line",
+      "candidate_status": "approved_for_production",
+      "candidate_canary_completed_on": "2026-08-02"
+    },
+    "is_active": true,
+    "field_mappings": [
+      {
+        "source_field": "ApplicationNumber",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {"fields": ["ApplicationNumber"]},
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationDate",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "IssueDate",
+        "canonical_field": "issued_at",
+        "is_active": true
+      },
+      {
+        "source_field": "DateFinaled",
+        "canonical_field": "completed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "is_active": true,
+        "transform_options": {
+          "cases": [
+            {
+              "field": "IssueDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "ApplicationStatus",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "StatusDesc",
+        "canonical_field": "description",
+        "is_active": true
+      },
+      {
+        "source_field": "Owner",
+        "canonical_field": "owner_name",
+        "is_active": true
+      },
+      {
+        "source_field": "Address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "TAXLOT",
+        "canonical_field": "parcel_id",
+        "is_active": true
+      },
+      {
+        "source_field": "ProjectValuation",
+        "canonical_field": "valuation",
+        "is_active": true
+      },
+      {
+        "source_field": "SQFT",
+        "canonical_field": "square_feet",
+        "is_active": true
+      },
+      {
+        "source_field": "Units",
+        "canonical_field": "units",
+        "is_active": true
+      },
+      {
+        "source_field": "UseDesc",
+        "canonical_field": "occupancy_type",
+        "is_active": true
+      },
+      {
+        "source_field": "ApplicationType",
+        "canonical_field": "permit_subtype",
+        "is_active": true
+      },
+      {
+        "source_field": "BldgUse",
+        "canonical_field": "permit_type",
+        "is_active": true
+      },
+      {
+        "source_field": "LASTUPDATE",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      }
+    ]
+  }
+]

@@ -186,6 +186,21 @@ export interface StateCoverageBucket {
   retailer_opening_sources: number;
   pre_approval_sources: number;
   approved_only_sources: number;
+  priority_score: number;
+  priority_reasons: string[];
+}
+
+export interface StateRolloutItem {
+  state: string;
+  rollout_cluster: number;
+  rollout_label: string;
+  coverage_status: 'live' | 'candidate' | 'uncovered';
+  live_sources: number;
+  candidate_sources: number;
+  jurisdiction_count: number;
+  priority_score: number;
+  next_action: string;
+  next_action_label: string;
 }
 
 export interface RetailerOpeningCoverageSource {
@@ -220,6 +235,7 @@ export interface IngestionCoverage {
   top_jurisdictions: CoverageJurisdictionBucket[];
   state_buckets: StateCoverageBucket[];
   activation_queue: StateCoverageBucket[];
+  rollout_queue?: StateRolloutItem[];
   candidate_only_state_count: number;
   candidate_only_states: string[];
   covered_state_count: number;
@@ -261,6 +277,7 @@ export interface IngestionCandidate {
   blocker_summary: string;
   early_warning_value: string;
   candidate_source_fields: string[];
+  production_page_size?: number | null;
   can_run_canary: boolean;
   last_canary_at?: string | null;
   last_canary_ok?: boolean | null;

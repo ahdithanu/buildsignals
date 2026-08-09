@@ -1,114 +1,51 @@
 [
   {
-    "key": "washington_state_lcb_local_authority_letters",
-    "name": "Washington State LCB Local Authority Letters",
-    "adapter": "socrata",
+    "key": "san_marcos_tx_planning_application_notices",
+    "name": "San Marcos Planning Application Notices",
+    "adapter": "rss",
     "record_type": "permit",
-    "jurisdiction": "Washington State",
-    "base_url": "https://data.wa.gov/resource/vgcw-qfjm.json",
-    "official_landing_page": "https://data.wa.gov/Public-Safety/Local-Authority-Letters/vgcw-qfjm",
-    "license": "Public Domain",
-    "status": "operational_retry",
-    "blocker_summary": "Official row API retries returned HTTP 503 on July 18, 2026; do not promote until a live row canary succeeds against the public endpoint.",
-    "early_warning_value": "Statewide pre-opening liquor, restaurant, grocery, and cannabis opening-intent context before public opening activity.",
+    "jurisdiction": "San Marcos, TX",
+    "base_url": "https://www.sanmarcostx.gov/RSSFeed.aspx?ModID=1&CID=30",
+    "official_landing_page": "https://www.sanmarcostx.gov/1537/Public-and-Application-Notices",
+    "license": "Official public notice feed",
+    "status": "freshness_hold",
+    "blocker_summary": "The City explicitly publishes a Planning Application Notices RSS category, but the official feed returned zero items during the August 1, 2026 audit.",
+    "early_warning_value": "Application-submitted notices for zoning, annexation, demolition, comprehensive-plan, and historic-district actions before hearings or final decisions.",
     "candidate_source_fields": [
-      "license",
-      "ubi",
-      "application_date",
-      "local_authority_posted_date",
-      "application_type",
-      "licensee_name",
-      "trade_name",
-      "address",
-      "city",
-      "county",
-      "zip",
-      "privilege_descriptions"
+      "guid",
+      "title",
+      "link",
+      "published_at",
+      "description"
     ],
-    "probe_settings": {
-      "connector": {
-        "dataset_identifier": "vgcw-qfjm",
-        "page_size": 5,
-        "order_by": "application_date DESC",
-        "where": "application_date >= '{utc_today_minus_180}'"
-      },
-      "defaults": {
-        "state": "WA",
-        "approval_stage": "pre_approval",
-        "permit_type": "local_authority_letter",
-        "jurisdiction": "Washington State"
-      },
-      "signal_stage": "pre_approval_and_approved",
-      "record_filters": {
-        "application_type__contains_any": [
-          "new",
-          "change",
-          "privilege"
-        ]
-      }
-    },
-    "probe_field_mappings": [
-      {
-        "source_field": "license",
-        "canonical_field": "source_record_id",
-        "is_required": true,
-        "is_active": true
-      },
-      {
-        "source_field": "license",
-        "canonical_field": "permit_number",
-        "is_active": true
-      },
-      {
-        "source_field": "application_date",
-        "canonical_field": "filed_at",
-        "is_active": true
-      },
-      {
-        "source_field": "local_authority_posted_date",
-        "canonical_field": "status_updated_at",
-        "is_active": true
-      },
-      {
-        "source_field": "application_type",
-        "canonical_field": "permit_subtype",
-        "is_active": true
-      },
-      {
-        "source_field": "licensee_name",
-        "canonical_field": "owner_name",
-        "is_active": true
-      },
-      {
-        "source_field": "trade_name",
-        "canonical_field": "project_name",
-        "is_active": true
-      },
-      {
-        "source_field": "address",
-        "canonical_field": "address",
-        "is_active": true
-      },
-      {
-        "source_field": "city",
-        "canonical_field": "city",
-        "is_active": true
-      },
-      {
-        "source_field": "zip",
-        "canonical_field": "postal_code",
-        "is_active": true
-      },
-      {
-        "source_field": "privilege_descriptions",
-        "canonical_field": "description",
-        "is_active": true
-      }
+    "can_run_canary": false,
+    "last_checked_on": "2026-08-01",
+    "next_audit_on": "2026-08-08",
+    "notes": "Recheck the declared RSS feed and notification archive. Do not promote from archived HTML alone without a stable recent-item reconciliation path. If items return, retain only project notice fields and suppress contacts, linked document bodies, enclosures, and raw exports."
+  },
+  {
+    "key": "taylor_tx_development_notices",
+    "name": "Taylor Development Notices",
+    "adapter": "rss",
+    "record_type": "permit",
+    "jurisdiction": "Taylor, TX",
+    "base_url": "https://www.taylortx.gov/RSSFeed.aspx?ModID=1&CID=31",
+    "official_landing_page": "https://www.taylortx.gov/1386/Development-News-and-Notices",
+    "license": "Official public notice feed",
+    "status": "freshness_hold",
+    "blocker_summary": "Taylor publishes rich before-action development notices, but its official Development Notices RSS feed returned zero items during the August 1, 2026 audit.",
+    "early_warning_value": "Before-action zoning, special-use, neighborhood-plan, and employment-center cases with project numbers, addresses, parcels, proposed uses, and applicant organizations.",
+    "candidate_source_fields": [
+      "guid",
+      "title",
+      "link",
+      "published_at",
+      "description"
     ],
-    "can_run_canary": true,
-    "last_checked_on": "2026-07-18",
-    "next_audit_on": "2026-07-25",
-    "notes": "Treat new license applications, location changes, and added privileges as pre-opening or opening-intent context. Suppress designated-signee and contact-like fields. Keep separate from building-permit coverage even if promoted."
+    "can_run_canary": false,
+    "last_checked_on": "2026-08-01",
+    "next_audit_on": "2026-08-08",
+    "notes": "The official page currently shows before-action cases such as PZ 2025-2558, while the declared RSS category is empty. Recheck for current feed entries. Suppress individual contact details and linked submittal bodies; retain organization names only after field-level review."
   },
   {
     "key": "bend_or_planning_applications",
@@ -120,7 +57,7 @@
     "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::planning-table",
     "license": "Custom License",
     "status": "operational_retry",
-    "blocker_summary": "Official planning applications data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "blocker_summary": "The live lifecycle canary passed; explicit production promotion and final rights review remain before this source can write customer-facing records.",
     "early_warning_value": "City planning applications for subdivision, site plan, and review-stage activity before permits are issued.",
     "candidate_source_fields": [
       "ApplicationNumber",
@@ -128,10 +65,8 @@
       "ApplicationDescription",
       "ProjectTypeCode",
       "ApplicationTypeCode",
-      "ApplicationReviewStatusCode",
       "AppStatus",
       "AppStatusDesc",
-      "Owner",
       "Address",
       "TAXLOT",
       "DecisionDate",
@@ -141,11 +76,13 @@
       "connector": {
         "page_size": 5,
         "where": "ApplicationNumber IS NOT NULL",
-        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PL_RecordID,ApplicationNumber,ApplicationDate,ApplicationDescription,ProjectTypeCode,ApplicationTypeCode,ApplicationReviewStatusCode,AppStatus,AppStatusDesc,Owner,Address,TAXLOT,DecisionDate,LASTUPDATE,OverallStatus",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PL_RecordID,ApplicationNumber,ApplicationDate,ApplicationDescription,ProjectTypeCode,ApplicationTypeCode,AppStatus,AppStatusDesc,Address,TAXLOT,DecisionDate,LASTUPDATE,OverallStatus",
         "order_by_fields": "ApplicationNumber ASC",
-        "include_geometry": true,
+        "include_geometry": false,
+        "include_centroid": true,
         "query": {
-          "f": "json"
+          "f": "json",
+          "outSR": 4326
         }
       },
       "defaults": {
@@ -155,7 +92,11 @@
         "permit_type": "planning_application",
         "approval_stage": "pre_approval"
       },
-      "signal_stage": "pre_approval_and_approved"
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {"name": "bend_planning_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NULL"}},
+        {"name": "bend_planning_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NOT NULL"}}
+      ]
     },
     "probe_field_mappings": [
       {
@@ -180,6 +121,16 @@
         "is_active": true
       },
       {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [{"field": "DecisionDate", "operator": "present", "value": "approved"}],
+          "default": "pre_approval"
+        },
+        "is_active": true
+      },
+      {
         "source_field": "AppStatusDesc",
         "canonical_field": "status",
         "is_active": true
@@ -190,13 +141,13 @@
         "is_active": true
       },
       {
-        "source_field": "Owner",
-        "canonical_field": "owner_name",
+        "source_field": "Address",
+        "canonical_field": "address",
         "is_active": true
       },
       {
-        "source_field": "Address",
-        "canonical_field": "address",
+        "source_field": "TAXLOT",
+        "canonical_field": "parcel_id",
         "is_active": true
       },
       {
@@ -218,12 +169,26 @@
         "source_field": "LASTUPDATE",
         "canonical_field": "status_updated_at",
         "is_active": true
+      },
+      {
+        "source_field": "centroid",
+        "canonical_field": "latitude",
+        "transform": "object_path",
+        "transform_options": {"path": ["y"]},
+        "is_active": true
+      },
+      {
+        "source_field": "__longitude",
+        "canonical_field": "longitude",
+        "transform": "object_path",
+        "transform_options": {"source_field": "centroid", "path": ["x"]},
+        "is_active": true
       }
     ],
     "can_run_canary": true,
     "last_checked_on": "2026-07-23",
     "next_audit_on": "2026-07-30",
-    "notes": "Planning applications are the earliest durable public signal of retail, subdivision, and site-plan movement. Keep the source in candidate status until the connector is exercised against live rows and the permission review is complete."
+    "notes": "Planning applications are the earliest durable public signal of retail, subdivision, and site-plan movement. An August 2, 2026 canary validated 30 rows with 20 approved and 10 pre-approval observations, WGS84 centroids, tax-lot joins, and zero failures. Keep candidate status until explicit promotion and rights signoff."
   },
   {
     "key": "bend_or_permit_applications_point",
@@ -235,13 +200,15 @@
     "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-point",
     "license": "Custom License",
     "status": "operational_retry",
-    "blocker_summary": "Official permit applications data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "blocker_summary": "The live lifecycle canary passed; explicit production promotion and final rights review remain before this source can write customer-facing records.",
     "early_warning_value": "Permit applications with IssueDate and status signals that flag retailer buildouts and opening activity before completion.",
     "candidate_source_fields": [
       "ApplicationNumber",
       "ApplicationDate",
       "IssueDate",
       "DateFinaled",
+      "SQFT",
+      "Units",
       "ProjectValuation",
       "ApplicationType",
       "TypeDesc",
@@ -252,17 +219,20 @@
       "Owner",
       "Address",
       "TAXLOT",
+      "ApplicationDescription",
+      "ProposedLandUse",
       "LASTUPDATE"
     ],
     "probe_settings": {
       "connector": {
         "page_size": 5,
         "where": "ApplicationNumber IS NOT NULL",
-        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,Owner,Address,TAXLOT,LASTUPDATE,OverallStatus",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,Owner,Address,TAXLOT,LASTUPDATE,OverallStatus,ApplicationDescription,ProposedLandUse",
         "order_by_fields": "ApplicationNumber ASC",
         "include_geometry": true,
         "query": {
-          "f": "json"
+          "f": "json",
+          "outSR": 4326
         }
       },
       "defaults": {
@@ -272,7 +242,11 @@
         "permit_type": "building_permit",
         "approval_stage": "pre_approval"
       },
-      "signal_stage": "pre_approval_and_approved"
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {"name": "bend_permit_point_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"}},
+        {"name": "bend_permit_point_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"}}
+      ]
     },
     "probe_field_mappings": [
       {
@@ -302,12 +276,22 @@
         "is_active": true
       },
       {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [{"field": "IssueDate", "operator": "present", "value": "approved"}],
+          "default": "pre_approval"
+        },
+        "is_active": true
+      },
+      {
         "source_field": "ApplicationStatus",
         "canonical_field": "status",
         "is_active": true
       },
       {
-        "source_field": "StatusDesc",
+        "source_field": "ApplicationDescription",
         "canonical_field": "description",
         "is_active": true
       },
@@ -321,6 +305,12 @@
         "canonical_field": "address",
         "is_active": true
       },
+      {"source_field": "TAXLOT", "canonical_field": "parcel_id", "is_active": true},
+      {"source_field": "ProjectValuation", "canonical_field": "valuation", "is_active": true},
+      {"source_field": "SQFT", "canonical_field": "square_feet", "is_active": true},
+      {"source_field": "Units", "canonical_field": "units", "is_active": true},
+      {"source_field": "ProposedLandUse", "canonical_field": "proposed_use", "is_active": true},
+      {"source_field": "UseDesc", "canonical_field": "occupancy_type", "is_active": true},
       {
         "source_field": "ApplicationType",
         "canonical_field": "permit_subtype",
@@ -340,12 +330,14 @@
         "source_field": "LASTUPDATE",
         "canonical_field": "status_updated_at",
         "is_active": true
-      }
+      },
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}, "is_active": true},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}, "is_active": true}
     ],
     "can_run_canary": true,
     "last_checked_on": "2026-07-23",
     "next_audit_on": "2026-07-30",
-    "notes": "This layer captures public permit lifecycle motion before completion. Keep it separate from planning-review datasets so issue-stage and under-review-stage intelligence stay distinct."
+    "notes": "This layer captures public permit lifecycle motion before completion. An August 2, 2026 canary validated 30 rows with 25 approved and 5 pre-approval observations, tax-lot, valuation, size, use, WGS84 point context, and zero failures. Keep it separate from planning review and retain candidate status until explicit promotion and rights signoff."
   },
   {
     "key": "bend_or_permit_applications_line",
@@ -357,7 +349,7 @@
     "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-line",
     "license": "Custom License",
     "status": "operational_retry",
-    "blocker_summary": "Official permit line data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "blocker_summary": "The live lifecycle canary passed; explicit production promotion and final rights review remain before this source can write customer-facing records.",
     "early_warning_value": "Permit applications tied to street-segment geometry, useful for pre-approval retail, corridor, and buildout detection.",
     "candidate_source_fields": [
       "ApplicationNumber",
@@ -379,7 +371,7 @@
       "Owner",
       "Address",
       "TAXLOT",
-      "CENTERLINID",
+      "CENTERLINEID",
       "LASTUPDATE",
       "OverallStatus"
     ],
@@ -387,11 +379,12 @@
       "connector": {
         "page_size": 5,
         "where": "ApplicationNumber IS NOT NULL",
-        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,BuildingCategory,DeptCode,Department,Owner,Address,TAXLOT,CENTERLINID,LASTUPDATE,OverallStatus,Shape.STLength()",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,BuildingCategory,DeptCode,Department,Owner,Address,TAXLOT,CENTERLINEID,LASTUPDATE,OverallStatus,Shape__Length",
         "order_by_fields": "ApplicationNumber ASC",
-        "include_geometry": true,
+        "include_geometry": false,
         "query": {
-          "f": "json"
+          "f": "json",
+          "outSR": 4326
         }
       },
       "defaults": {
@@ -401,7 +394,11 @@
         "permit_type": "building_permit",
         "approval_stage": "pre_approval"
       },
-      "signal_stage": "pre_approval_and_approved"
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {"name": "bend_permit_line_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"}},
+        {"name": "bend_permit_line_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"}}
+      ]
     },
     "probe_field_mappings": [
       {
@@ -431,6 +428,16 @@
         "is_active": true
       },
       {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [{"field": "IssueDate", "operator": "present", "value": "approved"}],
+          "default": "pre_approval"
+        },
+        "is_active": true
+      },
+      {
         "source_field": "ApplicationStatus",
         "canonical_field": "status",
         "is_active": true
@@ -450,6 +457,11 @@
         "canonical_field": "address",
         "is_active": true
       },
+      {"source_field": "TAXLOT", "canonical_field": "parcel_id", "is_active": true},
+      {"source_field": "ProjectValuation", "canonical_field": "valuation", "is_active": true},
+      {"source_field": "SQFT", "canonical_field": "square_feet", "is_active": true},
+      {"source_field": "Units", "canonical_field": "units", "is_active": true},
+      {"source_field": "UseDesc", "canonical_field": "occupancy_type", "is_active": true},
       {
         "source_field": "ApplicationType",
         "canonical_field": "permit_subtype",
@@ -469,7 +481,7 @@
     "can_run_canary": true,
     "last_checked_on": "2026-07-23",
     "next_audit_on": "2026-07-30",
-    "notes": "This geometry-backed view gives corridor-level context for development motion and is useful for identifying retail buildout patterns before a final issued permit arrives."
+    "notes": "This corridor-linked view gives development-motion context before final issuance. An August 2, 2026 canary validated 30 rows with 24 approved and 6 pre-approval observations plus tax-lot, valuation, size, use, and address context with zero failures. The ArcGIS line layer rejects centroid requests, so no derived coordinates are claimed. Retain candidate status until explicit promotion and rights signoff."
   },
   {
     "key": "orlando_fl_planning_applications",

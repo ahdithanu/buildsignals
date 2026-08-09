@@ -107,6 +107,12 @@ class GraphRelatedEntityResponse(BaseModel):
     direction: str
 
 
+class GraphRelationshipDetailResponse(BaseModel):
+    relationship: GraphRelationshipResponse
+    source_entity: GraphEntityResponse
+    target_entity: GraphEntityResponse
+
+
 class GraphEntityDetailResponse(GraphEntityResponse):
     aliases: list[str] = Field(default_factory=list)
     links: list[dict[str, str]] = Field(default_factory=list)
@@ -115,6 +121,12 @@ class GraphEntityDetailResponse(GraphEntityResponse):
 
 class GraphEntitySearchResponse(GraphEntityResponse):
     aliases: list[str] = Field(default_factory=list)
+
+
+class GraphEntityMergeCandidateResponse(BaseModel):
+    entity: GraphEntityResponse
+    score: float
+    reasons: list[str] = Field(default_factory=list)
 
 
 class GraphPathResponse(BaseModel):

@@ -1,9 +1,39 @@
+from datetime import date
 from types import SimpleNamespace
 
 from app.models.ingestion import IngestionSource
 from app.models.organization import Organization
+from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.ingestion import cli
 from app.services.ingestion.cli import build_parser
+from app.services.ingestion.health import CandidateCanaryResult
+
+
+def _retry_candidate() -> IngestionSourceCandidate:
+    return IngestionSourceCandidate(
+        key="test_retry_candidate",
+        name="Test Retry Candidate",
+        adapter="csv",
+        record_type="permit",
+        jurisdiction="Test, OR",
+        base_url="https://example.test/retry.csv",
+        official_landing_page="https://example.test/retry",
+        license="Test License",
+        status="operational_retry",
+        blocker_summary="Awaiting a successful operational retry.",
+        early_warning_value="Test pre-approval records.",
+        candidate_source_fields=["id"],
+        probe_settings={
+            "connector": {"source": "https://example.test/retry.csv"},
+            "defaults": {"state": "OR", "approval_stage": "pre_approval"},
+        },
+        probe_field_mappings=[
+            {"source_field": "id", "canonical_field": "source_record_id"}
+        ],
+        last_checked_on=date(2026, 7, 1),
+        next_audit_on=date(2026, 7, 30),
+        notes="Test candidate fixture.",
+    )
 
 
 def test_run_all_parser_defaults_to_bounded_resumable_collection():
@@ -17,6 +47,7 @@ def test_run_all_parser_defaults_to_bounded_resumable_collection():
     assert args.max_pages_per_source == 10
     assert args.stage == "all"
     assert args.reset_checkpoints is False
+    assert args.source_keys is None
 
 
 def test_run_all_parser_supports_full_preapproval_reconciliation():
@@ -34,6 +65,56 @@ def test_run_all_parser_supports_full_preapproval_reconciliation():
     assert args.max_pages_per_source == 100
     assert args.stage == "pre_approval_and_approved"
     assert args.reset_checkpoints is True
+
+
+def test_scheduled_parser_requires_explicit_sources():
+    args = build_parser().parse_args([
+        "scheduled",
+        "--organization",
+        "default-org",
+        "--source-key",
+        "first_source",
+        "--source-key",
+        "second_source",
+    ])
+
+    assert args.command == "scheduled"
+    assert args.source_keys == ["first_source", "second_source"]
+    assert args.max_pages_per_source == 10
+    assert args.reset_checkpoints is False
+
+
+def test_health_parser_supports_source_scoping():
+    args = build_parser().parse_args([
+        "health",
+        "--organization",
+        "default-org",
+        "--source-key",
+        "first_source",
+        "--json",
+    ])
+
+    assert args.source_keys == ["first_source"]
+    assert args.json is True
+
+
+def test_retry_candidates_parser_accepts_deterministic_audit_date():
+    args = build_parser().parse_args([
+        "retry-candidates",
+        "--organization",
+        "default-org",
+        "--candidate-key",
+        "bend_or_planning_applications",
+        "--as-of",
+        "2026-08-02",
+        "--sample-size",
+        "5",
+    ])
+
+    assert args.command == "retry-candidates"
+    assert args.as_of == date(2026, 8, 2)
+    assert args.sample_size == 5
+    assert args.force is False
 
 
 def test_run_all_continues_after_one_source_errors(db, monkeypatch):
@@ -76,3 +157,298 @@ def test_run_all_continues_after_one_source_errors(db, monkeypatch):
     assert result == 1
     assert [key for key, _kwargs in calls] == ["a_source", "b_source"]
     assert all(kwargs["trigger"] == "scheduled" for _key, kwargs in calls)
+
+
+def test_run_all_only_runs_selected_source_keys(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.add_all([
+        IngestionSource(
+            organization_id="default-org", key="a_source", name="A Source",
+            adapter="csv", record_type="permit", is_active=True,
+        ),
+        IngestionSource(
+            organization_id="default-org", key="b_source", name="B Source",
+            adapter="csv", record_type="permit", is_active=True,
+        ),
+    ])
+    db.commit()
+    calls = []
+
+    def fake_execute(_db, source, **kwargs):
+        calls.append(source.key)
+        return SimpleNamespace(
+            status="completed", records_seen=1, records_inserted=1,
+            records_updated=0, records_failed=0,
+        )
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "execute_source_run", fake_execute)
+
+    result = cli.main([
+        "run-all", "--organization", "default-org",
+        "--source-key", "b_source",
+    ])
+
+    assert result == 0
+    assert calls == ["b_source"]
+
+
+def test_scheduled_syncs_catalog_runs_sources_and_checks_health(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.add(IngestionSource(
+        organization_id="default-org", key="wa_source", name="WA Source",
+        adapter="csv", record_type="permit", is_active=True,
+    ))
+    db.commit()
+    events = []
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    catalog_entry = SimpleNamespace(key="wa_source")
+    monkeypatch.setattr(cli, "load_catalog", lambda: [catalog_entry])
+    monkeypatch.setattr(
+        cli,
+        "sync_catalog",
+        lambda _db, entries: events.append(("sync", entries)) or SimpleNamespace(
+            created=0, updated=0, unchanged=1,
+        ),
+    )
+    monkeypatch.setattr(
+        cli,
+        "execute_source_run",
+        lambda _db, source, **kwargs: events.append(("run", source.key, kwargs))
+        or SimpleNamespace(
+            status="completed", records_seen=1, records_inserted=1,
+            records_updated=0, records_failed=0,
+        ),
+    )
+    monkeypatch.setattr(
+        cli,
+        "evaluate_source_health",
+        lambda _db, source: events.append(("health", source.key)) or SimpleNamespace(
+            source_key=source.key, status="healthy", ingestion_age_hours=0.0,
+            run_failure_rate=0.0, reasons=[],
+        ),
+    )
+
+    result = cli.main([
+        "scheduled", "--organization", "default-org",
+        "--source-key", "wa_source", "--max-pages-per-source", "4",
+    ])
+
+    assert result == 0
+    assert events[0] == ("sync", [catalog_entry])
+    assert events[1][0:2] == ("run", "wa_source")
+    assert events[1][2]["max_pages"] == 4
+    assert events[1][2]["trigger"] == "scheduled"
+    assert events[2] == ("health", "wa_source")
+
+
+def test_scheduled_returns_critical_health_exit_code(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.add(IngestionSource(
+        organization_id="default-org", key="wa_source", name="WA Source",
+        adapter="csv", record_type="permit", is_active=True,
+    ))
+    db.commit()
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(
+        cli, "load_catalog", lambda: [SimpleNamespace(key="wa_source")]
+    )
+    monkeypatch.setattr(
+        cli, "sync_catalog",
+        lambda _db, _entries: SimpleNamespace(created=0, updated=0, unchanged=1),
+    )
+    monkeypatch.setattr(
+        cli, "execute_source_run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            status="completed", records_seen=0, records_inserted=0,
+            records_updated=0, records_failed=0,
+        ),
+    )
+    monkeypatch.setattr(
+        cli, "evaluate_source_health",
+        lambda _db, source: SimpleNamespace(
+            source_key=source.key, status="critical", ingestion_age_hours=50.0,
+            run_failure_rate=0.0, reasons=["Latest successful ingestion is 50 hours old"],
+        ),
+    )
+
+    result = cli.main([
+        "scheduled", "--organization", "default-org",
+        "--source-key", "wa_source",
+    ])
+
+    assert result == 2
+
+
+def test_scheduled_rejects_unknown_key_before_catalog_sync(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.commit()
+    sync_calls = []
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(
+        cli, "load_catalog", lambda: [SimpleNamespace(key="known_source")]
+    )
+    monkeypatch.setattr(
+        cli, "sync_catalog",
+        lambda *_args, **_kwargs: sync_calls.append(True),
+    )
+
+    result = cli.main([
+        "scheduled", "--organization", "default-org",
+        "--source-key", "missing_b", "--source-key", "missing_a",
+    ])
+
+    assert result == 1
+    assert sync_calls == []
+
+
+def test_run_all_explicit_filter_does_not_succeed_when_stage_excludes_it(
+    db, monkeypatch
+):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.add(IngestionSource(
+        organization_id="default-org", key="approved_source", name="Approved Source",
+        adapter="csv", record_type="permit", is_active=True,
+        settings={"signal_stage": "approved_only"},
+    ))
+    db.commit()
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+
+    result = cli.main([
+        "run-all", "--organization", "default-org",
+        "--source-key", "approved_source",
+        "--stage", "pre_approval_and_approved",
+    ])
+
+    assert result == 1
+
+
+def test_select_due_candidates_returns_only_overdue_runnable_probes(db, monkeypatch):
+    monkeypatch.setattr(cli, "load_candidate_catalog", lambda: [_retry_candidate()])
+    monkeypatch.setattr(cli, "list_candidate_canary_attempts", lambda *_args, **_kwargs: [])
+
+    selected = cli._select_due_candidates(db, as_of=date(2026, 8, 2))
+
+    assert [candidate.key for candidate in selected] == ["test_retry_candidate"]
+
+
+def test_successful_post_audit_candidate_canary_stops_future_retries(db, monkeypatch):
+    attempt = SimpleNamespace(
+        ok=True,
+        created_at=SimpleNamespace(date=lambda: date(2026, 8, 2)),
+    )
+    monkeypatch.setattr(
+        cli, "list_candidate_canary_attempts", lambda *_args, **_kwargs: [attempt]
+    )
+    monkeypatch.setattr(cli, "load_candidate_catalog", lambda: [_retry_candidate()])
+
+    selected = cli._select_due_candidates(
+        db,
+        as_of=date(2026, 8, 3),
+        candidate_keys=["test_retry_candidate"],
+    )
+
+    assert selected == []
+
+    forced = cli._select_due_candidates(
+        db,
+        as_of=date(2026, 8, 3),
+        candidate_keys=["test_retry_candidate"],
+        force=True,
+    )
+    assert [candidate.key for candidate in forced] == ["test_retry_candidate"]
+
+
+def test_retry_candidates_records_transport_failure_and_continues(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.commit()
+    recorded = []
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "load_candidate_catalog", lambda: [_retry_candidate()])
+    monkeypatch.setattr(cli, "list_candidate_canary_attempts", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(
+        cli,
+        "validate_candidate_source_canary",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("feed offline")),
+    )
+    monkeypatch.setattr(
+        cli,
+        "record_candidate_canary_attempt",
+        lambda _db, candidate, result, **kwargs: recorded.append(
+            (candidate.key, result, kwargs)
+        ),
+    )
+
+    result = cli.main([
+        "retry-candidates", "--organization", "default-org",
+        "--candidate-key", "test_retry_candidate",
+        "--as-of", "2026-08-02",
+    ])
+
+    assert result == 1
+    assert recorded[0][0] == "test_retry_candidate"
+    assert recorded[0][1].ok is False
+    assert recorded[0][1].errors == ["RuntimeError: feed offline"]
+    assert recorded[0][2]["sample_size"] == 10
+
+
+def test_retry_candidates_returns_success_after_persisted_canary(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.commit()
+    recorded = []
+    canary = CandidateCanaryResult(
+        candidate_key="test_retry_candidate",
+        candidate_name="Test Retry Candidate",
+        ok=True,
+        records_fetched=5,
+        records_valid=5,
+        records_failed=0,
+        approval_stages={"pre_approval": 5},
+        sample_record_ids=["1"],
+        next_checkpoint=None,
+        errors=[],
+    )
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "load_candidate_catalog", lambda: [_retry_candidate()])
+    monkeypatch.setattr(cli, "list_candidate_canary_attempts", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(cli, "validate_candidate_source_canary", lambda *_args, **_kwargs: canary)
+    monkeypatch.setattr(
+        cli,
+        "record_candidate_canary_attempt",
+        lambda _db, candidate, result, **kwargs: recorded.append((candidate.key, result)),
+    )
+
+    result = cli.main([
+        "retry-candidates", "--organization", "default-org",
+        "--candidate-key", "test_retry_candidate",
+        "--as-of", "2026-08-02",
+    ])
+
+    assert result == 0
+    assert recorded == [("test_retry_candidate", canary)]

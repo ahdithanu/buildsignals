@@ -10,6 +10,9 @@ vi.mock("@/hooks/useGraphEntity", () => ({
 vi.mock("@/hooks/useGraphPaths", () => ({
   useGraphPaths: vi.fn(),
 }));
+vi.mock("@/hooks/useGraphEntityMergeCandidates", () => ({
+  useGraphEntityMergeCandidates: vi.fn(),
+}));
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: { full_name: "Test User" },
@@ -20,6 +23,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 }));
 
 import { useGraphEntity } from "@/hooks/useGraphEntity";
+import { useGraphEntityMergeCandidates } from "@/hooks/useGraphEntityMergeCandidates";
 import { useGraphPaths } from "@/hooks/useGraphPaths";
 
 describe("<GraphEntityDetail>", () => {
@@ -213,6 +217,23 @@ describe("<GraphEntityDetail>", () => {
       isLoading: false,
       error: null,
     });
+    (useGraphEntityMergeCandidates as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [
+        {
+          entity: {
+            id: "entity-6",
+            entity_type: "developer",
+            display_name: "Acme Development Group",
+            confidence: 0.84,
+            last_verified_at: "2026-07-23T12:00:00Z",
+          },
+          score: 0.91,
+          reasons: ["exact normalized name match", "same city"],
+        },
+      ],
+      isLoading: false,
+      error: null,
+    });
 
     render(
       <MemoryRouter initialEntries={["/graph/entities/entity-1"]}>
@@ -229,6 +250,9 @@ describe("<GraphEntityDetail>", () => {
     expect(screen.getByText("parcel-1")).toBeInTheDocument();
     expect(screen.getByText("permit-1")).toBeInTheDocument();
     expect(screen.getByText("Related by Type")).toBeInTheDocument();
+    expect(screen.getByText("Merge Candidates")).toBeInTheDocument();
+    expect(screen.getByText("Acme Development Group")).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes("91% match"))).toBeInTheDocument();
     expect(screen.getAllByText("property", { selector: "h4" })).toHaveLength(1);
     expect(screen.getByText("Relationship Paths")).toBeInTheDocument();
     expect(screen.getByText("Confidence 91%")).toBeInTheDocument();

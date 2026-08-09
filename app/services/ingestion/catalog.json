@@ -7309,6 +7309,8 @@
       "reconciliation_mode": "daily_pending_snapshot",
       "signal_stage": "pre_approval_and_approved",
       "export_policy": "derived_pending_license_opening_context_only_no_raw_sla_source_export",
+      "retailer_opening_signal": true,
+      "opening_signal_date_field": "received_date",
       "field_allowlist": [
         "application_id", "premises_county", "type", "class",
         "description", "legalname", "dba", "actual_address_of_premises",
@@ -7405,6 +7407,253 @@
       {"source_field": "proposed_use_type", "canonical_field": "proposed_use"},
       {"source_field": "num_units", "canonical_field": "units"},
       {"source_field": "__valuation", "canonical_field": "valuation", "transform": "first_nonempty", "transform_options": {"fields": ["amt_permit_cost", "amt_estimated_contractor_cost", "amt_estimated_department_cost"]}}
+    ]
+  },
+  {
+    "key": "washington_state_lcb_local_authority_letters",
+    "name": "Washington State LCB Local Authority Letters",
+    "adapter": "socrata",
+    "record_type": "permit",
+    "jurisdiction": "Washington State",
+    "base_url": "https://data.wa.gov/resource/vgcw-qfjm.json",
+    "settings": {
+      "connector": {
+        "page_size": 500,
+        "order_by": "applicationdate DESC",
+        "query": {
+          "$select": "license,ubi,applicationdate,countyname,cityname,l_a_type,licenseename,tradename,streetaddress,city,state,zipcode,privdesc01,privdesc02,privdesc03,la_posted_date,systemdate,location"
+        }
+      },
+      "defaults": {
+        "state": "WA",
+        "approval_stage": "pre_approval",
+        "permit_type": "local_authority_letter",
+        "jurisdiction": "Washington State",
+        "source_url": "https://data.wa.gov/Public-Safety/Local-Authority-Letters/vgcw-qfjm"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "reconciliation_mode": "daily_rolling_window_incremental",
+      "freshness_field": "systemdate",
+      "freshness_sla_hours": 168,
+      "retailer_opening_signal": true,
+      "opening_signal_date_field": "applicationdate",
+      "field_allowlist": [
+        "license",
+        "ubi",
+        "applicationdate",
+        "countyname",
+        "cityname",
+        "l_a_type",
+        "licenseename",
+        "tradename",
+        "streetaddress",
+        "city",
+        "state",
+        "zipcode",
+        "privdesc01",
+        "privdesc02",
+        "privdesc03",
+        "la_posted_date",
+        "systemdate",
+        "location"
+      ],
+      "suppressed_fields": [
+        "designatedsignee",
+        "dayphone",
+        "applicants",
+        "mailaddress",
+        "mailcity",
+        "mailstate",
+        "mailzip",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_retailer_opening_context_only_no_raw_source_export",
+      "official_landing_page": "https://data.wa.gov/Public-Safety/Local-Authority-Letters/vgcw-qfjm",
+      "license": "Public Domain",
+      "candidate_canary_completed_on": "2026-08-01",
+      "rights_basis": "Washington State LCB publishes Local Authority Letters through Data.WA with Public Domain metadata. Production stores a privacy-restricted field slice as derived retailer-opening intelligence and does not export the raw source feed.",
+      "refresh_frequency": "daily",
+      "attribution_required": false
+    },
+    "is_active": true,
+    "field_mappings": [
+      {
+        "source_field": "license",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "license"
+          ]
+        }
+      },
+      {
+        "source_field": "applicationdate",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "la_posted_date",
+        "canonical_field": "status_updated_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "l_a_type",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "licenseename",
+        "canonical_field": "owner_name"
+      },
+      {
+        "source_field": "tradename",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "streetaddress",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "city",
+        "canonical_field": "city"
+      },
+      {
+        "source_field": "zipcode",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "privdesc01",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "location",
+        "canonical_field": "longitude",
+        "transform": "object_path",
+        "transform_options": {
+          "path": [
+            "longitude"
+          ]
+        }
+      },
+      {
+        "source_field": "__latitude",
+        "canonical_field": "latitude",
+        "transform": "object_path",
+        "transform_options": {
+          "source_field": "location",
+          "path": [
+            "latitude"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "key": "everett_wa_planning_application_notices",
+    "name": "Everett Planning Application Notices",
+    "adapter": "rss",
+    "record_type": "permit",
+    "jurisdiction": "Everett, WA",
+    "base_url": "https://www.everettwa.gov/RSSFeed.aspx?ModID=1&CID=Everett-Planning-Public-Notices-37",
+    "settings": {
+      "connector": {
+        "page_size": 100,
+        "max_records": 1000,
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public RSS reader)"
+        }
+      },
+      "defaults": {
+        "city": "Everett",
+        "state": "WA",
+        "jurisdiction": "Everett",
+        "permit_type": "planning_application_notice",
+        "approval_stage": "pre_approval"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "reconciliation_mode": "rss_recent_window",
+      "freshness_field": "published_at",
+      "freshness_sla_hours": 336,
+      "record_filters": [
+        {
+          "field": "title",
+          "values": [
+            "Notice of Application",
+            "Notice of Application and Public Hearing"
+          ]
+        }
+      ],
+      "field_allowlist": [
+        "guid",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ],
+      "suppressed_fields": [
+        "enclosure",
+        "linked_document_body",
+        "applicant_contact",
+        "planner_contact",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_planning_notice_context_only_no_raw_document_export",
+      "official_landing_page": "https://www.everettwa.gov/CivicAlerts.aspx?CID=37",
+      "license": "Official public notice feed",
+      "candidate_canary_completed_on": "2026-08-01",
+      "rights_basis": "The City of Everett publishes an official Planning Public Notices RSS feed for public syndication. Production retains only application-stage notice metadata and official evidence links, without fetching linked documents, enclosures, or contact details.",
+      "refresh_frequency": "daily",
+      "attribution_required": true
+    },
+    "is_active": true,
+    "field_mappings": [
+      {
+        "source_field": "guid",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "source_field": "link",
+          "pattern": "(?i)(rev(?:ii|iii)\\d{2}-\\d+)"
+        }
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "description",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "link",
+        "canonical_field": "source_url"
+      },
+      {
+        "source_field": "__project_name",
+        "canonical_field": "project_name",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "description",
+            "title"
+          ]
+        }
+      }
     ]
   }
 ]

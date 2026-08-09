@@ -13,11 +13,13 @@ from app.schemas.graph import (
     GraphBuyerLensSummary,
     GraphEntityCreate,
     GraphEntityDetailResponse,
+    GraphEntityMergeCandidateResponse,
     GraphEntityResponse,
     GraphEntitySearchResponse,
     GraphPathResponse,
     GraphRelatedEntityResponse,
     GraphRelationshipCreate,
+    GraphRelationshipDetailResponse,
     GraphRelationshipResponse,
     GraphSharedParcelSummary,
     OpportunityGraphContextResponse,
@@ -25,8 +27,10 @@ from app.schemas.graph import (
 from app.services.brand_intelligence import list_deal_brand_matches
 from app.services.graph_service import (
     create_relationship,
+    entity_merge_candidates,
     find_relationship_paths,
     get_entity_or_none,
+    get_relationship_or_none,
     opportunity_context,
     relationships_for_entity,
     resolve_entity,
@@ -153,6 +157,31 @@ def related_entities(entity_id: str, db: Session = Depends(get_db)):
     return [_relationship_item(row) for row in relationships_for_entity(db, entity_id)]
 
 
+@router.get("/entities/{entity_id}/merge-candidates", response_model=list[GraphEntityMergeCandidateResponse])
+def merge_candidates(
+    entity_id: str,
+    limit: int = Query(8, ge=1, le=20),
+    minimum_score: float = Query(0.6, ge=0, le=1),
+    db: Session = Depends(get_db),
+):
+    entity = get_entity_or_none(db, entity_id)
+    if not entity:
+        raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+    return [
+        GraphEntityMergeCandidateResponse(
+            entity=GraphEntityResponse.model_validate(candidate),
+            score=score,
+            reasons=reasons,
+        )
+        for candidate, score, reasons in entity_merge_candidates(
+            db,
+            entity_id,
+            limit=limit,
+            minimum_score=minimum_score,
+        )
+    ]
+
+
 @router.post(
     "/relationships",
     response_model=GraphRelationshipResponse,
@@ -167,6 +196,18 @@ def add_relationship(payload: GraphRelationshipCreate, db: Session = Depends(get
     db.commit()
     db.refresh(relationship)
     return relationship
+
+
+@router.get("/relationships/{relationship_id}", response_model=GraphRelationshipDetailResponse)
+def get_relationship(relationship_id: str, db: Session = Depends(get_db)):
+    relationship = get_relationship_or_none(db, relationship_id)
+    if relationship is None:
+        raise HTTPException(status_code=404, detail=f"Relationship {relationship_id} not found")
+    return GraphRelationshipDetailResponse(
+        relationship=GraphRelationshipResponse.model_validate(relationship),
+        source_entity=GraphEntityResponse.model_validate(relationship.source_entity),
+        target_entity=GraphEntityResponse.model_validate(relationship.target_entity),
+    )
 
 
 @router.get("/paths", response_model=list[GraphPathResponse])

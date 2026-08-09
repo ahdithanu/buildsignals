@@ -59,7 +59,9 @@ export interface GraphEvidence {
   source_url?: string | null;
   evidence_type?: string | null;
   excerpt?: string | null;
+  observed_at?: string | null;
   confidence: number;
+  payload?: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -69,6 +71,11 @@ export interface GraphRelationship {
   confidence: number;
   source_system?: string | null;
   source_id?: string | null;
+  attributes?: Record<string, unknown> | null;
+  is_current?: boolean;
+  valid_from?: string;
+  valid_to?: string | null;
+  updated_at?: string;
   created_at: string;
   last_verified_at: string;
   evidence: GraphEvidence[];
@@ -91,6 +98,18 @@ export interface GraphEntityDetail extends GraphEntity {
 
 export interface GraphEntitySearchResult extends GraphEntity {
   aliases: string[];
+}
+
+export interface GraphEntityMergeCandidate {
+  entity: GraphEntity;
+  score: number;
+  reasons: string[];
+}
+
+export interface GraphRelationshipDetail {
+  relationship: GraphRelationship;
+  source_entity: GraphEntity;
+  target_entity: GraphEntity;
 }
 
 export interface GraphPath {

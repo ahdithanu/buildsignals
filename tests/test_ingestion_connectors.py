@@ -14,6 +14,7 @@ from app.services.ingestion.connectors import (
     JSONArrayConnector,
     OpenDataSoftConnector,
     RetryingHttpClient,
+    RSSConnector,
     SocrataConnector,
     build_connector,
 )
@@ -134,6 +135,65 @@ def test_json_array_connector_rejects_arrays_above_configured_limit():
 
     with pytest.raises(Exception, match="configured max_records is 2"):
         connector.fetch()
+
+
+def test_rss_connector_parses_and_pages_public_notices():
+    feed = """<?xml version="1.0"?>
+    <rss version="2.0"><channel>
+      <item><guid>notice-1</guid><title>Notice of Application</title>
+        <link>https://example.test/1</link><pubDate>Fri, 31 Jul 2026 15:07:37 -0800</pubDate>
+        <description>Site plan review</description></item>
+      <item><guid>notice-2</guid><title>Public Hearing</title>
+        <link>https://example.test/2</link><pubDate>Thu, 30 Jul 2026 10:00:00 -0800</pubDate>
+        <description>Legislative hearing</description></item>
+    </channel></rss>"""
+    http = FakeHttpClient([feed, feed])
+    connector = RSSConnector(
+        "https://example.test/notices.rss",
+        page_size=1,
+        headers={"User-Agent": "PublicFeedClient/1.0"},
+        http_client=http,
+    )
+
+    first, second = list(connector.iter_pages())
+
+    assert first.records[0]["guid"] == "notice-1"
+    assert first.records[0]["published_at"] == "Fri, 31 Jul 2026 15:07:37 -0800"
+    assert first.checkpoint == {"offset": 1}
+    assert second.records[0]["guid"] == "notice-2"
+    assert second.has_more is False
+    assert http.calls[0][2] == {
+        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
+        "User-Agent": "PublicFeedClient/1.0",
+    }
+
+
+def test_rss_connector_rejects_non_feed_xml_and_document_types():
+    connector = RSSConnector(
+        "https://example.test/notices.rss",
+        http_client=FakeHttpClient(["<html><body>not a feed</body></html>"]),
+    )
+    with pytest.raises(Exception, match="not an RSS or Atom feed"):
+        connector.fetch()
+
+    connector = RSSConnector(
+        "https://example.test/notices.rss",
+        http_client=FakeHttpClient(["<!DOCTYPE rss><rss><channel /></rss>"]),
+    )
+    with pytest.raises(Exception, match="document type declarations"):
+        connector.fetch()
+
+
+def test_rss_factory_passes_public_headers():
+    connector = build_connector("rss", {
+        "endpoint": "https://example.test/notices.rss",
+        "page_size": 25,
+        "headers": {"User-Agent": "Mozilla/5.0"},
+    })
+
+    assert isinstance(connector, RSSConnector)
+    assert connector.page_size == 25
+    assert connector.headers["User-Agent"] == "Mozilla/5.0"
 
 
 def test_opendatasoft_returns_flattened_checkpointed_pages():

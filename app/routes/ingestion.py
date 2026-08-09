@@ -97,6 +97,7 @@ def get_ingestion_candidates(
 ):
     state_code = normalize_state_code(state)
     candidates = load_candidate_catalog()
+    live_keys = {source.key for source in list_sources(db)}
     attempts = (
         active_query(db.query(IngestionCandidateCanaryAttempt), IngestionCandidateCanaryAttempt)
         .order_by(IngestionCandidateCanaryAttempt.created_at.desc())
@@ -108,6 +109,8 @@ def get_ingestion_candidates(
             latest_by_key[attempt.candidate_key] = attempt
     response: list[IngestionCandidateResponse] = []
     for candidate in candidates:
+        if candidate.key in live_keys:
+            continue
         if state_code and normalize_state_code(candidate.jurisdiction) != state_code:
             continue
         latest = latest_by_key.get(candidate.key)
@@ -123,8 +126,10 @@ def get_ingestion_candidates(
 
 
 @router.get("/coverage", response_model=IngestionCoverageResponse)
-def get_ingestion_coverage():
-    return IngestionCoverageResponse.model_validate(asdict(summarize_coverage()))
+def get_ingestion_coverage(db: Session = Depends(get_db)):
+    return IngestionCoverageResponse.model_validate(
+        asdict(summarize_coverage(live_sources=list_sources(db)))
+    )
 
 
 @router.post(
@@ -209,6 +214,17 @@ def promote_candidate(candidate_key: str, db: Session = Depends(get_db)):
     candidate = next((entry for entry in load_candidate_catalog() if entry.key == candidate_key), None)
     if candidate is None:
         raise HTTPException(status_code=404, detail="Ingestion candidate not found")
+    latest_canary = (
+        active_query(db.query(IngestionCandidateCanaryAttempt), IngestionCandidateCanaryAttempt)
+        .filter(IngestionCandidateCanaryAttempt.candidate_key == candidate_key)
+        .order_by(IngestionCandidateCanaryAttempt.created_at.desc())
+        .first()
+    )
+    if latest_canary is None or not latest_canary.ok:
+        raise HTTPException(
+            status_code=422,
+            detail="Candidate promotion requires a successful persisted canary",
+        )
     try:
         source = promote_candidate_to_source(db, candidate)
         db.commit()
