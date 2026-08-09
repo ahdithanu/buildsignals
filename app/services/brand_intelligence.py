@@ -4,11 +4,12 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from dateutil import parser as date_parser
 from pydantic import TypeAdapter
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.brand import BrandAlias, BrandPartyFingerprint, BrandProfile, PermitBrandMatch
@@ -564,23 +565,70 @@ def list_brand_matches(
     review_status: str | None = None,
     approval_stage: str | None = None,
     detection_method: str | None = None,
+    freshness: str | None = None,
+    sort_by: str = "confidence",
     limit: int = 100,
 ) -> list[PermitBrandMatchResponse]:
-    query = active_query(db.query(PermitBrandMatch), PermitBrandMatch).options(
+    query = active_query(db.query(PermitBrandMatch), PermitBrandMatch).join(
+        PermitRecord, PermitRecord.id == PermitBrandMatch.permit_id
+    ).options(
         joinedload(PermitBrandMatch.brand),
         joinedload(PermitBrandMatch.permit),
     )
     if review_status:
         query = query.filter(PermitBrandMatch.review_status == review_status)
     if approval_stage:
-        query = query.join(PermitRecord).filter(PermitRecord.approval_stage == approval_stage)
+        query = query.filter(PermitRecord.approval_stage == approval_stage)
     if detection_method == "historical_party":
         query = query.filter(PermitBrandMatch.matched_field == "historical_parties")
     elif detection_method == "direct_alias":
         query = query.filter(PermitBrandMatch.matched_field != "historical_parties")
-    matches = query.order_by(
-        PermitBrandMatch.confidence.desc(), PermitBrandMatch.first_seen_at.desc()
-    ).limit(limit).all()
+    now = utcnow()
+    future_limit = now + timedelta(days=1)
+    activity_at = func.coalesce(
+        case(
+            (PermitRecord.status_updated_at <= future_limit, PermitRecord.status_updated_at),
+            else_=None,
+        ),
+        case(
+            (PermitRecord.filed_at <= future_limit, PermitRecord.filed_at),
+            else_=None,
+        ),
+        PermitBrandMatch.first_seen_at,
+    )
+    cutoffs = {
+        "fresh": (now - timedelta(days=30), None),
+        "active": (now - timedelta(days=90), now - timedelta(days=30)),
+        "aging": (now - timedelta(days=180), now - timedelta(days=90)),
+        "stale": (None, now - timedelta(days=180)),
+    }
+    if freshness:
+        lower, upper = cutoffs[freshness]
+        if lower is not None:
+            query = query.filter(activity_at >= lower)
+        if upper is not None:
+            query = query.filter(activity_at < upper)
+    freshness_band = case(
+        (activity_at >= now - timedelta(days=30), 0),
+        (activity_at >= now - timedelta(days=90), 1),
+        (activity_at >= now - timedelta(days=180), 2),
+        else_=3,
+    )
+    ordering = (
+        (
+            freshness_band,
+            PermitBrandMatch.confidence.desc(),
+            activity_at.desc(),
+            PermitRecord.last_seen_at.desc(),
+        )
+        if sort_by == "freshness"
+        else (
+            PermitBrandMatch.confidence.desc(),
+            activity_at.desc(),
+            PermitRecord.last_seen_at.desc(),
+        )
+    )
+    matches = query.order_by(*ordering).limit(limit).all()
     return _serialize_brand_matches(db, matches)
 
 

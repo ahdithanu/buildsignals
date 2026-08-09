@@ -28,6 +28,10 @@ describe("<PermitBrandMatchRow>", () => {
             signal_quality: "historical_party",
             signal_quality_label: "Historical party",
             signal_quality_note: "Parties on this filing have prior brand history.",
+            freshness: "fresh",
+            freshness_date: "2026-07-18T00:00:00Z",
+            freshness_label: "Fresh filing",
+            signal_age_days: 12,
             first_seen_at: "2026-07-18T00:00:00Z",
             last_seen_at: "2026-07-18T00:00:00Z",
             brand: { id: "brand-1", key: "chipotle", name: "Chipotle", priority: 5, is_active: true },
@@ -37,6 +41,7 @@ describe("<PermitBrandMatchRow>", () => {
               status: "Under Review",
               application_number: "APP-100",
               filed_at: "2026-07-18T00:00:00Z",
+              last_observed_at: "2026-07-30T12:00:00Z",
             },
             linked_deals: [],
           }}
@@ -49,6 +54,9 @@ describe("<PermitBrandMatchRow>", () => {
     expect(screen.getByText("Chipotle")).toBeInTheDocument();
     expect(screen.getByText("Stealth inference")).toBeInTheDocument();
     expect(screen.getByText("Historical party match")).toBeInTheDocument();
+    expect(screen.getByText("Fresh filing")).toBeInTheDocument();
+    expect(screen.getByText("12 days since activity")).toBeInTheDocument();
+    expect(screen.getByText(/Last observed Jul 30, 2026/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open permit/i })).toHaveAttribute(
       "href",
       "/permits/permit-1",

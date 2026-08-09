@@ -1,6 +1,7 @@
 export type BrandMatchReviewStatus = 'candidate' | 'confirmed' | 'dismissed' | 'retracted';
 export type BrandMatchApprovalStage = 'pre_approval' | 'approved';
 export type BrandDetectionMethod = 'direct_alias' | 'historical_party';
+export type BrandMatchFreshness = 'fresh' | 'active' | 'aging' | 'stale';
 
 import type { Deal } from './deal';
 import type { NearbyParcelSearchSummary } from './parcel';
@@ -9,6 +10,8 @@ export interface PermitBrandMatchListParams {
   review_status?: BrandMatchReviewStatus;
   approval_stage?: BrandMatchApprovalStage;
   detection_method?: BrandDetectionMethod;
+  freshness?: BrandMatchFreshness;
+  sort_by?: 'confidence' | 'freshness';
   limit?: number;
 }
 
@@ -56,6 +59,8 @@ export interface BrandPermitSummary {
   latitude?: number | null;
   longitude?: number | null;
   filed_at?: string | null;
+  status_updated_at?: string | null;
+  last_observed_at?: string;
   source_url?: string | null;
 }
 
@@ -74,6 +79,10 @@ export interface PermitBrandMatch {
   signal_quality: 'applicant_dba' | 'applicant_legal_entity' | 'direct_project_name' | 'description_context' | 'supporting_context' | 'historical_party';
   signal_quality_label: string;
   signal_quality_note: string;
+  freshness?: 'fresh' | 'active' | 'aging' | 'stale';
+  freshness_date?: string;
+  freshness_label?: string;
+  signal_age_days?: number;
   first_seen_at: string;
   last_seen_at: string;
   brand: BrandProfile;

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import app.services.ingestion.service as ingestion_service
 from app.models.brand import BrandAlias, BrandPartyFingerprint, BrandProfile, PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
@@ -159,6 +161,9 @@ def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, db, t
     assert listed.json()[0]["brand"]["name"] == "Starbucks"
     assert listed.json()[0]["permit"]["application_number"] == "APP-1"
     assert listed.json()[0]["signal_quality"] == "description_context"
+    assert listed.json()[0]["freshness"] in {"fresh", "active", "aging", "stale"}
+    assert listed.json()[0]["signal_age_days"] >= 0
+    assert listed.json()[0]["freshness_date"]
     assert listed.json()[0]["linked_deals"] == [{
         "id": deal.json()["id"],
         "name": "Main Street Retail",
@@ -178,6 +183,50 @@ def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, db, t
     assert db.query(GraphRelationship).filter(
         GraphRelationship.attributes["brand_match_id"].as_string() == match.id
     ).one().is_current is False
+
+
+def test_review_queue_ranks_recent_source_activity_before_confidence(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    old_path = tmp_path / "old-brand.csv"
+    recent_path = tmp_path / "recent-brand.csv"
+    _write_filing(old_path)
+    _write_filing(recent_path)
+    _ingest(client, old_path, key="old_brand_signal")
+    _ingest(client, recent_path, key="recent_brand_signal")
+
+    permits = {permit.source.key: permit for permit in db.query(PermitRecord).all()}
+    old_permit = permits["old_brand_signal"]
+    recent_permit = permits["recent_brand_signal"]
+    old_permit.filed_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    recent_permit.filed_at = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    old_match = db.query(PermitBrandMatch).filter_by(permit_id=old_permit.id).one()
+    recent_match = db.query(PermitBrandMatch).filter_by(permit_id=recent_permit.id).one()
+    old_match.confidence = 0.99
+    recent_match.confidence = 0.70
+    db.commit()
+
+    response = client.get(
+        "/permit-brand-matches?review_status=candidate&sort_by=freshness"
+    )
+
+    assert response.status_code == 200, response.text
+    assert [row["permit_id"] for row in response.json()] == [recent_permit.id, old_permit.id]
+    assert response.json()[0]["freshness"] == "fresh"
+    assert response.json()[1]["freshness"] == "stale"
+
+    fresh_only = client.get("/permit-brand-matches?freshness=fresh")
+    assert fresh_only.status_code == 200, fresh_only.text
+    assert [row["permit_id"] for row in fresh_only.json()] == [recent_permit.id]
+
+    recent_permit.filed_at = datetime(2099, 1, 1, tzinfo=timezone.utc)
+    db.commit()
+    future_dated = client.get("/permit-brand-matches?freshness=fresh")
+    assert future_dated.status_code == 200, future_dated.text
+    future_row = next(
+        row for row in future_dated.json() if row["permit_id"] == recent_permit.id
+    )
+    assert not future_row["freshness_date"].startswith("2099-")
 
 
 def test_applicant_company_alias_is_high_confidence_direct_evidence(client, db, tmp_path):

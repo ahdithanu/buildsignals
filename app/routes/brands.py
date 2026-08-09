@@ -48,6 +48,10 @@ def get_permit_brand_matches(
     detection_method: str | None = Query(
         default=None, pattern=r"^(direct_alias|historical_party)$"
     ),
+    freshness: str | None = Query(
+        default=None, pattern=r"^(fresh|active|aging|stale)$"
+    ),
+    sort_by: str = Query(default="confidence", pattern=r"^(confidence|freshness)$"),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
@@ -56,6 +60,8 @@ def get_permit_brand_matches(
         review_status=review_status,
         approval_stage=approval_stage,
         detection_method=detection_method,
+        freshness=freshness,
+        sort_by=sort_by,
         limit=limit,
     )
 
