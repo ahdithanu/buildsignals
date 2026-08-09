@@ -738,7 +738,8 @@ can use the same command and cursor.
 
 The canary command and `POST /ingestion/sources/{source_id}/canary` fetch a
 bounded sample, check required fields, execute the configured transforms,
-enforce declared publisher freshness when `freshness_field` is present, and
+enforce declared publisher freshness when `freshness_field` represents a
+record update or dataset refresh, and
 report lifecycle counts and record-level errors. They do not persist raw
 records, permits, events, graph relationships, or retailer candidates. Run a
 canary after every source mapping change and before the first write-enabled
@@ -757,9 +758,11 @@ and record failure rates, durable cursor, source watermark lag, and historical
 cursor stalls. Active run ID, heartbeat age, and stale-lease state are included
 in the same response. A source is critical when no checkpoint advances across three
 partial runs, at least half of recent terminal runs fail, or successful
-ingestion exceeds the critical freshness threshold. Publisher lag remains
-unknown unless the catalog declares a trustworthy `freshness_field`; it is not
-fabricated from permit filing or approval dates.
+ingestion exceeds the critical freshness threshold. A configured
+`filing_event_at` clock is exposed as activity context but never used to mark a
+source unhealthy. Publisher lag remains unknown unless the catalog declares a
+trustworthy record-update or dataset-refresh field; it is not fabricated from
+permit filing or approval dates.
 
 The same operations response includes jurisdiction, source license, and
 attribution/share-alike flags so reuse obligations remain visible during daily

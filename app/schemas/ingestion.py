@@ -121,6 +121,17 @@ class SourceHealthResponse(BaseModel):
     ingestion_age_hours: Optional[float]
     source_watermark_at: Optional[datetime]
     source_lag_hours: Optional[float]
+    freshness_sla_hours: float = 36.0
+    freshness_sla_configured: bool = False
+    freshness_semantics: Literal[
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+        "ingestion_observed_at",
+        "unclassified_source_timestamp",
+    ] = "ingestion_observed_at"
+    freshness_label: str = "Collection observed"
+    source_watermark_enforced: bool = False
     terminal_runs: int
     unhealthy_runs: int
     run_failure_rate: Optional[float]

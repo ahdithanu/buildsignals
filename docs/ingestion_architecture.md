@@ -109,3 +109,27 @@ flowchart LR
   layer itself.
 - Prefer a narrow set of high-confidence relationships over a noisy universal
   graph.
+
+## Freshness Contract
+
+Every production permit source declares a positive `freshness_sla_hours`. A
+source with a publisher timestamp also classifies that field as one of:
+
+- `record_updated_at`: the publisher says an individual record changed
+- `dataset_refreshed_at`: the publisher says the dataset or extract refreshed
+- `filing_event_at`: the timestamp is a filing, opening, or publication event
+
+Sources without a trustworthy publisher timestamp use collection time for
+operational health and report `ingestion_observed_at` through the health API.
+Only record-update and dataset-refresh clocks can degrade source health. Filing
+events remain visible as activity context, because a quiet jurisdiction is not
+necessarily a broken source. The API retains `source_watermark_at` and
+`source_lag_hours` for compatibility,
+but also returns `freshness_semantics`, `freshness_label`, and the effective SLA
+so operators can interpret those values correctly. Evidence panels call the
+immutable raw-row timestamp `Snapshot captured`; it is not presented as proof
+that the publisher re-observed an unchanged record.
+
+This contract deliberately stays in source configuration rather than the graph
+layer. Graph relationships consume evidence timestamps but do not infer what a
+publisher's field means.

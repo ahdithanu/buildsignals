@@ -944,6 +944,26 @@ def _raw_evidence(
     match: PermitBrandMatch,
 ) -> BrandMatchRawEvidence:
     source = raw.source
+    settings = source.settings or {}
+    configured_semantics = settings.get("freshness_semantics")
+    if configured_semantics in {
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+        "ingestion_observed_at",
+    }:
+        timestamp_semantics = str(configured_semantics)
+    elif settings.get("freshness_field") or raw.source_updated_at is not None:
+        timestamp_semantics = "unclassified_source_timestamp"
+    else:
+        timestamp_semantics = "ingestion_observed_at"
+    timestamp_label = {
+        "record_updated_at": "Publisher record update",
+        "dataset_refreshed_at": "Publisher dataset refresh",
+        "filing_event_at": "Filing event",
+        "ingestion_observed_at": "Source timestamp",
+        "unclassified_source_timestamp": "Unclassified publisher timestamp",
+    }.get(timestamp_semantics, "Publisher timestamp")
     return BrandMatchRawEvidence(
         raw_record_id=raw.id,
         external_record_id=raw.external_record_id,
@@ -954,6 +974,8 @@ def _raw_evidence(
         source_name=source.name,
         source_url=source.base_url,
         payload_excerpt=_payload_excerpt(raw.payload, match),
+        source_timestamp_semantics=timestamp_semantics,
+        source_timestamp_label=timestamp_label,
     )
 
 

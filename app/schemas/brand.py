@@ -218,6 +218,14 @@ class BrandMatchRawEvidence(BaseModel):
     source_name: str
     source_url: Optional[str]
     payload_excerpt: dict[str, Any]
+    source_timestamp_semantics: Literal[
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+        "ingestion_observed_at",
+        "unclassified_source_timestamp",
+    ] = "ingestion_observed_at"
+    source_timestamp_label: str = "Source timestamp"
 
     @computed_field
     @property
