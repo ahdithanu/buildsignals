@@ -231,6 +231,18 @@ def load_catalog(path: Path | str | None = None) -> list[IngestionSourceCreate]:
             raise ValueError("Promoted ingestion catalog must contain a JSON list")
         payload.extend(promoted)
     entries = _CATALOG_ADAPTER.validate_python(payload)
+    return validate_catalog_entries(
+        entries,
+        require_freshness_contract=path is None,
+    )
+
+
+def validate_catalog_entries(
+    entries: Iterable[IngestionSourceCreate],
+    *,
+    require_freshness_contract: bool = True,
+) -> list[IngestionSourceCreate]:
+    entries = list(entries)
     keys = [entry.key for entry in entries]
     duplicates = sorted({key for key in keys if keys.count(key) > 1})
     if duplicates:
@@ -260,7 +272,7 @@ def load_catalog(path: Path | str | None = None) -> list[IngestionSourceCreate]:
         _validate_field_allowlist(entry)
         _validate_freshness_metadata(
             entry,
-            require_contract=path is None and entry.record_type == "permit",
+            require_contract=require_freshness_contract and entry.record_type == "permit",
         )
         _validate_opening_signal_metadata(entry)
     return entries

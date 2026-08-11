@@ -117,6 +117,55 @@ def test_retry_candidates_parser_accepts_deterministic_audit_date():
     assert args.force is False
 
 
+def test_prepare_promotion_parser_is_offline_and_requires_review_artifacts():
+    args = build_parser().parse_args([
+        "catalog",
+        "prepare-promotion",
+        "--candidate-key",
+        "bend_or_planning_applications",
+        "--review-file",
+        "review.json",
+        "--output",
+        "promoted.json",
+    ])
+
+    assert args.catalog_command == "prepare-promotion"
+    assert args.candidate_key == "bend_or_planning_applications"
+    assert not hasattr(args, "organization")
+
+
+def test_prepare_promotion_command_does_not_open_database(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(
+        cli,
+        "prepare_promotion_manifest",
+        lambda **kwargs: calls.append(kwargs) or [SimpleNamespace(key="candidate")],
+    )
+    monkeypatch.setattr(
+        cli,
+        "SessionLocal",
+        lambda: (_ for _ in ()).throw(AssertionError("database should not open")),
+    )
+    review = tmp_path / "review.json"
+    output = tmp_path / "promoted.json"
+
+    result = cli.main([
+        "catalog",
+        "prepare-promotion",
+        "--candidate-key",
+        "candidate",
+        "--review-file",
+        str(review),
+        "--output",
+        str(output),
+    ])
+
+    assert result == 0
+    assert calls[0]["candidate_key"] == "candidate"
+    assert calls[0]["review_path"] == review
+    assert calls[0]["output_path"] == output
+
+
 def test_run_all_continues_after_one_source_errors(db, monkeypatch):
     db.add(Organization(
         id="default-org", name="Default Organization", slug="default-org",
