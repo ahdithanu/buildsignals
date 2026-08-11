@@ -733,6 +733,29 @@ is reviewed and deployed, an admin activates it from the Source Health page.
 A database-only source can be staged and inspected, but it does not count as
 live nationwide coverage until it is backed by the checked-in catalog.
 
+Prepare a promotion manifest with the offline compiler instead of manually
+assembling a production source entry:
+
+```bash
+python -m app.services.ingestion.cli catalog prepare-promotion \
+  --candidate-key <candidate-key> \
+  --review-file docs/examples/ingestion_promotion_review.json \
+  --output app/services/ingestion/promoted_catalog.json
+```
+
+The versioned review file must name the same candidate, record an explicit
+production decision, approve source rights and data minimization, and provide
+the complete production settings and field mappings. The compiler does not
+inherit probe-only settings. Reviews must include a rights rationale, export
+policy, non-empty field allowlist, and an explicit suppressed-fields decision.
+It preserves candidate identity, records review provenance, merges
+the existing promoted catalog, sorts entries by key, and runs the complete
+production catalog validator before atomically replacing the output. Existing
+keys require `--replace`, making updates intentional and reviewable in Git.
+The canary completion date is an offline reviewer attestation; the compiler
+checks it against the candidate audit date but does not query tenant canary
+history or contact the source.
+
 For production, set `INGESTION_ALLOWED_HOSTS` to include
 `data.austintexas.gov`, `data.seattle.gov`, `data.cityofchicago.org`,
 `data.cityofnewyork.us`, `data.nola.gov`, and `data.sfgov.org`. Start with a

@@ -25,6 +25,7 @@ from app.services.ingestion.health import (
     validate_candidate_source_canary,
     validate_source_canary,
 )
+from app.services.ingestion.promotion import prepare_promotion_manifest
 from app.services.ingestion.service import execute_source_run, list_sources
 from app.utils.org_scope import (
     SYSTEM_USER_ID,
@@ -45,6 +46,23 @@ def build_parser() -> argparse.ArgumentParser:
     sync.add_argument("--organization", required=True, help="Organization ID or slug")
     sync.add_argument("--path", type=Path, help="Alternative catalog JSON file")
     sync.add_argument("--dry-run", action="store_true")
+    prepare = catalog_commands.add_parser(
+        "prepare-promotion",
+        help="Compile a reviewed candidate into a validated promoted catalog",
+    )
+    prepare.add_argument("--candidate-key", required=True)
+    prepare.add_argument("--review-file", type=Path, required=True)
+    prepare.add_argument("--output", type=Path, required=True)
+    prepare.add_argument(
+        "--promoted-catalog",
+        type=Path,
+        help="Existing promoted catalog to merge (defaults to the checked-in catalog)",
+    )
+    prepare.add_argument(
+        "--replace",
+        action="store_true",
+        help="Replace an existing promoted entry with the same candidate key",
+    )
 
     brands = subcommands.add_parser("brands", help="Manage the retailer brand catalog")
     brand_commands = brands.add_subparsers(dest="brand_command", required=True)
@@ -284,6 +302,26 @@ def _report_health(db, sources: list[IngestionSource], *, as_json: bool = False)
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "catalog" and args.catalog_command == "prepare-promotion":
+        try:
+            kwargs = {
+                "candidate_key": args.candidate_key,
+                "review_path": args.review_file,
+                "output_path": args.output,
+                "replace": args.replace,
+            }
+            if args.promoted_catalog is not None:
+                kwargs["promoted_catalog_path"] = args.promoted_catalog
+            promoted = prepare_promotion_manifest(**kwargs)
+            print(
+                f"prepared {args.candidate_key} in {args.output} "
+                f"({len(promoted)} promoted sources)"
+            )
+            return 0
+        except Exception as exc:
+            print(f"error: {exc}")
+            return 1
+
     db = SessionLocal()
     token = None
     try:
