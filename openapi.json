@@ -4954,6 +4954,17 @@
             "title": "Pre Approval Source Count",
             "type": "integer"
           },
+          "researched_state_count": {
+            "title": "Researched State Count",
+            "type": "integer"
+          },
+          "researched_states": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Researched States",
+            "type": "array"
+          },
           "retailer_opening_source_count": {
             "title": "Retailer Opening Source Count",
             "type": "integer"
@@ -4985,6 +4996,17 @@
             },
             "title": "Top Jurisdictions",
             "type": "array"
+          },
+          "unresearched_state_count": {
+            "title": "Unresearched State Count",
+            "type": "integer"
+          },
+          "unresearched_states": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unresearched States",
+            "type": "array"
           }
         },
         "required": [
@@ -5005,6 +5027,10 @@
           "rollout_queue",
           "candidate_only_state_count",
           "candidate_only_states",
+          "researched_state_count",
+          "unresearched_state_count",
+          "researched_states",
+          "unresearched_states",
           "covered_state_count",
           "missing_state_count",
           "covered_states",
