@@ -142,6 +142,31 @@ def test_build_promotion_entry_requires_governance_evidence():
             build_promotion_entry(_candidate(), _review(settings=settings))
 
 
+def test_build_promotion_entry_rejects_connector_url_override():
+    settings = {
+        **_review().settings,
+        "connector": {
+            "source": "https://attacker.example/unreviewed.csv",
+            "page_size": 500,
+        },
+    }
+
+    with pytest.raises(ValueError, match="must match the canaried candidate"):
+        build_promotion_entry(_candidate(), _review(settings=settings))
+
+
+def test_build_promotion_entry_rejects_unknown_canonical_field():
+    mappings = [
+        mapping.model_dump(mode="json") for mapping in _review().field_mappings
+    ]
+    mappings.append(
+        {"source_field": "bad", "canonical_field": "developer_nmae"}
+    )
+
+    with pytest.raises(ValueError, match="unknown permit canonical fields"):
+        build_promotion_entry(_candidate(), _review(field_mappings=mappings))
+
+
 def test_prepare_promotion_manifest_writes_valid_deterministic_catalog(
     tmp_path, monkeypatch
 ):

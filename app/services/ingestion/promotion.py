@@ -21,6 +21,10 @@ from app.services.ingestion.catalog import (
     load_catalog,
     validate_catalog_entries,
 )
+from app.services.ingestion.normalization import (
+    CANONICAL_FIELDS,
+    PARCEL_CANONICAL_FIELDS,
+)
 
 _SOURCE_LIST_ADAPTER = TypeAdapter(list[IngestionSourceCreate])
 
@@ -63,6 +67,19 @@ def build_promotion_entry(
     if not candidate.can_run_canary:
         raise ValueError("Only runnable canary candidates can be prepared for promotion")
 
+    connector = review.settings.get("connector")
+    if isinstance(connector, dict):
+        connector_url = connector.get(
+            "source" if candidate.adapter.casefold() == "csv" else "endpoint"
+        )
+        if connector_url is not None and (
+            not isinstance(connector_url, str)
+            or _normalize_url(connector_url) != _normalize_url(candidate.base_url)
+        ):
+            raise ValueError(
+                "Promotion connector URL must match the canaried candidate base URL"
+            )
+
     required_policy_strings = ("rights_basis", "export_policy")
     missing_policy = [
         key
@@ -91,6 +108,23 @@ def build_promotion_entry(
     )
     if duplicates:
         raise ValueError(f"Promotion review contains duplicate source fields: {duplicates}")
+    canonical_fields = (
+        CANONICAL_FIELDS
+        if candidate.record_type == "permit"
+        else PARCEL_CANONICAL_FIELDS
+    )
+    invalid_canonical_fields = sorted(
+        {
+            mapping.canonical_field
+            for mapping in review.field_mappings
+            if mapping.is_active and mapping.canonical_field not in canonical_fields
+        }
+    )
+    if invalid_canonical_fields:
+        raise ValueError(
+            f"Promotion review contains unknown {candidate.record_type} canonical fields: "
+            f"{invalid_canonical_fields}"
+        )
     if not any(
         mapping.is_active
         and mapping.is_required
@@ -235,6 +269,10 @@ def _file_fingerprint(path: Path) -> str | None:
     if not path.exists():
         return None
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _normalize_url(value: str) -> str:
+    return value.strip().rstrip("/").casefold()
 
 
 @contextmanager
