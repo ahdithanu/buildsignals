@@ -4721,6 +4721,11 @@
             "title": "Candidate Source Fields",
             "type": "array"
           },
+          "catalog_backed": {
+            "default": false,
+            "title": "Catalog Backed",
+            "type": "boolean"
+          },
           "early_warning_value": {
             "title": "Early Warning Value",
             "type": "string"
