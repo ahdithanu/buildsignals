@@ -741,6 +741,34 @@ def test_health_marks_stale_source_watermark_degraded(db):
     assert any("Publisher record update" in reason for reason in health.reasons)
 
 
+def test_health_uses_collection_sla_independently_from_publisher_freshness(db):
+    source = _source(db)
+    now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)
+    source.settings = {
+        **(source.settings or {}),
+        "collection_interval_minutes": 30 * 24 * 60,
+        "freshness_sla_hours": 24,
+        "freshness_semantics": "filing_event_at",
+    }
+    db.add(IngestionRun(
+        organization_id="default-org",
+        source_id=source.id,
+        status="completed",
+        trigger="scheduled",
+        started_at=now - timedelta(days=2),
+        completed_at=now - timedelta(days=2) + timedelta(minutes=5),
+        records_seen=1,
+        records_failed=0,
+    ))
+    db.flush()
+
+    health = evaluate_source_health(db, source, now=now)
+
+    assert health.status == "healthy"
+    assert health.collection_sla_hours == 720
+    assert health.collection_sla_configured is False
+
+
 def test_health_does_not_treat_quiet_filing_activity_as_source_failure(db):
     source = _source(db)
     now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)

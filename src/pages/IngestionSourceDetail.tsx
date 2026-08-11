@@ -168,7 +168,7 @@ export default function IngestionSourceDetail() {
           <Stat
             icon={ShieldCheck}
             label="Collection SLA"
-            value={`${health.freshness_sla_hours ?? 36} hours${health.freshness_sla_configured === false ? ' (default)' : ''}`}
+            value={`${health.collection_sla_hours ?? health.freshness_sla_hours ?? 36} hours${health.collection_sla_configured === false ? ' (default)' : ''}`}
           />
         </section>
 

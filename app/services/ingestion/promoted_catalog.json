@@ -53,6 +53,10 @@
       "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 72,
       "refresh_frequency": "nightly",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "attribution_required": true,
       "field_allowlist": [
         "Address",
@@ -253,6 +257,10 @@
       "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 72,
       "refresh_frequency": "nightly",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "attribution_required": true,
       "field_allowlist": [
         "Address",
@@ -496,6 +504,10 @@
       "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 72,
       "refresh_frequency": "nightly",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "attribution_required": true,
       "field_allowlist": [
         "Address",

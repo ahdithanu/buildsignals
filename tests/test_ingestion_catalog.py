@@ -31,6 +31,11 @@ def test_production_permit_sources_declare_freshness_contracts():
 
     assert entries
     assert all(entry.settings["freshness_sla_hours"] > 0 for entry in entries)
+    assert all(
+        entry.settings["collection_sla_hours"]
+        >= entry.settings["collection_interval_minutes"] / 60
+        for entry in entries
+    )
     for entry in entries:
         freshness_field = entry.settings.get("freshness_field")
         if freshness_field:
@@ -642,8 +647,12 @@ def test_opening_signal_sources_declare_stage_date_and_raw_export_limits(tmp_pat
         "settings": {
             "official_landing_page": "https://example.test/openings",
             "license": "Public Domain",
-            "reconciliation_mode": "daily_recent_snapshot",
-            "signal_stage": "approved_only",
+                "reconciliation_mode": "daily_recent_snapshot",
+                "collection_interval_minutes": 1440,
+                "collection_sla_hours": 24,
+                "retry_interval_minutes": 360,
+                "schedule_mode": "automatic",
+                "signal_stage": "approved_only",
             "retailer_opening_signal": True,
             "opening_signal_date_field": "first_sale_date",
             "export_policy": "derived_retailer_opening_context_only_no_raw_export",
@@ -697,8 +706,12 @@ def test_opening_signal_date_field_must_be_selected(tmp_path):
         "settings": {
             "official_landing_page": "https://example.test/openings",
             "license": "Public Domain",
-            "reconciliation_mode": "daily_recent_snapshot",
-            "signal_stage": "approved_only",
+                "reconciliation_mode": "daily_recent_snapshot",
+                "collection_interval_minutes": 1440,
+                "collection_sla_hours": 24,
+                "retry_interval_minutes": 360,
+                "schedule_mode": "automatic",
+                "signal_stage": "approved_only",
             "retailer_opening_signal": True,
             "opening_signal_date_field": "first_sale_date",
             "export_policy": "derived_retailer_opening_context_only_no_raw_export",
@@ -5690,6 +5703,35 @@ def test_catalog_sync_is_idempotent_and_preserves_source_ids(db):
     assert second.unchanged == len(entries)
     assert {source.key: source.id for source in db.query(IngestionSource).all()} == source_ids
     assert db.query(SourceFieldMapping).count() == mapping_count
+
+
+def test_catalog_sync_preserves_tenant_source_pause(db):
+    entry = load_catalog()[0]
+    sync_catalog(db, [entry])
+    db.commit()
+    source = db.query(IngestionSource).one()
+    source.is_active = False
+    db.commit()
+
+    result = sync_catalog(db, [entry])
+    db.commit()
+
+    assert result.unchanged == 1
+    assert db.query(IngestionSource).one().is_active is False
+
+
+def test_catalog_sync_can_reactivate_a_catalog_disabled_source(db):
+    active_entry = load_catalog()[0]
+    inactive_entry = active_entry.model_copy(update={"is_active": False})
+    sync_catalog(db, [inactive_entry])
+    db.commit()
+    assert db.query(IngestionSource).one().is_active is False
+
+    result = sync_catalog(db, [active_entry])
+    db.commit()
+
+    assert result.updated == 1
+    assert db.query(IngestionSource).one().is_active is True
 
 
 def test_promoted_washington_sources_bootstrap_from_production_catalog(db):

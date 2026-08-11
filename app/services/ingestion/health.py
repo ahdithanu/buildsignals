@@ -24,7 +24,7 @@ from app.services.ingestion.normalization import (
     parse_source_datetime,
     prepare_mapped_record,
 )
-from app.services.ingestion.service import _record_matches_filters
+from app.services.ingestion.service import _record_matches_filters, resolve_stale_run_after
 from app.utils.org_scope import active_query, get_org_id
 
 
@@ -73,6 +73,8 @@ class SourceHealthResult:
     cursor_updated_at: datetime | None
     cursor_stalled: bool
     reasons: list[str]
+    collection_sla_hours: float = 36.0
+    collection_sla_configured: bool = False
     freshness_sla_hours: float = 36.0
     freshness_sla_configured: bool = False
     freshness_semantics: str = "ingestion_observed_at"
@@ -146,9 +148,7 @@ def evaluate_source_health(
         round((now - _as_utc(active_run.heartbeat_at)).total_seconds(), 2)
         if active_run else None
     )
-    stale_after_seconds = float(
-        (source.settings or {}).get("stale_run_after_seconds", 300)
-    )
+    stale_after_seconds = resolve_stale_run_after(source.settings).total_seconds()
     active_run_stale = bool(
         heartbeat_age_seconds is not None
         and heartbeat_age_seconds > stale_after_seconds
@@ -199,6 +199,17 @@ def evaluate_source_health(
         configured_sla, bool
     ) and configured_sla > 0
     sla_hours = float(configured_sla) if freshness_sla_configured else 36.0
+    configured_collection_sla = settings.get("collection_sla_hours")
+    collection_sla_configured = (
+        isinstance(configured_collection_sla, (int, float))
+        and not isinstance(configured_collection_sla, bool)
+        and configured_collection_sla > 0
+    )
+    collection_sla_hours = (
+        float(configured_collection_sla)
+        if collection_sla_configured
+        else _default_collection_sla_hours(settings)
+    )
     configured_semantics = settings.get("freshness_semantics")
     if configured_semantics in {
         "record_updated_at",
@@ -223,19 +234,27 @@ def evaluate_source_health(
         "dataset_refreshed_at",
         "unclassified_source_timestamp",
     }
-    critical_hours = max(48.0, sla_hours * 4 / 3)
+    collection_critical_hours = max(48.0, collection_sla_hours * 4 / 3)
+    freshness_critical_hours = max(48.0, sla_hours * 4 / 3)
     reasons: list[str] = []
     status = "healthy"
     if last_success is None:
         status = "unknown"
         reasons.append("No successful operational run has completed")
-    elif ingestion_age is not None and ingestion_age > critical_hours:
+    elif ingestion_age is not None and ingestion_age > collection_critical_hours:
         status = "critical"
         reasons.append(f"Latest successful ingestion is {ingestion_age:.1f} hours old")
-    elif ingestion_age is not None and ingestion_age > sla_hours:
+    elif ingestion_age is not None and ingestion_age > collection_sla_hours:
         status = "degraded"
-        reasons.append(f"Latest successful ingestion exceeds the {sla_hours:g}-hour SLA")
-    if source_watermark_enforced and source_lag is not None and source_lag > critical_hours:
+        reasons.append(
+            "Latest successful ingestion exceeds the "
+            f"{collection_sla_hours:g}-hour collection SLA"
+        )
+    if (
+        source_watermark_enforced
+        and source_lag is not None
+        and source_lag > freshness_critical_hours
+    ):
         status = "critical"
         reasons.append(f"{freshness_label} is {source_lag:.1f} hours old")
     elif (
@@ -301,6 +320,8 @@ def evaluate_source_health(
         cursor_updated_at=cursor_run.completed_at if cursor_run else None,
         cursor_stalled=cursor_stalled,
         reasons=reasons,
+        collection_sla_hours=collection_sla_hours,
+        collection_sla_configured=collection_sla_configured,
         freshness_sla_hours=sla_hours,
         freshness_sla_configured=freshness_sla_configured,
         freshness_semantics=freshness_semantics,
@@ -360,6 +381,17 @@ def _as_utc(value: datetime) -> datetime:
 
 def _hours_between(later: datetime, earlier: datetime) -> float:
     return round((_as_utc(later) - _as_utc(earlier)).total_seconds() / 3600, 2)
+
+
+def _default_collection_sla_hours(settings: dict[str, Any]) -> float:
+    interval = settings.get("collection_interval_minutes")
+    if (
+        isinstance(interval, (int, float))
+        and not isinstance(interval, bool)
+        and interval > 0
+    ):
+        return float(interval) / 60
+    return 36.0
 
 
 def validate_source_canary(

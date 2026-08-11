@@ -4,7 +4,7 @@ import os
 from typing import Any, Mapping
 from urllib.parse import urlparse
 
-from app.config import IS_PRODUCTION
+from app.config import ENVIRONMENT
 
 from .arcgis import ArcGISConnector
 from .base import Connector, RetryingHttpClient
@@ -85,8 +85,11 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
         )
     if connector_type == "csv":
         source = _required(config, "source")
-        if IS_PRODUCTION and urlparse(source).scheme.lower() not in {"http", "https"}:
-            raise ValueError("Production CSV sources must use HTTPS or HTTP")
+        if (
+            _is_deployed_environment()
+            and urlparse(source).scheme.lower() not in {"http", "https"}
+        ):
+            raise ValueError("Deployed CSV sources must use HTTPS or HTTP")
         return CSVConnector(
             source,
             delimiter=config.get("delimiter"),
@@ -171,7 +174,7 @@ def _public_headers(config: Mapping[str, Any]) -> dict[str, str]:
 
 
 def _production_allowed_hosts() -> frozenset[str] | None:
-    if not IS_PRODUCTION:
+    if not _is_deployed_environment():
         return None
     hosts = frozenset(
         host.strip().lower()
@@ -179,5 +182,11 @@ def _production_allowed_hosts() -> frozenset[str] | None:
         if host.strip()
     )
     if not hosts:
-        raise ValueError("INGESTION_ALLOWED_HOSTS must be configured in production")
+        raise ValueError(
+            "INGESTION_ALLOWED_HOSTS must be configured in staging and production"
+        )
     return hosts
+
+
+def _is_deployed_environment() -> bool:
+    return ENVIRONMENT in {"staging", "production"}

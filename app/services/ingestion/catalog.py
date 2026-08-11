@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.models.ingestion import IngestionSource
 from app.schemas.ingestion import IngestionSourceCreate, IngestionSourceUpdate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
+from app.services.ingestion.scheduling import source_schedule_policy
 from app.services.ingestion.service import create_source, update_source
 from app.utils.org_scope import active_query
 
@@ -20,6 +21,7 @@ PROMOTED_CATALOG_PATH = Path(__file__).with_name("promoted_catalog.json")
 DEFAULT_CANDIDATE_CATALOG_PATH = Path(__file__).with_name("candidate_catalog.json")
 _CATALOG_ADAPTER = TypeAdapter(list[IngestionSourceCreate])
 _CANDIDATE_CATALOG_ADAPTER = TypeAdapter(list[IngestionSourceCandidate])
+_CATALOG_ACTIVE_SETTING = "_catalog_is_active"
 US_STATE_CODES = (
     "AL",
     "AK",
@@ -279,6 +281,7 @@ def validate_catalog_entries(
             require_contract=require_freshness_contract and entry.record_type == "permit",
         )
         _validate_opening_signal_metadata(entry)
+        source_schedule_policy(entry)
     return entries
 
 
@@ -1027,20 +1030,28 @@ def sync_catalog(
 ) -> CatalogSyncResult:
     created = updated = unchanged = 0
     for entry in entries:
+        managed_entry = _entry_with_catalog_state(entry)
         source = active_query(db.query(IngestionSource), IngestionSource).filter(
             IngestionSource.key == entry.key
         ).first()
         if source is None:
             created += 1
             if not dry_run:
-                create_source(db, entry)
+                create_source(db, managed_entry)
             continue
 
         if source.adapter != entry.adapter.lower() or source.record_type != entry.record_type:
             raise ValueError(
                 f"Catalog cannot change adapter or record type for existing source: {entry.key}"
             )
-        if _source_snapshot(source) == _payload_snapshot(entry):
+        previous_catalog_active = (source.settings or {}).get(
+            _CATALOG_ACTIVE_SETTING
+        )
+        tenant_paused = not source.is_active and previous_catalog_active is not False
+        desired_is_active = entry.is_active and not tenant_paused
+        if _source_snapshot(source) == _payload_snapshot(
+            managed_entry, is_active=desired_is_active
+        ):
             unchanged += 1
             continue
 
@@ -1050,16 +1061,29 @@ def sync_catalog(
                 db,
                 source,
                 IngestionSourceUpdate(
-                    name=entry.name,
-                    jurisdiction=entry.jurisdiction,
-                    base_url=entry.base_url,
-                    settings=entry.settings,
-                    is_active=entry.is_active,
+                    name=managed_entry.name,
+                    jurisdiction=managed_entry.jurisdiction,
+                    base_url=managed_entry.base_url,
+                    settings=managed_entry.settings,
+                    is_active=desired_is_active,
                     field_mappings=entry.field_mappings,
                 ),
             )
 
     return CatalogSyncResult(created=created, updated=updated, unchanged=unchanged)
+
+
+def _entry_with_catalog_state(
+    entry: IngestionSourceCreate,
+) -> IngestionSourceCreate:
+    return entry.model_copy(
+        update={
+            "settings": {
+                **(entry.settings or {}),
+                _CATALOG_ACTIVE_SETTING: entry.is_active,
+            }
+        }
+    )
 
 
 def _mapping_snapshot(mapping: object) -> dict:
@@ -1077,13 +1101,17 @@ def _mapping_snapshot(mapping: object) -> dict:
     }
 
 
-def _payload_snapshot(payload: IngestionSourceCreate) -> dict:
+def _payload_snapshot(
+    payload: IngestionSourceCreate,
+    *,
+    is_active: bool | None = None,
+) -> dict:
     return {
         "name": payload.name,
         "jurisdiction": payload.jurisdiction,
         "base_url": payload.base_url,
         "settings": payload.settings or None,
-        "is_active": payload.is_active,
+        "is_active": payload.is_active if is_active is None else is_active,
         "field_mappings": sorted(
             (_mapping_snapshot(mapping) for mapping in payload.field_mappings),
             key=lambda mapping: mapping["source_field"],

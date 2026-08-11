@@ -1,11 +1,11 @@
-import { Activity, CheckCircle2, ChevronDown, ChevronUp, Database, ExternalLink, Play, RefreshCw, Rocket, Store, TriangleAlert } from 'lucide-react';
+import { Activity, CheckCircle2, ChevronDown, ChevronUp, Clock3, Database, ExternalLink, Play, RefreshCw, Rocket, Store, TriangleAlert } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCandidateCanaryHistory, useIngestionHealth, usePromoteIngestionCandidate } from '@/hooks/useIngestionHealth';
+import { useCandidateCanaryHistory, useIngestionHealth, useIngestionSchedulePlan, usePromoteIngestionCandidate } from '@/hooks/useIngestionHealth';
 import { useToast } from '@/hooks/use-toast';
 import { stateCodeFromJurisdiction } from '@/lib/jurisdiction';
 import { buildIngestionReliabilitySummary, resolveIngestionReliabilitySummary } from '@/lib/ingestionReliability';
@@ -124,8 +124,8 @@ function HealthRow({
         <p className="font-medium text-foreground">{ageLabel(source.ingestion_age_hours)}</p>
         <p className="mt-0.5 text-muted-foreground">Last successful collection</p>
         <p className="mt-1 text-[11px] text-muted-foreground">
-          Collection SLA: {source.freshness_sla_hours ?? 36}h
-          {source.freshness_sla_configured === false ? ' (default)' : ''}
+          Collection SLA: {source.collection_sla_hours ?? source.freshness_sla_hours ?? 36}h
+          {source.collection_sla_configured === false ? ' (default)' : ''}
         </p>
         {source.freshness_semantics && source.freshness_semantics !== 'ingestion_observed_at' && (
           <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -382,6 +382,13 @@ export default function IngestionOperations() {
     canary,
     candidateCanary,
   } = useIngestionHealth(selectedState);
+  const {
+    data: schedulePlan,
+    isLoading: scheduleLoading,
+    isFetching: scheduleFetching,
+    error: scheduleError,
+    refetch: refetchSchedule,
+  } = useIngestionSchedulePlan(selectedState);
   const promoteCandidate = usePromoteIngestionCandidate();
   const sources = data?.sources ?? [];
   const candidates = data?.candidates ?? [];
@@ -410,6 +417,9 @@ export default function IngestionOperations() {
     () => candidates.filter((candidate) => matchesStateFilter(candidate.jurisdiction, selectedState)),
     [candidates, selectedState],
   );
+  const scheduleAttention = (schedulePlan?.items ?? [])
+    .filter((item) => item.due || item.active_run)
+    .slice(0, 10);
 
   const runCanary = (source: SourceHealth) => {
     canary.mutate(
@@ -486,8 +496,14 @@ export default function IngestionOperations() {
               Official permit, application, and parcel feeds
             </p>
           </div>
-          <Button type="button" variant="outline" size="sm" disabled={isFetching} onClick={() => refetch()}>
-            <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isFetching || scheduleFetching}
+            onClick={() => void Promise.all([refetch(), refetchSchedule()])}
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', (isFetching || scheduleFetching) && 'animate-spin')} />
             Refresh
           </Button>
         </div>
@@ -575,6 +591,68 @@ export default function IngestionOperations() {
             </div>
           </section>
         )}
+
+        <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Collection schedule">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <Clock3 className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Collection Schedule</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Catalog cadence, retry backoff, and resumable work due now
+                </p>
+              </div>
+            </div>
+            {schedulePlan && (
+              <span className="text-xs text-muted-foreground">
+                shard {schedulePlan.shard_index + 1} of {schedulePlan.shard_count}
+              </span>
+            )}
+          </div>
+          {scheduleLoading ? (
+            <p className="text-xs text-muted-foreground">Loading collection plan...</p>
+          ) : scheduleError ? (
+            <p className="text-xs text-red-700">Collection plan is temporarily unavailable.</p>
+          ) : schedulePlan ? (
+            <>
+              {!schedulePlan.catalog_synced && (
+                <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {schedulePlan.unsynced_source_count} catalog source{schedulePlan.unsynced_source_count === 1 ? '' : 's'} pending tenant sync
+                </p>
+              )}
+              <div className="grid grid-cols-3 divide-x rounded-md border bg-background">
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{schedulePlan.due_source_count}</p>
+                  <p className="text-[11px] text-muted-foreground">Due now</p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{schedulePlan.active_source_count}</p>
+                  <p className="text-[11px] text-muted-foreground">Running</p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{schedulePlan.automatic_source_count}</p>
+                  <p className="text-[11px] text-muted-foreground">Automatic</p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {scheduleAttention.length === 0 ? (
+                  <span className="text-[11px] text-muted-foreground">No collection work is due.</span>
+                ) : (
+                  scheduleAttention.map((item) => (
+                    <Link
+                      key={item.source_id}
+                      to={`/source-health/sources/${item.source_id}`}
+                      className="rounded-md border bg-secondary/40 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+                      title={`${item.due_reason.replace(/_/g, ' ')} · ${item.max_pages_per_run} page limit`}
+                    >
+                      {item.source_name} · {item.stale_run ? 'stale, reclaim due' : item.active_run ? 'running' : 'due'}
+                    </Link>
+                  ))
+                )}
+              </div>
+            </>
+          ) : null}
+        </section>
 
         {!isLoading && !error && sources.length > 0 && (
           <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Live source mix">

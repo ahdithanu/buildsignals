@@ -704,26 +704,48 @@ python -m app.services.ingestion.cli scheduled --organization <id-or-slug> \
   --source-key washington_state_lcb_local_authority_letters \
   --source-key everett_wa_planning_application_notices \
   --max-pages-per-source 10
+python -m app.services.ingestion.cli scheduled-due --organization <id-or-slug> \
+  --as-of 2026-08-11T12:00:00+00:00 --plan-only
 python -m app.services.ingestion.cli retry-candidates \
   --organization <id-or-slug> --sample-size 10
 ```
 
-Use bounded `run-all` collections for frequent scheduled work. They resume the
+Use `scheduled-due` for recurring work. It syncs the production catalog,
+intersects it with active tenant sources, applies a stable SHA-256 shard, emits
+a deterministic JSON plan, and runs only sources whose numeric collection or
+retry interval has elapsed. Clean partial runs remain due so bounded histories
+continue without waiting a full cadence. Fresh active leases are skipped;
+stale leases are passed to the ingestion service for atomic reclaim. Failures
+remain isolated to their source.
+
+Every production catalog entry and promotion review must declare
+`collection_interval_minutes`, `retry_interval_minutes`, and `schedule_mode`.
+Optional `max_pages_per_run` and `collection_priority` values tune bounded work
+without changing connector behavior. `manual` sources remain visible in the
+plan but are never automatically collected.
+
+Use bounded `run-all` collections only for controlled reconciliation or manual
+backfill work. They resume the
 latest successful checkpoint per source and continue when one source fails.
 Run a separate reset-checkpoint reconciliation on the cadence declared by each
 source; the example above performs a full early-warning pass. A later completed
 run with no checkpoint is authoritative and prevents an older partial cursor
 from being reused.
 
-The `scheduled` command is the production entry point for a source cohort. It
+The legacy `scheduled` command remains the production entry point for an
+explicit source cohort. It
 first synchronizes the checked-in production catalog, resumes and runs only the
 explicitly named sources, then evaluates their health. It exits `1` for a run
 failure or degraded health and `2` for critical or unknown health, allowing the
 job platform to alert without parsing logs. Source keys are required so a new
 catalog entry cannot silently expand an existing job's workload.
 
-The Render Blueprint runs the Washington cohort every six hours at minute 15
-UTC and checks its health hourly at minute 45 UTC. Set
+The production Render Blueprint still runs the explicit Washington/Bend cohort
+every six hours and checks its health hourly. Staging and generic AWS/GitHub
+workers use `scheduled-due` hourly. Promote the production Render worker only
+after a plan-only parity window and an explicit expansion of
+`INGESTION_ALLOWED_HOSTS`; the scheduler does not weaken the connector host
+allowlist. Set
 `INGESTION_ORGANIZATION` to the production organization ID or slug and set each
 worker's `CORS_ALLOWED_ORIGINS` to the same frontend origin used by the API.
 Enable failure notifications for the ingestion cron services in Render; a nonzero CLI

@@ -9,6 +9,25 @@ from app.services.ingestion.cli import build_parser
 from app.services.ingestion.health import CandidateCanaryResult
 
 
+def _catalog_source(
+    key: str,
+    *,
+    signal_stage: str = "approved_only",
+    max_pages_per_run: int = 10,
+):
+    return SimpleNamespace(
+        key=key,
+        settings={
+            "collection_interval_minutes": 1440,
+            "collection_sla_hours": 24,
+            "retry_interval_minutes": 60,
+            "schedule_mode": "automatic",
+            "signal_stage": signal_stage,
+            "max_pages_per_run": max_pages_per_run,
+        },
+    )
+
+
 def _retry_candidate() -> IngestionSourceCandidate:
     return IngestionSourceCandidate(
         key="test_retry_candidate",
@@ -82,6 +101,21 @@ def test_scheduled_parser_requires_explicit_sources():
     assert args.source_keys == ["first_source", "second_source"]
     assert args.max_pages_per_source == 10
     assert args.reset_checkpoints is False
+
+
+def test_scheduled_due_parser_defaults_to_one_executable_shard():
+    args = build_parser().parse_args([
+        "scheduled-due",
+        "--organization",
+        "default-org",
+    ])
+
+    assert args.command == "scheduled-due"
+    assert args.source_keys is None
+    assert args.shard_count == 1
+    assert args.shard_index == 0
+    assert args.plan_only is False
+    assert args.max_pages_per_source is None
 
 
 def test_health_parser_supports_source_scoping():
@@ -364,6 +398,173 @@ def test_scheduled_rejects_unknown_key_before_catalog_sync(db, monkeypatch):
 
     assert result == 1
     assert sync_calls == []
+
+
+def test_scheduled_due_plan_only_syncs_and_does_not_execute(db, monkeypatch, capsys):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.add(IngestionSource(
+        organization_id="default-org", key="due_source", name="Due Source",
+        adapter="csv", record_type="permit", is_active=True,
+        settings={
+            "collection_interval_minutes": 1440,
+            "retry_interval_minutes": 60,
+            "schedule_mode": "automatic",
+        },
+    ))
+    db.commit()
+    catalog_entry = _catalog_source("due_source")
+    calls = []
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "load_catalog", lambda: [catalog_entry])
+    monkeypatch.setattr(
+        cli,
+        "sync_catalog",
+        lambda _db, entries, **kwargs: calls.append(("sync", entries, kwargs)) or SimpleNamespace(
+            created=0, updated=0, unchanged=1,
+        ),
+    )
+    monkeypatch.setattr(
+        cli,
+        "execute_source_run",
+        lambda *_args, **_kwargs: calls.append(("run", None)),
+    )
+
+    result = cli.main([
+        "scheduled-due", "--organization", "default-org", "--plan-only",
+        "--as-of", "2026-08-11T12:00:00+00:00",
+    ])
+
+    assert result == 0
+    assert calls == [("sync", [catalog_entry], {"dry_run": True})]
+    assert '"due_reason": "never_run"' in capsys.readouterr().out
+
+
+def test_scheduled_due_rejects_historical_execution(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.commit()
+    sync_calls = []
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(
+        cli,
+        "sync_catalog",
+        lambda *_args, **_kwargs: sync_calls.append(True),
+    )
+
+    result = cli.main([
+        "scheduled-due", "--organization", "default-org",
+        "--as-of", "2026-08-11T12:00:00+00:00",
+    ])
+
+    assert result == 1
+    assert sync_calls == []
+
+
+def test_scheduled_due_executes_only_due_catalog_sources(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    due = IngestionSource(
+        organization_id="default-org", key="due_source", name="Due Source",
+        adapter="csv", record_type="permit", is_active=True,
+        settings={
+            "collection_interval_minutes": 1440,
+            "retry_interval_minutes": 60,
+            "schedule_mode": "automatic",
+            "max_pages_per_run": 3,
+        },
+    )
+    runtime_only = IngestionSource(
+        organization_id="default-org", key="runtime_only", name="Runtime Only",
+        adapter="csv", record_type="permit", is_active=True,
+        settings={
+            "collection_interval_minutes": 1440,
+            "retry_interval_minutes": 60,
+            "schedule_mode": "automatic",
+        },
+    )
+    db.add_all([due, runtime_only])
+    db.commit()
+    calls = []
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(
+        cli, "load_catalog", lambda: [
+            _catalog_source("due_source", max_pages_per_run=3)
+        ]
+    )
+    monkeypatch.setattr(
+        cli,
+        "sync_catalog",
+        lambda *_args, **_kwargs: SimpleNamespace(created=0, updated=0, unchanged=1),
+    )
+    monkeypatch.setattr(cli, "resolve_resume_checkpoint", lambda *_args: None)
+    monkeypatch.setattr(
+        cli,
+        "execute_source_run",
+        lambda _db, source, **kwargs: calls.append((source.key, kwargs))
+        or SimpleNamespace(
+            status="completed", records_seen=1, records_inserted=1,
+            records_updated=0, records_failed=0,
+        ),
+    )
+    monkeypatch.setattr(
+        cli,
+        "evaluate_source_health",
+        lambda _db, source: SimpleNamespace(
+            source_key=source.key, status="healthy", ingestion_age_hours=0.0,
+            run_failure_rate=0.0, reasons=[],
+        ),
+    )
+
+    result = cli.main([
+        "scheduled-due", "--organization", "default-org",
+    ])
+
+    assert result == 0
+    assert [key for key, _kwargs in calls] == ["due_source"]
+    assert calls[0][1]["max_pages"] == 3
+
+
+def test_scheduled_due_concurrent_claim_is_not_health_failure(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.add(IngestionSource(
+        organization_id="default-org", key="due_source", name="Due Source",
+        adapter="csv", record_type="permit", is_active=True,
+    ))
+    db.commit()
+    health_calls = []
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "load_catalog", lambda: [_catalog_source("due_source")])
+    monkeypatch.setattr(
+        cli, "sync_catalog",
+        lambda *_args, **_kwargs: SimpleNamespace(created=0, updated=0, unchanged=1),
+    )
+    monkeypatch.setattr(
+        cli, "execute_source_run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            cli.ActiveRunConflict("already claimed")
+        ),
+    )
+    monkeypatch.setattr(
+        cli, "evaluate_source_health",
+        lambda *_args, **_kwargs: health_calls.append(True),
+    )
+
+    result = cli.main(["scheduled-due", "--organization", "default-org"])
+
+    assert result == 0
+    assert health_calls == []
 
 
 def test_run_all_explicit_filter_does_not_succeed_when_stage_excludes_it(

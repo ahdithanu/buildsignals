@@ -30,6 +30,8 @@ export interface SourceHealth {
   ingestion_age_hours?: number | null;
   source_watermark_at?: string | null;
   source_lag_hours?: number | null;
+  collection_sla_hours?: number;
+  collection_sla_configured?: boolean;
   freshness_sla_hours?: number;
   freshness_sla_configured?: boolean;
   freshness_semantics?: 'record_updated_at' | 'dataset_refreshed_at' | 'filing_event_at' | 'ingestion_observed_at' | 'unclassified_source_timestamp';
@@ -251,6 +253,44 @@ export interface IngestionCoverage {
   missing_state_count: number;
   covered_states: string[];
   missing_states: string[];
+}
+
+export interface SourceSchedulePlanItem {
+  source_id: string;
+  source_key: string;
+  source_name: string;
+  jurisdiction?: string | null;
+  due: boolean;
+  due_reason: string;
+  interval_minutes: number;
+  retry_interval_minutes: number;
+  collection_sla_hours: number;
+  max_pages_per_run: number;
+  priority: number;
+  schedule_mode: 'automatic' | 'manual';
+  shard_index: number;
+  active_run: boolean;
+  stale_run: boolean;
+  latest_status?: string | null;
+  last_terminal_at?: string | null;
+  due_at?: string | null;
+  overdue_minutes: number;
+}
+
+export interface SourceSchedulePlan {
+  as_of: string;
+  shard_count: number;
+  shard_index: number;
+  total_source_count: number;
+  catalog_source_count: number;
+  unsynced_source_count: number;
+  unsynced_source_keys: string[];
+  catalog_synced: boolean;
+  shard_source_count: number;
+  automatic_source_count: number;
+  due_source_count: number;
+  active_source_count: number;
+  items: SourceSchedulePlanItem[];
 }
 
 export interface ReliabilityWatchlistItem {
