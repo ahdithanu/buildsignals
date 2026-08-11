@@ -18,6 +18,7 @@ from app.services.ingestion.connectors import (
     SocrataConnector,
     build_connector,
 )
+from app.services.ingestion.connectors import factory as connector_factory
 
 
 class FakeHttpClient:
@@ -413,6 +414,23 @@ def test_arcgis_factory_passes_centroid_configuration():
 
     assert connector.include_centroid is True
     assert connector.query == {"outSR": 4326}
+
+
+def test_staging_requires_an_ingestion_host_allowlist(monkeypatch):
+    monkeypatch.setattr(connector_factory, "ENVIRONMENT", "staging")
+    monkeypatch.delenv("INGESTION_ALLOWED_HOSTS", raising=False)
+
+    with pytest.raises(ValueError, match="staging and production"):
+        connector_factory._production_allowed_hosts()
+
+
+def test_staging_normalizes_the_ingestion_host_allowlist(monkeypatch):
+    monkeypatch.setattr(connector_factory, "ENVIRONMENT", "staging")
+    monkeypatch.setenv("INGESTION_ALLOWED_HOSTS", " DATA.EXAMPLE.COM,api.example.com ")
+
+    assert connector_factory._production_allowed_hosts() == frozenset({
+        "data.example.com", "api.example.com",
+    })
 
 
 def test_arcgis_factory_passes_public_headers():

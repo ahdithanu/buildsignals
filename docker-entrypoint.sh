@@ -5,7 +5,7 @@
 #   serve    (default) — start the API
 #   migrate            — run `alembic upgrade head` and exit; run this as a
 #                        ONE-OFF task before cutting traffic to a new image
-#   ingest             — sync catalog + run-all; for ECS scheduled tasks / cron
+#   ingest             — plan and run due catalog sources; for scheduled tasks / cron
 set -e
 
 case "${1:-serve}" in
@@ -14,7 +14,7 @@ case "${1:-serve}" in
     exec alembic upgrade head
     ;;
   ingest)
-    echo "[entrypoint] running daily ingestion"
+    echo "[entrypoint] running cadence-aware ingestion"
     exec ./scripts/daily-ingestion.sh
     ;;
   serve)

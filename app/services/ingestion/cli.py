@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import date
+from dataclasses import asdict
+from datetime import date, datetime
 from pathlib import Path
 
 from sqlalchemy import or_
@@ -26,7 +27,8 @@ from app.services.ingestion.health import (
     validate_source_canary,
 )
 from app.services.ingestion.promotion import prepare_promotion_manifest
-from app.services.ingestion.service import execute_source_run, list_sources
+from app.services.ingestion.scheduling import build_schedule_plan, source_schedule_policy
+from app.services.ingestion.service import ActiveRunConflict, execute_source_run, list_sources
 from app.utils.org_scope import (
     SYSTEM_USER_ID,
     RequestContext,
@@ -112,6 +114,40 @@ def build_parser() -> argparse.ArgumentParser:
     scheduled.add_argument(
         "--reset-checkpoints", action="store_true",
         help="Start a reconciliation pass from the beginning of each source",
+    )
+
+    scheduled_due = subcommands.add_parser(
+        "scheduled-due",
+        help="Sync the catalog, plan due sources, and optionally run the due shard",
+    )
+    scheduled_due.add_argument(
+        "--organization", required=True, help="Organization ID or slug"
+    )
+    scheduled_due.add_argument(
+        "--source-key", action="append", dest="source_keys",
+        help="Limit the plan to this production source key (repeatable)",
+    )
+    scheduled_due.add_argument(
+        "--stage", choices=("all", "pre_approval_and_approved", "approved_only"),
+        default="all",
+    )
+    scheduled_due.add_argument(
+        "--as-of", type=datetime.fromisoformat, metavar="ISO-8601",
+        help="Build a deterministic plan at this timestamp",
+    )
+    scheduled_due.add_argument(
+        "--shard-count", type=int, default=1, choices=range(1, 129), metavar="1..128",
+    )
+    scheduled_due.add_argument(
+        "--shard-index", type=int, default=0, choices=range(0, 128), metavar="0..127",
+    )
+    scheduled_due.add_argument(
+        "--max-pages-per-source", type=int, choices=range(1, 101), metavar="1..100",
+        help="Override each source's catalog page limit for this execution",
+    )
+    scheduled_due.add_argument(
+        "--plan-only", action="store_true",
+        help="Print the due plan without executing sources",
     )
 
     canary = subcommands.add_parser("canary", help="Validate one source without writing data")
@@ -283,6 +319,44 @@ def _run_sources(
     return failed
 
 
+def _run_due_sources(
+    db,
+    sources_by_id: dict[str, IngestionSource],
+    items,
+    *,
+    max_pages_override: int | None = None,
+) -> tuple[bool, list[IngestionSource]]:
+    failed = False
+    attempted: list[IngestionSource] = []
+    for item in items:
+        if not item.due:
+            continue
+        source = sources_by_id[item.source_id]
+        try:
+            run_result = execute_source_run(
+                db,
+                source,
+                max_pages=max_pages_override or item.max_pages_per_run,
+                checkpoint=resolve_resume_checkpoint(db, source.id),
+                trigger="scheduled",
+            )
+            attempted.append(source)
+            failed = failed or run_result.status in {"failed", "partial_with_errors"}
+            print(
+                f"{source.key}: status={run_result.status} "
+                f"seen={run_result.records_seen} inserted={run_result.records_inserted} "
+                f"updated={run_result.records_updated} failed={run_result.records_failed}"
+            )
+        except ActiveRunConflict:
+            db.rollback()
+            print(f"{source.key}: status=concurrent_claim")
+        except Exception as exc:
+            failed = True
+            db.rollback()
+            print(f"{source.key}: error={exc}")
+    return failed, attempted
+
+
 def _report_health(db, sources: list[IngestionSource], *, as_json: bool = False) -> int:
     results = [evaluate_source_health(db, source) for source in sources]
     if as_json:
@@ -432,6 +506,66 @@ def main(argv: list[str] | None = None) -> int:
                 reset_checkpoints=args.reset_checkpoints,
             )
             health_exit = _report_health(db, selected)
+            if health_exit == 2:
+                return 2
+            return 1 if run_failed or health_exit == 1 else 0
+
+        if args.command == "scheduled-due":
+            if args.as_of is not None and not args.plan_only:
+                raise ValueError("--as-of requires --plan-only")
+            catalog_entries = load_catalog()
+            if args.source_keys:
+                _validate_catalog_source_keys(catalog_entries, args.source_keys)
+            sync_result = sync_catalog(db, catalog_entries, dry_run=args.plan_only)
+            if args.plan_only:
+                db.rollback()
+            else:
+                db.commit()
+            print(
+                f"catalog sync: created={sync_result.created} updated={sync_result.updated} "
+                f"unchanged={sync_result.unchanged} dry_run={args.plan_only}"
+            )
+            catalog_keys = {entry.key for entry in catalog_entries}
+            policies_by_key = {
+                entry.key: source_schedule_policy(entry) for entry in catalog_entries
+            }
+            runtime_sources = list_sources(db)
+            runtime_keys = {source.key for source in runtime_sources}
+            selected = [
+                source
+                for source in _select_sources(
+                    db, source_keys=args.source_keys, stage=args.stage
+                )
+                if source.is_active and source.key in catalog_keys
+            ]
+            stage_catalog_keys = {
+                entry.key for entry in catalog_entries
+                if args.stage == "all"
+                or (entry.settings or {}).get("signal_stage") == args.stage
+            }
+            scoped_catalog_keys = stage_catalog_keys
+            if args.source_keys:
+                scoped_catalog_keys &= set(args.source_keys)
+            plan = build_schedule_plan(
+                db,
+                selected,
+                as_of=args.as_of,
+                shard_count=args.shard_count,
+                shard_index=args.shard_index,
+                policies_by_key=policies_by_key,
+                catalog_source_count=len(scoped_catalog_keys),
+                unsynced_source_keys=scoped_catalog_keys - runtime_keys,
+            )
+            print(json.dumps(asdict(plan), default=str, sort_keys=True))
+            if args.plan_only or not plan.due_source_count:
+                return 0
+            run_failed, attempted = _run_due_sources(
+                db,
+                {source.id: source for source in selected},
+                plan.items,
+                max_pages_override=args.max_pages_per_source,
+            )
+            health_exit = _report_health(db, attempted)
             if health_exit == 2:
                 return 2
             return 1 if run_failed or health_exit == 1 else 0

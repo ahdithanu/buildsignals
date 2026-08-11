@@ -25,6 +25,7 @@ from app.services.ingestion.normalization import (
     CANONICAL_FIELDS,
     PARCEL_CANONICAL_FIELDS,
 )
+from app.services.ingestion.scheduling import source_schedule_policy
 
 _SOURCE_LIST_ADAPTER = TypeAdapter(list[IngestionSourceCreate])
 
@@ -158,6 +159,7 @@ def build_promotion_entry(
         is_active=True,
         field_mappings=review.field_mappings,
     )
+    source_schedule_policy(entry)
     catalog_source_for_candidate(candidate, [entry])
     return entry
 

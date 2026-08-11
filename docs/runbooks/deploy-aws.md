@@ -217,17 +217,18 @@ go to `localhost`, `VITE_API_BASE_URL` wasn't set at build time — rebuild.
 ## 9. Daily permit ingestion (AWS)
 
 The API image supports a third entrypoint command: **`ingest`**. It syncs
-`catalog.json` and runs all active permit/parcel sources (same as
-`scripts/daily-ingestion.sh`).
+`catalog.json`, computes the cadence-aware due plan, and runs due active
+permit/parcel sources (same as `scripts/daily-ingestion.sh`).
 
 ### Option A — ECS Fargate scheduled task (recommended on AWS)
 
 Run the **same ECR image** as App Runner on a schedule via EventBridge:
 
 1. **Task definition** — same image/env as App Runner (`DATABASE_URL`,
-   `SECRET_KEY`, `REDIS_URL`, `ENVIRONMENT=production`, `CORS_ALLOWED_ORIGINS`).
+   `SECRET_KEY`, `REDIS_URL`, `ENVIRONMENT=production`, `CORS_ALLOWED_ORIGINS`,
+   and the reviewed static `INGESTION_ALLOWED_HOSTS` list).
 2. **Command override:** `ingest` (not `serve`).
-3. **EventBridge rule:** `cron(0 6 * * ? *)` (06:00 UTC daily).
+3. **EventBridge rule:** `cron(17 * * * ? *)` (hourly at minute 17 UTC).
 4. **Network:** task must reach RDS (public SG on pilot tier, or run in VPC on
    hardened tier).
 
@@ -239,6 +240,7 @@ docker run --rm \
   -e SECRET_KEY=<same-as-app-runner> \
   -e ENVIRONMENT=production \
   -e CORS_ALLOWED_ORIGINS=https://<cloudfront-url> \
+  -e INGESTION_ALLOWED_HOSTS=<reviewed-comma-separated-source-hosts> \
   -e REDIS_URL=<optional> \
   -e INGESTION_ORGANIZATION=default-org \
   $AWS_ACCOUNT.dkr.ecr.$REGION.amazonaws.com/dealsignal-api:latest ingest
@@ -251,9 +253,13 @@ Or from ECS: run task with container command `ingest`.
 If RDS is reachable from GitHub-hosted runners (pilot tier: public RDS + SG
 allowing GitHub IP ranges, or self-hosted runner in VPC):
 
-1. Repo secret **`INGESTION_DATABASE_URL`** = same Postgres URL as App Runner.
-2. Workflow **`.github/workflows/ingestion-cron.yml`** runs daily at 06:00 UTC.
-3. Manual trigger: Actions → **ingestion-cron** → Run workflow.
+1. Configure the four production secrets documented in
+   [ingestion-scheduling.md](ingestion-scheduling.md): database URL, app secret,
+   CORS origins, and the reviewed static ingestion host allowlist.
+2. Set repository variable **`INGESTION_ORCHESTRATOR=github`** and disable any
+   Render or EventBridge ingestion schedule for the same environment.
+3. Workflow **`.github/workflows/ingestion-cron.yml`** runs hourly at minute 17 UTC.
+4. Manual trigger: Actions -> **ingestion-cron** -> Run workflow.
 
 Skip Render entirely — that workflow is built for AWS/non-Render deploys.
 

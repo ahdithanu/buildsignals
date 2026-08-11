@@ -11,6 +11,7 @@ import type {
   PermitRecord,
   SourceCanaryResult,
   SourceHealth,
+  SourceSchedulePlan,
 } from '@/types/ingestion';
 
 export const ingestionApi = {
@@ -51,4 +52,9 @@ export const ingestionApi = {
     apiClient.get<IngestionCoverage>('/ingestion/coverage'),
   reliabilitySummary: (): Promise<IngestionReliabilitySummary> =>
     apiClient.get<IngestionReliabilitySummary>('/ingestion/reliability-summary'),
+  schedulePlan: (state?: string | null): Promise<SourceSchedulePlan> =>
+    apiClient.get<SourceSchedulePlan>(
+      '/ingestion/schedule-plan',
+      state ? { state } : undefined,
+    ),
 };

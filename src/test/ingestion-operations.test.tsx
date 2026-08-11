@@ -6,6 +6,7 @@ import IngestionOperations from "@/pages/IngestionOperations";
 
 vi.mock("@/hooks/useIngestionHealth", () => ({
   useIngestionHealth: vi.fn(),
+  useIngestionSchedulePlan: vi.fn(),
   useCandidateCanaryHistory: vi.fn(),
   usePromoteIngestionCandidate: vi.fn(),
 }));
@@ -16,7 +17,7 @@ vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
-import { useIngestionHealth, useCandidateCanaryHistory, usePromoteIngestionCandidate } from "@/hooks/useIngestionHealth";
+import { useIngestionHealth, useIngestionSchedulePlan, useCandidateCanaryHistory, usePromoteIngestionCandidate } from "@/hooks/useIngestionHealth";
 
 describe("<IngestionOperations>", () => {
   it("shows approved-only source names in the coverage footprint", () => {
@@ -192,6 +193,48 @@ describe("<IngestionOperations>", () => {
       mutate: vi.fn(),
       variables: undefined,
     });
+    (useIngestionSchedulePlan as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        as_of: "2026-08-11T12:00:00Z",
+        shard_count: 1,
+        shard_index: 0,
+        total_source_count: 3,
+        catalog_source_count: 3,
+        unsynced_source_count: 0,
+        unsynced_source_keys: [],
+        catalog_synced: true,
+        shard_source_count: 3,
+        automatic_source_count: 3,
+        due_source_count: 1,
+        active_source_count: 1,
+        items: [
+          {
+            source_id: "source-texas-comptroller-sales-tax-locations",
+            source_key: "texas_comptroller_sales_tax_locations",
+            source_name: "Texas Comptroller Sales Tax Locations",
+            due: true,
+            due_reason: "interval_elapsed",
+            interval_minutes: 1440,
+            retry_interval_minutes: 360,
+            collection_sla_hours: 24,
+            max_pages_per_run: 10,
+            priority: 50,
+            schedule_mode: "automatic",
+            shard_index: 0,
+            active_run: false,
+            stale_run: false,
+            latest_status: "completed",
+            last_terminal_at: "2026-08-10T10:00:00Z",
+            due_at: "2026-08-11T10:00:00Z",
+            overdue_minutes: 120,
+          },
+        ],
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    });
 
     render(
       <MemoryRouter>
@@ -200,6 +243,11 @@ describe("<IngestionOperations>", () => {
     );
 
     expect(screen.getByText("Coverage Footprint")).toBeInTheDocument();
+    expect(screen.getByText("Collection Schedule")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Texas Comptroller Sales Tax Locations · due" })).toHaveAttribute(
+      "href",
+      "/source-health/sources/source-texas-comptroller-sales-tax-locations",
+    );
     const liveMix = screen.getByLabelText("Live source mix");
     expect(within(liveMix).getByText("Live Source Mix")).toBeInTheDocument();
     expect(within(liveMix).getByText("approved only")).toBeInTheDocument();
@@ -415,6 +463,27 @@ describe("<IngestionOperations>", () => {
       mutate: vi.fn(),
       variables: undefined,
     });
+    (useIngestionSchedulePlan as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        as_of: "2026-08-11T12:00:00Z",
+        shard_count: 1,
+        shard_index: 0,
+        total_source_count: 1,
+        catalog_source_count: 1,
+        unsynced_source_count: 0,
+        unsynced_source_keys: [],
+        catalog_synced: true,
+        shard_source_count: 1,
+        automatic_source_count: 1,
+        due_source_count: 0,
+        active_source_count: 0,
+        items: [],
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    });
 
     render(
       <MemoryRouter initialEntries={["/source-health?state=TX"]}>
@@ -436,5 +505,6 @@ describe("<IngestionOperations>", () => {
       "https://example.com/tx",
     );
     expect(screen.queryByText("California Candidate")).not.toBeInTheDocument();
+    expect(useIngestionSchedulePlan).toHaveBeenLastCalledWith("TX");
   });
 });

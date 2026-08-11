@@ -47,6 +47,8 @@ services:
         value: "true"
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        sync: false
       - key: APP_BASE_URL
         sync: false
       - key: RESEND_API_KEY
@@ -58,7 +60,7 @@ services:
     name: dealsignal-ingestion-staging
     runtime: python
     plan: starter
-    schedule: "0 7 * * *"   # 07:00 UTC daily (offset from prod)
+    schedule: "7 * * * *"   # hourly cadence-aware dispatcher, offset from production
     buildCommand: pip install -r requirements.txt
     startCommand: ./scripts/daily-ingestion.sh
     envVars:
@@ -82,6 +84,8 @@ services:
       - key: INGESTION_MAX_PAGES_PER_SOURCE
         value: "5"
       - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
         sync: false
 
   - type: web

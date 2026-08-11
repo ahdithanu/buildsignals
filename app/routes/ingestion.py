@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -34,6 +35,7 @@ from app.schemas.ingestion import (
     SourceCanaryRequest,
     SourceCanaryResponse,
     SourceHealthResponse,
+    SourceSchedulePlanResponse,
 )
 from app.services.brand_intelligence import list_permit_brand_matches
 from app.services.graph_service import entity_for_record, relationships_for_entity
@@ -53,6 +55,7 @@ from app.services.ingestion.health import (
     validate_candidate_source_canary,
     validate_source_canary,
 )
+from app.services.ingestion.scheduling import build_schedule_plan, source_schedule_policy
 from app.services.ingestion.service import (
     ActiveRunConflict,
     create_source,
@@ -68,6 +71,13 @@ from app.utils.org_scope import active_query
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
 
 
+def _normalize_state_filter(state: str | None) -> str | None:
+    state_code = normalize_state_code(state)
+    if state is not None and state.strip() and state_code is None:
+        raise HTTPException(status_code=422, detail="Invalid state filter")
+    return state_code
+
+
 @router.get("/sources", response_model=list[IngestionSourceResponse])
 def get_sources(db: Session = Depends(get_db)):
     return list_sources(db)
@@ -78,7 +88,7 @@ def get_ingestion_health(
     state: str | None = Query(default=None, max_length=50),
     db: Session = Depends(get_db),
 ):
-    state_code = normalize_state_code(state)
+    state_code = _normalize_state_filter(state)
     sources = list_sources(db)
     if state_code:
         sources = [source for source in sources if normalize_state_code(source.jurisdiction) == state_code]
@@ -92,12 +102,61 @@ def get_ingestion_reliability_summary(db: Session = Depends(get_db)):
     )
 
 
+@router.get(
+    "/schedule-plan",
+    response_model=SourceSchedulePlanResponse,
+    dependencies=[Depends(require_role(
+        MemberRole.admin,
+        MemberRole.editor,
+        MemberRole.viewer,
+    ))],
+)
+def get_ingestion_schedule_plan(
+    state: str | None = Query(default=None, max_length=50),
+    as_of: datetime | None = Query(default=None),
+    shard_count: int = Query(default=1, ge=1, le=128),
+    shard_index: int = Query(default=0, ge=0, le=127),
+    db: Session = Depends(get_db),
+):
+    state_code = _normalize_state_filter(state)
+    catalog_entries = load_catalog()
+    if state_code:
+        catalog_entries = [
+            entry for entry in catalog_entries
+            if normalize_state_code(entry.jurisdiction) == state_code
+        ]
+    catalog_keys = {entry.key for entry in catalog_entries}
+    runtime_sources = list_sources(db)
+    sources = [
+        source for source in runtime_sources
+        if source.is_active and source.key in catalog_keys
+    ]
+    runtime_keys = {source.key for source in runtime_sources}
+    try:
+        plan = build_schedule_plan(
+            db,
+            sources,
+            as_of=as_of,
+            shard_count=shard_count,
+            shard_index=shard_index,
+            policies_by_key={
+                entry.key: source_schedule_policy(entry)
+                for entry in catalog_entries
+            },
+            catalog_source_count=len(catalog_entries),
+            unsynced_source_keys=catalog_keys - runtime_keys,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return SourceSchedulePlanResponse.model_validate(asdict(plan))
+
+
 @router.get("/candidates", response_model=list[IngestionCandidateResponse])
 def get_ingestion_candidates(
     state: str | None = Query(default=None, max_length=50),
     db: Session = Depends(get_db),
 ):
-    state_code = normalize_state_code(state)
+    state_code = _normalize_state_filter(state)
     candidates = load_candidate_catalog(include_promoted=True)
     catalog_entries = load_catalog()
     catalog_backed_keys = {

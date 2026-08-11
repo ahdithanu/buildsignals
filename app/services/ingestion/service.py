@@ -105,6 +105,21 @@ class SnapshotReconciliationGuard(RuntimeError):
     """Raised when a completed snapshot would retire an unsafe amount of data."""
 
 
+def resolve_stale_run_after(settings: dict | None) -> timedelta:
+    value = (settings or {}).get(
+        "stale_run_after_seconds", STALE_RUN_AFTER.total_seconds()
+    )
+    if isinstance(value, bool):
+        raise ValueError("stale_run_after_seconds must be positive")
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("stale_run_after_seconds must be positive") from exc
+    if seconds <= 0:
+        raise ValueError("stale_run_after_seconds must be positive")
+    return timedelta(seconds=seconds)
+
+
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -231,12 +246,6 @@ def execute_source_run(
     if "source_record_id" not in {row.canonical_field for row in active_mappings}:
         raise ValueError("Source requires an active mapping to source_record_id")
     normalization_hash = _normalization_hash(source)
-    stale_run_after_seconds = settings.get(
-        "stale_run_after_seconds", STALE_RUN_AFTER.total_seconds()
-    )
-    if isinstance(stale_run_after_seconds, bool) or float(stale_run_after_seconds) <= 0:
-        raise ValueError("stale_run_after_seconds must be positive")
-
     run = _claim_source_run(
         db,
         source.id,
@@ -246,7 +255,7 @@ def execute_source_run(
             "max_pages": max_pages,
             **({"snapshot_id": snapshot_id} if snapshot_id else {}),
         },
-        stale_after=timedelta(seconds=float(stale_run_after_seconds)),
+        stale_after=resolve_stale_run_after(settings),
     )
     run_id = run.id
 

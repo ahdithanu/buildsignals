@@ -57,6 +57,8 @@ export const queryKeys = {
   ingestion: {
     health: (state?: string | null) => ['ingestion', 'health', state ?? 'all'] as const,
     coverage: ['ingestion', 'coverage'] as const,
+    schedulePlan: (state?: string | null) =>
+      ['ingestion', 'schedule-plan', state ?? 'all'] as const,
     permitDetail: (permitId: string) => ['ingestion', 'permits', permitId] as const,
     candidateCanaryHistory: (candidateKey: string) =>
       ['ingestion', 'candidate-canary-history', candidateKey] as const,

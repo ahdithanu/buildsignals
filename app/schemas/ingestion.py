@@ -121,6 +121,8 @@ class SourceHealthResponse(BaseModel):
     ingestion_age_hours: Optional[float]
     source_watermark_at: Optional[datetime]
     source_lag_hours: Optional[float]
+    collection_sla_hours: float = 36.0
+    collection_sla_configured: bool = False
     freshness_sla_hours: float = 36.0
     freshness_sla_configured: bool = False
     freshness_semantics: Literal[
@@ -299,6 +301,44 @@ class IngestionCoverageResponse(BaseModel):
     missing_state_count: int
     covered_states: list[str]
     missing_states: list[str]
+
+
+class SourceSchedulePlanItemResponse(BaseModel):
+    source_id: str
+    source_key: str
+    source_name: str
+    jurisdiction: Optional[str] = None
+    due: bool
+    due_reason: str
+    interval_minutes: int
+    retry_interval_minutes: int
+    collection_sla_hours: float
+    max_pages_per_run: int
+    priority: int
+    schedule_mode: str
+    shard_index: int
+    active_run: bool
+    stale_run: bool
+    latest_status: Optional[str] = None
+    last_terminal_at: Optional[datetime] = None
+    due_at: Optional[datetime] = None
+    overdue_minutes: int
+
+
+class SourceSchedulePlanResponse(BaseModel):
+    as_of: datetime
+    shard_count: int
+    shard_index: int
+    total_source_count: int
+    catalog_source_count: int
+    unsynced_source_count: int
+    unsynced_source_keys: list[str]
+    catalog_synced: bool
+    shard_source_count: int
+    automatic_source_count: int
+    due_source_count: int
+    active_source_count: int
+    items: list[SourceSchedulePlanItemResponse]
 
 
 class IngestionRunResponse(BaseModel):
