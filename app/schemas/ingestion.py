@@ -166,6 +166,7 @@ class IngestionCandidateResponse(BaseModel):
     candidate_source_fields: list[str]
     production_page_size: Optional[int] = None
     can_run_canary: bool = False
+    catalog_backed: bool = False
     last_canary_at: Optional[datetime] = None
     last_canary_ok: Optional[bool] = None
     last_canary_records_valid: Optional[int] = None

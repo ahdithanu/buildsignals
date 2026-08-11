@@ -291,7 +291,7 @@ function CandidateRetryRow({
       </div>
       <div className="flex justify-end">
         <div className="flex items-center gap-2">
-          {canManage && candidate.last_canary_ok === true && (
+          {canManage && candidate.last_canary_ok === true && candidate.catalog_backed && (
             <Button
               type="button"
               variant="outline"
@@ -303,6 +303,11 @@ function CandidateRetryRow({
               {promoting ? <RefreshCw className="animate-spin" /> : <Rocket />}
               Promote source
             </Button>
+          )}
+          {candidate.last_canary_ok === true && !candidate.catalog_backed && (
+            <span className="whitespace-nowrap text-[11px] font-medium text-amber-700 dark:text-amber-300">
+              Catalog review required
+            </span>
           )}
           <Button
             type="button"

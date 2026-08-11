@@ -10,8 +10,14 @@ from app.models.ingestion import (
     RawSourceRecord,
     SourceFieldMapping,
 )
+from app.schemas.ingestion import FieldMappingCreate, IngestionSourceCreate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
-from app.services.ingestion.catalog import load_candidate_catalog, load_catalog, summarize_coverage
+from app.services.ingestion.catalog import (
+    load_candidate_catalog,
+    load_catalog,
+    summarize_coverage,
+    sync_catalog,
+)
 from app.services.ingestion.connector_config import resolve_connector_config_dates
 from app.services.ingestion.connectors import FetchEnvelope
 from app.services.ingestion.health import (
@@ -65,12 +71,40 @@ def _retry_candidate() -> IngestionSourceCandidate:
 def _install_retry_candidate(monkeypatch) -> IngestionSourceCandidate:
     candidate = _retry_candidate()
     monkeypatch.setattr(
-        "app.routes.ingestion.load_candidate_catalog", lambda: [candidate]
+        "app.routes.ingestion.load_candidate_catalog", lambda *args, **kwargs: [candidate]
     )
     monkeypatch.setattr(
-        "app.services.ingestion.catalog.load_candidate_catalog", lambda: [candidate]
+        "app.services.ingestion.catalog.load_candidate_catalog",
+        lambda *args, **kwargs: [candidate],
     )
     return candidate
+
+
+def _reviewed_source(candidate: IngestionSourceCandidate) -> IngestionSourceCreate:
+    return IngestionSourceCreate(
+        key=candidate.key,
+        name=f"{candidate.name} production",
+        adapter=candidate.adapter,
+        record_type=candidate.record_type,
+        jurisdiction=candidate.jurisdiction,
+        base_url=candidate.base_url,
+        settings={
+            "candidate_key": candidate.key,
+            "candidate_status": "approved_for_production",
+            "official_landing_page": candidate.official_landing_page,
+            "license": candidate.license,
+            "reconciliation_mode": "daily_incremental",
+            "signal_stage": "pre_approval_and_approved",
+            "connector": {"page_size": 250},
+        },
+        field_mappings=[
+            FieldMappingCreate(
+                source_field="id",
+                canonical_field="source_record_id",
+                is_required=True,
+            )
+        ],
+    )
 
 
 def test_connector_config_resolves_rolling_utc_date_placeholders():
@@ -840,7 +874,15 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "birmingham_al_digital_plan_room",
         "mobile_al_build_mobile_portal",
         "evansville_in_building_commission_permits",
+        "bend_or_permit_applications_line",
+        "bend_or_permit_applications_point",
+        "bend_or_planning_applications",
     }
+    assert all(
+        row["catalog_backed"]
+        for row in body
+        if row["key"].startswith("bend_or_")
+    )
 
 
 def test_ingestion_candidates_endpoint_filters_by_state(client):
@@ -848,7 +890,12 @@ def test_ingestion_candidates_endpoint_filters_by_state(client):
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body == []
+    assert {row["key"] for row in body} == {
+        "bend_or_permit_applications_line",
+        "bend_or_permit_applications_point",
+        "bend_or_planning_applications",
+    }
+    assert all(row["catalog_backed"] for row in body)
 
 
 def test_candidate_canary_endpoint_runs_retry_probe(client, monkeypatch):
@@ -968,7 +1015,9 @@ def test_ingestion_candidates_endpoint_uses_most_recent_canary_attempt(client, m
     assert bend["last_canary_records_failed"] == 0
 
 
-def test_ingestion_coverage_endpoint_reports_catalog_footprint(client):
+def test_ingestion_coverage_endpoint_reports_active_catalog_footprint(client, db):
+    sync_catalog(db, load_catalog())
+    db.commit()
     response = client.get("/ingestion/coverage")
 
     assert response.status_code == 200, response.text
@@ -1025,7 +1074,7 @@ def test_ingestion_coverage_prioritizes_activation_queue_by_readiness(monkeypatc
 
     monkeypatch.setattr(
         "app.services.ingestion.catalog.load_candidate_catalog",
-        lambda: [
+        lambda *args, **kwargs: [
             candidate("texas_retry", "Texas", "operational_retry"),
             candidate("florida_queue_1", "Florida", "queued"),
             candidate("florida_queue_2", "Florida", "queued"),
@@ -1039,7 +1088,7 @@ def test_ingestion_coverage_prioritizes_activation_queue_by_readiness(monkeypatc
     assert summary.activation_queue[0].priority_reasons
 
 
-def test_ingestion_candidate_promotion_creates_source_with_probe_context(client, monkeypatch):
+def test_ingestion_candidate_promotion_requires_reviewed_catalog_manifest(client, monkeypatch):
     candidate = _install_retry_candidate(monkeypatch)
     coverage_before = client.get("/ingestion/coverage").json()
     monkeypatch.setattr(
@@ -1065,20 +1114,56 @@ def test_ingestion_candidate_promotion_creates_source_with_probe_context(client,
 
     response = client.post(f"/ingestion/candidates/{candidate.key}/promote")
 
+    assert response.status_code == 409, response.text
+    assert "reviewed production catalog manifest" in response.json()["detail"]
+    assert candidate.key not in {
+        source["key"] for source in client.get("/ingestion/sources").json()
+    }
+    coverage_after = client.get("/ingestion/coverage").json()
+    assert coverage_after["live_source_count"] == coverage_before["live_source_count"]
+    assert coverage_after["candidate_count"] == coverage_before["candidate_count"]
+
+
+def test_ingestion_candidate_promotion_syncs_reviewed_catalog_source(client, monkeypatch):
+    candidate = _install_retry_candidate(monkeypatch)
+    reviewed = _reviewed_source(candidate)
+    monkeypatch.setattr("app.routes.ingestion.load_catalog", lambda: [reviewed])
+    monkeypatch.setattr(
+        "app.routes.ingestion.validate_candidate_source_canary",
+        lambda candidate, sample_size: CandidateCanaryResult(
+            candidate_key=candidate.key,
+            candidate_name=candidate.name,
+            ok=True,
+            records_fetched=1,
+            records_valid=1,
+            records_failed=0,
+            approval_stages={"pre_approval": 1},
+            sample_record_ids=["ABC-1"],
+            next_checkpoint=None,
+            errors=[],
+        ),
+    )
+    canary = client.post(
+        f"/ingestion/candidates/{candidate.key}/canary",
+        json={"sample_size": 1},
+    )
+    assert canary.status_code == 200, canary.text
+
+    candidates = client.get("/ingestion/candidates").json()
+    row = next(row for row in candidates if row["key"] == candidate.key)
+    assert row["catalog_backed"] is True
+
+    response = client.post(f"/ingestion/candidates/{candidate.key}/promote")
+
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["key"] == candidate.key
-    assert body["name"] == candidate.name
+    assert body["name"] == reviewed.name
     assert body["is_active"] is True
     assert body["settings"]["candidate_key"] == candidate.key
-    assert body["settings"]["candidate_status"] == candidate.status
-    assert body["settings"]["reconciliation_mode"] == candidate.probe_settings.get(
-        "reconciliation_mode", "candidate_promoted"
-    )
-    assert body["settings"]["connector"]["page_size"] == (
-        candidate.production_page_size
-        or candidate.probe_settings["connector"]["page_size"]
-    )
+    assert body["settings"]["candidate_status"] == "approved_for_production"
+    assert body["settings"]["reconciliation_mode"] == "daily_incremental"
+    assert body["settings"]["connector"]["page_size"] == 250
     assert body["field_mappings"]
 
     sources = client.get("/ingestion/sources").json()
@@ -1087,9 +1172,9 @@ def test_ingestion_candidate_promotion_creates_source_with_probe_context(client,
 
     candidates = client.get("/ingestion/candidates").json()
     assert candidate.key not in {row["key"] for row in candidates}
-    coverage_after = client.get("/ingestion/coverage").json()
-    assert coverage_after["live_source_count"] == coverage_before["live_source_count"] + 1
-    assert coverage_after["candidate_count"] == coverage_before["candidate_count"] - 1
+    repeated = client.post(f"/ingestion/candidates/{candidate.key}/promote")
+    assert repeated.status_code == 201, repeated.text
+    assert repeated.json()["id"] == body["id"]
 
 
 def test_ingestion_candidate_promotion_requires_successful_canary(client, monkeypatch):
@@ -1099,3 +1184,32 @@ def test_ingestion_candidate_promotion_requires_successful_canary(client, monkey
 
     assert response.status_code == 422, response.text
     assert "successful persisted canary" in response.json()["detail"]
+
+
+def test_ingestion_candidate_promotion_rejects_stale_successful_canary(
+    client, db, monkeypatch
+):
+    candidate = _install_retry_candidate(monkeypatch)
+    db.add(
+        IngestionCandidateCanaryAttempt(
+            organization_id="default-org",
+            candidate_key=candidate.key,
+            candidate_name=candidate.name,
+            sample_size=1,
+            ok=True,
+            records_fetched=1,
+            records_valid=1,
+            records_failed=0,
+            approval_stages={"pre_approval": 1},
+            sample_record_ids=["ABC-1"],
+            next_checkpoint=None,
+            errors=[],
+            created_at=datetime(2026, 7, 29, tzinfo=timezone.utc),
+        )
+    )
+    db.commit()
+
+    response = client.post(f"/ingestion/candidates/{candidate.key}/promote")
+
+    assert response.status_code == 422, response.text
+    assert "current audit date" in response.json()["detail"]

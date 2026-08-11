@@ -284,6 +284,7 @@ export interface IngestionCandidate {
   candidate_source_fields: string[];
   production_page_size?: number | null;
   can_run_canary: boolean;
+  catalog_backed: boolean;
   last_canary_at?: string | null;
   last_canary_ok?: boolean | null;
   last_canary_records_valid?: number | null;

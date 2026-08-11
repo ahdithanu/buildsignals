@@ -266,10 +266,14 @@ def load_catalog(path: Path | str | None = None) -> list[IngestionSourceCreate]:
     return entries
 
 
-def load_candidate_catalog(path: Path | str | None = None) -> list[IngestionSourceCandidate]:
+def load_candidate_catalog(
+    path: Path | str | None = None,
+    *,
+    include_promoted: bool = False,
+) -> list[IngestionSourceCandidate]:
     catalog_path = Path(path) if path else DEFAULT_CANDIDATE_CATALOG_PATH
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
-    if path is None:
+    if path is None and not include_promoted:
         production_keys = {entry.key for entry in load_catalog()}
         payload = [entry for entry in payload if entry.get("key") not in production_keys]
     entries = _CANDIDATE_CATALOG_ADAPTER.validate_python(payload)
@@ -286,12 +290,13 @@ def load_candidate_catalog(path: Path | str | None = None) -> list[IngestionSour
     }
     if duplicate_urls:
         raise ValueError(f"Duplicate candidate catalog base URLs: {duplicate_urls}")
-    production_keys = {entry.key for entry in load_catalog()}
-    overlap = sorted(production_keys & set(keys))
-    if overlap:
-        raise ValueError(
-            f"Candidate catalog keys already exist in production catalog: {overlap}"
-        )
+    if path is not None or not include_promoted:
+        production_keys = {entry.key for entry in load_catalog()}
+        overlap = sorted(production_keys & set(keys))
+        if overlap:
+            raise ValueError(
+                f"Candidate catalog keys already exist in production catalog: {overlap}"
+            )
     for entry in entries:
         if entry.next_audit_on < entry.last_checked_on:
             raise ValueError(
@@ -301,19 +306,63 @@ def load_candidate_catalog(path: Path | str | None = None) -> list[IngestionSour
     return entries
 
 
+def catalog_source_for_candidate(
+    candidate: IngestionSourceCandidate,
+    entries: Iterable[IngestionSourceCreate] | None = None,
+) -> IngestionSourceCreate | None:
+    available_entries = entries if entries is not None else load_catalog()
+    production = next(
+        (entry for entry in available_entries if entry.key == candidate.key),
+        None,
+    )
+    if production is None:
+        return None
+    settings = production.settings or {}
+    if settings.get("candidate_key") != candidate.key:
+        raise ValueError(
+            f"Production catalog source {candidate.key} is missing candidate provenance"
+        )
+    if settings.get("candidate_status") != "approved_for_production":
+        raise ValueError(
+            f"Production catalog source {candidate.key} is not approved for production"
+        )
+    drift: list[str] = []
+    if production.adapter.casefold() != candidate.adapter.casefold():
+        drift.append("adapter")
+    if production.record_type != candidate.record_type:
+        drift.append("record_type")
+    if production.base_url.strip().rstrip("/").casefold() != (
+        candidate.base_url.strip().rstrip("/").casefold()
+    ):
+        drift.append("base_url")
+    if drift:
+        raise ValueError(
+            f"Production catalog source {candidate.key} drifted from its candidate: {drift}"
+        )
+    return production
+
+
 def summarize_coverage(
     limit: int = 10,
     live_sources: Iterable[IngestionSource] | None = None,
 ) -> IngestionCoverageSummary:
-    live_by_key: dict[str, IngestionSourceCreate | IngestionSource] = {
+    catalog_by_key: dict[str, IngestionSourceCreate] = {
         entry.key: entry for entry in load_catalog()
     }
-    for source in live_sources or ():
-        if source.is_active:
-            live_by_key[source.key] = source
+    live_by_key: dict[str, IngestionSourceCreate | IngestionSource]
+    if live_sources is None:
+        live_by_key = dict(catalog_by_key)
+    else:
+        live_by_key = {
+            source.key: source
+            for source in live_sources
+            if source.is_active and source.key in catalog_by_key
+        }
     live_catalog = list(live_by_key.values())
     candidates = [
-        entry for entry in load_candidate_catalog() if entry.key not in live_by_key
+        entry
+        for entry in load_candidate_catalog(include_promoted=True)
+        if entry.key not in live_by_key
     ]
     live_signal_stage_counts: dict[str, int] = {}
     live_signal_sources_by_stage: dict[str, list[RetailerOpeningCoverageSource]] = {}

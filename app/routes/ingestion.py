@@ -38,9 +38,12 @@ from app.schemas.ingestion import (
 from app.services.brand_intelligence import list_permit_brand_matches
 from app.services.graph_service import entity_for_record, relationships_for_entity
 from app.services.ingestion.catalog import (
+    catalog_source_for_candidate,
     load_candidate_catalog,
+    load_catalog,
     normalize_state_code,
     summarize_coverage,
+    sync_catalog,
 )
 from app.services.ingestion.health import (
     evaluate_source_health,
@@ -57,7 +60,6 @@ from app.services.ingestion.service import (
     get_permit_detail,
     get_source,
     list_sources,
-    promote_candidate_to_source,
     update_source,
 )
 from app.utils.auth_deps import require_role
@@ -96,7 +98,13 @@ def get_ingestion_candidates(
     db: Session = Depends(get_db),
 ):
     state_code = normalize_state_code(state)
-    candidates = load_candidate_catalog()
+    candidates = load_candidate_catalog(include_promoted=True)
+    catalog_entries = load_catalog()
+    catalog_backed_keys = {
+        candidate.key
+        for candidate in candidates
+        if catalog_source_for_candidate(candidate, catalog_entries) is not None
+    }
     live_keys = {source.key for source in list_sources(db)}
     attempts = (
         active_query(db.query(IngestionCandidateCanaryAttempt), IngestionCandidateCanaryAttempt)
@@ -111,11 +119,12 @@ def get_ingestion_candidates(
     for candidate in candidates:
         if candidate.key in live_keys:
             continue
+        latest = latest_by_key.get(candidate.key)
         if state_code and normalize_state_code(candidate.jurisdiction) != state_code:
             continue
-        latest = latest_by_key.get(candidate.key)
         payload = {
             **candidate.model_dump(),
+            "catalog_backed": candidate.key in catalog_backed_keys,
             "last_canary_at": latest.created_at if latest else None,
             "last_canary_ok": latest.ok if latest else None,
             "last_canary_records_valid": latest.records_valid if latest else None,
@@ -143,7 +152,11 @@ def canary_candidate(
     db: Session = Depends(get_db),
 ):
     candidate = next(
-        (entry for entry in load_candidate_catalog() if entry.key == candidate_key),
+        (
+            entry
+            for entry in load_candidate_catalog(include_promoted=True)
+            if entry.key == candidate_key
+        ),
         None,
     )
     if candidate is None:
@@ -172,7 +185,11 @@ def get_candidate_canary_history(
     db: Session = Depends(get_db),
 ):
     candidate = next(
-        (entry for entry in load_candidate_catalog() if entry.key == candidate_key),
+        (
+            entry
+            for entry in load_candidate_catalog(include_promoted=True)
+            if entry.key == candidate_key
+        ),
         None,
     )
     if candidate is None:
@@ -211,7 +228,14 @@ def add_source(payload: IngestionSourceCreate, db: Session = Depends(get_db)):
     dependencies=[Depends(require_role(MemberRole.admin))],
 )
 def promote_candidate(candidate_key: str, db: Session = Depends(get_db)):
-    candidate = next((entry for entry in load_candidate_catalog() if entry.key == candidate_key), None)
+    candidate = next(
+        (
+            entry
+            for entry in load_candidate_catalog(include_promoted=True)
+            if entry.key == candidate_key
+        ),
+        None,
+    )
     if candidate is None:
         raise HTTPException(status_code=404, detail="Ingestion candidate not found")
     latest_canary = (
@@ -220,15 +244,34 @@ def promote_candidate(candidate_key: str, db: Session = Depends(get_db)):
         .order_by(IngestionCandidateCanaryAttempt.created_at.desc())
         .first()
     )
-    if latest_canary is None or not latest_canary.ok:
+    if (
+        latest_canary is None
+        or not latest_canary.ok
+        or latest_canary.created_at.date() < candidate.next_audit_on
+    ):
         raise HTTPException(
             status_code=422,
-            detail="Candidate promotion requires a successful persisted canary",
+            detail=(
+                "Candidate promotion requires a successful persisted canary "
+                "on or after its current audit date"
+            ),
         )
     try:
-        source = promote_candidate_to_source(db, candidate)
+        production_source = catalog_source_for_candidate(candidate, load_catalog())
+        if production_source is None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Candidate has passed its canary but requires a reviewed "
+                    "production catalog manifest before activation"
+                ),
+            )
+        sync_catalog(db, [production_source])
         db.commit()
-        refreshed = get_source(db, source.id)
+        refreshed = next(
+            (source for source in list_sources(db) if source.key == candidate.key),
+            None,
+        )
         if refreshed is None:
             raise HTTPException(status_code=500, detail="Promoted source could not be loaded")
         return refreshed
