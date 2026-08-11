@@ -91,6 +91,10 @@ describe("<NationalCoverageCard>", () => {
             ],
             candidate_only_state_count: 1,
             candidate_only_states: ["TX"],
+            researched_state_count: 15,
+            unresearched_state_count: 35,
+            researched_states: ["MI", "TX"],
+            unresearched_states: ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA"],
             covered_state_count: 14,
             missing_state_count: 36,
             covered_states: ["MI", "TX"],
@@ -108,8 +112,9 @@ describe("<NationalCoverageCard>", () => {
     expect(screen.getByText(/pre approval and approved/i)).toBeInTheDocument();
     expect(screen.getAllByText(/approved only/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/operational retry/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/14 states covered/i)).toBeInTheDocument();
+    expect(screen.getByText(/14 states live/i)).toBeInTheDocument();
     expect(screen.getByText(/36 still need a live source/i)).toBeInTheDocument();
+    expect(screen.getByText(/15 states researched/i)).toBeInTheDocument();
     expect(screen.getByText("AL")).toBeInTheDocument();
     expect(screen.getByText(/state leaders/i)).toBeInTheDocument();
     expect(screen.getByText(/next activation queue/i)).toBeInTheDocument();

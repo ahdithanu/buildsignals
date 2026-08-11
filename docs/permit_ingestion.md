@@ -19,6 +19,15 @@ That queue is reserved for operational retries and legal, technical, or
 freshness holds; a source is promoted into the production catalog only after
 its blocker is cleared.
 
+The checked-in catalogs now provide an explicit source decision for all 50
+states: 39 states have at least one production source, while Alaska, Georgia,
+Hawaii, Idaho, Iowa, Mississippi, Montana, New Mexico, Oklahoma, West Virginia,
+and Wyoming are represented only by official-source candidates with documented
+legal, technical, freshness, identity, or lifecycle blockers. This is
+nationwide research coverage, not nationwide live ingestion. Candidate-only
+states must remain visibly separate from production coverage in APIs and
+dashboards.
+
 ## Pipeline
 
 1. A connector fetches a page from an official source using a saved cursor.

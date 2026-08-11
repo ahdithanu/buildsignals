@@ -209,6 +209,10 @@ class IngestionCoverageSummary:
     rollout_queue: list[StateRolloutItem]
     candidate_only_state_count: int
     candidate_only_states: list[str]
+    researched_state_count: int
+    unresearched_state_count: int
+    researched_states: list[str]
+    unresearched_states: list[str]
     covered_state_count: int
     missing_state_count: int
     covered_states: list[str]
@@ -384,7 +388,12 @@ def summarize_coverage(
     state_jurisdictions: dict[str, set[str]] = {}
     retailer_opening_sources: list[RetailerOpeningCoverageSource] = []
     approved_only_sources: list[ApprovedOnlyCoverageSource] = []
-    covered_states: set[str] = set()
+    live_states: set[str] = set()
+    researched_states: set[str] = {
+        state_code
+        for entry in catalog_by_key.values()
+        if (state_code := extract_state_code(entry.jurisdiction, entry.settings or {}))
+    }
     retailer_opening_source_count = 0
     pre_approval_source_count = 0
     approved_only_source_count = 0
@@ -430,7 +439,8 @@ def summarize_coverage(
         bucket["live_sources"] += 1
         state_code = extract_state_code(entry.jurisdiction, entry.settings or {})
         if state_code:
-            covered_states.add(state_code)
+            live_states.add(state_code)
+            researched_states.add(state_code)
             state_jurisdictions.setdefault(state_code, set()).add(jurisdiction)
             state_bucket = state_buckets.setdefault(
                 state_code,
@@ -458,7 +468,7 @@ def summarize_coverage(
         bucket["candidate_sources"] += 1
         state_code = extract_state_code(entry.jurisdiction, entry.model_dump())
         if state_code:
-            covered_states.add(state_code)
+            researched_states.add(state_code)
             state_jurisdictions.setdefault(state_code, set()).add(jurisdiction)
             state_bucket = state_buckets.setdefault(
                 state_code,
@@ -526,7 +536,10 @@ def summarize_coverage(
         if bucket["candidate_sources"] > 0 and bucket["live_sources"] == 0
     ]
     candidate_only_states = [bucket.state for bucket in activation_queue]
-    missing_states = [state for state in US_STATE_CODES if state not in covered_states]
+    missing_states = [state for state in US_STATE_CODES if state not in live_states]
+    unresearched_states = [
+        state for state in US_STATE_CODES if state not in researched_states
+    ]
     rollout_queue = _build_rollout_queue(state_buckets, state_jurisdictions)
     return IngestionCoverageSummary(
         live_source_count=len(live_catalog),
@@ -546,9 +559,13 @@ def summarize_coverage(
         rollout_queue=rollout_queue,
         candidate_only_state_count=len(activation_queue),
         candidate_only_states=candidate_only_states,
-        covered_state_count=len(covered_states),
+        researched_state_count=len(researched_states),
+        unresearched_state_count=len(unresearched_states),
+        researched_states=sorted(researched_states),
+        unresearched_states=unresearched_states,
+        covered_state_count=len(live_states),
         missing_state_count=len(missing_states),
-        covered_states=sorted(covered_states),
+        covered_states=sorted(live_states),
         missing_states=missing_states,
     )
 

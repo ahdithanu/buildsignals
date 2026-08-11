@@ -139,7 +139,7 @@ def test_coverage_builds_a_50_state_clustered_rollout_queue():
         "add_retailer_opening_source",
         "add_secondary_jurisdiction",
     }
-    assert by_state["AK"].next_action == "discover_first_source"
+    assert by_state["AK"].next_action == "resolve_candidate_blocker"
 
 
 def _source(db, *, key: str = "canary_source", name: str = "Canary source"):
@@ -877,6 +877,16 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "bend_or_permit_applications_line",
         "bend_or_permit_applications_point",
         "bend_or_planning_applications",
+        "anchorage_ak_bsd_permit_lookup",
+        "honolulu_hi_building_permits_2005_2025",
+        "boise_id_development_tracker",
+        "cedar_rapids_ia_building_permits",
+        "biloxi_ms_development_review_agendas",
+        "bozeman_mt_active_planning_projects",
+        "bernalillo_county_nm_accela_permits",
+        "tulsa_ok_development_plans",
+        "charleston_wv_energov_permits",
+        "cheyenne_wy_opengov_permits",
     }
     assert all(
         row["catalog_backed"]
@@ -1044,6 +1054,16 @@ def test_ingestion_coverage_endpoint_reports_active_catalog_footprint(client, db
     assert body["covered_state_count"] + body["missing_state_count"] == 50
     assert len(body["covered_states"]) == body["covered_state_count"]
     assert len(body["missing_states"]) == body["missing_state_count"]
+    assert body["researched_state_count"] == 50
+    assert body["unresearched_state_count"] == 0
+    assert body["unresearched_states"] == []
+    assert body["covered_state_count"] == 39
+    assert body["missing_state_count"] == 11
+    assert body["candidate_only_state_count"] == 11
+    assert set(body["candidate_only_states"]) == {
+        "AK", "GA", "HI", "IA", "ID", "MS", "MT", "NM", "OK", "WV", "WY",
+    }
+    assert set(body["missing_states"]) == set(body["candidate_only_states"])
 
 
 def test_ingestion_coverage_prioritizes_activation_queue_by_readiness(monkeypatch):
