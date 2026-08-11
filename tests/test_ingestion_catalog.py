@@ -10,6 +10,7 @@ from app.models.ingestion import IngestionSource, SourceFieldMapping
 from app.schemas.ingestion import FieldMappingCreate, IngestionSourceCreate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.ingestion.catalog import (
+    catalog_source_for_candidate,
     load_candidate_catalog,
     load_catalog,
     summarize_coverage,
@@ -337,6 +338,103 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert evansville.base_url.endswith("/BC/BUILDING_COMMISSION_PERMITS/MapServer/0/query")
     assert "application status" in evansville.blocker_summary
     assert evansville.can_run_canary is False
+
+
+def test_candidate_catalog_can_include_promoted_history():
+    entries = load_candidate_catalog(include_promoted=True)
+    by_key = {entry.key: entry for entry in entries}
+
+    assert {
+        "bend_or_permit_applications_line",
+        "bend_or_permit_applications_point",
+        "bend_or_planning_applications",
+    } <= set(by_key)
+    for key in (
+        "bend_or_permit_applications_line",
+        "bend_or_permit_applications_point",
+        "bend_or_planning_applications",
+    ):
+        production = catalog_source_for_candidate(by_key[key])
+        assert production is not None
+        assert production.settings["candidate_key"] == key
+
+
+def test_catalog_candidate_match_rejects_missing_provenance_and_identity_drift():
+    candidate = load_candidate_catalog(include_promoted=True)[0]
+    assert catalog_source_for_candidate(candidate, []) is None
+    base = IngestionSourceCreate(
+        key=candidate.key,
+        name=candidate.name,
+        adapter=candidate.adapter,
+        record_type=candidate.record_type,
+        jurisdiction=candidate.jurisdiction,
+        base_url=candidate.base_url,
+        settings={},
+        field_mappings=[],
+    )
+
+    with pytest.raises(ValueError, match="missing candidate provenance"):
+        catalog_source_for_candidate(candidate, [base])
+
+    unapproved = base.model_copy(
+        update={"settings": {"candidate_key": candidate.key}}
+    )
+    with pytest.raises(ValueError, match="not approved for production"):
+        catalog_source_for_candidate(candidate, [unapproved])
+
+    drifted = base.model_copy(
+        update={
+            "adapter": "csv" if candidate.adapter != "csv" else "socrata",
+            "settings": {
+                "candidate_key": candidate.key,
+                "candidate_status": "approved_for_production",
+            },
+        }
+    )
+    with pytest.raises(ValueError, match="drifted from its candidate"):
+        catalog_source_for_candidate(candidate, [drifted])
+
+
+def test_summarize_coverage_ignores_database_only_sources():
+    database_only = SimpleNamespace(
+        key="runtime_only_unreviewed_source",
+        is_active=True,
+    )
+
+    coverage = summarize_coverage(live_sources=[database_only])
+
+    assert coverage.live_source_count == 0
+    assert coverage.candidate_count == len(
+        load_candidate_catalog(include_promoted=True)
+    )
+
+
+def test_summarize_coverage_requires_active_database_source():
+    candidate = next(
+        entry
+        for entry in load_candidate_catalog(include_promoted=True)
+        if entry.key.startswith("bend_or_")
+    )
+    catalog_source = catalog_source_for_candidate(candidate)
+    assert catalog_source is not None
+    inactive = SimpleNamespace(key=catalog_source.key, is_active=False)
+    active = SimpleNamespace(
+        key=catalog_source.key,
+        name=catalog_source.name,
+        jurisdiction=catalog_source.jurisdiction,
+        settings=catalog_source.settings,
+        is_active=True,
+    )
+
+    inactive_coverage = summarize_coverage(live_sources=[inactive])
+    active_coverage = summarize_coverage(live_sources=[active])
+
+    assert inactive_coverage.live_source_count == 0
+    assert inactive_coverage.candidate_count == len(
+        load_candidate_catalog(include_promoted=True)
+    )
+    assert active_coverage.live_source_count == 1
+    assert active_coverage.candidate_count == inactive_coverage.candidate_count - 1
 
 
 def test_summarize_coverage_groups_live_sources_by_signal_stage():

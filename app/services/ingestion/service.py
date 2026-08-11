@@ -32,7 +32,6 @@ from app.models.ingestion import (
 from app.models.parcel import ParcelRecord
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
 from app.schemas.ingestion import IngestionSourceCreate, IngestionSourceUpdate
-from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.brand_intelligence import detect_permit_brands, rebuild_brand_party_fingerprints
 from app.services.graph_service import create_relationship, link_entity_to_record, resolve_entity
 from app.services.ingestion.connector_config import resolve_connector_config_dates
@@ -186,50 +185,6 @@ def update_source(db: Session, source: IngestionSource, payload: IngestionSource
     if payload.field_mappings is not None:
         _replace_field_mappings(db, source, payload.field_mappings)
     source.updated_at = utcnow()
-    db.flush()
-    return source
-
-
-def _candidate_to_source_payload(candidate: IngestionSourceCandidate) -> IngestionSourceCreate:
-    settings = dict(candidate.probe_settings or {})
-    if candidate.production_page_size is not None:
-        connector = dict(settings.get("connector") or {})
-        connector["page_size"] = candidate.production_page_size
-        settings["connector"] = connector
-    settings.setdefault("official_landing_page", candidate.official_landing_page)
-    settings.setdefault("license", candidate.license)
-    if candidate.probe_settings and candidate.probe_settings.get("signal_stage"):
-        settings.setdefault("signal_stage", candidate.probe_settings["signal_stage"])
-    settings.setdefault("reconciliation_mode", settings.get("reconciliation_mode") or "candidate_promoted")
-    settings.setdefault("candidate_key", candidate.key)
-    settings.setdefault("candidate_status", candidate.status)
-    unique_field_mappings: list[dict[str, Any]] = []
-    seen_source_fields: set[str] = set()
-    for mapping in candidate.probe_field_mappings:
-        if mapping.source_field in seen_source_fields:
-          continue
-        seen_source_fields.add(mapping.source_field)
-        unique_field_mappings.append(mapping.model_dump())
-    return IngestionSourceCreate(
-        key=candidate.key,
-        name=candidate.name,
-        adapter=candidate.adapter,
-        record_type=candidate.record_type,
-        jurisdiction=candidate.jurisdiction,
-        base_url=candidate.base_url,
-        settings=settings,
-        is_active=True,
-        field_mappings=unique_field_mappings,
-    )
-
-
-def promote_candidate_to_source(db: Session, candidate: IngestionSourceCandidate) -> IngestionSource:
-    existing = active_query(db.query(IngestionSource), IngestionSource).filter(
-        IngestionSource.key == candidate.key
-    ).first()
-    if existing:
-        return existing
-    source = create_source(db, _candidate_to_source_payload(candidate))
     db.flush()
     return source
 

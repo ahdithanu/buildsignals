@@ -726,8 +726,12 @@ The candidate retry job runs daily at 13:30 UTC. It selects only runnable
 validation results and transport exceptions, and returns nonzero while any
 retry fails. Once a successful canary is persisted on or after the candidate's
 audit date, that candidate leaves the retry set. Success does not promote a
-candidate; an admin still reviews the result and explicitly promotes it from
-the Source Health page.
+candidate. Promotion requires a matching reviewed entry in
+`app/services/ingestion/promoted_catalog.json`, including rights, reconciliation,
+freshness, suppression, and candidate-provenance metadata. After that manifest
+is reviewed and deployed, an admin activates it from the Source Health page.
+A database-only source can be staged and inspected, but it does not count as
+live nationwide coverage until it is backed by the checked-in catalog.
 
 For production, set `INGESTION_ALLOWED_HOSTS` to include
 `data.austintexas.gov`, `data.seattle.gov`, `data.cityofchicago.org`,
