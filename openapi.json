@@ -8680,6 +8680,16 @@
             "title": "Attribution Required",
             "type": "boolean"
           },
+          "collection_sla_configured": {
+            "default": false,
+            "title": "Collection Sla Configured",
+            "type": "boolean"
+          },
+          "collection_sla_hours": {
+            "default": 36.0,
+            "title": "Collection Sla Hours",
+            "type": "number"
+          },
           "cursor": {
             "anyOf": [
               {
@@ -8956,6 +8966,215 @@
           "reasons"
         ],
         "title": "SourceHealthResponse",
+        "type": "object"
+      },
+      "SourceSchedulePlanItemResponse": {
+        "properties": {
+          "active_run": {
+            "title": "Active Run",
+            "type": "boolean"
+          },
+          "collection_sla_hours": {
+            "title": "Collection Sla Hours",
+            "type": "number"
+          },
+          "due": {
+            "title": "Due",
+            "type": "boolean"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "due_reason": {
+            "title": "Due Reason",
+            "type": "string"
+          },
+          "interval_minutes": {
+            "title": "Interval Minutes",
+            "type": "integer"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "last_terminal_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Terminal At"
+          },
+          "latest_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Status"
+          },
+          "max_pages_per_run": {
+            "title": "Max Pages Per Run",
+            "type": "integer"
+          },
+          "overdue_minutes": {
+            "title": "Overdue Minutes",
+            "type": "integer"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "retry_interval_minutes": {
+            "title": "Retry Interval Minutes",
+            "type": "integer"
+          },
+          "schedule_mode": {
+            "title": "Schedule Mode",
+            "type": "string"
+          },
+          "shard_index": {
+            "title": "Shard Index",
+            "type": "integer"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "stale_run": {
+            "title": "Stale Run",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_key",
+          "source_name",
+          "due",
+          "due_reason",
+          "interval_minutes",
+          "retry_interval_minutes",
+          "collection_sla_hours",
+          "max_pages_per_run",
+          "priority",
+          "schedule_mode",
+          "shard_index",
+          "active_run",
+          "stale_run",
+          "overdue_minutes"
+        ],
+        "title": "SourceSchedulePlanItemResponse",
+        "type": "object"
+      },
+      "SourceSchedulePlanResponse": {
+        "properties": {
+          "active_source_count": {
+            "title": "Active Source Count",
+            "type": "integer"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "automatic_source_count": {
+            "title": "Automatic Source Count",
+            "type": "integer"
+          },
+          "catalog_source_count": {
+            "title": "Catalog Source Count",
+            "type": "integer"
+          },
+          "catalog_synced": {
+            "title": "Catalog Synced",
+            "type": "boolean"
+          },
+          "due_source_count": {
+            "title": "Due Source Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SourceSchedulePlanItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "shard_count": {
+            "title": "Shard Count",
+            "type": "integer"
+          },
+          "shard_index": {
+            "title": "Shard Index",
+            "type": "integer"
+          },
+          "shard_source_count": {
+            "title": "Shard Source Count",
+            "type": "integer"
+          },
+          "total_source_count": {
+            "title": "Total Source Count",
+            "type": "integer"
+          },
+          "unsynced_source_count": {
+            "title": "Unsynced Source Count",
+            "type": "integer"
+          },
+          "unsynced_source_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unsynced Source Keys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "shard_count",
+          "shard_index",
+          "total_source_count",
+          "catalog_source_count",
+          "unsynced_source_count",
+          "unsynced_source_keys",
+          "catalog_synced",
+          "shard_source_count",
+          "automatic_source_count",
+          "due_source_count",
+          "active_source_count",
+          "items"
+        ],
+        "title": "SourceSchedulePlanResponse",
         "type": "object"
       },
       "StateCoverageBucket": {
@@ -13932,6 +14151,113 @@
           }
         },
         "summary": "Get Runs",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/schedule-plan": {
+      "get": {
+        "operationId": "get_ingestion_schedule_plan_v1_ingestion_schedule_plan_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 50,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shard_count",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 128,
+              "minimum": 1,
+              "title": "Shard Count",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shard_index",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 127,
+              "minimum": 0,
+              "title": "Shard Index",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceSchedulePlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ingestion Schedule Plan",
         "tags": [
           "ingestion"
         ]
