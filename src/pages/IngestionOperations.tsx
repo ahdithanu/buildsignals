@@ -656,7 +656,10 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">State coverage gap</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {coverage.covered_state_count} states covered · {coverage.missing_state_count} still need a live source
+                    {coverage.covered_state_count} states live · {coverage.missing_state_count} still need a live source
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {coverage.researched_state_count} states researched · {coverage.unresearched_state_count} without a source decision
                   </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">

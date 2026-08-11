@@ -291,6 +291,10 @@ class IngestionCoverageResponse(BaseModel):
     rollout_queue: list[StateRolloutItem]
     candidate_only_state_count: int
     candidate_only_states: list[str]
+    researched_state_count: int
+    unresearched_state_count: int
+    researched_states: list[str]
+    unresearched_states: list[str]
     covered_state_count: int
     missing_state_count: int
     covered_states: list[str]

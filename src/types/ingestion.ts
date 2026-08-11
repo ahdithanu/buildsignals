@@ -243,6 +243,10 @@ export interface IngestionCoverage {
   rollout_queue?: StateRolloutItem[];
   candidate_only_state_count: number;
   candidate_only_states: string[];
+  researched_state_count: number;
+  unresearched_state_count: number;
+  researched_states: string[];
+  unresearched_states: string[];
   covered_state_count: number;
   missing_state_count: number;
   covered_states: string[];

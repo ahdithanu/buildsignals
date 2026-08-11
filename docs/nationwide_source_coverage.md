@@ -81,7 +81,10 @@ Status meanings:
 
 ## Expansion Order
 
-1. Every state now has an explicit production or hold decision; re-audit holds
+1. Every state now has an explicit production or candidate-catalog decision;
+   39 states have production sources and 11 are candidate-only. This pass added
+   official-source holds for the 10 states that previously had no catalog
+   representation; Georgia was already candidate-only. Re-audit those holds
    when publishers add licensed bulk feeds or materially change platforms.
 2. Run parcel-source admission loops in production permit markets, starting
    with Austin/Travis County, Seattle/King County, and New York City tax lots.

@@ -278,6 +278,16 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "birmingham_al_digital_plan_room",
         "mobile_al_build_mobile_portal",
         "evansville_in_building_commission_permits",
+        "anchorage_ak_bsd_permit_lookup",
+        "honolulu_hi_building_permits_2005_2025",
+        "boise_id_development_tracker",
+        "cedar_rapids_ia_building_permits",
+        "biloxi_ms_development_review_agendas",
+        "bozeman_mt_active_planning_projects",
+        "bernalillo_county_nm_accela_permits",
+        "tulsa_ok_development_plans",
+        "charleston_wv_energov_permits",
+        "cheyenne_wy_opengov_permits",
     }
     by_key = {entry.key: entry for entry in entries}
 
@@ -338,6 +348,35 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert evansville.base_url.endswith("/BC/BUILDING_COMMISSION_PERMITS/MapServer/0/query")
     assert "application status" in evansville.blocker_summary
     assert evansville.can_run_canary is False
+
+    nationwide_holds = {
+        "anchorage_ak_bsd_permit_lookup",
+        "honolulu_hi_building_permits_2005_2025",
+        "boise_id_development_tracker",
+        "cedar_rapids_ia_building_permits",
+        "biloxi_ms_development_review_agendas",
+        "bozeman_mt_active_planning_projects",
+        "bernalillo_county_nm_accela_permits",
+        "tulsa_ok_development_plans",
+        "charleston_wv_energov_permits",
+        "cheyenne_wy_opengov_permits",
+    }
+    assert all(by_key[key].can_run_canary is False for key in nationwide_holds)
+
+
+def test_candidate_catalog_closes_the_fifty_state_research_gap():
+    coverage = summarize_coverage()
+
+    assert coverage.researched_state_count == 50
+    assert coverage.unresearched_state_count == 0
+    assert coverage.unresearched_states == []
+    assert coverage.covered_state_count == 39
+    assert coverage.missing_state_count == 11
+    assert coverage.candidate_only_state_count == 11
+    assert set(coverage.candidate_only_states) == {
+        "AK", "GA", "HI", "IA", "ID", "MS", "MT", "NM", "OK", "WV", "WY",
+    }
+    assert set(coverage.missing_states) == set(coverage.candidate_only_states)
 
 
 def test_candidate_catalog_can_include_promoted_history():
@@ -407,6 +446,10 @@ def test_summarize_coverage_ignores_database_only_sources():
     assert coverage.candidate_count == len(
         load_candidate_catalog(include_promoted=True)
     )
+    assert coverage.covered_state_count == 0
+    assert coverage.missing_state_count == 50
+    assert coverage.researched_state_count == 50
+    assert coverage.unresearched_state_count == 0
 
 
 def test_summarize_coverage_requires_active_database_source():

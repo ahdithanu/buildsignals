@@ -63,7 +63,10 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
           <div>
             <p className="text-xs font-medium text-foreground">State coverage gap</p>
             <p className="text-[11px] text-muted-foreground">
-              {coverage.covered_state_count} states covered · {coverage.missing_state_count} still need a live source
+              {coverage.covered_state_count} states live · {coverage.missing_state_count} still need a live source
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {coverage.researched_state_count} states researched · {coverage.unresearched_state_count} without a source decision
             </p>
           </div>
           <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -72,7 +75,7 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
           {missingStates.length === 0 ? (
-            <span className="text-xs text-muted-foreground">No state gaps detected</span>
+            <span className="text-xs text-muted-foreground">All states have a live source</span>
           ) : (
             missingStates.map((state) => (
               <span key={state} className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground">
