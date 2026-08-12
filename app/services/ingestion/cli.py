@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
+import os
 from dataclasses import asdict
 from datetime import date, datetime
 from pathlib import Path
 
 from sqlalchemy import or_
 
+from app.config import ENVIRONMENT
 from app.db import SessionLocal
 from app.models.ingestion import IngestionSource
 from app.models.organization import Organization
@@ -26,8 +29,13 @@ from app.services.ingestion.health import (
     validate_candidate_source_canary,
     validate_source_canary,
 )
+from app.services.ingestion.host_policy import audit_ingestion_hosts
 from app.services.ingestion.promotion import prepare_promotion_manifest
-from app.services.ingestion.scheduling import build_schedule_plan, source_schedule_policy
+from app.services.ingestion.scheduling import (
+    build_schedule_plan,
+    source_schedule_policy,
+    source_shard,
+)
 from app.services.ingestion.service import ActiveRunConflict, execute_source_run, list_sources
 from app.utils.org_scope import (
     SYSTEM_USER_ID,
@@ -64,6 +72,37 @@ def build_parser() -> argparse.ArgumentParser:
         "--replace",
         action="store_true",
         help="Replace an existing promoted entry with the same candidate key",
+    )
+    host_audit = catalog_commands.add_parser(
+        "host-audit",
+        help="Compare catalog source hosts with the static outbound allowlist",
+    )
+    host_audit.add_argument("--path", type=Path, help="Alternative catalog JSON file")
+    host_audit.add_argument(
+        "--allowed-hosts",
+        help="Comma-separated host list (defaults to INGESTION_ALLOWED_HOSTS)",
+    )
+    host_audit.add_argument("--json", action="store_true")
+    host_audit.add_argument("--print-required-hosts", action="store_true")
+    host_audit.add_argument("--print-policy-digest", action="store_true")
+    host_audit.add_argument(
+        "--allow-unused-hosts",
+        action="store_true",
+        help="Allow a reviewed shared policy to cover more hosts than this scope",
+    )
+    host_audit.add_argument(
+        "--source-key", action="append", dest="source_keys",
+        help="Audit only this production source key (repeatable)",
+    )
+    host_audit.add_argument(
+        "--stage", choices=("all", "pre_approval_and_approved", "approved_only"),
+        default="all",
+    )
+    host_audit.add_argument(
+        "--shard-count", type=int, default=1, choices=range(1, 129), metavar="1..128",
+    )
+    host_audit.add_argument(
+        "--shard-index", type=int, default=0, choices=range(0, 128), metavar="0..127",
     )
 
     brands = subcommands.add_parser("brands", help="Manage the retailer brand catalog")
@@ -218,6 +257,51 @@ def _validate_catalog_source_keys(catalog_entries, source_keys: list[str]) -> No
         raise ValueError(
             f"Scheduled source not found in production catalog: {', '.join(missing)}"
         )
+
+
+def _scope_catalog_entries(
+    catalog_entries,
+    *,
+    source_keys: list[str] | None = None,
+    stage: str = "all",
+    shard_count: int = 1,
+    shard_index: int = 0,
+):
+    if shard_index < 0 or shard_index >= shard_count:
+        raise ValueError("shard_index must be between 0 and shard_count - 1")
+    if source_keys:
+        _validate_catalog_source_keys(catalog_entries, source_keys)
+    requested = set(source_keys or [])
+    return [
+        entry for entry in catalog_entries
+        if (not requested or entry.key in requested)
+        and (stage == "all" or (entry.settings or {}).get("signal_stage") == stage)
+        and source_shard(entry.key, shard_count) == shard_index
+    ]
+
+
+def _enforce_catalog_host_policy(catalog_entries) -> None:
+    if ENVIRONMENT not in {"staging", "production"}:
+        return
+    host_policy = audit_ingestion_hosts(catalog_entries)
+    if host_policy.coverage_ready:
+        expected_digest = os.environ.get("INGESTION_HOST_POLICY_DIGEST", "").strip()
+        if not expected_digest:
+            raise ValueError("INGESTION_HOST_POLICY_DIGEST must be configured")
+        if not hmac.compare_digest(
+            expected_digest, host_policy.policy_digest
+        ):
+            raise ValueError("Ingestion host policy digest does not match this executor scope")
+        return
+    details = []
+    if host_policy.missing_hosts:
+        details.append(f"missing hosts: {','.join(host_policy.missing_hosts)}")
+    if host_policy.unsafe_sources:
+        details.append(
+            "unsafe sources: "
+            + ",".join(item.source_key for item in host_policy.unsafe_sources)
+        )
+    raise ValueError("Ingestion host policy blocked execution; " + "; ".join(details))
 
 
 def _select_due_candidates(
@@ -376,6 +460,46 @@ def _report_health(db, sources: list[IngestionSource], *, as_json: bool = False)
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "catalog" and args.catalog_command == "host-audit":
+        try:
+            entries = load_catalog(args.path)
+            entries = _scope_catalog_entries(
+                entries,
+                source_keys=args.source_keys,
+                stage=args.stage,
+                shard_count=args.shard_count,
+                shard_index=args.shard_index,
+            )
+            report = audit_ingestion_hosts(
+                entries,
+                allowed_hosts=args.allowed_hosts,
+            )
+            if args.print_required_hosts:
+                print(",".join(report.required_hosts))
+            elif args.print_policy_digest:
+                print(report.policy_digest)
+            elif args.json:
+                print(json.dumps(asdict(report), sort_keys=True))
+            else:
+                status = "ready" if report.ready else "blocked"
+                print(
+                    f"host policy: {status} sources={report.source_count} "
+                    f"required={report.required_host_count} "
+                    f"configured={report.configured_host_count}"
+                )
+                if report.missing_hosts:
+                    print(f"missing hosts: {','.join(report.missing_hosts)}")
+                for source in report.unsafe_sources:
+                    print(f"unsafe source {source.source_key}: {source.reason}")
+            audit_ready = report.coverage_ready if args.allow_unused_hosts else report.ready
+            if args.print_required_hosts:
+                return 0 if not report.unsafe_sources else 1
+            if args.print_policy_digest:
+                return 0 if report.coverage_ready else 1
+            return 0 if audit_ready else 1
+        except Exception as exc:
+            print(f"error: {exc}")
+            return 1
     if args.command == "catalog" and args.catalog_command == "prepare-promotion":
         try:
             kwargs = {
@@ -492,6 +616,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "scheduled":
             catalog_entries = load_catalog()
             _validate_catalog_source_keys(catalog_entries, args.source_keys)
+            _enforce_catalog_host_policy([
+                entry for entry in catalog_entries if entry.key in set(args.source_keys)
+            ])
             sync_result = sync_catalog(db, catalog_entries)
             db.commit()
             print(
@@ -516,6 +643,15 @@ def main(argv: list[str] | None = None) -> int:
             catalog_entries = load_catalog()
             if args.source_keys:
                 _validate_catalog_source_keys(catalog_entries, args.source_keys)
+            scoped_catalog_entries = _scope_catalog_entries(
+                catalog_entries,
+                source_keys=args.source_keys,
+                stage=args.stage,
+                shard_count=args.shard_count,
+                shard_index=args.shard_index,
+            )
+            if not args.plan_only:
+                _enforce_catalog_host_policy(scoped_catalog_entries)
             sync_result = sync_catalog(db, catalog_entries, dry_run=args.plan_only)
             if args.plan_only:
                 db.rollback()

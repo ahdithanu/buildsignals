@@ -5,7 +5,7 @@ import { Layout } from '@/components/Layout';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCandidateCanaryHistory, useIngestionHealth, useIngestionSchedulePlan, usePromoteIngestionCandidate } from '@/hooks/useIngestionHealth';
+import { useCandidateCanaryHistory, useIngestionHealth, useIngestionHostPolicy, useIngestionSchedulePlan, usePromoteIngestionCandidate } from '@/hooks/useIngestionHealth';
 import { useToast } from '@/hooks/use-toast';
 import { stateCodeFromJurisdiction } from '@/lib/jurisdiction';
 import { buildIngestionReliabilitySummary, resolveIngestionReliabilitySummary } from '@/lib/ingestionReliability';
@@ -389,6 +389,12 @@ export default function IngestionOperations() {
     error: scheduleError,
     refetch: refetchSchedule,
   } = useIngestionSchedulePlan(selectedState);
+  const {
+    data: hostPolicy,
+    isLoading: hostPolicyLoading,
+    error: hostPolicyError,
+    refetch: refetchHostPolicy,
+  } = useIngestionHostPolicy();
   const promoteCandidate = usePromoteIngestionCandidate();
   const sources = data?.sources ?? [];
   const candidates = data?.candidates ?? [];
@@ -501,7 +507,7 @@ export default function IngestionOperations() {
             variant="outline"
             size="sm"
             disabled={isFetching || scheduleFetching}
-            onClick={() => void Promise.all([refetch(), refetchSchedule()])}
+            onClick={() => void Promise.all([refetch(), refetchSchedule(), refetchHostPolicy()])}
           >
             <RefreshCw className={cn('h-3.5 w-3.5', (isFetching || scheduleFetching) && 'animate-spin')} />
             Refresh
@@ -591,6 +597,76 @@ export default function IngestionOperations() {
             </div>
           </section>
         )}
+
+        <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Production activation">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <Rocket className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Production Activation</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Reviewed outbound access for every production catalog source
+                </p>
+              </div>
+            </div>
+            {hostPolicy && (
+              <span className={cn(
+                'rounded-md border px-2 py-1 text-[11px] font-medium',
+                hostPolicy.ready
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-amber-200 bg-amber-50 text-amber-800',
+              )}>
+                {hostPolicy.ready ? 'Ready' : 'Blocked'}
+              </span>
+            )}
+          </div>
+          {hostPolicyLoading ? (
+            <p className="text-xs text-muted-foreground">Checking activation policy...</p>
+          ) : hostPolicyError ? (
+            <p className="text-xs text-red-700">Activation policy is temporarily unavailable.</p>
+          ) : hostPolicy ? (
+            <>
+              <div className="grid grid-cols-3 divide-x rounded-md border bg-background">
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{hostPolicy.source_count}</p>
+                  <p className="text-[11px] text-muted-foreground">Catalog sources</p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{hostPolicy.missing_hosts.length}</p>
+                  <p className="text-[11px] text-muted-foreground">Missing hosts</p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{hostPolicy.unsafe_sources.length}</p>
+                  <p className="text-[11px] text-muted-foreground">Unsafe sources</p>
+                </div>
+              </div>
+              {!hostPolicy.ready && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {!hostPolicy.executor_verified && (
+                    <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800">
+                      Executor not verified
+                    </span>
+                  )}
+                  {hostPolicy.missing_hosts.slice(0, 12).map((host) => (
+                    <span key={host} className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800">
+                      {host}
+                    </span>
+                  ))}
+                  {hostPolicy.missing_hosts.length > 12 && (
+                    <span className="px-2.5 py-1 text-[11px] text-muted-foreground">
+                      +{hostPolicy.missing_hosts.length - 12} more
+                    </span>
+                  )}
+                </div>
+              )}
+              {hostPolicy.executor_verified && (
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Executor: {hostPolicy.executor_name}
+                </p>
+              )}
+            </>
+          ) : null}
+        </section>
 
         <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Collection schedule">
           <div className="mb-3 flex items-center justify-between gap-3">

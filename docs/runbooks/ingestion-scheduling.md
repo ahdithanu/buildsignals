@@ -40,11 +40,11 @@ Manual run: Actions → **ingestion-cron** → Run workflow.
 
 ## Render (alternative hosting)
 
-If you deploy via `render.yaml` instead of AWS, a cron service
-`dealsignal-ingestion` runs `./scripts/daily-ingestion.sh`. Staging uses the
-catalog-driven due planner. The current production Blueprint retains its
-explicit cohort until the production outbound-host allowlist is expanded and a
-plan-only parity window is reviewed. See
+If you deploy via `render.yaml` instead of AWS, the cron service
+`dealsignal-permit-ingestion-cohort-1` runs the current explicit cohort. Staging
+uses the catalog-driven due planner. The current production Blueprint retains
+its explicit cohort until the production outbound-host allowlist is expanded
+and a plan-only parity window is reviewed. See
 [first-deploy.md](first-deploy.md). Skip this section if you are on AWS.
 
 ---
@@ -81,12 +81,56 @@ python -m app.services.ingestion.cli scheduled-due \
 The same plan is available at `GET /ingestion/schedule-plan`, including state
 filtering and deterministic shard parameters.
 
+Audit the catalog against the static outbound policy before enabling execution:
+
+```bash
+python -m app.services.ingestion.cli catalog host-audit --json
+```
+
+Use `--print-required-hosts` to emit the exact comma-separated value for review;
+proposal mode succeeds when every source URL is safe even before the allowlist
+is configured.
+The audit checks the primary connector and any canary endpoint overrides. It
+fails closed for missing hosts, non-HTTPS URLs, credentials, localhost, and IP
+literals. Host matching is exact; authorizing a parent domain does not authorize
+its subdomains. `GET /ingestion/host-policy` exposes the same read-only result
+on the Ingestion Operations page without source query strings. Set the API
+service's `INGESTION_ALLOWED_HOSTS` to the same reviewed value as the worker and
+set `INGESTION_HOST_POLICY_EXECUTOR` to that worker's service name only after
+verifying parity. Also set `INGESTION_HOST_POLICY_DIGEST` to the `policy_digest`
+from the exact host-policy audit (`--print-policy-digest`). The UI verifies that
+digest before it reports Ready; a name alone is not an attestation. Without
+both values, it remains blocked.
+The report never expands the worker allowlist.
+
+Production activation order:
+
+1. Run `catalog host-audit` and review every proposed hostname.
+2. Update the API and exactly one worker with the same static allowlist.
+3. Run `scheduled-due --plan-only` for a parity window and inspect due volume.
+4. Enable execution only after the plan and worker capacity are approved.
+
+For an hourly GitHub parity window, set repository variable
+`INGESTION_PLAN_ONLY=true`. Clear it only after review. The workflow scopes its
+host audit to the same stage and deterministic shard as the planned run.
+
+Both `scheduled` and `scheduled-due` repeat a scoped host-policy audit
+immediately before execution in staging and production. A missing or unsafe
+destination exits nonzero before catalog sync or network access.
+
+Production HTTPS connections resolve each exact allowlisted hostname, reject
+non-public addresses, and connect to the validated address while preserving the
+official hostname for TLS verification. Private-network egress controls remain
+recommended as a second independent boundary.
+
 Run exactly one production orchestrator. Render is the default. To enable the
 GitHub scheduled workflow instead, set the repository variable
 `INGESTION_ORCHESTRATOR=github` and disable the Render cron. Manual GitHub runs
 remain available for explicit operations. GitHub execution requires production
 values for `INGESTION_DATABASE_URL`, `INGESTION_CRON_SECRET_KEY`,
-`INGESTION_CORS_ALLOWED_ORIGINS`, and `INGESTION_ALLOWED_HOSTS`.
+`INGESTION_CORS_ALLOWED_ORIGINS`, `INGESTION_ALLOWED_HOSTS`, and
+`INGESTION_HOST_POLICY_DIGEST`. The worker validates the digest against its
+exact catalog scope before collection.
 
 ---
 

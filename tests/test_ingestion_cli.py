@@ -466,6 +466,56 @@ def test_scheduled_due_rejects_historical_execution(db, monkeypatch):
     assert sync_calls == []
 
 
+def test_scheduled_preflight_runs_before_catalog_sync(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.commit()
+    sync_calls = []
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "load_catalog", lambda: [_catalog_source("due_source")])
+    monkeypatch.setattr(
+        cli,
+        "_enforce_catalog_host_policy",
+        lambda _entries: (_ for _ in ()).throw(ValueError("blocked by host policy")),
+    )
+    monkeypatch.setattr(
+        cli,
+        "sync_catalog",
+        lambda *_args, **_kwargs: sync_calls.append(True),
+    )
+
+    result = cli.main([
+        "scheduled", "--organization", "default-org", "--source-key", "due_source",
+    ])
+
+    assert result == 1
+    assert sync_calls == []
+
+
+def test_catalog_scope_matches_stage_and_shard():
+    entries = [
+        _catalog_source("approved_a", signal_stage="approved_only"),
+        _catalog_source("approved_b", signal_stage="approved_only"),
+        _catalog_source("preapproval", signal_stage="pre_approval_and_approved"),
+    ]
+    expected = [
+        entry.key for entry in entries
+        if entry.settings["signal_stage"] == "approved_only"
+        and cli.source_shard(entry.key, 2) == 1
+    ]
+
+    scoped = cli._scope_catalog_entries(
+        entries,
+        stage="approved_only",
+        shard_count=2,
+        shard_index=1,
+    )
+
+    assert [entry.key for entry in scoped] == expected
+
+
 def test_scheduled_due_executes_only_due_catalog_sources(db, monkeypatch):
     db.add(Organization(
         id="default-org", name="Default Organization", slug="default-org",

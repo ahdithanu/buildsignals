@@ -341,6 +341,37 @@ class SourceSchedulePlanResponse(BaseModel):
     items: list[SourceSchedulePlanItemResponse]
 
 
+class SourceHostRequirementResponse(BaseModel):
+    source_key: str
+    source_name: str
+    jurisdiction: Optional[str] = None
+    host: str
+    purpose: str
+
+
+class UnsafeSourceUrlResponse(BaseModel):
+    source_key: str
+    url: str
+    reason: str
+
+
+class IngestionHostPolicyResponse(BaseModel):
+    ready: bool
+    coverage_ready: bool
+    policy_digest: str
+    executor_name: Optional[str] = None
+    executor_verified: bool
+    source_count: int
+    required_host_count: int
+    configured_host_count: int
+    required_hosts: list[str]
+    configured_hosts: list[str]
+    missing_hosts: list[str]
+    unused_hosts: list[str]
+    unsafe_sources: list[UnsafeSourceUrlResponse]
+    requirements: list[SourceHostRequirementResponse]
+
+
 class IngestionRunResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -9,6 +9,7 @@ import pytest
 from app.services.ingestion.connectors import (
     ArcGISConnector,
     CKANConnector,
+    ConnectorRequestError,
     CSVConnector,
     InvalidCheckpointError,
     JSONArrayConnector,
@@ -448,12 +449,152 @@ def test_arcgis_factory_rejects_invalid_public_headers():
             "endpoint": "https://example.test/FeatureServer/0/query",
             "headers": ["User-Agent"],
         })
-
     with pytest.raises(ValueError, match="'headers' keys and values"):
         build_connector("arcgis", {
             "endpoint": "https://example.test/FeatureServer/0/query",
             "headers": {"User-Agent": ""},
         })
+
+
+@pytest.mark.parametrize("header", ["Host", "Proxy-Authorization", "Connection"])
+def test_factory_rejects_headers_that_can_change_request_routing(header):
+    with pytest.raises(ValueError, match="Connector header is not allowed"):
+        build_connector("arcgis", {
+            "endpoint": "https://example.test/FeatureServer/0/query",
+            "headers": {header: "attacker.example"},
+        })
+
+
+def test_factory_rejects_header_control_characters():
+    with pytest.raises(ValueError, match="control characters"):
+        build_connector("arcgis", {
+            "endpoint": "https://example.test/FeatureServer/0/query",
+            "headers": {"X-Source": "trusted\r\nHost: attacker.example"},
+        })
+
+
+def test_deployed_http_client_rejects_non_public_dns(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [
+            (2, 1, 6, "", ("169.254.169.254", 443)),
+        ],
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({"metadata.example.test"}))
+
+    with pytest.raises(ConnectorRequestError, match="non-public address"):
+        client._validate_url("https://metadata.example.test/data")
+
+
+def test_deployed_http_client_accepts_exact_public_dns(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [
+            (2, 1, 6, "", ("8.8.8.8", 443)),
+        ],
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({"data.example.test"}))
+
+    client._validate_url("https://data.example.test/data")
+
+
+def test_deployed_http_client_pins_validated_address(monkeypatch):
+    connections = []
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [
+            (2, 1, 6, "", ("8.8.8.8", 443)),
+        ],
+    )
+
+    class Response:
+        status = 200
+        reason = "OK"
+        headers = Message()
+
+        @staticmethod
+        def read():
+            return b'{"ok": true}'
+
+    class Connection:
+        def __init__(self, host, connect_address, **kwargs):
+            connections.append((host, connect_address, kwargs))
+
+        def request(self, method, target, headers):
+            assert (method, target) == ("GET", "/data")
+
+        @staticmethod
+        def getresponse():
+            return Response()
+
+        @staticmethod
+        def close():
+            return None
+
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base._PinnedHTTPSConnection",
+        Connection,
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({"data.example.test"}))
+
+    assert client.get_json("https://data.example.test/data") == {"ok": True}
+    assert connections[0][0:2] == ("data.example.test", "8.8.8.8")
+
+
+def test_deployed_http_client_rejects_cross_host_redirects(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [(2, 1, 6, "", ("8.8.8.8", 443))],
+    )
+
+    class Response:
+        status = 302
+        reason = "Found"
+        headers = Message()
+        headers["Location"] = "https://other.example.test/data"
+
+        @staticmethod
+        def read():
+            return b""
+
+    class Connection:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def request(self, *_args, **_kwargs):
+            pass
+
+        @staticmethod
+        def getresponse():
+            return Response()
+
+        @staticmethod
+        def close():
+            return None
+
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base._PinnedHTTPSConnection",
+        Connection,
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({
+        "data.example.test", "other.example.test",
+    }))
+
+    with pytest.raises(ConnectorRequestError, match="cross-host redirects"):
+        client.get_json("https://data.example.test/data")
+
+
+def test_deployed_http_client_rejects_plain_http_before_dns(monkeypatch):
+    dns = []
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: dns.append(True),
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({"data.example.test"}))
+
+    with pytest.raises(ConnectorRequestError, match="must use HTTPS"):
+        client._validate_url("http://data.example.test/data")
+    assert dns == []
 
 
 def test_arcgis_keyset_paginates_without_shifting_offsets():
