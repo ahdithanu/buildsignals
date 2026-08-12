@@ -53,6 +53,9 @@ jobs:
       - name: Lint (ruff)
         run: ruff check app/ scripts/ tests/
 
+      - name: Verify nationwide rollout manifest
+        run: python -m app.services.ingestion.cli catalog rollout-manifest --check
+
       # Fails the build on any known-vulnerable dependency. Uses the PyPI
       # advisory DB (osv.dev). To skip a CVE we've reviewed and confirmed
       # doesn't affect us, add --ignore-vuln=<ID> with a comment.

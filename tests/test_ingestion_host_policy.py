@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 
 import pytest
 
 from app.schemas.ingestion import IngestionSourceCreate
+from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.ingestion import cli
 from app.services.ingestion.host_policy import (
     audit_ingestion_hosts,
+    candidate_host_policy_entries,
     configured_ingestion_hosts,
     effective_source_url,
 )
@@ -119,6 +122,45 @@ def test_host_policy_includes_canary_endpoint_overrides():
     assert {item.purpose for item in report.requirements} == {"primary", "preapproval"}
     assert report.required_hosts == ["primary.example.gov", "review.example.gov"]
     assert report.unsafe_sources[0].reason.startswith("freshness_probe:")
+
+
+def test_candidate_host_policy_uses_probe_overrides_and_ignores_holds():
+    runnable = IngestionSourceCandidate(
+        key="runnable",
+        name="Runnable",
+        adapter="csv",
+        record_type="permit",
+        jurisdiction="Test, OR",
+        base_url="https://landing.example.gov/data.csv",
+        official_landing_page="https://landing.example.gov",
+        license="Open",
+        status="operational_retry",
+        blocker_summary="Retry pending.",
+        early_warning_value="Planning applications.",
+        probe_settings={
+            "connector": {"source": "https://probe.example.gov/data.csv"},
+            "canary_stage_probes": [{
+                "name": "stage",
+                "connector": {"source": "https://stage.example.gov/data.csv"},
+            }],
+        },
+        probe_field_mappings=[{
+            "source_field": "id", "canonical_field": "source_record_id",
+        }],
+        last_checked_on=date(2026, 8, 1),
+        next_audit_on=date(2026, 8, 2),
+        notes="Retry fixture.",
+    )
+    held = runnable.model_copy(update={
+        "key": "held",
+        "status": "technical_hold",
+        "can_run_canary": False,
+    })
+
+    report = audit_ingestion_hosts(candidate_host_policy_entries([runnable, held]))
+
+    assert report.source_count == 1
+    assert report.required_hosts == ["probe.example.gov", "stage.example.gov"]
 
 
 def test_configured_hosts_reject_urls_and_ports():

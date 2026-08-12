@@ -29,8 +29,15 @@ from app.services.ingestion.health import (
     validate_candidate_source_canary,
     validate_source_canary,
 )
-from app.services.ingestion.host_policy import audit_ingestion_hosts
+from app.services.ingestion.host_policy import audit_ingestion_hosts, candidate_host_policy_entries
 from app.services.ingestion.promotion import prepare_promotion_manifest
+from app.services.ingestion.rollout import (
+    DEFAULT_ROLLOUT_MANIFEST_PATH,
+    build_production_rollout_manifest,
+    require_current_rollout_manifest,
+    rollout_manifest_json,
+    scope_rollout_wave,
+)
 from app.services.ingestion.scheduling import (
     build_schedule_plan,
     source_schedule_policy,
@@ -104,6 +111,33 @@ def build_parser() -> argparse.ArgumentParser:
     host_audit.add_argument(
         "--shard-index", type=int, default=0, choices=range(0, 128), metavar="0..127",
     )
+    host_audit.add_argument(
+        "--rollout-wave", type=int, choices=range(1, 5), metavar="1..4",
+    )
+    rollout_manifest = catalog_commands.add_parser(
+        "rollout-manifest",
+        help="Build a deterministic nationwide activation manifest",
+    )
+    rollout_manifest.add_argument(
+        "--shard-count", type=int, default=4, choices=range(1, 129), metavar="1..128",
+    )
+    rollout_manifest.add_argument("--output", type=Path)
+    rollout_manifest.add_argument("--check", action="store_true")
+    candidate_host_audit = catalog_commands.add_parser(
+        "candidate-host-audit",
+        help="Audit runnable retry-candidate hosts without fetching them",
+    )
+    candidate_host_audit.add_argument(
+        "--candidate-key", action="append", dest="candidate_keys",
+        help="Audit only this runnable candidate key (repeatable)",
+    )
+    candidate_host_audit.add_argument(
+        "--allowed-hosts",
+        help="Comma-separated host list (defaults to INGESTION_ALLOWED_HOSTS)",
+    )
+    candidate_host_audit.add_argument("--json", action="store_true")
+    candidate_host_audit.add_argument("--print-required-hosts", action="store_true")
+    candidate_host_audit.add_argument("--print-policy-digest", action="store_true")
 
     brands = subcommands.add_parser("brands", help="Manage the retailer brand catalog")
     brand_commands = brands.add_subparsers(dest="brand_command", required=True)
@@ -188,6 +222,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--plan-only", action="store_true",
         help="Print the due plan without executing sources",
     )
+    scheduled_due.add_argument(
+        "--rollout-wave", type=int, choices=range(1, 5), metavar="1..4",
+        help="Limit execution to one reviewed nationwide rollout wave",
+    )
 
     canary = subcommands.add_parser("canary", help="Validate one source without writing data")
     canary.add_argument("--organization", required=True, help="Organization ID or slug")
@@ -266,18 +304,28 @@ def _scope_catalog_entries(
     stage: str = "all",
     shard_count: int = 1,
     shard_index: int = 0,
+    rollout_wave: int | None = None,
 ):
     if shard_index < 0 or shard_index >= shard_count:
         raise ValueError("shard_index must be between 0 and shard_count - 1")
     if source_keys:
         _validate_catalog_source_keys(catalog_entries, source_keys)
     requested = set(source_keys or [])
-    return [
+    scoped = [
         entry for entry in catalog_entries
         if (not requested or entry.key in requested)
         and (stage == "all" or (entry.settings or {}).get("signal_stage") == stage)
         and source_shard(entry.key, shard_count) == shard_index
     ]
+    scoped = scope_rollout_wave(scoped, rollout_wave)
+    if source_keys:
+        excluded = sorted(requested - {entry.key for entry in scoped})
+        if excluded:
+            raise ValueError(
+                "Requested sources are outside the selected stage, shard, or "
+                f"rollout wave: {', '.join(excluded)}"
+            )
+    return scoped
 
 
 def _enforce_catalog_host_policy(catalog_entries) -> None:
@@ -302,6 +350,35 @@ def _enforce_catalog_host_policy(catalog_entries) -> None:
             + ",".join(item.source_key for item in host_policy.unsafe_sources)
         )
     raise ValueError("Ingestion host policy blocked execution; " + "; ".join(details))
+
+
+def _enforce_rollout_manifest_attestation(manifest) -> None:
+    if ENVIRONMENT not in {"staging", "production"}:
+        return
+    expected_digest = os.environ.get(
+        "INGESTION_ROLLOUT_MANIFEST_DIGEST", ""
+    ).strip()
+    if not expected_digest:
+        raise ValueError("INGESTION_ROLLOUT_MANIFEST_DIGEST must be configured")
+    if not hmac.compare_digest(expected_digest, manifest.manifest_digest):
+        raise ValueError("Production rollout manifest digest does not match deployment")
+
+
+def _validate_candidate_rollout_scope(manifest, candidates, *, sample_size: int) -> None:
+    if sample_size != manifest.candidate_retries.sample_size:
+        raise ValueError(
+            "Candidate sample size does not match the reviewed rollout manifest"
+        )
+    approved_candidates = set(manifest.candidate_retries.candidate_keys)
+    unapproved = sorted(
+        candidate.key for candidate in candidates
+        if candidate.key not in approved_candidates
+    )
+    if unapproved:
+        raise ValueError(
+            "Candidates are absent from the reviewed rollout manifest: "
+            + ", ".join(unapproved)
+        )
 
 
 def _select_due_candidates(
@@ -469,6 +546,7 @@ def main(argv: list[str] | None = None) -> int:
                 stage=args.stage,
                 shard_count=args.shard_count,
                 shard_index=args.shard_index,
+                rollout_wave=args.rollout_wave,
             )
             report = audit_ingestion_hosts(
                 entries,
@@ -497,6 +575,73 @@ def main(argv: list[str] | None = None) -> int:
             if args.print_policy_digest:
                 return 0 if report.coverage_ready else 1
             return 0 if audit_ready else 1
+        except Exception as exc:
+            print(f"error: {exc}")
+            return 1
+    if args.command == "catalog" and args.catalog_command == "rollout-manifest":
+        try:
+            content = rollout_manifest_json(build_production_rollout_manifest(
+                load_catalog(),
+                candidates=load_candidate_catalog(),
+                shard_count=args.shard_count,
+            ))
+            output_path = args.output or DEFAULT_ROLLOUT_MANIFEST_PATH
+            if args.check:
+                if not output_path.exists() or output_path.read_text(encoding="utf-8") != content:
+                    print(f"error: rollout manifest is stale: {output_path}")
+                    return 1
+                print(f"rollout manifest is current: {output_path}")
+            elif args.output:
+                output_path.write_text(content, encoding="utf-8")
+                print(f"wrote rollout manifest to {output_path}")
+            else:
+                print(content, end="")
+            return 0
+        except Exception as exc:
+            print(f"error: {exc}")
+            return 1
+    if args.command == "catalog" and args.catalog_command == "candidate-host-audit":
+        try:
+            candidates = [
+                candidate for candidate in load_candidate_catalog()
+                if candidate.can_run_canary
+            ]
+            if args.candidate_keys:
+                by_key = {candidate.key: candidate for candidate in candidates}
+                missing = sorted(set(args.candidate_keys) - set(by_key))
+                if missing:
+                    raise ValueError(
+                        "Runnable ingestion candidate not found: " + ", ".join(missing)
+                    )
+                candidates = [
+                    by_key[key] for key in dict.fromkeys(args.candidate_keys)
+                ]
+            report = audit_ingestion_hosts(
+                candidate_host_policy_entries(candidates),
+                allowed_hosts=args.allowed_hosts,
+            )
+            if args.print_required_hosts:
+                print(",".join(report.required_hosts))
+            elif args.print_policy_digest:
+                print(report.policy_digest)
+            elif args.json:
+                print(json.dumps(asdict(report), sort_keys=True))
+            else:
+                status = "ready" if report.ready else "blocked"
+                print(
+                    f"candidate host policy: {status} candidates={len(candidates)} "
+                    f"required={report.required_host_count} "
+                    f"configured={report.configured_host_count}"
+                )
+                if report.missing_hosts:
+                    print(f"missing hosts: {','.join(report.missing_hosts)}")
+                for source in report.unsafe_sources:
+                    print(f"unsafe candidate {source.source_key}: {source.reason}")
+            if args.print_required_hosts:
+                return 0 if not report.unsafe_sources else 1
+            if args.print_policy_digest:
+                return 0 if report.coverage_ready else 1
+            return 0 if report.ready else 1
         except Exception as exc:
             print(f"error: {exc}")
             return 1
@@ -576,6 +721,14 @@ def main(argv: list[str] | None = None) -> int:
             if not selected:
                 print(f"no runnable candidate canaries are due as of {args.as_of}")
                 return 0
+            rollout_manifest = require_current_rollout_manifest(
+                load_catalog(), candidates=load_candidate_catalog()
+            )
+            _enforce_rollout_manifest_attestation(rollout_manifest)
+            _validate_candidate_rollout_scope(
+                rollout_manifest, selected, sample_size=args.sample_size
+            )
+            _enforce_catalog_host_policy(candidate_host_policy_entries(selected))
             return 1 if _retry_candidates(
                 db, selected, sample_size=args.sample_size
             ) else 0
@@ -616,10 +769,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "scheduled":
             catalog_entries = load_catalog()
             _validate_catalog_source_keys(catalog_entries, args.source_keys)
-            _enforce_catalog_host_policy([
+            scoped_catalog_entries = [
                 entry for entry in catalog_entries if entry.key in set(args.source_keys)
-            ])
-            sync_result = sync_catalog(db, catalog_entries)
+            ]
+            _enforce_catalog_host_policy(scoped_catalog_entries)
+            sync_result = sync_catalog(db, scoped_catalog_entries)
             db.commit()
             print(
                 f"catalog sync: created={sync_result.created} updated={sync_result.updated} "
@@ -640,6 +794,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "scheduled-due":
             if args.as_of is not None and not args.plan_only:
                 raise ValueError("--as-of requires --plan-only")
+            if (
+                ENVIRONMENT == "production"
+                and not args.plan_only
+                and args.rollout_wave is None
+            ):
+                raise ValueError(
+                    "Production scheduled execution requires --rollout-wave"
+                )
             catalog_entries = load_catalog()
             if args.source_keys:
                 _validate_catalog_source_keys(catalog_entries, args.source_keys)
@@ -649,10 +811,31 @@ def main(argv: list[str] | None = None) -> int:
                 stage=args.stage,
                 shard_count=args.shard_count,
                 shard_index=args.shard_index,
+                rollout_wave=args.rollout_wave,
             )
+            if args.rollout_wave is not None:
+                rollout_manifest = require_current_rollout_manifest(
+                    catalog_entries,
+                    candidates=load_candidate_catalog(),
+                )
+                _enforce_rollout_manifest_attestation(rollout_manifest)
+                approved_wave_keys = set(
+                    rollout_manifest.waves[args.rollout_wave - 1].source_keys
+                )
+                unapproved = sorted(
+                    entry.key for entry in scoped_catalog_entries
+                    if entry.key not in approved_wave_keys
+                )
+                if unapproved:
+                    raise ValueError(
+                        "Sources are absent from the reviewed rollout wave: "
+                        + ", ".join(unapproved)
+                    )
             if not args.plan_only:
                 _enforce_catalog_host_policy(scoped_catalog_entries)
-            sync_result = sync_catalog(db, catalog_entries, dry_run=args.plan_only)
+            sync_result = sync_catalog(
+                db, scoped_catalog_entries, dry_run=args.plan_only
+            )
             if args.plan_only:
                 db.rollback()
             else:
@@ -661,27 +844,19 @@ def main(argv: list[str] | None = None) -> int:
                 f"catalog sync: created={sync_result.created} updated={sync_result.updated} "
                 f"unchanged={sync_result.unchanged} dry_run={args.plan_only}"
             )
-            catalog_keys = {entry.key for entry in catalog_entries}
             policies_by_key = {
                 entry.key: source_schedule_policy(entry) for entry in catalog_entries
             }
             runtime_sources = list_sources(db)
             runtime_keys = {source.key for source in runtime_sources}
+            scoped_catalog_keys = {entry.key for entry in scoped_catalog_entries}
             selected = [
                 source
                 for source in _select_sources(
                     db, source_keys=args.source_keys, stage=args.stage
                 )
-                if source.is_active and source.key in catalog_keys
+                if source.is_active and source.key in scoped_catalog_keys
             ]
-            stage_catalog_keys = {
-                entry.key for entry in catalog_entries
-                if args.stage == "all"
-                or (entry.settings or {}).get("signal_stage") == args.stage
-            }
-            scoped_catalog_keys = stage_catalog_keys
-            if args.source_keys:
-                scoped_catalog_keys &= set(args.source_keys)
             plan = build_schedule_plan(
                 db,
                 selected,

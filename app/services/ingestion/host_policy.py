@@ -9,6 +9,7 @@ from typing import Iterable
 from urllib.parse import urlparse
 
 from app.schemas.ingestion import IngestionSourceCreate
+from app.schemas.ingestion_candidate import IngestionSourceCandidate
 
 
 @dataclass(frozen=True)
@@ -130,6 +131,32 @@ def effective_source_url(entry: IngestionSourceCreate) -> str:
     if isinstance(entry.base_url, str) and entry.base_url.strip():
         return entry.base_url.strip()
     raise ValueError(f"Catalog source {entry.key} has no effective connector URL")
+
+
+def candidate_host_policy_entries(
+    candidates: Iterable[IngestionSourceCandidate],
+) -> list[IngestionSourceCreate]:
+    return [
+        IngestionSourceCreate(
+            key=candidate.key,
+            name=candidate.name,
+            adapter=candidate.adapter,
+            record_type=candidate.record_type,
+            jurisdiction=candidate.jurisdiction,
+            base_url=candidate.base_url,
+            settings={
+                "connector": dict(candidate.probe_settings or {}).get("connector") or {},
+                "canary_stage_probes": dict(candidate.probe_settings or {}).get(
+                    "canary_stage_probes"
+                ) or [],
+                "canary_freshness_probe": dict(candidate.probe_settings or {}).get(
+                    "canary_freshness_probe"
+                ),
+            },
+        )
+        for candidate in candidates
+        if candidate.can_run_canary
+    ]
 
 
 def redact_source_url(url: str) -> str:
