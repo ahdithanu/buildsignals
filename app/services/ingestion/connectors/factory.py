@@ -5,6 +5,7 @@ from typing import Any, Mapping
 from urllib.parse import urlparse
 
 from app.config import ENVIRONMENT
+from app.services.ingestion.host_policy import configured_ingestion_hosts
 
 from .arcgis import ArcGISConnector
 from .base import Connector, RetryingHttpClient
@@ -14,6 +15,18 @@ from .json_array import JSONArrayConnector
 from .opendatasoft import OpenDataSoftConnector
 from .rss import RSSConnector
 from .socrata import SocrataConnector
+
+_FORBIDDEN_REQUEST_HEADERS = frozenset({
+    "connection",
+    "host",
+    "keep-alive",
+    "proxy-authorization",
+    "proxy-connection",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+})
 
 
 def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector:
@@ -150,6 +163,7 @@ def _secret_headers(config: Mapping[str, Any]) -> dict[str, str]:
         value = os.environ.get(env_name)
         if value is None:
             raise ValueError(f"Required connector secret environment variable is not set: {env_name}")
+        _validate_request_header(header, value)
         headers[header] = value
     return headers
 
@@ -169,18 +183,24 @@ def _public_headers(config: Mapping[str, Any]) -> dict[str, str]:
             or not header_value.strip()
         ):
             raise ValueError("'headers' keys and values must be non-empty strings")
-        headers[header.strip()] = header_value.strip()
+        header = header.strip()
+        header_value = header_value.strip()
+        _validate_request_header(header, header_value)
+        headers[header] = header_value
     return headers
+
+
+def _validate_request_header(name: str, value: str) -> None:
+    if name.strip().lower() in _FORBIDDEN_REQUEST_HEADERS:
+        raise ValueError(f"Connector header is not allowed: {name}")
+    if any(char in name or char in value for char in ("\r", "\n", "\0")):
+        raise ValueError("Connector headers cannot contain control characters")
 
 
 def _production_allowed_hosts() -> frozenset[str] | None:
     if not _is_deployed_environment():
         return None
-    hosts = frozenset(
-        host.strip().lower()
-        for host in os.environ.get("INGESTION_ALLOWED_HOSTS", "").split(",")
-        if host.strip()
-    )
+    hosts = configured_ingestion_hosts()
     if not hosts:
         raise ValueError(
             "INGESTION_ALLOWED_HOSTS must be configured in staging and production"

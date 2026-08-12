@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hmac
+import os
 from dataclasses import asdict
 from datetime import datetime
 
@@ -23,6 +25,7 @@ from app.schemas.ingestion import (
     CandidateCanaryResponse,
     IngestionCandidateResponse,
     IngestionCoverageResponse,
+    IngestionHostPolicyResponse,
     IngestionReliabilitySummaryResponse,
     IngestionRunRequest,
     IngestionRunResponse,
@@ -55,6 +58,7 @@ from app.services.ingestion.health import (
     validate_candidate_source_canary,
     validate_source_canary,
 )
+from app.services.ingestion.host_policy import audit_ingestion_hosts
 from app.services.ingestion.scheduling import build_schedule_plan, source_schedule_policy
 from app.services.ingestion.service import (
     ActiveRunConflict,
@@ -149,6 +153,33 @@ def get_ingestion_schedule_plan(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return SourceSchedulePlanResponse.model_validate(asdict(plan))
+
+
+@router.get(
+    "/host-policy",
+    response_model=IngestionHostPolicyResponse,
+    dependencies=[Depends(require_role(
+        MemberRole.admin,
+        MemberRole.editor,
+        MemberRole.viewer,
+    ))],
+)
+def get_ingestion_host_policy():
+    report = audit_ingestion_hosts(load_catalog())
+    executor_name = os.environ.get("INGESTION_HOST_POLICY_EXECUTOR", "").strip() or None
+    attested_digest = os.environ.get("INGESTION_HOST_POLICY_DIGEST", "").strip()
+    executor_verified = bool(
+        executor_name
+        and attested_digest
+        and hmac.compare_digest(attested_digest, report.policy_digest)
+    )
+    payload = asdict(report)
+    payload.update({
+        "ready": report.ready and executor_verified,
+        "executor_name": executor_name,
+        "executor_verified": executor_verified,
+    })
+    return IngestionHostPolicyResponse.model_validate(payload)
 
 
 @router.get("/candidates", response_model=list[IngestionCandidateResponse])

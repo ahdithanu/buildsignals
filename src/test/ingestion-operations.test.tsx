@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { render, screen, within } from "@testing-library/react";
 
@@ -7,6 +7,7 @@ import IngestionOperations from "@/pages/IngestionOperations";
 vi.mock("@/hooks/useIngestionHealth", () => ({
   useIngestionHealth: vi.fn(),
   useIngestionSchedulePlan: vi.fn(),
+  useIngestionHostPolicy: vi.fn(),
   useCandidateCanaryHistory: vi.fn(),
   usePromoteIngestionCandidate: vi.fn(),
 }));
@@ -17,7 +18,31 @@ vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
-import { useIngestionHealth, useIngestionSchedulePlan, useCandidateCanaryHistory, usePromoteIngestionCandidate } from "@/hooks/useIngestionHealth";
+import { useIngestionHealth, useIngestionHostPolicy, useIngestionSchedulePlan, useCandidateCanaryHistory, usePromoteIngestionCandidate } from "@/hooks/useIngestionHealth";
+
+beforeEach(() => {
+  (useIngestionHostPolicy as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    data: {
+      ready: false,
+      coverage_ready: false,
+      policy_digest: "test-policy-digest",
+      executor_name: null,
+      executor_verified: false,
+      source_count: 121,
+      required_host_count: 40,
+      configured_host_count: 3,
+      required_hosts: [],
+      configured_hosts: [],
+      missing_hosts: ["data.example.gov"],
+      unused_hosts: [],
+      unsafe_sources: [],
+      requirements: [],
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  });
+});
 
 describe("<IngestionOperations>", () => {
   it("shows approved-only source names in the coverage footprint", () => {
@@ -243,6 +268,9 @@ describe("<IngestionOperations>", () => {
     );
 
     expect(screen.getByText("Coverage Footprint")).toBeInTheDocument();
+    expect(screen.getByText("Production Activation")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByText("data.example.gov")).toBeInTheDocument();
     expect(screen.getByText("Collection Schedule")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Texas Comptroller Sales Tax Locations · due" })).toHaveAttribute(
       "href",

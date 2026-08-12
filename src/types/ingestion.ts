@@ -293,6 +293,33 @@ export interface SourceSchedulePlan {
   items: SourceSchedulePlanItem[];
 }
 
+export interface IngestionHostPolicy {
+  ready: boolean;
+  coverage_ready: boolean;
+  policy_digest: string;
+  executor_name?: string | null;
+  executor_verified: boolean;
+  source_count: number;
+  required_host_count: number;
+  configured_host_count: number;
+  required_hosts: string[];
+  configured_hosts: string[];
+  missing_hosts: string[];
+  unused_hosts: string[];
+  unsafe_sources: Array<{
+    source_key: string;
+    url: string;
+    reason: string;
+  }>;
+  requirements: Array<{
+    source_key: string;
+    source_name: string;
+    jurisdiction?: string | null;
+    host: string;
+    purpose: string;
+  }>;
+}
+
 export interface ReliabilityWatchlistItem {
   source_id: string;
   source_name: string;

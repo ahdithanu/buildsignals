@@ -81,6 +81,16 @@ services:
       # SENTRY_DSN: backend error tracking. Leave unset to disable Sentry.
       - key: SENTRY_DSN
         sync: false
+      # Mirror the worker's reviewed policy so the read-only activation report
+      # reflects the deployed collection boundary. This value is not a secret.
+      - key: INGESTION_ALLOWED_HOSTS
+        sync: false
+      # Set both only after confirming the API policy digest exactly matches
+      # the named worker. Without the digest attestation the UI remains blocked.
+      - key: INGESTION_HOST_POLICY_EXECUTOR
+        sync: false
+      - key: INGESTION_HOST_POLICY_DIGEST
+        sync: false
       # NOTE: ALLOW_ANONYMOUS is intentionally NOT set here. Production forces
       # it false; the app refuses to start if you set it true.
 
@@ -120,6 +130,8 @@ services:
         sync: false
       - key: INGESTION_ALLOWED_HOSTS
         value: data.wa.gov,www.everettwa.gov,services5.arcgis.com
+      - key: INGESTION_HOST_POLICY_DIGEST
+        sync: false
       - key: INGESTION_ORGANIZATION
         sync: false
 

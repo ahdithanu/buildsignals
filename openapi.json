@@ -5039,6 +5039,108 @@
         "title": "IngestionCoverageResponse",
         "type": "object"
       },
+      "IngestionHostPolicyResponse": {
+        "properties": {
+          "configured_host_count": {
+            "title": "Configured Host Count",
+            "type": "integer"
+          },
+          "configured_hosts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Configured Hosts",
+            "type": "array"
+          },
+          "coverage_ready": {
+            "title": "Coverage Ready",
+            "type": "boolean"
+          },
+          "executor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Executor Name"
+          },
+          "executor_verified": {
+            "title": "Executor Verified",
+            "type": "boolean"
+          },
+          "missing_hosts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Hosts",
+            "type": "array"
+          },
+          "policy_digest": {
+            "title": "Policy Digest",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "required_host_count": {
+            "title": "Required Host Count",
+            "type": "integer"
+          },
+          "required_hosts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Hosts",
+            "type": "array"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/SourceHostRequirementResponse"
+            },
+            "title": "Requirements",
+            "type": "array"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          },
+          "unsafe_sources": {
+            "items": {
+              "$ref": "#/components/schemas/UnsafeSourceUrlResponse"
+            },
+            "title": "Unsafe Sources",
+            "type": "array"
+          },
+          "unused_hosts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unused Hosts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ready",
+          "coverage_ready",
+          "policy_digest",
+          "executor_verified",
+          "source_count",
+          "required_host_count",
+          "configured_host_count",
+          "required_hosts",
+          "configured_hosts",
+          "missing_hosts",
+          "unused_hosts",
+          "unsafe_sources",
+          "requirements"
+        ],
+        "title": "IngestionHostPolicyResponse",
+        "type": "object"
+      },
       "IngestionReliabilitySummaryResponse": {
         "properties": {
           "attention_sources": {
@@ -8968,6 +9070,45 @@
         "title": "SourceHealthResponse",
         "type": "object"
       },
+      "SourceHostRequirementResponse": {
+        "properties": {
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_key",
+          "source_name",
+          "host",
+          "purpose"
+        ],
+        "title": "SourceHostRequirementResponse",
+        "type": "object"
+      },
       "SourceSchedulePlanItemResponse": {
         "properties": {
           "active_run": {
@@ -9387,6 +9528,29 @@
           "status"
         ],
         "title": "TopOpportunity",
+        "type": "object"
+      },
+      "UnsafeSourceUrlResponse": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_key",
+          "url",
+          "reason"
+        ],
+        "title": "UnsafeSourceUrlResponse",
         "type": "object"
       },
       "UpdateMemberRequest": {
@@ -13907,6 +14071,55 @@
           }
         },
         "summary": "Get Ingestion Health",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/host-policy": {
+      "get": {
+        "operationId": "get_ingestion_host_policy_v1_ingestion_host_policy_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionHostPolicyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ingestion Host Policy",
         "tags": [
           "ingestion"
         ]

@@ -787,12 +787,14 @@ The canary completion date is an offline reviewer attestation; the compiler
 checks it against the candidate audit date but does not query tenant canary
 history or contact the source.
 
-For production, set `INGESTION_ALLOWED_HOSTS` to include
-`data.austintexas.gov`, `data.seattle.gov`, `data.cityofchicago.org`,
-`data.cityofnewyork.us`, `data.nola.gov`, and `data.sfgov.org`. Start with a
-one-page canary, inspect run errors and graph evidence, then resume bounded
-batches until the historical cursor is exhausted. Daily incremental scheduling
-can use the same command and cursor.
+For production, generate the required static host set with `catalog host-audit
+--json`, review every hostname, and set `INGESTION_ALLOWED_HOSTS` to the approved
+result. The audit includes primary and canary override destinations and exits
+nonzero while the policy is incomplete. Matching is exact, so every approved
+subdomain must be listed explicitly. Start with a one-page canary, inspect
+run errors and graph evidence, then resume bounded batches until the historical
+cursor is exhausted. Daily incremental scheduling can use the same command and
+cursor.
 
 The canary command and `POST /ingestion/sources/{source_id}/canary` fetch a
 bounded sample, check required fields, execute the configured transforms,

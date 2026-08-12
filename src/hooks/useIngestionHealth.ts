@@ -60,6 +60,16 @@ export function useIngestionSchedulePlan(state?: string | null) {
   });
 }
 
+export function useIngestionHostPolicy() {
+  return useQuery({
+    queryKey: queryKeys.ingestion.hostPolicy,
+    queryFn: () => ingestionApi.hostPolicy(),
+    retry: 1,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+}
+
 export function useCandidateCanaryHistory(candidateKey: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: candidateKey ? queryKeys.ingestion.candidateCanaryHistory(candidateKey) : ['ingestion', 'candidate-canary-history', 'disabled'],

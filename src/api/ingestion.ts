@@ -3,6 +3,7 @@ import type {
   CandidateCanaryAttempt,
   CandidateCanaryResult,
   IngestionCoverage,
+  IngestionHostPolicy,
   IngestionCandidate,
   IngestionReliabilitySummary,
   IngestionRun,
@@ -57,4 +58,6 @@ export const ingestionApi = {
       '/ingestion/schedule-plan',
       state ? { state } : undefined,
     ),
+  hostPolicy: (): Promise<IngestionHostPolicy> =>
+    apiClient.get<IngestionHostPolicy>('/ingestion/host-policy'),
 };
