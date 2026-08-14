@@ -2,7 +2,7 @@ import type { Deal } from './deal';
 import type { GraphEntity, GraphRelatedEntity } from './graph';
 
 export type ParcelReviewStatus = 'candidate' | 'shortlisted' | 'dismissed';
-export type ParcelPersona = 'developer' | 'broker' | 'realtor';
+export type ParcelPersona = 'developer' | 'investor' | 'broker' | 'realtor';
 
 export interface ParcelFact {
   id: string;

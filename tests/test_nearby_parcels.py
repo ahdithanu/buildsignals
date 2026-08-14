@@ -297,7 +297,11 @@ def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tm
     assert history.status_code == 200
     assert history.json()[0]["id"] == body["id"]
 
-    for persona in ("broker", "realtor"):
+    for persona, expected_version in (
+        ("investor", "investor-v1"),
+        ("broker", "broker-v2"),
+        ("realtor", "realtor-v2"),
+    ):
         persona_search = client.post(
             f"/deals/{deal['id']}/nearby-parcel-searches",
             json={
@@ -308,8 +312,8 @@ def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tm
         )
         assert persona_search.status_code == 201, persona_search.text
         persona_body = persona_search.json()
-        assert persona_body["ranker_version"] == f"{persona}-v2"
-        assert persona_body["candidates"][0]["explanation"]["ranker_version"] == f"{persona}-v2"
+        assert persona_body["ranker_version"] == expected_version
+        assert persona_body["candidates"][0]["explanation"]["ranker_version"] == expected_version
         assert "No owner willingness to sell" in persona_body["candidates"][0]["explanation"]["cautions"][0]
 
 
@@ -888,13 +892,15 @@ def test_creating_opportunity_from_geocoded_signal_auto_seeds_parcel_context(cli
     assert body["nearby_parcel_search"]["persona"] == "developer"
     assert body["nearby_parcel_search"]["radius_miles"] == 2.0
     assert [row["persona"] for row in body["nearby_parcel_searches"]] == [
-        "developer", "broker", "realtor"
+        "developer", "investor", "broker", "realtor"
     ]
 
     deal_id = body["deal"]["id"]
     history = client.get(f"/deals/{deal_id}/nearby-parcel-searches")
     assert history.status_code == 200, history.text
-    assert {row["persona"] for row in history.json()[:3]} == {"developer", "broker", "realtor"}
+    assert {row["persona"] for row in history.json()[:4]} == {
+        "developer", "investor", "broker", "realtor"
+    }
     assert any(row["id"] == body["nearby_parcel_search"]["id"] for row in history.json())
 
     search = client.get(f"/nearby-parcel-searches/{body['nearby_parcel_search']['id']}")
@@ -1028,6 +1034,16 @@ def test_market_ranker_uses_sale_tenure_without_inferring_intent():
     assert ranked.explanation["cautions"][0] == (
         "No owner willingness to sell or listing intent is inferred"
     )
+
+    investor = rank_parcel_candidate(
+        parcel, [sale], persona="investor", distance_miles=1, radius_miles=2
+    )
+    assert investor.explanation["ranker_version"] == "investor-v1"
+    valuation = next(
+        feature for feature in investor.explanation["features"]
+        if feature["name"] == "valuation_context"
+    )
+    assert valuation["weight"] == 25
 
 
 def test_parcel_ingestion_versions_fact_evidence(client, db, tmp_path):

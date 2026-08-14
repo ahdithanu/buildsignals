@@ -47,7 +47,9 @@ router = APIRouter(tags=["nearby parcels"])
 def get_acquisition_radar(
     q: str | None = Query(default=None, min_length=1, max_length=200),
     state: str | None = Query(default=None, min_length=2, max_length=2),
-    persona: str | None = Query(default=None, pattern="^(developer|broker|realtor)$"),
+    persona: str | None = Query(
+        default=None, pattern="^(developer|investor|broker|realtor)$"
+    ),
     review_status: str | None = Query(default=None, pattern="^(candidate|shortlisted|dismissed)$"),
     assignment: str | None = Query(default=None, pattern="^(assigned|unassigned)$"),
     limit: int = Query(default=50, ge=1, le=100),

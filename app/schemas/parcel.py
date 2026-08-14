@@ -11,7 +11,7 @@ from app.schemas.deal import DealDetailResponse
 class NearbyParcelSearchCreate(BaseModel):
     anchor_brand_match_id: str
     radius_miles: float = Field(default=2.0, ge=0.25, le=5.0)
-    persona: Literal["developer", "broker", "realtor"] = "developer"
+    persona: Literal["developer", "investor", "broker", "realtor"] = "developer"
     minimum_land_area_sq_ft: Optional[float] = Field(default=None, ge=0)
     zoning_codes: list[str] = Field(default_factory=list, max_length=50)
     land_uses: list[str] = Field(default_factory=list, max_length=50)

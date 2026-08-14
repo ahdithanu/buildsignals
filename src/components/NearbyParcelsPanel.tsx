@@ -12,6 +12,7 @@ import type { NearbyParcelCandidate, ParcelPersona } from '@/types/parcel';
 
 const PERSONAS: Array<{ value: ParcelPersona; label: string }> = [
   { value: 'developer', label: 'Developer' },
+  { value: 'investor', label: 'Investor' },
   { value: 'broker', label: 'Broker' },
   { value: 'realtor', label: 'Realtor' },
 ];
@@ -273,7 +274,8 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
   })) ?? [];
   const isLoading = history.isLoading || (!!history.data?.length && search.isLoading);
   const error = create.error || history.error || search.error;
-  const canExport = role !== 'viewer' && !!latest && latest.candidates.length > 0;
+  const canManage = role === 'admin' || role === 'editor';
+  const canExport = canManage && !!latest && latest.candidates.length > 0;
   const parseDelimitedList = (value: string) =>
     value
       .split(',')
@@ -349,7 +351,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
         </div>
         <div className="flex items-center gap-2">
           {latest && <span className="text-xs text-muted-foreground">{latest.candidates.length} candidates</span>}
-          {role !== 'viewer' && (
+          {canManage && (
             <button
               type="button"
               title="Export nearby parcels"
@@ -368,7 +370,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
         <div className="mb-4 space-y-3">
           <fieldset className="min-w-0">
             <legend className="text-xs text-muted-foreground">Buyer lens</legend>
-            <div className="mt-1 grid grid-cols-3 overflow-hidden rounded-md border" role="group" aria-label="Buyer lens selector">
+            <div className="mt-1 grid grid-cols-2 overflow-hidden rounded-md border sm:grid-cols-4" role="group" aria-label="Buyer lens selector">
               {PERSONAS.map((option) => (
                 <button
                   key={option.value}
@@ -417,7 +419,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
             type="button"
             title="Search nearby parcels"
             aria-label="Search nearby parcels"
-            disabled={!anchorId || create.isPending}
+            disabled={!canManage || !anchorId || create.isPending}
             onClick={() => create.mutate({
               anchor_brand_match_id: anchorId,
               radius_miles: radius,
@@ -554,7 +556,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
               candidate={candidate}
               currentUserId={user?.id}
               members={members}
-              disabled={review.isPending || assign.isPending || promote.isPending}
+              disabled={!canManage || review.isPending || assign.isPending || promote.isPending}
               onReview={(status) => review.mutate({ candidateId: candidate.id, status })}
               onAssign={(assignedToUserId) => assign.mutate({
                 candidateId: candidate.id,

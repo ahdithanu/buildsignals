@@ -12,8 +12,9 @@ signal:
   `ST_DWithin`/`ST_Distance` queries with a generated geography centroid and
   GiST index
 - explainable `developer-v1` ranking with missing-data confidence penalties
-- developer, broker, and realtor buyer lenses with versioned explainable
-  rankings; `broker-v2` and `realtor-v2` add official sale-tenure evidence while
+- developer, investor, broker, and realtor buyer lenses with versioned
+  explainable rankings; `investor-v1`, `broker-v2`, and `realtor-v2` add
+  official sale-tenure evidence while
   never inferring listing status or owner willingness to sell
 - shortlist and dismissal review with audit history
 - opportunity-detail panel with confirmed-signal selection and bounded radius
@@ -22,9 +23,9 @@ signal:
 
 NYC PLUTO, Denver Assessor, Washington DC owner polygons, Florida FDOR
 statewide cadastral parcels, Maryland iMAP / SDAT parcel points, and MassGIS
-Level 3 property tax parcels are admitted production parcel sources. The next
-slice adds parcel boundaries and map interaction, exports, assignment, and
-explicit promotion into a standalone opportunity.
+Level 3 property tax parcels are admitted production parcel sources. Parcel
+boundaries, map interaction, assignment, policy-controlled export, and explicit
+promotion into a standalone opportunity are implemented.
 
 Parcel and assessor sources now use the same connector registry and bounded
 runner as permits by declaring `record_type: parcel`. Declarative mappings

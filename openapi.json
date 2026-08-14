@@ -6115,6 +6115,7 @@
             "default": "developer",
             "enum": [
               "developer",
+              "investor",
               "broker",
               "realtor"
             ],
@@ -9798,7 +9799,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(developer|broker|realtor)$",
+                  "pattern": "^(developer|investor|broker|realtor)$",
                   "type": "string"
                 },
                 {

@@ -755,7 +755,7 @@ def maybe_create_default_nearby_parcel_searches(
     minimum_confidence: float = 0.9,
 ) -> list[NearbyParcelSearch]:
     searches: list[NearbyParcelSearch] = []
-    for persona in ("developer", "broker", "realtor"):
+    for persona in ("developer", "investor", "broker", "realtor"):
         search = maybe_create_default_nearby_parcel_search(
             db,
             deal_id=deal_id,
