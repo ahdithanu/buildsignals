@@ -18,6 +18,41 @@ export interface ParcelFact {
   last_verified_at: string;
 }
 
+export type ParcelLineageEventType = 'split' | 'merge' | 'replat' | 'correction';
+
+export interface ParcelLineageEvidence {
+  id: string;
+  raw_source_record_id: string;
+  source_url?: string | null;
+  excerpt?: string | null;
+  confidence: number;
+  observed_at: string;
+  last_verified_at: string;
+  payload?: Record<string, unknown> | null;
+}
+
+export interface ParcelLineageParticipant {
+  id: string;
+  role: 'predecessor' | 'successor';
+  external_parcel_id: string;
+  parcel_id?: string | null;
+  parcel?: ParcelSummary | null;
+  last_verified_at: string;
+}
+
+export interface ParcelLineageEvent {
+  id: string;
+  source_key: string;
+  external_event_id: string;
+  event_type: ParcelLineageEventType;
+  confidence: number;
+  observed_at: string;
+  last_verified_at: string;
+  attributes?: Record<string, unknown> | null;
+  participants: ParcelLineageParticipant[];
+  evidence: ParcelLineageEvidence[];
+}
+
 export interface ParcelSummary {
   id: string;
   external_parcel_id: string;
@@ -127,6 +162,7 @@ export interface ParcelDetail {
   search_hits: ParcelSearchHit[];
   graph_entity?: GraphEntity | null;
   graph_related: GraphRelatedEntity[];
+  lineage_events: ParcelLineageEvent[];
 }
 
 export interface AcquisitionRadarSignal {

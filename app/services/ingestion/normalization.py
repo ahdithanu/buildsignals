@@ -77,6 +77,13 @@ PARCEL_CANONICAL_FIELDS = {
     "vacancy_indicator",
     "source_url",
     "observed_at",
+    "lineage_event_id",
+    "lineage_event_type",
+    "lineage_predecessor_ids",
+    "lineage_successor_ids",
+    "lineage_observed_at",
+    "lineage_confidence",
+    "lineage_excerpt",
 }
 
 DATE_FIELDS = {
@@ -90,7 +97,7 @@ DATE_FIELDS = {
 DECIMAL_FIELDS = {"valuation", "latitude", "longitude"}
 INTEGER_FIELDS = {"square_feet", "units"}
 PERMIT_TEXT_FIELDS = CANONICAL_FIELDS - DATE_FIELDS - DECIMAL_FIELDS - INTEGER_FIELDS
-PARCEL_DATE_FIELDS = {"last_sale_date", "observed_at"}
+PARCEL_DATE_FIELDS = {"last_sale_date", "observed_at", "lineage_observed_at"}
 PARCEL_DECIMAL_FIELDS = {
     "latitude",
     "longitude",
@@ -100,11 +107,13 @@ PARCEL_DECIMAL_FIELDS = {
     "improvement_value",
     "total_assessed_value",
     "last_sale_price",
+    "lineage_confidence",
 }
+PARCEL_LIST_FIELDS = {"lineage_predecessor_ids", "lineage_successor_ids"}
 PARCEL_TEXT_FIELDS = PARCEL_CANONICAL_FIELDS - PARCEL_DATE_FIELDS - PARCEL_DECIMAL_FIELDS - {
     "tax_delinquent",
     "vacancy_indicator",
-}
+} - PARCEL_LIST_FIELDS
 APPROVAL_STAGES = {"pre_approval", "approved"}
 BLANKISH_NUMERIC_MARKERS = {"unknown", "n/a", "na", "none", "null"}
 
@@ -200,7 +209,9 @@ def normalize_parcel(
             continue
         if canonical_field in PARCEL_DATE_FIELDS and str(raw_value).strip() in {"0", "0.0"}:
             continue
-        if canonical_field in PARCEL_DATE_FIELDS:
+        if canonical_field in PARCEL_LIST_FIELDS:
+            values[canonical_field] = raw_value
+        elif canonical_field in PARCEL_DATE_FIELDS:
             values[canonical_field] = _parse_datetime(raw_value)
         elif canonical_field in PARCEL_DECIMAL_FIELDS:
             if _is_blankish_numeric(raw_value):

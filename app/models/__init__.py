@@ -48,3 +48,8 @@ from app.models.acquisition import (  # noqa
     ParcelAcquisitionCase,
     ParcelAcquisitionSource,
 )
+from app.models.parcel_lineage import (  # noqa
+    ParcelLineageEvent,
+    ParcelLineageEvidence,
+    ParcelLineageParticipant,
+)
