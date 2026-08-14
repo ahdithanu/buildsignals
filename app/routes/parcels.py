@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -26,6 +26,7 @@ from app.schemas.parcel import (
 )
 from app.services.deal_service import deal_to_detail_response
 from app.services.graph_service import relationships_for_entity
+from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,
     create_nearby_parcel_search,
@@ -173,6 +174,39 @@ def get_search(search_id: str, db: Session = Depends(get_db)):
     if search is None:
         raise HTTPException(status_code=404, detail="Nearby parcel search not found")
     return search
+
+
+@router.post(
+    "/nearby-parcel-searches/{search_id}/export",
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def export_search(
+    search_id: str,
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        exported = export_nearby_parcel_search(
+            db,
+            search_id=search_id,
+            actor_user_id=principal["user_id"],
+        )
+        db.commit()
+        return Response(
+            content=exported.content,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="{exported.filename}"',
+                "X-Exported-Count": str(exported.exported_count),
+                "X-Omitted-Count": str(exported.omitted_count),
+            },
+        )
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ParcelExportDenied as exc:
+        db.commit()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.patch(

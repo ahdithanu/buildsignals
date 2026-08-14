@@ -74,6 +74,13 @@ export class ApiError extends Error {
   }
 }
 
+export interface DownloadResponse {
+  blob: Blob;
+  filename: string | null;
+  exportedCount: number | null;
+  omittedCount: number | null;
+}
+
 // ── Silent refresh ────────────────────────────────────────────────────────
 //
 // When a request comes back 401, we attempt a silent refresh once and retry
@@ -155,6 +162,17 @@ export class ApiClient {
     options: RequestInit = {},
     withContentType = true,
   ): Promise<T> {
+    const response = await this.response(endpoint, options, withContentType);
+
+    if (response.status === 204) return undefined as T;
+    return response.json();
+  }
+
+  private async response(
+    endpoint: string,
+    options: RequestInit = {},
+    withContentType = true,
+  ): Promise<Response> {
     let response = await this.doFetch(endpoint, options, withContentType);
 
     // 401 → attempt silent refresh once, then retry the original request.
@@ -187,8 +205,7 @@ export class ApiClient {
       );
     }
 
-    if (response.status === 204) return undefined as T;
-    return response.json();
+    return response;
   }
 
   async get<T>(
@@ -248,6 +265,24 @@ export class ApiClient {
       },
       false,
     );
+  }
+
+  async download(endpoint: string, method: 'GET' | 'POST' = 'GET'): Promise<DownloadResponse> {
+    const response = await this.response(endpoint, { method }, false);
+    const disposition = response.headers.get('Content-Disposition');
+    const filename = disposition?.match(/filename="?([^";]+)"?/i)?.[1] ?? null;
+    const parseCount = (name: string) => {
+      const value = response.headers.get(name);
+      if (value === null) return null;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+    return {
+      blob: await response.blob(),
+      filename,
+      exportedCount: parseCount('X-Exported-Count'),
+      omittedCount: parseCount('X-Omitted-Count'),
+    };
   }
 }
 

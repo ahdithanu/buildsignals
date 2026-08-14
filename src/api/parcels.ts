@@ -23,6 +23,8 @@ export const parcelsApi = {
     apiClient.get<NearbyParcelSearchSummary[]>(`/deals/${dealId}/nearby-parcel-searches`),
   get: (searchId: string): Promise<NearbyParcelSearch> =>
     apiClient.get<NearbyParcelSearch>(`/nearby-parcel-searches/${searchId}`),
+  exportSearch: (searchId: string) =>
+    apiClient.download(`/nearby-parcel-searches/${searchId}/export`, 'POST'),
   detail: (parcelId: string): Promise<ParcelDetail> =>
     apiClient.get<ParcelDetail>(`/parcels/${parcelId}`),
   create: (dealId: string, payload: NearbyParcelSearchCreate): Promise<NearbyParcelSearch> =>

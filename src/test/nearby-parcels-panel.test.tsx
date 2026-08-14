@@ -149,6 +149,12 @@ describe("<NearbyParcelsPanel>", () => {
       configurable: true,
     });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const exportMutate = vi.fn((_searchId, options) => options.onSuccess({
+      blob: new Blob(["server-authorized-export"]),
+      filename: "reviewed-parcels.csv",
+      exportedCount: 1,
+      omittedCount: 0,
+    }));
 
     (usePermitBrandMatches as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [
@@ -211,6 +217,7 @@ describe("<NearbyParcelsPanel>", () => {
       review: { isPending: false, mutate: vi.fn() },
       assign: { isPending: false, mutate: vi.fn(), error: null },
       promote: { isPending: false, mutate: vi.fn(), error: null },
+      exportSearch: { isPending: false, mutate: exportMutate, error: null },
     });
     (useOrganizationMembers as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [
@@ -227,6 +234,7 @@ describe("<NearbyParcelsPanel>", () => {
 
     screen.getByRole("button", { name: /export nearby parcels/i }).click();
 
+    expect(exportMutate).toHaveBeenCalledWith("search-1", expect.any(Object));
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(click).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:nearby-parcels");

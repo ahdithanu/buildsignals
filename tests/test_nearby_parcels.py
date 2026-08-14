@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import csv
+import io
+import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -19,6 +22,7 @@ from app.models.user import User
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.catalog import load_catalog
 from app.services.ingestion.connectors import FetchEnvelope
+from app.services.parcel_export import derived_export_fields
 from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
 from app.services.parcel_proximity import find_nearby_parcels, haversine_miles
 from app.services.parcel_ranking import rank_developer_candidate, rank_parcel_candidate
@@ -201,6 +205,37 @@ def _add_parcel(
     return parcel
 
 
+def _role_headers(db, role: MemberRole = MemberRole.admin) -> dict[str, str]:
+    org = db.get(Organization, "default-org") or Organization(
+        id="default-org", name="Default Org", slug="default-org", is_active=True
+    )
+    user = User(
+        id=str(uuid4()),
+        email=f"parcel-export-{uuid4()}@acme.com",
+        full_name="Parcel Export Admin",
+        password_hash=hash_password("CorrectHorseBattery42"),
+        is_active=True,
+    )
+    db.add_all([org, user])
+    db.add(OrganizationMembership(
+        id=str(uuid4()),
+        organization_id=org.id,
+        user_id=user.id,
+        role=role,
+        is_default=True,
+    ))
+    db.commit()
+    return {
+        "Authorization": (
+            "Bearer " + create_access_token(user_id=user.id, org_id=org.id)
+        )
+    }
+
+
+def _admin_headers(db) -> dict[str, str]:
+    return _role_headers(db, MemberRole.admin)
+
+
 def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tmp_path):
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
@@ -276,6 +311,175 @@ def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tm
         assert persona_body["ranker_version"] == f"{persona}-v2"
         assert persona_body["candidates"][0]["explanation"]["ranker_version"] == f"{persona}-v2"
         assert "No owner willingness to sell" in persona_body["candidates"][0]["explanation"]["cautions"][0]
+
+
+def test_nearby_parcel_export_is_policy_gated_safe_and_audited(
+    client, db, tmp_path
+):
+    headers = _admin_headers(db)
+    deal, source_data, match = _setup_confirmed_signal(
+        client, db, tmp_path, headers=headers
+    )
+    source = db.get(IngestionSource, source_data["id"])
+    source.settings = {
+        **(source.settings or {}),
+        "export_policy": "derived_nearby_parcel_context_only_no_raw_delaware_firstmap_resale",
+    }
+    raw = db.query(RawSourceRecord).one()
+    parcel = _add_parcel(
+        db,
+        source.id,
+        raw.id,
+        "P-EXPORT",
+        -97.735,
+        land_area_sq_ft=80_000,
+        zoning_code="Commercial Retail",
+        land_use="Retail",
+    )
+    parcel.address = '=HYPERLINK("https://bad.example","click")'
+    db.commit()
+    created = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        headers=headers,
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "developer",
+        },
+    )
+    assert created.status_code == 201, created.text
+    search_id = created.json()["id"]
+
+    response = client.post(
+        f"/nearby-parcel-searches/{search_id}/export", headers=headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/csv")
+    assert response.headers["x-exported-count"] == "1"
+    assert response.headers["x-omitted-count"] == "0"
+    rows = list(csv.DictReader(io.StringIO(response.text)))
+    assert len(rows) == 1
+    assert rows[0]["external_parcel_id"] == "P-EXPORT"
+    assert rows[0]["address"].startswith("'=")
+    assert "owner" not in rows[0]
+    assert "geometry" not in rows[0]
+    audit = db.query(AuditLog).filter_by(
+        entity_type="nearby_parcel_search",
+        entity_id=search_id,
+        action="export",
+    ).one()
+    values = json.loads(audit.new_values)
+    assert values["exported_count"] == 1
+    assert values["omitted_count"] == 0
+    assert values["ownership_included"] is False
+    assert values["raw_geometry_included"] is False
+    assert values["candidate_ids"] == [created.json()["candidates"][0]["id"]]
+    assert len(values["content_sha256"]) == 64
+    assert values["policy_decisions"][source.key]["approved"] is True
+    assert audit.request_id
+
+
+def test_nearby_parcel_export_fails_closed_without_reviewed_policy(
+    client, db, tmp_path
+):
+    headers = _admin_headers(db)
+    deal, source_data, match = _setup_confirmed_signal(
+        client, db, tmp_path, headers=headers
+    )
+    source = db.get(IngestionSource, source_data["id"])
+    raw = db.query(RawSourceRecord).one()
+    _add_parcel(
+        db,
+        source.id,
+        raw.id,
+        "P-BLOCKED",
+        -97.735,
+        zoning_code="Commercial Retail",
+    )
+    db.commit()
+    created = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        headers=headers,
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "developer",
+        },
+    )
+    assert created.status_code == 201, created.text
+
+    response = client.post(
+        f"/nearby-parcel-searches/{created.json()['id']}/export",
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert "No candidates are exportable" in response.json()["detail"]
+    denied = db.query(AuditLog).filter_by(action="export_denied").one()
+    assert json.loads(denied.new_values)["reason"] == "no_reviewed_active_source_policy"
+
+
+def test_nearby_parcel_export_rejects_malformed_policy_and_inactive_source(
+    client, db, tmp_path
+):
+    headers = _admin_headers(db)
+    deal, source_data, match = _setup_confirmed_signal(
+        client, db, tmp_path, headers=headers
+    )
+    source = db.get(IngestionSource, source_data["id"])
+    source.settings = {
+        **(source.settings or {}),
+        "export_policy": "derived_nearby_parcel_context_raw_export_allowed",
+    }
+    raw = db.query(RawSourceRecord).one()
+    _add_parcel(db, source.id, raw.id, "P-MALFORMED", -97.735)
+    db.commit()
+    created = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        headers=headers,
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "developer",
+        },
+    )
+    assert created.status_code == 201, created.text
+    search_id = created.json()["id"]
+
+    assert derived_export_fields(source.settings) == frozenset()
+    malformed = client.post(
+        f"/nearby-parcel-searches/{search_id}/export", headers=headers
+    )
+    assert malformed.status_code == 422
+
+    source.settings = {
+        **(source.settings or {}),
+        "export_policy": "derived_nearby_parcel_context_only_no_raw_delaware_firstmap_resale",
+    }
+    source.is_active = False
+    db.commit()
+    inactive = client.post(
+        f"/nearby-parcel-searches/{search_id}/export", headers=headers
+    )
+    assert inactive.status_code == 422
+    decisions = json.loads(
+        db.query(AuditLog)
+        .filter_by(action="export_denied")
+        .order_by(AuditLog.created_at.desc())
+        .first()
+        .new_values
+    )["policy_decisions"]
+    assert decisions[source.key]["active"] is False
+
+
+def test_nearby_parcel_export_requires_editor_or_admin(client, db):
+    response = client.post(
+        "/nearby-parcel-searches/does-not-matter/export",
+        headers=_role_headers(db, MemberRole.viewer),
+    )
+
+    assert response.status_code == 403
 
 
 def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcels(

@@ -17,6 +17,8 @@ signal:
   never inferring listing status or owner willingness to sell
 - shortlist and dismissal review with audit history
 - opportunity-detail panel with confirmed-signal selection and bounded radius
+- server-authorized CSV export with source-policy filtering, actor audit, and
+  spreadsheet-injection protection
 
 NYC PLUTO, Denver Assessor, Washington DC owner polygons, Florida FDOR
 statewide cadastral parcels, Maryland iMAP / SDAT parcel points, and MassGIS
@@ -52,6 +54,16 @@ map modes:
 
 Raw polygon export remains blocked by each source's `export_policy`; UI shapes
 are derived display context only.
+
+Candidate CSV export is a separate server-side decision available to editors
+and administrators. Only active sources whose exact policy value appears in the
+reviewed parcel-export allowlist are included; missing, malformed, or newly
+invented policy strings fail closed. Parcel-ID-only and situs-only policies
+suppress broader columns, and ownership plus raw geometry are never included.
+Every attempt logs the actor and request ID. Successful exports also retain the
+candidate IDs, source-policy snapshot, exported/omitted counts, approved
+columns, and a SHA-256 content digest; denied attempts retain their decision
+reason and policy snapshot for incident reconstruction.
 
 Canonical assessor parcels are also projected into the knowledge graph and
 linked to their source records. Current ownership facts create `owned_by`
@@ -205,6 +217,7 @@ graph path traversal so distance queries use spatial indexes.
 - `POST /deals/{deal_id}/nearby-parcel-searches`
 - `GET /deals/{deal_id}/nearby-parcel-searches`
 - `GET /nearby-parcel-searches/{search_id}`
+- `POST /nearby-parcel-searches/{search_id}/export`
 - `PATCH /parcel-candidates/{candidate_id}`
 - `GET /acquisition-radar`
 

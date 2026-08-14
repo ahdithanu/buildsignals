@@ -6,6 +6,7 @@ import { useOrganizationMembers } from '@/hooks/useOrganizationMembers';
 import { usePermitBrandMatches } from '@/hooks/usePermitBrandMatches';
 import { useNearbyParcels } from '@/hooks/useNearbyParcels';
 import { useToast } from '@/hooks/use-toast';
+import { ApiError } from '@/api/client';
 import { ParcelMap, type ParcelMapPoint, type ParcelMapPointTone } from '@/components/ParcelMap';
 import type { NearbyParcelCandidate, ParcelPersona } from '@/types/parcel';
 
@@ -26,49 +27,6 @@ function ownershipName(candidate: NearbyParcelCandidate) {
   const ownership = value as { owner_name?: unknown; owner?: unknown };
   const owner = ownership.owner_name ?? ownership.owner;
   return typeof owner === 'string' && owner.trim() ? owner : null;
-}
-
-function exportCandidatesCsv(candidates: NearbyParcelCandidate[]) {
-  const headers = [
-    'rank',
-    'parcel_id',
-    'external_parcel_id',
-    'address',
-    'city',
-    'state',
-    'distance_miles',
-    'score',
-    'score_confidence',
-    'review_status',
-    'zoning_code',
-    'land_use',
-    'owner_name',
-    'reason',
-    'caution',
-  ];
-  const escapeCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
-  const rows = candidates.map((candidate) => {
-    const reason = candidate.explanation.reasons?.[0] ?? '';
-    const caution = candidate.explanation.cautions?.[0] ?? '';
-    return [
-      candidate.rank,
-      candidate.parcel.id,
-      candidate.parcel.external_parcel_id,
-      candidate.parcel.address || '',
-      candidate.parcel.city || '',
-      candidate.parcel.state || '',
-      candidate.distance_miles.toFixed(2),
-      Math.round(candidate.score),
-      Math.round(candidate.score_confidence * 100),
-      candidate.review_status,
-      candidate.parcel.zoning_code || '',
-      candidate.parcel.land_use || '',
-      ownershipName(candidate) || '',
-      reason,
-      caution,
-    ].map((value) => escapeCell(String(value)));
-  });
-  return [headers.map(escapeCell).join(','), ...rows.map((row) => row.join(','))].join('\n');
 }
 
 function anchorLabel(match: {
@@ -275,7 +233,7 @@ function CandidateRow({
 export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, organizationId } = useAuth();
+  const { user, organizationId, role } = useAuth();
   const { data: matches = [] } = usePermitBrandMatches(dealId);
   const { data: members = [] } = useOrganizationMembers(organizationId);
   const [persona, setPersona] = useState<ParcelPersona>('developer');
@@ -283,7 +241,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
   const [zoningCodes, setZoningCodes] = useState('');
   const [landUses, setLandUses] = useState('');
   const [resultLimit, setResultLimit] = useState(50);
-  const { history, search, create, review, assign, promote } = useNearbyParcels(dealId, persona);
+  const { history, search, create, review, assign, promote, exportSearch } = useNearbyParcels(dealId, persona);
   const anchors = useMemo(
     () => matches.filter((match) =>
       (match.review_status === 'confirmed' || (
@@ -315,7 +273,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
   })) ?? [];
   const isLoading = history.isLoading || (!!history.data?.length && search.isLoading);
   const error = create.error || history.error || search.error;
-  const canExport = !!latest && latest.candidates.length > 0;
+  const canExport = role !== 'viewer' && !!latest && latest.candidates.length > 0;
   const parseDelimitedList = (value: string) =>
     value
       .split(',')
@@ -323,14 +281,31 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
       .filter((item) => item.length > 0);
   const handleExport = () => {
     if (!latest || latest.candidates.length === 0) return;
-    const csv = exportCandidatesCsv(latest.candidates);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `nearby-parcels-${latest.id}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    exportSearch.mutate(latest.id, {
+      onSuccess: (result) => {
+        const url = URL.createObjectURL(result.blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = result.filename || `nearby-parcels-${latest.id}.csv`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+        toast({
+          title: 'Parcel export ready',
+          description: result.omittedCount
+            ? `${result.exportedCount ?? latest.candidates.length} exported; ${result.omittedCount} omitted by source policy.`
+            : `${result.exportedCount ?? latest.candidates.length} parcels exported.`,
+        });
+      },
+      onError: (error) => toast({
+        title: 'Parcel export unavailable',
+        description: error instanceof ApiError && error.status === 403
+          ? 'Your workspace role does not allow parcel exports.'
+          : error instanceof ApiError && error.status === 422
+            ? 'No candidates are exportable under the reviewed source policies.'
+            : 'The export could not be completed. Try again.',
+        variant: 'destructive',
+      }),
+    });
   };
   const handlePromote = (candidate: NearbyParcelCandidate) => {
     promote.mutate(
@@ -374,16 +349,18 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
         </div>
         <div className="flex items-center gap-2">
           {latest && <span className="text-xs text-muted-foreground">{latest.candidates.length} candidates</span>}
-          <button
-            type="button"
-            title="Export nearby parcels"
-            aria-label="Export nearby parcels"
-            disabled={!canExport}
-            onClick={handleExport}
-            className="flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-          >
-            <Download className="h-4 w-4" />
-          </button>
+          {role !== 'viewer' && (
+            <button
+              type="button"
+              title="Export nearby parcels"
+              aria-label="Export nearby parcels"
+              disabled={!canExport || exportSearch?.isPending}
+              onClick={handleExport}
+              className="flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 
