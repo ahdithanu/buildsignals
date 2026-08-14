@@ -143,6 +143,42 @@ describe("<ParcelDetail>", () => {
             },
           },
         ],
+        lineage_events: [{
+          id: "lineage-1",
+          source_key: "travis-assessor",
+          external_event_id: "SPLIT-2026-100",
+          event_type: "split",
+          confidence: 0.97,
+          observed_at: "2026-07-20T12:00:00Z",
+          last_verified_at: "2026-07-23T12:00:00Z",
+          attributes: null,
+          participants: [
+            {
+              id: "participant-parent",
+              role: "predecessor",
+              external_parcel_id: "PARCEL-000",
+              parcel_id: "parcel-0",
+              last_verified_at: "2026-07-23T12:00:00Z",
+            },
+            {
+              id: "participant-child",
+              role: "successor",
+              external_parcel_id: "PARCEL-001",
+              parcel_id: "parcel-1",
+              last_verified_at: "2026-07-23T12:00:00Z",
+            },
+          ],
+          evidence: [{
+            id: "lineage-evidence-1",
+            raw_source_record_id: "raw-lineage-1",
+            source_url: "https://example.gov/parcels/SPLIT-2026-100",
+            excerpt: "Parcel split into two tax lots.",
+            confidence: 0.97,
+            observed_at: "2026-07-20T12:00:00Z",
+            last_verified_at: "2026-07-23T12:00:00Z",
+            payload: null,
+          }],
+        }],
       },
       isLoading: false,
       error: null,
@@ -158,13 +194,23 @@ describe("<ParcelDetail>", () => {
     );
 
     expect(screen.getByRole("heading", { name: "125 Main St" })).toBeInTheDocument();
-    expect(screen.getByText("PARCEL-001")).toBeInTheDocument();
+    expect(screen.getAllByText("PARCEL-001")).toHaveLength(2);
     expect(screen.getByText("Retail")).toBeInTheDocument();
     expect(screen.getByText("Zoning")).toBeInTheDocument();
     expect(screen.getByText("ownership")).toBeInTheDocument();
     expect(screen.getByText("Map / Boundary")).toBeInTheDocument();
     expect(screen.getByText("No boundary geometry is attached to this parcel yet.")).toBeInTheDocument();
     expect(screen.getByText("Graph Context")).toBeInTheDocument();
+    expect(screen.getByText("Parcel Lineage")).toBeInTheDocument();
+    expect(screen.getByText("SPLIT-2026-100")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "PARCEL-000" })).toHaveAttribute(
+      "href",
+      "/parcels/parcel-0",
+    );
+    expect(screen.getByRole("link", { name: "Open evidence" })).toHaveAttribute(
+      "href",
+      "https://example.gov/parcels/SPLIT-2026-100",
+    );
     expect(screen.getByRole("link", { name: /open graph entity/i })).toHaveAttribute(
       "href",
       "/graph/entities/graph-parcel-1",
@@ -229,6 +275,7 @@ describe("<ParcelDetail>", () => {
         search_hits: [],
         graph_entity: null,
         graph_related: [],
+        lineage_events: [],
       },
       isLoading: false,
       error: null,

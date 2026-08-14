@@ -28,6 +28,7 @@ from app.schemas.parcel import (
     NearbyParcelSearchResponse,
     NearbyParcelSearchSummary,
     ParcelDetailResponse,
+    ParcelLineageEventResponse,
     ParcelSearchHitResponse,
 )
 from app.services.acquisition_service import (
@@ -38,6 +39,7 @@ from app.services.acquisition_service import (
 from app.services.deal_service import deal_to_detail_response
 from app.services.graph_service import relationships_for_entity
 from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
+from app.services.parcel_lineage import get_lineage_event, lineage_events_for_parcel
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,
     create_nearby_parcel_search,
@@ -52,6 +54,32 @@ from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(tags=["nearby parcels"])
+
+
+def _lineage_response(event) -> dict:
+    return {
+        "id": event.id,
+        "source_key": event.source.key,
+        "external_event_id": event.external_event_id,
+        "event_type": event.event_type,
+        "confidence": event.confidence,
+        "observed_at": event.observed_at,
+        "last_verified_at": event.last_verified_at,
+        "attributes": event.attributes,
+        "participants": event.participants,
+        "evidence": event.evidence,
+    }
+
+
+@router.get(
+    "/parcel-lineage-events/{event_id}",
+    response_model=ParcelLineageEventResponse,
+)
+def get_parcel_lineage_event(event_id: str, db: Session = Depends(get_db)):
+    event = get_lineage_event(db, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Parcel lineage event not found")
+    return _lineage_response(event)
 
 
 @router.get(
@@ -207,6 +235,10 @@ def get_parcel(parcel_id: str, db: Session = Depends(get_db)):
             ).model_dump()
             for relationship, entity, direction in relationships_for_entity(db, graph_entity.id)
         ] if graph_entity else [],
+        lineage_events=[
+            _lineage_response(event)
+            for event in lineage_events_for_parcel(db, parcel.id)
+        ],
     )
 
 

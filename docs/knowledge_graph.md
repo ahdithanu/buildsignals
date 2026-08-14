@@ -104,6 +104,14 @@ Two important projected sources now feed that context:
 
 The graph context route also backfills existing deal contacts on read, so older opportunities pick up contact-derived graph nodes even if the contact predates the projection logic.
 
+Official parcel split, merge, replat, and correction events are stored in a
+separate temporal lineage model and projected into the graph once both sides
+resolve to canonical parcel records. The graph edge remains generic
+`related_to`; `lineage_event_type`, event identity, predecessor/successor parcel
+IDs, confidence, timestamps, and raw-record evidence preserve its precise
+meaning. Keeping lineage as its own event model supports one-to-many and
+many-to-one changes without making the generic graph schema parcel-specific.
+
 Entity review now also exposes a merge-candidate endpoint for cautious deduping.
 It scores same-type entities by normalized name, aliases, shared addresses, and
 location signals, then surfaces the top likely duplicates in the entity detail
@@ -124,6 +132,8 @@ Near-term improvements:
 - Store geocoded parcel/property keys and normalized APNs.
 - Add relationship merge jobs for duplicate edges with complementary evidence.
 - Track verification jobs and stale relationship queues using `last_verified_at`.
+- Materialize current parcel ancestry and descendant closures if lineage path
+  traffic outgrows bounded graph traversal.
 
 Mid-term improvements:
 

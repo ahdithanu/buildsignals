@@ -1,6 +1,6 @@
 import { useMemo, type ComponentType } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BadgeInfo, Building2, CalendarClock, FileText, MapPinned, Network, Store } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeInfo, Building2, CalendarClock, FileText, GitFork, MapPinned, Network, Store } from 'lucide-react';
 
 import { Layout } from '@/components/Layout';
 import { ParcelMap } from '@/components/ParcelMap';
@@ -94,6 +94,7 @@ export default function ParcelDetail() {
   }, [hits]);
   const graphEntity = data?.graph_entity;
   const graphRelated = data?.graph_related ?? [];
+  const lineageEvents = data?.lineage_events ?? [];
   const boundaryGeometry = data?.parcel.boundary_geometry ?? null;
 
   if (isLoading) {
@@ -170,6 +171,51 @@ export default function ParcelDetail() {
             emptyLabel="No boundary geometry is attached to this parcel yet."
           />
         </section>
+
+        {lineageEvents.length > 0 && (
+          <section className="rounded-md border bg-card p-4 card-shadow">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <GitFork className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Parcel Lineage</h3>
+              </div>
+              <span className="text-xs text-muted-foreground">{lineageEvents.length} event{lineageEvents.length === 1 ? '' : 's'}</span>
+            </div>
+            <div className="divide-y border-y">
+              {lineageEvents.map((event) => {
+                const predecessors = event.participants.filter((item) => item.role === 'predecessor');
+                const successors = event.participants.filter((item) => item.role === 'successor');
+                const evidence = event.evidence[0];
+                return (
+                  <div key={event.id} className="py-3 first:pt-3 last:pb-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary" className="capitalize">{event.event_type}</Badge>
+                          <span className="text-xs font-medium text-foreground">{event.external_event_id}</span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {event.source_key} · observed {formatDate(event.observed_at)} · {Math.round(event.confidence * 100)}% confidence · {event.evidence.length} evidence record{event.evidence.length === 1 ? '' : 's'}
+                        </p>
+                      </div>
+                      {evidence?.source_url && (
+                        <a href={evidence.source_url} target="_blank" rel="noreferrer" className="rounded-md border px-2 py-1 text-xs text-foreground transition-colors hover:bg-secondary/50">
+                          Open evidence
+                        </a>
+                      )}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                      <LineageParticipants participants={predecessors} fallback="Unknown predecessor" />
+                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      <LineageParticipants participants={successors} fallback="Unknown successor" />
+                    </div>
+                    {evidence?.excerpt && <p className="mt-2 text-xs text-muted-foreground">{evidence.excerpt}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <section className="rounded-md border bg-card p-4 card-shadow">
           <div className="mb-3 flex items-center gap-2">
@@ -373,5 +419,34 @@ function Detail({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-sm font-medium text-foreground break-words">{value}</p>
     </div>
+  );
+}
+
+function LineageParticipants({
+  participants,
+  fallback,
+}: {
+  participants: Array<{
+    id: string;
+    parcel_id?: string | null;
+    external_parcel_id: string;
+  }>;
+  fallback: string;
+}) {
+  if (participants.length === 0) {
+    return <span className="text-muted-foreground">{fallback}</span>;
+  }
+  return (
+    <span className="flex flex-wrap gap-1.5">
+      {participants.map((participant) => participant.parcel_id ? (
+        <Link key={participant.id} to={`/parcels/${participant.parcel_id}`} className="font-medium text-primary hover:underline">
+          {participant.external_parcel_id}
+        </Link>
+      ) : (
+        <span key={participant.id} className="text-muted-foreground" title="Parcel record has not arrived yet">
+          {participant.external_parcel_id}
+        </span>
+      ))}
+    </span>
   );
 }

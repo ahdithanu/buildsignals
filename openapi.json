@@ -7083,6 +7083,13 @@
             "title": "Graph Related",
             "type": "array"
           },
+          "lineage_events": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelLineageEventResponse"
+            },
+            "title": "Lineage Events",
+            "type": "array"
+          },
           "parcel": {
             "$ref": "#/components/schemas/ParcelSummaryResponse"
           },
@@ -7178,6 +7185,204 @@
           "last_verified_at"
         ],
         "title": "ParcelFactResponse",
+        "type": "object"
+      },
+      "ParcelLineageEventResponse": {
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelLineageEvidenceResponse"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "external_event_id": {
+            "title": "External Event Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "participants": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelLineageParticipantResponse"
+            },
+            "title": "Participants",
+            "type": "array"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_key",
+          "external_event_id",
+          "event_type",
+          "confidence",
+          "observed_at",
+          "last_verified_at",
+          "attributes",
+          "participants",
+          "evidence"
+        ],
+        "title": "ParcelLineageEventResponse",
+        "type": "object"
+      },
+      "ParcelLineageEvidenceResponse": {
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "raw_source_record_id": {
+            "title": "Raw Source Record Id",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "id",
+          "raw_source_record_id",
+          "source_url",
+          "excerpt",
+          "confidence",
+          "observed_at",
+          "last_verified_at",
+          "payload"
+        ],
+        "title": "ParcelLineageEvidenceResponse",
+        "type": "object"
+      },
+      "ParcelLineageParticipantResponse": {
+        "properties": {
+          "external_parcel_id": {
+            "title": "External Parcel Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "parcel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParcelSummaryResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parcel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel Id"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "external_parcel_id",
+          "parcel_id",
+          "parcel",
+          "last_verified_at"
+        ],
+        "title": "ParcelLineageParticipantResponse",
         "type": "object"
       },
       "ParcelSearchHitResponse": {
@@ -16202,6 +16407,48 @@
           }
         },
         "summary": "Promote Candidate",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/parcel-lineage-events/{event_id}": {
+      "get": {
+        "operationId": "get_parcel_lineage_event_v1_parcel_lineage_events__event_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelLineageEventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Parcel Lineage Event",
         "tags": [
           "nearby parcels"
         ]

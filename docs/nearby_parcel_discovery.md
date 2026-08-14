@@ -62,6 +62,36 @@ map modes:
 Raw polygon export remains blocked by each source's `export_policy`; UI shapes
 are derived display context only.
 
+### Parcel Lineage
+
+Parcel identity changes are represented as source-reported events rather than
+overwriting a parcel or storing a single parent pointer. Each organization-
+scoped event has one or more predecessor and successor participants, which
+supports one-to-many splits, many-to-one merges, replats, and corrections.
+
+The generic parcel ingestion contract accepts these optional canonical fields:
+
+- `lineage_event_id`: stable event or recording identity within the source.
+- `lineage_event_type`: `split`, `merge`, `replat`, or `correction`.
+- `lineage_predecessor_ids` and `lineage_successor_ids`: source parcel IDs as
+  arrays or delimiter-separated strings. Sources can set `lineage_delimiter`.
+- `lineage_observed_at`, `lineage_confidence`, and `lineage_excerpt`: event
+  date, bounded confidence, and reviewer-facing evidence text.
+
+When only predecessor IDs are supplied, the ingested parcel is the successor.
+When only successor IDs are supplied, it is the predecessor. Unknown parcel
+IDs remain unresolved participants and are linked automatically when that
+parcel later arrives from the same source. Every event and participant keeps a
+last-verification timestamp, and every immutable raw record supporting the
+claim creates a separate evidence row. Replays advance verification without
+duplicating evidence.
+
+Lineage claims are additive. A publisher correction is represented by a new
+`correction` event rather than deleting prior evidence. This preserves the
+source history and avoids silently rewriting parcel identity. Resolved
+predecessor-to-successor pairs are also projected into the generic knowledge
+graph as evidence-backed `related_to` relationships with lineage attributes.
+
 Candidate CSV export is a separate server-side decision available to editors
 and administrators. Only active sources whose exact policy value appears in the
 reviewed parcel-export allowlist are included; missing, malformed, or newly
@@ -243,6 +273,8 @@ graph path traversal so distance queries use spatial indexes.
 - `GET /parcel-acquisition-cases/{case_id}`
 - `PATCH /parcel-acquisition-cases/{case_id}`
 - `POST /parcel-acquisition-cases/{case_id}/activities`
+- `GET /parcels/{parcel_id}` includes `lineage_events`.
+- `GET /parcel-lineage-events/{event_id}` returns participants and evidence.
 
 Search input includes `radius_miles`, persona, minimum parcel area, land-use or
 zoning filters, ownership filters, and result limit. Responses include distance,

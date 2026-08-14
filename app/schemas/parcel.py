@@ -69,6 +69,43 @@ class ParcelSummaryResponse(BaseModel):
     last_verified_at: datetime
 
 
+class ParcelLineageEvidenceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    raw_source_record_id: str
+    source_url: Optional[str]
+    excerpt: Optional[str]
+    confidence: float
+    observed_at: datetime
+    last_verified_at: datetime
+    payload: Optional[dict[str, Any]]
+
+
+class ParcelLineageParticipantResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    role: str
+    external_parcel_id: str
+    parcel_id: Optional[str]
+    parcel: Optional[ParcelSummaryResponse]
+    last_verified_at: datetime
+
+
+class ParcelLineageEventResponse(BaseModel):
+    id: str
+    source_key: str
+    external_event_id: str
+    event_type: str
+    confidence: float
+    observed_at: datetime
+    last_verified_at: datetime
+    attributes: Optional[dict[str, Any]]
+    participants: list[ParcelLineageParticipantResponse]
+    evidence: list[ParcelLineageEvidenceResponse]
+
+
 class NearbyParcelCandidateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -131,6 +168,7 @@ class ParcelDetailResponse(BaseModel):
     search_hits: list[ParcelSearchHitResponse] = Field(default_factory=list)
     graph_entity: Optional[dict[str, Any]] = None
     graph_related: list[dict[str, Any]] = Field(default_factory=list)
+    lineage_events: list[ParcelLineageEventResponse] = Field(default_factory=list)
 
 
 class NearbyParcelOpportunityResponse(BaseModel):

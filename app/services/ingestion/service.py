@@ -46,6 +46,7 @@ from app.services.ingestion.normalization import (
     prepare_mapped_record,
 )
 from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
+from app.services.parcel_lineage import upsert_lineage_from_snapshot
 from app.utils.org_scope import active_query, get_org_id
 
 PERMIT_COLUMNS = {
@@ -789,6 +790,14 @@ def _persist_parcel(
             if fact.is_current:
                 fact.last_verified_at = fetched_at
         _project_parcel_to_graph(db, source, parcel, raw)
+        upsert_lineage_from_snapshot(
+            db,
+            source=source,
+            raw_record=raw,
+            current_parcel=parcel,
+            values=normalized.values,
+            verified_at=fetched_at,
+        )
         return parcel, "reprocessed" if was_inactive else "unchanged"
 
     values = normalized.values
@@ -806,6 +815,14 @@ def _persist_parcel(
         attributes=normalized.unmapped or None,
     )
     _project_parcel_to_graph(db, source, parcel, raw)
+    upsert_lineage_from_snapshot(
+        db,
+        source=source,
+        raw_record=raw,
+        current_parcel=parcel,
+        values=values,
+        verified_at=fetched_at,
+    )
     return parcel, action
 
 
