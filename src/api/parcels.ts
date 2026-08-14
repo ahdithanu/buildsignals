@@ -11,6 +11,10 @@ import type {
   AcquisitionRadarParams,
   AcquisitionRadarResponse,
   ParcelReviewStatus,
+  ParcelAcquisitionActivity,
+  ParcelAcquisitionActivityCreate,
+  ParcelAcquisitionCase,
+  ParcelAcquisitionCaseUpdate,
 } from '@/types/parcel';
 
 export const parcelsApi = {
@@ -18,6 +22,21 @@ export const parcelsApi = {
     apiClient.get<AcquisitionRadarResponse>(
       '/acquisition-radar',
       params as Record<string, string | number | boolean | undefined>,
+    ),
+  acquisitionCase: (caseId: string): Promise<ParcelAcquisitionCase> =>
+    apiClient.get<ParcelAcquisitionCase>(`/parcel-acquisition-cases/${caseId}`),
+  updateAcquisitionCase: (
+    caseId: string,
+    payload: ParcelAcquisitionCaseUpdate,
+  ): Promise<ParcelAcquisitionCase> =>
+    apiClient.patch<ParcelAcquisitionCase>(`/parcel-acquisition-cases/${caseId}`, payload),
+  recordAcquisitionActivity: (
+    caseId: string,
+    payload: ParcelAcquisitionActivityCreate,
+  ): Promise<ParcelAcquisitionActivity> =>
+    apiClient.post<ParcelAcquisitionActivity>(
+      `/parcel-acquisition-cases/${caseId}/activities`,
+      payload,
     ),
   history: (dealId: string): Promise<NearbyParcelSearchSummary[]> =>
     apiClient.get<NearbyParcelSearchSummary[]>(`/deals/${dealId}/nearby-parcel-searches`),

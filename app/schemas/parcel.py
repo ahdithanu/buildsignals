@@ -155,6 +155,7 @@ class AcquisitionRadarSignalResponse(BaseModel):
 class AcquisitionRadarItemResponse(BaseModel):
     parcel: ParcelSummaryResponse
     candidate_id: str
+    acquisition_case_id: Optional[str] = None
     radar_score: float
     best_candidate_score: float
     score_confidence: float
@@ -164,6 +165,9 @@ class AcquisitionRadarItemResponse(BaseModel):
     review_status: str
     assigned_to_user_id: Optional[str] = None
     assigned_to_name: Optional[str] = None
+    contacted_at: Optional[datetime] = None
+    follow_up_at: Optional[datetime] = None
+    promoted_deal_id: Optional[str] = None
     latest_signal_at: datetime
     reasons: list[str]
     cautions: list[str]

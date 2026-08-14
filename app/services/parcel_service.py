@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import case, desc, func, or_
+from sqlalchemy import and_, case, desc, func, or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.models.acquisition import ParcelAcquisitionCase
 from app.models.brand import PermitBrandMatch
 from app.models.deal import Deal
 from app.models.graph import GraphEntityType, GraphRelationshipType
@@ -13,6 +14,7 @@ from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelR
 from app.models.user import User
 from app.schemas.deal import DealCreate
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
+from app.services.acquisition_service import ensure_acquisition_case_for_candidate
 from app.services.audit_service import log_change
 from app.services.brand_intelligence import list_deal_brand_matches
 from app.services.deal_service import create_deal_with_defaults
@@ -46,14 +48,36 @@ def _radar_candidate_query(
     assignment: str | None = None,
 ):
     rows = active_query(db.query(NearbyParcelCandidate), NearbyParcelCandidate).join(
-        NearbyParcelSearch, NearbyParcelCandidate.search_id == NearbyParcelSearch.id
-    ).join(ParcelRecord, NearbyParcelCandidate.parcel_id == ParcelRecord.id).outerjoin(
+        NearbyParcelSearch,
+        and_(
+            NearbyParcelCandidate.search_id == NearbyParcelSearch.id,
+            NearbyParcelCandidate.organization_id == NearbyParcelSearch.organization_id,
+        ),
+    ).join(
+        ParcelRecord,
+        and_(
+            NearbyParcelCandidate.parcel_id == ParcelRecord.id,
+            NearbyParcelCandidate.organization_id == ParcelRecord.organization_id,
+        ),
+    ).outerjoin(
         PermitBrandMatch,
-        NearbyParcelSearch.anchor_brand_match_id == PermitBrandMatch.id,
+        and_(
+            NearbyParcelSearch.anchor_brand_match_id == PermitBrandMatch.id,
+            NearbyParcelSearch.organization_id == PermitBrandMatch.organization_id,
+        ),
+    ).outerjoin(
+        ParcelAcquisitionCase,
+        and_(
+            ParcelAcquisitionCase.parcel_id == ParcelRecord.id,
+            ParcelAcquisitionCase.organization_id == NearbyParcelCandidate.organization_id,
+        ),
     )
     if query:
         pattern = f"%{query.strip()}%"
-        rows = rows.join(Deal, NearbyParcelSearch.deal_id == Deal.id).filter(or_(
+        rows = rows.join(Deal, and_(
+            NearbyParcelSearch.deal_id == Deal.id,
+            NearbyParcelSearch.organization_id == Deal.organization_id,
+        )).filter(or_(
             ParcelRecord.external_parcel_id.ilike(pattern),
             ParcelRecord.address.ilike(pattern),
             ParcelRecord.city.ilike(pattern),
@@ -65,11 +89,23 @@ def _radar_candidate_query(
     if persona:
         rows = rows.filter(NearbyParcelSearch.persona == persona)
     if review_status:
-        rows = rows.filter(NearbyParcelCandidate.review_status == review_status)
+        rows = rows.filter(
+            func.coalesce(
+                ParcelAcquisitionCase.status, NearbyParcelCandidate.review_status
+            ) == review_status
+        )
     if assignment == "assigned":
-        rows = rows.filter(NearbyParcelCandidate.assigned_to_user_id.isnot(None))
+        rows = rows.filter(
+            func.coalesce(
+                ParcelAcquisitionCase.assigned_to_user_id,
+                NearbyParcelCandidate.assigned_to_user_id,
+            ).isnot(None)
+        )
     elif assignment == "unassigned":
-        rows = rows.filter(NearbyParcelCandidate.assigned_to_user_id.is_(None))
+        rows = rows.filter(
+            ParcelAcquisitionCase.assigned_to_user_id.is_(None),
+            NearbyParcelCandidate.assigned_to_user_id.is_(None),
+        )
     return rows
 
 
@@ -104,10 +140,15 @@ def list_acquisition_radar(
         func.count(func.distinct(NearbyParcelSearch.deal_id)).label("opportunity_count"),
         func.max(NearbyParcelSearch.created_at).label("latest_signal_at"),
         func.max(ParcelRecord.last_verified_at).label("last_verified_at"),
-        func.sum(case((NearbyParcelCandidate.review_status == "shortlisted", 1), else_=0)).label(
+        func.sum(case((func.coalesce(
+            ParcelAcquisitionCase.status, NearbyParcelCandidate.review_status
+        ) == "shortlisted", 1), else_=0)).label(
             "shortlisted_count"
         ),
-        func.sum(case((NearbyParcelCandidate.assigned_to_user_id.isnot(None), 1), else_=0)).label(
+        func.sum(case((func.coalesce(
+            ParcelAcquisitionCase.assigned_to_user_id,
+            NearbyParcelCandidate.assigned_to_user_id,
+        ).isnot(None), 1), else_=0)).label(
             "assigned_count"
         ),
     ).group_by(ParcelRecord.id, ParcelRecord.state).subquery()
@@ -170,6 +211,10 @@ def list_acquisition_radar(
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_brand_match),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_permit),
     ).filter(NearbyParcelCandidate.parcel_id.in_(parcel_ids)).all()
+    acquisition_cases = active_query(
+        db.query(ParcelAcquisitionCase), ParcelAcquisitionCase
+    ).filter(ParcelAcquisitionCase.parcel_id.in_(parcel_ids)).all()
+    cases_by_parcel = {case.parcel_id: case for case in acquisition_cases}
     by_parcel: dict[str, list[NearbyParcelCandidate]] = {}
     for candidate in candidates:
         by_parcel.setdefault(candidate.parcel_id, []).append(candidate)
@@ -188,6 +233,7 @@ def list_acquisition_radar(
         if not parcel_candidates:
             continue
         representative = parcel_candidates[0]
+        acquisition_case = cases_by_parcel.get(aggregate.parcel_id)
         signal_confidence = float(aggregate.signal_confidence or 0.0)
         final_score = min(100.0, float(aggregate.radar_score))
         opportunity_count = int(aggregate.opportunity_count)
@@ -206,8 +252,10 @@ def list_acquisition_radar(
             for candidate in parcel_candidates
             for caution in (candidate.explanation or {}).get("cautions", [])
         ))[:3]
-        review = "shortlisted" if aggregate.shortlisted_count else (
+        review = acquisition_case.status if acquisition_case else (
+            "shortlisted" if aggregate.shortlisted_count else (
             "candidate" if any(item.review_status == "candidate" for item in parcel_candidates) else "dismissed"
+            )
         )
         signals = []
         seen_deals = set()
@@ -232,6 +280,7 @@ def list_acquisition_radar(
         items.append({
             "parcel": representative.parcel,
             "candidate_id": representative.id,
+            "acquisition_case_id": acquisition_case.id if acquisition_case else None,
             "radar_score": round(final_score, 1),
             "best_candidate_score": float(aggregate.best_score),
             "score_confidence": float(aggregate.best_confidence),
@@ -239,8 +288,19 @@ def list_acquisition_radar(
             "opportunity_count": opportunity_count,
             "personas": personas,
             "review_status": review,
-            "assigned_to_user_id": representative.assigned_to_user_id,
-            "assigned_to_name": representative.assigned_to_name,
+            "assigned_to_user_id": (
+                acquisition_case.assigned_to_user_id
+                if acquisition_case else representative.assigned_to_user_id
+            ),
+            "assigned_to_name": (
+                acquisition_case.assigned_to_name
+                if acquisition_case else representative.assigned_to_name
+            ),
+            "contacted_at": acquisition_case.contacted_at if acquisition_case else None,
+            "follow_up_at": acquisition_case.follow_up_at if acquisition_case else None,
+            "promoted_deal_id": (
+                acquisition_case.promoted_deal_id if acquisition_case else None
+            ),
             "latest_signal_at": aggregate.latest_signal_at,
             "reasons": reasons,
             "cautions": cautions,
@@ -340,7 +400,7 @@ def create_nearby_parcel_search(
     ranked.sort(key=lambda row: (-row[2].score, row[1], row[0].external_parcel_id))
 
     for rank, (parcel, distance, score) in enumerate(ranked, start=1):
-        db.add(NearbyParcelCandidate(
+        candidate = NearbyParcelCandidate(
             organization_id=get_org_id(),
             search_id=search.id,
             parcel_id=parcel.id,
@@ -355,7 +415,10 @@ def create_nearby_parcel_search(
             },
             review_status="candidate",
             ranker_version=ranker_version(persona),
-        ))
+        )
+        db.add(candidate)
+        db.flush()
+        ensure_acquisition_case_for_candidate(db, candidate)
     log_change(
         db,
         "nearby_parcel_search",
@@ -509,6 +572,8 @@ def review_nearby_parcel_candidate(
         return None
     old_status = candidate.review_status
     candidate.review_status = review_status
+    acquisition_case = ensure_acquisition_case_for_candidate(db, candidate)
+    acquisition_case.status = review_status
     log_change(
         db,
         "nearby_parcel_candidate",
@@ -568,6 +633,11 @@ def assign_nearby_parcel_candidate(
     candidate.assigned_to_name = assignee_membership.user.full_name
     candidate.assigned_by_user_id = actor.id
     candidate.assigned_at = utcnow()
+    acquisition_case = ensure_acquisition_case_for_candidate(db, candidate)
+    acquisition_case.assigned_to_user_id = candidate.assigned_to_user_id
+    acquisition_case.assigned_to_name = candidate.assigned_to_name
+    acquisition_case.assigned_by_user_id = candidate.assigned_by_user_id
+    acquisition_case.assigned_at = candidate.assigned_at
     log_change(
         db,
         "nearby_parcel_candidate",
@@ -603,8 +673,9 @@ def promote_nearby_parcel_candidate_to_deal(
     ).filter(NearbyParcelCandidate.id == candidate_id).first()
     if candidate is None:
         raise LookupError("Nearby parcel candidate not found")
-    if candidate.review_status != "shortlisted":
-        raise ValueError("Only shortlisted parcels can be promoted")
+    acquisition_case = ensure_acquisition_case_for_candidate(db, candidate)
+    if acquisition_case.status not in {"shortlisted", "contacted"}:
+        raise ValueError("Only shortlisted or contacted parcels can be promoted")
 
     parcel = candidate.parcel
     deal_name = name or parcel.address or parcel.external_parcel_id
@@ -693,6 +764,8 @@ def promote_nearby_parcel_candidate_to_deal(
             "candidate_id": candidate.id,
         },
     )
+    acquisition_case.status = "promoted"
+    acquisition_case.promoted_deal_id = deal.id
     db.flush()
     return deal, True
 

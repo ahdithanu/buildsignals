@@ -43,3 +43,8 @@ from app.models.parcel import (  # noqa
     ParcelFact,
     ParcelRecord,
 )
+from app.models.acquisition import (  # noqa
+    ParcelAcquisitionActivity,
+    ParcelAcquisitionCase,
+    ParcelAcquisitionSource,
+)

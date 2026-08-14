@@ -8,6 +8,8 @@ signal:
 - canonical parcel records and independently versioned parcel facts
 - physical-parcel grouping for condo units and multi-account assessor records
 - persisted search inputs and ranked candidate snapshots
+- one canonical acquisition case per organization and parcel, with all
+  contributing search/candidate provenance retained
 - 0.25-5 mile validation, SQLite haversine retrieval, and PostgreSQL PostGIS
   `ST_DWithin`/`ST_Distance` queries with a generated geography centroid and
   GiST index
@@ -16,7 +18,8 @@ signal:
   explainable rankings; `investor-v1`, `broker-v2`, and `realtor-v2` add
   official sale-tenure evidence while
   never inferring listing status or owner willingness to sell
-- shortlist and dismissal review with audit history
+- shortlist, dismissal, assignment, outreach, follow-up, and promotion with
+  actor audit history
 - opportunity-detail panel with confirmed-signal selection and bounded radius
 - server-authorized CSV export with source-policy filtering, actor audit, and
   spreadsheet-injection protection
@@ -151,6 +154,19 @@ Persist the user decision surface, not the raw geospatial result alone:
 - review state: `candidate`, `shortlisted`, `dismissed`, `contacted`
 - evidence references used by every scored feature
 
+### Acquisition Cases
+
+Repeated appearances converge on one organization-scoped parcel case:
+
+- canonical status, assignee, contacted time, follow-up, and promoted deal
+- source links to every contributing candidate and nearby-parcel search
+- immutable call, email, text, meeting, and note activities with actor and time
+- tenant isolation and audit history for all mutations
+
+This separates durable acquisition work from versioned ranking snapshots. A
+new search can add evidence without resetting an existing shortlist, dismissal,
+assignment, or outreach history.
+
 ## Ranking Personas
 
 All scores are explainable 0-100 feature composites. Missing data lowers
@@ -224,6 +240,9 @@ graph path traversal so distance queries use spatial indexes.
 - `POST /nearby-parcel-searches/{search_id}/export`
 - `PATCH /parcel-candidates/{candidate_id}`
 - `GET /acquisition-radar`
+- `GET /parcel-acquisition-cases/{case_id}`
+- `PATCH /parcel-acquisition-cases/{case_id}`
+- `POST /parcel-acquisition-cases/{case_id}/activities`
 
 Search input includes `radius_miles`, persona, minimum parcel area, land-use or
 zoning filters, ownership filters, and result limit. Responses include distance,
@@ -247,6 +266,8 @@ automatically for linked deals. The implemented workspace includes:
 The organization-wide Acquisition Radar deduplicates these candidates across
 opportunities and ranks them by parcel fit, evidence confidence, connected
 signal confidence, repeated opportunity exposure, review state, and freshness.
+It is also the team queue for canonical case status, assignment, outreach,
+follow-up, pagination, and explicit opportunity promotion.
 
 No parcel becomes an opportunity automatically. Promotion is an explicit user
 action that preserves the originating search, ranking version, and evidence.

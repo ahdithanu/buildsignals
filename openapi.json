@@ -42,6 +42,17 @@
       },
       "AcquisitionRadarItemResponse": {
         "properties": {
+          "acquisition_case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acquisition Case Id"
+          },
           "appearance_count": {
             "title": "Appearance Count",
             "type": "integer"
@@ -83,6 +94,30 @@
             "title": "Cautions",
             "type": "array"
           },
+          "contacted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contacted At"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
           "latest_signal_at": {
             "format": "date-time",
             "title": "Latest Signal At",
@@ -101,6 +136,17 @@
             },
             "title": "Personas",
             "type": "array"
+          },
+          "promoted_deal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promoted Deal Id"
           },
           "radar_score": {
             "title": "Radar Score",
@@ -6672,6 +6718,342 @@
         "title": "OutputsResponse",
         "type": "object"
       },
+      "ParcelAcquisitionActivityCreate": {
+        "properties": {
+          "activity_type": {
+            "enum": [
+              "call",
+              "email",
+              "sms",
+              "meeting",
+              "note"
+            ],
+            "title": "Activity Type",
+            "type": "string"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          }
+        },
+        "required": [
+          "activity_type"
+        ],
+        "title": "ParcelAcquisitionActivityCreate",
+        "type": "object"
+      },
+      "ParcelAcquisitionActivityResponse": {
+        "properties": {
+          "activity_type": {
+            "title": "Activity Type",
+            "type": "string"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "activity_type",
+          "notes",
+          "actor_user_id",
+          "occurred_at",
+          "follow_up_at",
+          "created_at"
+        ],
+        "title": "ParcelAcquisitionActivityResponse",
+        "type": "object"
+      },
+      "ParcelAcquisitionCaseResponse": {
+        "properties": {
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelAcquisitionActivityResponse"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "assigned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          },
+          "assigned_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned By User Id"
+          },
+          "assigned_to_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To Name"
+          },
+          "assigned_to_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To User Id"
+          },
+          "contacted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contacted At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "parcel_id": {
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "promoted_deal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promoted Deal Id"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelAcquisitionSourceResponse"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "parcel_id",
+          "status",
+          "assigned_to_user_id",
+          "assigned_to_name",
+          "assigned_by_user_id",
+          "assigned_at",
+          "contacted_at",
+          "follow_up_at",
+          "promoted_deal_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ParcelAcquisitionCaseResponse",
+        "type": "object"
+      },
+      "ParcelAcquisitionCaseUpdate": {
+        "properties": {
+          "assigned_to_user_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To User Id"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "candidate",
+                  "shortlisted",
+                  "contacted",
+                  "dismissed",
+                  "promoted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "ParcelAcquisitionCaseUpdate",
+        "type": "object"
+      },
+      "ParcelAcquisitionSourceResponse": {
+        "properties": {
+          "candidate_id": {
+            "title": "Candidate Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "search_id": {
+            "title": "Search Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "candidate_id",
+          "search_id",
+          "created_at"
+        ],
+        "title": "ParcelAcquisitionSourceResponse",
+        "type": "object"
+      },
       "ParcelDetailResponse": {
         "properties": {
           "facts": {
@@ -9816,7 +10198,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(candidate|shortlisted|dismissed)$",
+                  "pattern": "^(candidate|shortlisted|contacted|dismissed|promoted)$",
                   "type": "string"
                 },
                 {
@@ -15442,6 +15824,182 @@
         "summary": "List Follow Ups",
         "tags": [
           "activities"
+        ]
+      }
+    },
+    "/v1/parcel-acquisition-cases/{case_id}": {
+      "get": {
+        "operationId": "get_case_v1_parcel_acquisition_cases__case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelAcquisitionCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Case",
+        "tags": [
+          "nearby parcels"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_case_v1_parcel_acquisition_cases__case_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParcelAcquisitionCaseUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelAcquisitionCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Case",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/parcel-acquisition-cases/{case_id}/activities": {
+      "post": {
+        "operationId": "create_case_activity_v1_parcel_acquisition_cases__case_id__activities_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParcelAcquisitionActivityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelAcquisitionActivityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Case Activity",
+        "tags": [
+          "nearby parcels"
         ]
       }
     },

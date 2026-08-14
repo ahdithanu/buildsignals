@@ -7,6 +7,11 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import app.services.ingestion.service as ingestion_service
+from app.models.acquisition import (
+    ParcelAcquisitionActivity,
+    ParcelAcquisitionCase,
+    ParcelAcquisitionSource,
+)
 from app.models.audit_log import AuditLog
 from app.models.brand import PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
@@ -486,6 +491,121 @@ def test_nearby_parcel_export_requires_editor_or_admin(client, db):
     assert response.status_code == 403
 
 
+def test_parcel_acquisition_case_tracks_provenance_status_and_outreach(
+    client, db, tmp_path
+):
+    headers = _admin_headers(db)
+    deal, source_data, match = _setup_confirmed_signal(
+        client, db, tmp_path, headers=headers
+    )
+    source = db.get(IngestionSource, source_data["id"])
+    raw = db.query(RawSourceRecord).one()
+    _add_parcel(db, source.id, raw.id, "P-CASE", -97.735)
+    db.commit()
+    created = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        headers=headers,
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "broker",
+        },
+    )
+    assert created.status_code == 201, created.text
+    acquisition_case = db.query(ParcelAcquisitionCase).one()
+    provenance = db.query(ParcelAcquisitionSource).one()
+    assert provenance.case_id == acquisition_case.id
+    assert provenance.candidate_id == created.json()["candidates"][0]["id"]
+
+    reviewed = client.patch(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=headers,
+        json={"status": "shortlisted"},
+    )
+    assert reviewed.status_code == 200, reviewed.text
+    assert reviewed.json()["status"] == "shortlisted"
+    assert db.query(NearbyParcelCandidate).one().review_status == "shortlisted"
+
+    assignee_id = db.query(OrganizationMembership).one().user_id
+    assigned = client.patch(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=headers,
+        json={"assigned_to_user_id": assignee_id},
+    )
+    assert assigned.status_code == 200, assigned.text
+    assert assigned.json()["assigned_to_user_id"] == assignee_id
+    assert db.query(NearbyParcelCandidate).one().assigned_to_user_id == assignee_id
+    unassigned = client.patch(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=headers,
+        json={"assigned_to_user_id": None},
+    )
+    assert unassigned.status_code == 200, unassigned.text
+    assert unassigned.json()["assigned_to_user_id"] is None
+    assert db.query(NearbyParcelCandidate).one().assigned_to_user_id is None
+
+    follow_up = datetime(2026, 8, 21, 17, 0, tzinfo=timezone.utc)
+    outreach = client.post(
+        f"/parcel-acquisition-cases/{acquisition_case.id}/activities",
+        headers=headers,
+        json={
+            "activity_type": "call",
+            "notes": "Owner representative requested a follow-up.",
+            "follow_up_at": follow_up.isoformat(),
+        },
+    )
+    assert outreach.status_code == 201, outreach.text
+    assert outreach.json()["activity_type"] == "call"
+    detail = client.get(f"/parcel-acquisition-cases/{acquisition_case.id}")
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["status"] == "contacted"
+    assert detail.json()["follow_up_at"].startswith("2026-08-21T17:00:00")
+    assert len(detail.json()["sources"]) == 1
+    assert len(detail.json()["activities"]) == 1
+    assert db.query(ParcelAcquisitionActivity).count() == 1
+    assert db.query(AuditLog).filter_by(
+        entity_type="parcel_acquisition_case"
+    ).count() == 4
+
+    promoted = client.post(
+        f"/parcel-candidates/{provenance.candidate_id}/opportunity",
+        headers=headers,
+        json={"name": "Outreach Parcel"},
+    )
+    assert promoted.status_code == 200, promoted.text
+    db.refresh(acquisition_case)
+    assert acquisition_case.status == "promoted"
+    assert acquisition_case.promoted_deal_id == promoted.json()["deal"]["id"]
+
+    other_org = client.post("/auth/register", json={
+        "email": "other-org-acquisition@example.com",
+        "password": "CorrectHorseBattery42",
+        "full_name": "Other Org Admin",
+        "organization_name": "Other Acquisition Org",
+    })
+    assert other_org.status_code == 201, other_org.text
+    other_headers = {
+        "Authorization": f"Bearer {other_org.json()['access_token']}"
+    }
+    assert client.get(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=other_headers,
+    ).status_code == 404
+    assert client.patch(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=other_headers,
+        json={"status": "dismissed"},
+    ).status_code == 404
+    assert client.post(
+        f"/parcel-acquisition-cases/{acquisition_case.id}/activities",
+        headers=other_headers,
+        json={"activity_type": "note", "notes": "Must remain isolated"},
+    ).status_code == 404
+    other_radar = client.get("/acquisition-radar", headers=other_headers)
+    assert other_radar.status_code == 200
+    assert other_radar.json()["items"] == []
+
+
 def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcels(
     client, db, tmp_path
 ):
@@ -544,7 +664,7 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
     )
     db.add(second_search)
     db.flush()
-    db.add(NearbyParcelCandidate(
+    second_candidate = NearbyParcelCandidate(
         organization_id="default-org",
         search_id=second_search.id,
         parcel_id=parcel.id,
@@ -553,10 +673,16 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
         score=88,
         score_confidence=0.92,
         explanation={"reasons": ["Repeated market signal"], "cautions": []},
-        review_status="shortlisted",
+        review_status="candidate",
         ranker_version="broker-v2",
-    ))
+    )
+    db.add(second_candidate)
     db.commit()
+    shortlisted = client.patch(
+        f"/parcel-candidates/{second_candidate.id}",
+        json={"review_status": "shortlisted"},
+    )
+    assert shortlisted.status_code == 200, shortlisted.text
 
     response = client.get("/acquisition-radar?state=TX")
     assert response.status_code == 200, response.text
@@ -575,6 +701,7 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
     assert item["appearance_count"] == 2
     assert item["personas"] == ["broker", "developer"]
     assert item["review_status"] == "shortlisted"
+    assert item["acquisition_case_id"]
     assert item["radar_score"] > first_candidate.score * 0.45
     assert {signal["deal_name"] for signal in item["signals"]} == {
         "Main Street signal",
@@ -584,7 +711,7 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
 
     filtered = client.get("/acquisition-radar?persona=developer&review_status=candidate")
     assert filtered.status_code == 200
-    assert filtered.json()["items"][0]["opportunity_count"] == 1
+    assert filtered.json()["items"] == []
 
 
 def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path):
