@@ -17,6 +17,16 @@ PARCEL_FIELDS = {
     "land_value", "improvement_value", "total_assessed_value", "land_use",
     "zoning_code",
 }
+MANAGED_FACT_TYPES = {
+    "ownership",
+    "last_sale",
+    "tax_status",
+    "vacancy",
+    "zoning",
+    "land_use",
+    "improvements",
+    "valuation",
+}
 
 
 @dataclass(frozen=True)
@@ -100,6 +110,18 @@ def upsert_parcel_snapshot(
         parcel.retired_at = None
         action = "updated"
     db.flush()
+
+    incoming_fact_types = {fact.fact_type for fact in facts}
+    if snapshot_id is not None:
+        omitted_fact_types = MANAGED_FACT_TYPES - incoming_fact_types
+        omitted = active_query(db.query(ParcelFact), ParcelFact).filter(
+            ParcelFact.parcel_id == parcel.id,
+            ParcelFact.fact_type.in_(omitted_fact_types),
+            ParcelFact.is_current.is_(True),
+        ).all()
+        for fact in omitted:
+            fact.is_current = False
+            fact.valid_to = now
 
     for incoming in facts:
         if not incoming.fact_type.strip():

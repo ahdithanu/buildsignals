@@ -226,7 +226,10 @@ Run the **same ECR image** as App Runner on a schedule via EventBridge:
 
 1. **Task definition** — same image/env as App Runner (`DATABASE_URL`,
    `SECRET_KEY`, `REDIS_URL`, `ENVIRONMENT=production`, `CORS_ALLOWED_ORIGINS`,
-   and the reviewed static `INGESTION_ALLOWED_HOSTS` list).
+   the reviewed static `INGESTION_ALLOWED_HOSTS` list, its
+   `INGESTION_HOST_POLICY_DIGEST`, the reviewed
+   `INGESTION_ROLLOUT_MANIFEST_DIGEST`, and an explicit
+   `INGESTION_ROLLOUT_WAVE`).
 2. **Command override:** `ingest` (not `serve`).
 3. **EventBridge rule:** `cron(17 * * * ? *)` (hourly at minute 17 UTC).
 4. **Network:** task must reach RDS (public SG on pilot tier, or run in VPC on
@@ -241,6 +244,9 @@ docker run --rm \
   -e ENVIRONMENT=production \
   -e CORS_ALLOWED_ORIGINS=https://<cloudfront-url> \
   -e INGESTION_ALLOWED_HOSTS=<reviewed-comma-separated-source-hosts> \
+  -e INGESTION_HOST_POLICY_DIGEST=<reviewed-policy-digest> \
+  -e INGESTION_ROLLOUT_MANIFEST_DIGEST=<reviewed-manifest-digest> \
+  -e INGESTION_ROLLOUT_WAVE=1 \
   -e REDIS_URL=<optional> \
   -e INGESTION_ORGANIZATION=default-org \
   $AWS_ACCOUNT.dkr.ecr.$REGION.amazonaws.com/dealsignal-api:latest ingest
@@ -253,9 +259,10 @@ Or from ECS: run task with container command `ingest`.
 If RDS is reachable from GitHub-hosted runners (pilot tier: public RDS + SG
 allowing GitHub IP ranges, or self-hosted runner in VPC):
 
-1. Configure the four production secrets documented in
+1. Configure the six production secrets documented in
    [ingestion-scheduling.md](ingestion-scheduling.md): database URL, app secret,
-   CORS origins, and the reviewed static ingestion host allowlist.
+   CORS origins, the reviewed static ingestion host allowlist, its digest, and
+   the reviewed rollout manifest digest.
 2. Set repository variable **`INGESTION_ORCHESTRATOR=github`** and disable any
    Render or EventBridge ingestion schedule for the same environment.
 3. Workflow **`.github/workflows/ingestion-cron.yml`** runs hourly at minute 17 UTC.

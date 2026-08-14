@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 
@@ -13,11 +13,13 @@ vi.mock("@/hooks/useNearbyParcels", () => ({
 vi.mock("@/hooks/useOrganizationMembers", () => ({
   useOrganizationMembers: vi.fn(),
 }));
+const authState = vi.hoisted(() => ({ role: "admin" }));
+
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: { id: "user-1", full_name: "Test User" },
     organizationId: "org-1",
-    role: "admin",
+    role: authState.role,
     isAuthenticated: true,
     logout: vi.fn(),
   }),
@@ -28,6 +30,10 @@ import { useNearbyParcels } from "@/hooks/useNearbyParcels";
 import { useOrganizationMembers } from "@/hooks/useOrganizationMembers";
 
 describe("<NearbyParcelsPanel>", () => {
+  beforeEach(() => {
+    authState.role = "admin";
+  });
+
   it("shows the buyer-lens parcel workflow for a geocoded pre-approval signal", () => {
     (usePermitBrandMatches as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [
@@ -109,7 +115,7 @@ describe("<NearbyParcelsPanel>", () => {
       ],
     });
 
-    render(
+    const rendered = render(
       <MemoryRouter>
         <NearbyParcelsPanel dealId="deal-1" />
       </MemoryRouter>,
@@ -118,6 +124,7 @@ describe("<NearbyParcelsPanel>", () => {
     expect(screen.getByText("Nearby Parcels")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /buyer lens selector/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Developer" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Investor" })).toBeInTheDocument();
     expect(screen.getByText("Search Map")).toBeInTheDocument();
     expect(screen.getByText("Best developer fit")).toBeInTheDocument();
     expect(screen.getAllByText("0.42 mi")).toHaveLength(2);
@@ -135,6 +142,16 @@ describe("<NearbyParcelsPanel>", () => {
     expect(screen.getByText(/Owner record:/i)).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /open parcel/i })).toHaveLength(2);
     expect(screen.getByRole("button", { name: /export nearby parcels/i })).toBeEnabled();
+
+    authState.role = "viewer";
+    rendered.rerender(
+      <MemoryRouter>
+        <NearbyParcelsPanel dealId="deal-1" />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("button", { name: /export nearby parcels/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /search nearby parcels/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /shortlist parcel/i })).toBeDisabled();
   });
 
   it("exports the current nearby parcel results", () => {
@@ -149,6 +166,12 @@ describe("<NearbyParcelsPanel>", () => {
       configurable: true,
     });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const exportMutate = vi.fn((_searchId, options) => options.onSuccess({
+      blob: new Blob(["server-authorized-export"]),
+      filename: "reviewed-parcels.csv",
+      exportedCount: 1,
+      omittedCount: 0,
+    }));
 
     (usePermitBrandMatches as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [
@@ -211,6 +234,7 @@ describe("<NearbyParcelsPanel>", () => {
       review: { isPending: false, mutate: vi.fn() },
       assign: { isPending: false, mutate: vi.fn(), error: null },
       promote: { isPending: false, mutate: vi.fn(), error: null },
+      exportSearch: { isPending: false, mutate: exportMutate, error: null },
     });
     (useOrganizationMembers as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [
@@ -227,6 +251,7 @@ describe("<NearbyParcelsPanel>", () => {
 
     screen.getByRole("button", { name: /export nearby parcels/i }).click();
 
+    expect(exportMutate).toHaveBeenCalledWith("search-1", expect.any(Object));
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(click).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:nearby-parcels");

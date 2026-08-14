@@ -2,7 +2,9 @@ import type { Deal } from './deal';
 import type { GraphEntity, GraphRelatedEntity } from './graph';
 
 export type ParcelReviewStatus = 'candidate' | 'shortlisted' | 'dismissed';
-export type ParcelPersona = 'developer' | 'broker' | 'realtor';
+export type AcquisitionCaseStatus = ParcelReviewStatus | 'contacted' | 'promoted';
+export type AcquisitionActivityType = 'call' | 'email' | 'sms' | 'meeting' | 'note';
+export type ParcelPersona = 'developer' | 'investor' | 'broker' | 'realtor';
 
 export interface ParcelFact {
   id: string;
@@ -143,15 +145,19 @@ export interface AcquisitionRadarSignal {
 export interface AcquisitionRadarItem {
   parcel: ParcelSummary;
   candidate_id: string;
+  acquisition_case_id?: string | null;
   radar_score: number;
   best_candidate_score: number;
   score_confidence: number;
   appearance_count: number;
   opportunity_count: number;
   personas: ParcelPersona[];
-  review_status: ParcelReviewStatus;
+  review_status: AcquisitionCaseStatus;
   assigned_to_user_id?: string | null;
   assigned_to_name?: string | null;
+  contacted_at?: string | null;
+  follow_up_at?: string | null;
+  promoted_deal_id?: string | null;
   latest_signal_at: string;
   reasons: string[];
   cautions: string[];
@@ -176,8 +182,55 @@ export interface AcquisitionRadarParams {
   q?: string;
   state?: string;
   persona?: ParcelPersona;
-  review_status?: ParcelReviewStatus;
+  review_status?: AcquisitionCaseStatus;
   assignment?: 'assigned' | 'unassigned';
   limit?: number;
   offset?: number;
+}
+
+export interface ParcelAcquisitionSource {
+  id: string;
+  candidate_id: string;
+  search_id: string;
+  created_at: string;
+}
+
+export interface ParcelAcquisitionActivity {
+  id: string;
+  activity_type: AcquisitionActivityType;
+  notes?: string | null;
+  actor_user_id?: string | null;
+  occurred_at: string;
+  follow_up_at?: string | null;
+  created_at: string;
+}
+
+export interface ParcelAcquisitionCase {
+  id: string;
+  parcel_id: string;
+  status: AcquisitionCaseStatus;
+  assigned_to_user_id?: string | null;
+  assigned_to_name?: string | null;
+  assigned_by_user_id?: string | null;
+  assigned_at?: string | null;
+  contacted_at?: string | null;
+  follow_up_at?: string | null;
+  promoted_deal_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  sources: ParcelAcquisitionSource[];
+  activities: ParcelAcquisitionActivity[];
+}
+
+export interface ParcelAcquisitionCaseUpdate {
+  status?: AcquisitionCaseStatus;
+  assigned_to_user_id?: string | null;
+  follow_up_at?: string;
+}
+
+export interface ParcelAcquisitionActivityCreate {
+  activity_type: AcquisitionActivityType;
+  notes?: string;
+  occurred_at?: string;
+  follow_up_at?: string;
 }

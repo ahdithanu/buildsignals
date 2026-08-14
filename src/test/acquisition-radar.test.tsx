@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import AcquisitionRadar from '@/pages/AcquisitionRadar';
 
-const review = vi.fn();
+const updateCase = vi.fn();
+const recordActivity = vi.fn();
+let currentRole = 'admin';
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
   useAcquisitionRadar: () => ({
@@ -23,6 +25,7 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
           last_verified_at: '2026-08-08T12:00:00Z',
         },
         candidate_id: 'candidate-1',
+        acquisition_case_id: 'case-1',
         radar_score: 91.2,
         best_candidate_score: 88,
         score_confidence: 0.94,
@@ -46,12 +49,26 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
     isLoading: false,
     error: null,
     refetch: vi.fn(),
-    review: { isPending: false, variables: undefined, mutate: review },
+    updateCase: { isPending: false, variables: undefined, mutate: updateCase },
+    recordActivity: { isPending: false, variables: undefined, mutate: recordActivity },
+    promote: { isPending: false, variables: undefined, mutate: vi.fn() },
+  }),
+}));
+
+vi.mock('@/hooks/useOrganizationMembers', () => ({
+  useOrganizationMembers: () => ({
+    data: [{ user_id: 'user-1', full_name: 'Alex Rivera' }],
   }),
 }));
 
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ role: 'admin', user: null, isAuthenticated: false, logout: vi.fn() }),
+  useAuth: () => ({
+    role: currentRole,
+    organizationId: 'org-1',
+    user: null,
+    isAuthenticated: false,
+    logout: vi.fn(),
+  }),
 }));
 
 describe('<AcquisitionRadar>', () => {
@@ -69,6 +86,27 @@ describe('<AcquisitionRadar>', () => {
     expect(screen.getByRole('link', { name: '125 Congress Ave' })).toHaveAttribute('href', '/parcels/parcel-1');
 
     fireEvent.click(screen.getByRole('button', { name: 'Shortlist' }));
-    expect(review).toHaveBeenCalledWith({ candidateId: 'candidate-1', reviewStatus: 'shortlisted' });
+    expect(updateCase).toHaveBeenCalledWith(
+      { caseId: 'case-1', payload: { status: 'shortlisted' } },
+      expect.any(Object),
+    );
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Assign 125 Congress Ave' }), {
+      target: { value: 'user-1' },
+    });
+    expect(updateCase).toHaveBeenCalledWith(
+      { caseId: 'case-1', payload: { assigned_to_user_id: 'user-1' } },
+      expect.any(Object),
+    );
+  });
+
+  it('keeps the acquisition queue read-only for viewers', () => {
+    currentRole = 'viewer';
+    render(<MemoryRouter><AcquisitionRadar /></MemoryRouter>);
+
+    expect(screen.queryByRole('button', { name: 'Shortlist' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Assign 125 Congress Ave' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Unassigned').length).toBeGreaterThan(0);
+    currentRole = 'admin';
   });
 });

@@ -163,6 +163,35 @@ describe("ApiClient — auth integration", () => {
     }
   });
 
+  it("downloads authenticated files with server export metadata", async () => {
+    setAccessToken("test.jwt.token");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("rank,parcel\n1,P-1\n", {
+        status: 200,
+        headers: {
+          "Content-Disposition": 'attachment; filename="reviewed-parcels.csv"',
+          "Content-Type": "text/csv",
+          "X-Exported-Count": "1",
+          "X-Omitted-Count": "2",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new ApiClient("http://api.test");
+    const result = await client.download("/parcel-export", "POST");
+
+    expect(result.filename).toBe("reviewed-parcels.csv");
+    expect(result.exportedCount).toBe(1);
+    expect(result.omittedCount).toBe(2);
+    expect(await result.blob.text()).toContain("P-1");
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      "Bearer test.jwt.token",
+    );
+  });
+
   it("legacy localStorage token is hoisted into memory then removed", () => {
     localStorage.setItem(TOKEN_STORAGE_KEY, "legacy.token");
     // First read migrates it out of localStorage.

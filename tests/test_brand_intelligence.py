@@ -1292,7 +1292,9 @@ def test_confirming_linked_brand_match_seeds_nearby_parcel_searches(client, db):
     searches = db.query(NearbyParcelSearch).filter(
         NearbyParcelSearch.deal_id == deal.json()["id"]
     ).all()
-    assert {search.persona for search in searches} == {"developer", "broker", "realtor"}
+    assert {search.persona for search in searches} == {
+        "developer", "investor", "broker", "realtor"
+    }
     assert all(search.anchor_brand_match_id == match.id for search in searches)
 
     repeated = client.post(f"/permit-brand-matches/{match.id}/opportunity", json={})
@@ -1302,4 +1304,4 @@ def test_confirming_linked_brand_match_seeds_nearby_parcel_searches(client, db):
     assert repeated_body["deal"]["id"] == deal.json()["id"]
     assert repeated_body["nearby_parcel_search"] is not None
     assert repeated_body["nearby_parcel_search"]["persona"] == "developer"
-    assert len(repeated_body["nearby_parcel_searches"]) == 3
+    assert len(repeated_body["nearby_parcel_searches"]) == 4

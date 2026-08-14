@@ -31,7 +31,7 @@ on:
         description: Print the due plan without fetching
         type: boolean
         required: false
-        default: false
+        default: true
       stage:
         description: Signal stage to collect
         type: choice
@@ -41,6 +41,17 @@ on:
           - approved_only
         required: false
         default: all
+      rollout_wave:
+        description: Reviewed nationwide rollout wave; required for execution
+        type: choice
+        options:
+          - ""
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+        required: false
+        default: ""
 
 jobs:
   ingest:
@@ -57,13 +68,15 @@ jobs:
       CORS_ALLOWED_ORIGINS: ${{ secrets.INGESTION_CORS_ALLOWED_ORIGINS }}
       INGESTION_ALLOWED_HOSTS: ${{ secrets.INGESTION_ALLOWED_HOSTS }}
       INGESTION_HOST_POLICY_DIGEST: ${{ secrets.INGESTION_HOST_POLICY_DIGEST }}
+      INGESTION_ROLLOUT_MANIFEST_DIGEST: ${{ secrets.INGESTION_ROLLOUT_MANIFEST_DIGEST }}
       ENVIRONMENT: production
       INGESTION_ORGANIZATION: ${{ github.event.inputs.organization || 'default-org' }}
       INGESTION_MAX_PAGES_PER_SOURCE: ${{ github.event.inputs.max_pages_per_source || '' }}
       INGESTION_SHARD_COUNT: ${{ github.event.inputs.shard_count || '1' }}
       INGESTION_SHARD_INDEX: ${{ github.event.inputs.shard_index || '0' }}
-      INGESTION_PLAN_ONLY: ${{ github.event.inputs.plan_only || vars.INGESTION_PLAN_ONLY || 'false' }}
+      INGESTION_PLAN_ONLY: ${{ github.event_name == 'workflow_dispatch' && toJSON(inputs.plan_only) || vars.INGESTION_PLAN_ONLY || 'true' }}
       INGESTION_STAGE: ${{ github.event.inputs.stage || 'all' }}
+      INGESTION_ROLLOUT_WAVE: ${{ github.event.inputs.rollout_wave || vars.INGESTION_ROLLOUT_WAVE || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -77,17 +90,23 @@ jobs:
 
       - name: Run due ingestion
         run: |
-          required=(DATABASE_URL SECRET_KEY CORS_ALLOWED_ORIGINS INGESTION_ALLOWED_HOSTS INGESTION_HOST_POLICY_DIGEST)
+          required=(DATABASE_URL SECRET_KEY CORS_ALLOWED_ORIGINS INGESTION_ALLOWED_HOSTS INGESTION_HOST_POLICY_DIGEST INGESTION_ROLLOUT_MANIFEST_DIGEST)
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
               echo "Required ingestion secret ${name} is not configured."
               exit 1
             fi
           done
-          python -m app.services.ingestion.cli catalog host-audit \
-            --allow-unused-hosts \
-            --stage "$INGESTION_STAGE" \
-            --shard-count "$INGESTION_SHARD_COUNT" \
+          HOST_AUDIT_ARGS=(
+            catalog host-audit
+            --allow-unused-hosts
+            --stage "$INGESTION_STAGE"
+            --shard-count "$INGESTION_SHARD_COUNT"
             --shard-index "$INGESTION_SHARD_INDEX"
+          )
+          if [[ -n "$INGESTION_ROLLOUT_WAVE" ]]; then
+            HOST_AUDIT_ARGS+=(--rollout-wave "$INGESTION_ROLLOUT_WAVE")
+          fi
+          python -m app.services.ingestion.cli "${HOST_AUDIT_ARGS[@]}"
           chmod +x scripts/daily-ingestion.sh
           ./scripts/daily-ingestion.sh

@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.graph import GraphEntity, GraphEntityLink
 from app.models.organization_membership import MemberRole
+from app.schemas.acquisition import (
+    ParcelAcquisitionActivityCreate,
+    ParcelAcquisitionActivityResponse,
+    ParcelAcquisitionCaseResponse,
+    ParcelAcquisitionCaseUpdate,
+)
 from app.schemas.graph import (
     GraphEntityResponse,
     GraphRelatedEntityResponse,
@@ -24,8 +30,14 @@ from app.schemas.parcel import (
     ParcelDetailResponse,
     ParcelSearchHitResponse,
 )
+from app.services.acquisition_service import (
+    get_acquisition_case,
+    record_acquisition_activity,
+    update_acquisition_case,
+)
 from app.services.deal_service import deal_to_detail_response
 from app.services.graph_service import relationships_for_entity
+from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,
     create_nearby_parcel_search,
@@ -42,12 +54,94 @@ from app.utils.org_scope import active_query
 router = APIRouter(tags=["nearby parcels"])
 
 
+@router.get(
+    "/parcel-acquisition-cases/{case_id}",
+    response_model=ParcelAcquisitionCaseResponse,
+)
+def get_case(case_id: str, db: Session = Depends(get_db)):
+    case = get_acquisition_case(db, case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="Parcel acquisition case not found")
+    return case
+
+
+@router.patch(
+    "/parcel-acquisition-cases/{case_id}",
+    response_model=ParcelAcquisitionCaseResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def patch_case(
+    case_id: str,
+    payload: ParcelAcquisitionCaseUpdate,
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        case = update_acquisition_case(
+            db,
+            case_id=case_id,
+            actor_user_id=principal["user_id"],
+            status=payload.status,
+            assigned_to_user_id=payload.assigned_to_user_id,
+            assignment_supplied="assigned_to_user_id" in payload.model_fields_set,
+            follow_up_at=payload.follow_up_at,
+        )
+        if case is None:
+            raise HTTPException(status_code=404, detail="Parcel acquisition case not found")
+        db.commit()
+        return get_acquisition_case(db, case.id)
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/parcel-acquisition-cases/{case_id}/activities",
+    response_model=ParcelAcquisitionActivityResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def create_case_activity(
+    case_id: str,
+    payload: ParcelAcquisitionActivityCreate,
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        activity = record_acquisition_activity(
+            db,
+            case_id=case_id,
+            actor_user_id=principal["user_id"],
+            activity_type=payload.activity_type,
+            notes=payload.notes,
+            occurred_at=payload.occurred_at,
+            follow_up_at=payload.follow_up_at,
+        )
+        db.commit()
+        db.refresh(activity)
+        return activity
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @router.get("/acquisition-radar", response_model=AcquisitionRadarResponse)
 def get_acquisition_radar(
     q: str | None = Query(default=None, min_length=1, max_length=200),
     state: str | None = Query(default=None, min_length=2, max_length=2),
-    persona: str | None = Query(default=None, pattern="^(developer|broker|realtor)$"),
-    review_status: str | None = Query(default=None, pattern="^(candidate|shortlisted|dismissed)$"),
+    persona: str | None = Query(
+        default=None, pattern="^(developer|investor|broker|realtor)$"
+    ),
+    review_status: str | None = Query(
+        default=None,
+        pattern="^(candidate|shortlisted|contacted|dismissed|promoted)$",
+    ),
     assignment: str | None = Query(default=None, pattern="^(assigned|unassigned)$"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -173,6 +267,39 @@ def get_search(search_id: str, db: Session = Depends(get_db)):
     if search is None:
         raise HTTPException(status_code=404, detail="Nearby parcel search not found")
     return search
+
+
+@router.post(
+    "/nearby-parcel-searches/{search_id}/export",
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def export_search(
+    search_id: str,
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        exported = export_nearby_parcel_search(
+            db,
+            search_id=search_id,
+            actor_user_id=principal["user_id"],
+        )
+        db.commit()
+        return Response(
+            content=exported.content,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="{exported.filename}"',
+                "X-Exported-Count": str(exported.exported_count),
+                "X-Omitted-Count": str(exported.omitted_count),
+            },
+        )
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ParcelExportDenied as exc:
+        db.commit()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.patch(

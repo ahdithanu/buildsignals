@@ -11,7 +11,7 @@ from app.schemas.deal import DealDetailResponse
 class NearbyParcelSearchCreate(BaseModel):
     anchor_brand_match_id: str
     radius_miles: float = Field(default=2.0, ge=0.25, le=5.0)
-    persona: Literal["developer", "broker", "realtor"] = "developer"
+    persona: Literal["developer", "investor", "broker", "realtor"] = "developer"
     minimum_land_area_sq_ft: Optional[float] = Field(default=None, ge=0)
     zoning_codes: list[str] = Field(default_factory=list, max_length=50)
     land_uses: list[str] = Field(default_factory=list, max_length=50)
@@ -155,6 +155,7 @@ class AcquisitionRadarSignalResponse(BaseModel):
 class AcquisitionRadarItemResponse(BaseModel):
     parcel: ParcelSummaryResponse
     candidate_id: str
+    acquisition_case_id: Optional[str] = None
     radar_score: float
     best_candidate_score: float
     score_confidence: float
@@ -164,6 +165,9 @@ class AcquisitionRadarItemResponse(BaseModel):
     review_status: str
     assigned_to_user_id: Optional[str] = None
     assigned_to_name: Optional[str] = None
+    contacted_at: Optional[datetime] = None
+    follow_up_at: Optional[datetime] = None
+    promoted_deal_id: Optional[str] = None
     latest_signal_at: datetime
     reasons: list[str]
     cautions: list[str]

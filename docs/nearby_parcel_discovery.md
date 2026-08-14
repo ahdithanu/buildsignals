@@ -8,27 +8,36 @@ signal:
 - canonical parcel records and independently versioned parcel facts
 - physical-parcel grouping for condo units and multi-account assessor records
 - persisted search inputs and ranked candidate snapshots
+- one canonical acquisition case per organization and parcel, with all
+  contributing search/candidate provenance retained
 - 0.25-5 mile validation, SQLite haversine retrieval, and PostgreSQL PostGIS
   `ST_DWithin`/`ST_Distance` queries with a generated geography centroid and
   GiST index
 - explainable `developer-v1` ranking with missing-data confidence penalties
-- developer, broker, and realtor buyer lenses with versioned explainable
-  rankings; `broker-v2` and `realtor-v2` add official sale-tenure evidence while
+- developer, investor, broker, and realtor buyer lenses with versioned
+  explainable rankings; `investor-v1`, `broker-v2`, and `realtor-v2` add
+  official sale-tenure evidence while
   never inferring listing status or owner willingness to sell
-- shortlist and dismissal review with audit history
+- shortlist, dismissal, assignment, outreach, follow-up, and promotion with
+  actor audit history
 - opportunity-detail panel with confirmed-signal selection and bounded radius
+- server-authorized CSV export with source-policy filtering, actor audit, and
+  spreadsheet-injection protection
 
 NYC PLUTO, Denver Assessor, Washington DC owner polygons, Florida FDOR
 statewide cadastral parcels, Maryland iMAP / SDAT parcel points, and MassGIS
-Level 3 property tax parcels are admitted production parcel sources. The next
-slice adds parcel boundaries and map interaction, exports, assignment, and
-explicit promotion into a standalone opportunity.
+Level 3 property tax parcels are admitted production parcel sources. Parcel
+boundaries, map interaction, assignment, policy-controlled export, and explicit
+promotion into a standalone opportunity are implemented.
 
 Parcel and assessor sources now use the same connector registry and bounded
 runner as permits by declaring `record_type: parcel`. Declarative mappings
 normalize parcel identity, centroid, site characteristics, values, zoning,
-ownership, sale, tax, and vacancy fields. Raw rows remain immutable; ownership
-and sale facts are versioned with source URLs and verification timestamps.
+ownership, sale, tax, and vacancy fields. Raw rows remain immutable; ownership,
+sale, tax, vacancy, zoning, land-use, improvement, and valuation facts are
+versioned with source URLs and independent verification timestamps. Complete
+replacement snapshots close managed facts that disappear; incremental rows do
+not infer deletion from an omitted field.
 Full-snapshot sources inherit the empty-snapshot and maximum-retirement circuit
 breakers, so missing parcels retire only after a complete reconciled run and
 reactivate without losing evidence if they reappear.
@@ -52,6 +61,16 @@ map modes:
 
 Raw polygon export remains blocked by each source's `export_policy`; UI shapes
 are derived display context only.
+
+Candidate CSV export is a separate server-side decision available to editors
+and administrators. Only active sources whose exact policy value appears in the
+reviewed parcel-export allowlist are included; missing, malformed, or newly
+invented policy strings fail closed. Parcel-ID-only and situs-only policies
+suppress broader columns, and ownership plus raw geometry are never included.
+Every attempt logs the actor and request ID. Successful exports also retain the
+candidate IDs, source-policy snapshot, exported/omitted counts, approved
+columns, and a SHA-256 content digest; denied attempts retain their decision
+reason and policy snapshot for incident reconstruction.
 
 Canonical assessor parcels are also projected into the knowledge graph and
 linked to their source records. Current ownership facts create `owned_by`
@@ -135,6 +154,19 @@ Persist the user decision surface, not the raw geospatial result alone:
 - review state: `candidate`, `shortlisted`, `dismissed`, `contacted`
 - evidence references used by every scored feature
 
+### Acquisition Cases
+
+Repeated appearances converge on one organization-scoped parcel case:
+
+- canonical status, assignee, contacted time, follow-up, and promoted deal
+- source links to every contributing candidate and nearby-parcel search
+- immutable call, email, text, meeting, and note activities with actor and time
+- tenant isolation and audit history for all mutations
+
+This separates durable acquisition work from versioned ranking snapshots. A
+new search can add evidence without resetting an existing shortlist, dismissal,
+assignment, or outreach history.
+
 ## Ranking Personas
 
 All scores are explainable 0-100 feature composites. Missing data lowers
@@ -205,8 +237,12 @@ graph path traversal so distance queries use spatial indexes.
 - `POST /deals/{deal_id}/nearby-parcel-searches`
 - `GET /deals/{deal_id}/nearby-parcel-searches`
 - `GET /nearby-parcel-searches/{search_id}`
+- `POST /nearby-parcel-searches/{search_id}/export`
 - `PATCH /parcel-candidates/{candidate_id}`
 - `GET /acquisition-radar`
+- `GET /parcel-acquisition-cases/{case_id}`
+- `PATCH /parcel-acquisition-cases/{case_id}`
+- `POST /parcel-acquisition-cases/{case_id}/activities`
 
 Search input includes `radius_miles`, persona, minimum parcel area, land-use or
 zoning filters, ownership filters, and result limit. Responses include distance,
@@ -230,6 +266,8 @@ automatically for linked deals. The implemented workspace includes:
 The organization-wide Acquisition Radar deduplicates these candidates across
 opportunities and ranks them by parcel fit, evidence confidence, connected
 signal confidence, repeated opportunity exposure, review state, and freshness.
+It is also the team queue for canonical case status, assignment, outreach,
+follow-up, pagination, and explicit opportunity promotion.
 
 No parcel becomes an opportunity automatically. Promotion is an explicit user
 action that preserves the originating search, ranking version, and evidence.

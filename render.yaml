@@ -194,6 +194,12 @@ services:
         sync: false
       - key: INGESTION_ALLOWED_HOSTS
         value: services5.arcgis.com
+      # Set from the candidate rollout manifest before any candidate becomes
+      # runnable. It remains unset while the effective runnable set is empty.
+      - key: INGESTION_HOST_POLICY_DIGEST
+        sync: false
+      - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
+        sync: false
       - key: INGESTION_ORGANIZATION
         sync: false
 

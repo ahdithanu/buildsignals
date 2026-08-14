@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { parcelsApi } from '@/api/parcels';
-import type { AcquisitionRadarParams, ParcelReviewStatus } from '@/types/parcel';
+import type {
+  AcquisitionRadarParams,
+  ParcelAcquisitionActivityCreate,
+  ParcelAcquisitionCaseUpdate,
+} from '@/types/parcel';
 
 export function useAcquisitionRadar(params: AcquisitionRadarParams) {
   const queryClient = useQueryClient();
@@ -9,12 +13,24 @@ export function useAcquisitionRadar(params: AcquisitionRadarParams) {
     queryKey: ['acquisition-radar', params],
     queryFn: () => parcelsApi.radar(params),
   });
-  const review = useMutation({
-    mutationFn: ({ candidateId, reviewStatus }: {
-      candidateId: string;
-      reviewStatus: ParcelReviewStatus;
-    }) => parcelsApi.review(candidateId, reviewStatus),
+  const updateCase = useMutation({
+    mutationFn: ({ caseId, payload }: {
+      caseId: string;
+      payload: ParcelAcquisitionCaseUpdate;
+    }) => parcelsApi.updateAcquisitionCase(caseId, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['acquisition-radar'] }),
   });
-  return { ...radar, review };
+  const recordActivity = useMutation({
+    mutationFn: ({ caseId, payload }: {
+      caseId: string;
+      payload: ParcelAcquisitionActivityCreate;
+    }) => parcelsApi.recordAcquisitionActivity(caseId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['acquisition-radar'] }),
+  });
+  const promote = useMutation({
+    mutationFn: ({ candidateId, name }: { candidateId: string; name?: string }) =>
+      parcelsApi.promote(candidateId, { name }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['acquisition-radar'] }),
+  });
+  return { ...radar, updateCase, recordActivity, promote };
 }
