@@ -30,8 +30,11 @@ promotion into a standalone opportunity are implemented.
 Parcel and assessor sources now use the same connector registry and bounded
 runner as permits by declaring `record_type: parcel`. Declarative mappings
 normalize parcel identity, centroid, site characteristics, values, zoning,
-ownership, sale, tax, and vacancy fields. Raw rows remain immutable; ownership
-and sale facts are versioned with source URLs and verification timestamps.
+ownership, sale, tax, and vacancy fields. Raw rows remain immutable; ownership,
+sale, tax, vacancy, zoning, land-use, improvement, and valuation facts are
+versioned with source URLs and independent verification timestamps. Complete
+replacement snapshots close managed facts that disappear; incremental rows do
+not infer deletion from an omitted field.
 Full-snapshot sources inherit the empty-snapshot and maximum-retirement circuit
 breakers, so missing parcels retire only after a complete reconciled run and
 reactivate without losing evidence if they reappear.

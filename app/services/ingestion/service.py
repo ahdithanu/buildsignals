@@ -785,6 +785,9 @@ def _persist_parcel(
         parcel.last_seen_snapshot_id = snapshot_id
         parcel.is_active = True
         parcel.retired_at = None
+        for fact in parcel.facts:
+            if fact.is_current:
+                fact.last_verified_at = fetched_at
         _project_parcel_to_graph(db, source, parcel, raw)
         return parcel, "reprocessed" if was_inactive else "unchanged"
 
@@ -887,6 +890,10 @@ def _parcel_facts(
         "last_sale": ("last_sale_date", "last_sale_price"),
         "tax_status": ("tax_delinquent",),
         "vacancy": ("vacancy_indicator",),
+        "zoning": ("zoning_code",),
+        "land_use": ("land_use",),
+        "improvements": ("improvement_area_sq_ft", "improvement_value"),
+        "valuation": ("land_value", "total_assessed_value"),
     }
     facts: list[ParcelFactInput] = []
     for fact_type, fields in groups.items():
@@ -1125,6 +1132,7 @@ def _project_parcel_to_graph(
         None,
     )
     if ownership is None:
+        _expire_parcel_relationships(db, source, parcel)
         return
     owner_name = str(ownership.value["owner_name"]).strip()
     if not owner_name:

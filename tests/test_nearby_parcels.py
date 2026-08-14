@@ -1181,8 +1181,10 @@ def test_parcel_snapshot_geometry_surfaces_as_boundary_geometry(db):
 def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     csv_path = tmp_path / "assessor.csv"
     csv_path.write_text(
-        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
-        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,900000,100000,Original Owner LLC\n"
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Original Owner LLC\n"
     )
     payload = {
         "key": "travis_assessor_test",
@@ -1211,8 +1213,12 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
                     "land_area_sq_ft",
                     {"transform": "multiply", "transform_options": {"factor": 43560}},
                 ),
+                ("improvement_area", "improvement_area_sq_ft", {}),
                 ("land_value", "land_value", {}),
                 ("improvement_value", "improvement_value", {}),
+                ("total_value", "total_assessed_value", {}),
+                ("zoning", "zoning_code", {}),
+                ("land_use", "land_use", {}),
                 ("owner", "owner_name", {}),
             )
         ],
@@ -1236,6 +1242,12 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     ownership = db.query(ParcelFact).filter(ParcelFact.fact_type == "ownership").one()
     assert ownership.value["owner_name"] == "Original Owner LLC"
     assert ownership.source_url == str(csv_path)
+    assert {
+        fact.fact_type for fact in db.query(ParcelFact).filter(
+            ParcelFact.is_current.is_(True)
+        ).all()
+    } == {"ownership", "zoning", "land_use", "improvements", "valuation"}
+    first_fact_verified_at = ownership.last_verified_at
     graph_types = {entity.entity_type.value for entity in db.query(GraphEntity).all()}
     assert {"parcel", "owner"}.issubset(graph_types)
     owner_relationship = db.query(GraphRelationship).filter(
@@ -1257,6 +1269,10 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert len(relationships) == 1
     assert relationships[0].id == owner_relationship.id
     assert relationships[0].is_current is True
+    assert db.query(ParcelFact).filter(
+        ParcelFact.fact_type == "ownership",
+        ParcelFact.is_current.is_(True),
+    ).one().last_verified_at > first_fact_verified_at
     assert db.query(RawSourceRecord).count() == 1
     assert db.query(RawSourceRecordObservation).count() == 1
     assert (
@@ -1265,8 +1281,10 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     )
 
     csv_path.write_text(
-        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
-        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,900000,100000,Replacement Owner LLC\n"
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Replacement Owner LLC\n"
     )
     changed = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
     assert changed.status_code == 201, changed.text
@@ -1279,8 +1297,10 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     ).one().value["owner_name"] == "Replacement Owner LLC"
 
     csv_path.write_text(
-        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
-        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,900000,100000,Original Owner LLC\n"
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Original Owner LLC\n"
     )
     reverted = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
     assert reverted.status_code == 201, reverted.text
@@ -1308,7 +1328,40 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert db.query(RawSourceRecordObservation).count() == 2
 
     csv_path.write_text(
-        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,,Retail,\n"
+    )
+    omitted = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert omitted.status_code == 201, omitted.text
+    db.expire_all()
+    assert db.query(ParcelFact).filter(
+        ParcelFact.fact_type.in_(("ownership", "zoning")),
+        ParcelFact.is_current.is_(True),
+    ).count() == 0
+    assert db.get(GraphRelationship, owner_relationship.id).is_current is False
+
+    csv_path.write_text(
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Original Owner LLC\n"
+    )
+    restored_facts = client.post(
+        f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1}
+    )
+    assert restored_facts.status_code == 201, restored_facts.text
+    db.expire_all()
+    assert db.query(ParcelFact).filter(
+        ParcelFact.fact_type.in_(("ownership", "zoning")),
+        ParcelFact.is_current.is_(True),
+    ).count() == 2
+    assert db.get(GraphRelationship, owner_relationship.id).is_current is True
+
+    csv_path.write_text(
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
     )
     retired = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
     assert retired.status_code == 201, retired.text
@@ -1317,8 +1370,10 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert db.get(GraphRelationship, owner_relationship.id).is_current is False
 
     csv_path.write_text(
-        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
-        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,900000,100000,Original Owner LLC\n"
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Original Owner LLC\n"
     )
     restored = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
     assert restored.status_code == 201, restored.text
