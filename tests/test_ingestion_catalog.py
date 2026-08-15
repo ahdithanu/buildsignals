@@ -287,6 +287,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "mobile_al_build_mobile_portal",
         "evansville_in_building_commission_permits",
         "anchorage_ak_bsd_permit_lookup",
+        "juneau_ak_civic_access_permits",
         "honolulu_hi_building_permits_2005_2025",
         "boise_id_development_tracker",
         "cedar_rapids_ia_building_permits",

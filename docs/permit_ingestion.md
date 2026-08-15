@@ -605,6 +605,21 @@ page, reviewed license statement, and reconciliation mode. Technically useful
 but unlicensed sources remain in the onboarding decision log, not in active
 configuration.
 
+Blocked candidates can be converted into a consistent agency-ready access
+contract without touching the database:
+
+```bash
+python -m app.services.ingestion.cli catalog source-request \
+  --candidate-key anchorage_ak_bsd_permit_lookup \
+  --output docs/source_access_requests/anchorage_ak_bsd_permit_lookup.md
+```
+
+The contract requests supported delivery, historical and incremental coverage,
+durable identity, lifecycle dates, deletion semantics, control totals, privacy
+limits, and written rights for evidence-backed product use. The same generator
+works for permit and parcel candidates so source outreach does not drift into
+one-off jurisdiction requirements.
+
 Catalog entries can also declare `suppressed_fields` when a source is admitted
 only for a narrower evidence use, such as geometry/situs parcel context without
 owner, value, or sale export. The catalog loader rejects any source that fetches

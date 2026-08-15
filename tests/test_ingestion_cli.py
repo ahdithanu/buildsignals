@@ -100,6 +100,44 @@ def test_run_all_parser_defaults_to_bounded_resumable_collection():
     assert args.source_keys is None
 
 
+def test_source_request_parser_defaults_to_markdown():
+    args = build_parser().parse_args([
+        "catalog",
+        "source-request",
+        "--candidate-key",
+        "test_ak_records",
+    ])
+
+    assert args.catalog_command == "source-request"
+    assert args.candidate_key == "test_ak_records"
+    assert args.format == "markdown"
+    assert args.output is None
+
+
+def test_source_request_writes_json_without_database(monkeypatch, tmp_path):
+    candidate = _retry_candidate().model_copy(
+        update={"status": "technical_hold", "probe_settings": None}
+    )
+    monkeypatch.setattr(cli, "load_candidate_catalog", lambda: [candidate])
+    output = tmp_path / "source-request.json"
+
+    exit_code = cli.main([
+        "catalog",
+        "source-request",
+        "--candidate-key",
+        candidate.key,
+        "--format",
+        "json",
+        "--output",
+        str(output),
+    ])
+
+    assert exit_code == 0
+    payload = output.read_text(encoding="utf-8")
+    assert '"candidate_key": "test_retry_candidate"' in payload
+    assert '"reconciliation_requirements"' in payload
+
+
 def test_run_all_parser_supports_full_preapproval_reconciliation():
     args = build_parser().parse_args([
         "run-all",

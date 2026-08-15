@@ -906,6 +906,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "bend_or_permit_applications_point",
         "bend_or_planning_applications",
         "anchorage_ak_bsd_permit_lookup",
+        "juneau_ak_civic_access_permits",
         "honolulu_hi_building_permits_2005_2025",
         "boise_id_development_tracker",
         "cedar_rapids_ia_building_permits",
