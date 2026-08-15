@@ -2314,21 +2314,36 @@ Evidence URLs:
 
 ### Alaska Permit Sources
 
-- Anchorage's official permit detail pages expose application screening,
-  review, corrections, approval, issuance, inspections, parcel, owner,
-  contractor, applicant, and work descriptions under a strong municipal open
-  data policy. Decision: technical hold because the system provides point HTML
-  lookups rather than a documented bulk dataset or API with testable identity
-  and reconciliation behavior.
-- Juneau's historical reports directly validate the early-retailer use case: a
-  filing described a 2,500-square-foot Starbucks restaurant while still under
-  review. The reports became stale after the January 2026 Tyler migration, are
-  hashed PDFs rather than a structured feed, and have no verified affirmative
-  commercial redistribution grant.
-- Decision: Alaska remains hold. Pursue an official Anchorage export/API,
-  Juneau EnerGov reporting access and written rights, or a statewide Fire
-  Marshal application export; do not crawl sequential internal IDs or automate
-  vendor portals.
+- Anchorage's current CDR portal searches building, planning, project, and use
+  permit records. The separate live permit and planning detail systems expose
+  application screening, review, corrections, approval, issuance, inspections,
+  parcel, owner, contractor, applicant, and work descriptions. The municipal
+  open-data policy defines public data as open by default, license-free, and
+  reusable, but the open-data portal does not currently publish permits.
+- A queryable ArcGIS permit layer exists, but its latest edit is from February
+  2017. It is historical research only and cannot establish current coverage.
+  Decision: technical hold because the live systems provide point lookups
+  rather than a supported recurring delivery with testable identity,
+  reconciliation, freshness, and deletion behavior.
+- Juneau's Civic Access portal replaced the legacy reports in January 2026 and
+  was current to roughly one business day during the August 15 audit. It exposes
+  submitted, documents-required, applicant-response, in-review, on-hold,
+  fees-due, issued, complete, denied, void, and expired stages with record IDs,
+  project names, dates, parcels, addresses, and descriptions. The UI limits
+  exports to 1,000 rows and search results to 10,000, and it does not document a
+  supported recurring API, modification cursor, deletion feed, or commercial
+  automation rights. Legacy PDFs remain useful research evidence only; one
+  filing described a 2,500-square-foot Starbucks while still under review.
+- Decision: Alaska remains hold. The standardized Anchorage access contract is
+  checked in at
+  `docs/source_access_requests/anchorage_ak_bsd_permit_lookup.md`; send it to
+  Development Services/OIT or attach it to a public-records request. A second
+  contract for Juneau is checked in at
+  `docs/source_access_requests/juneau_ak_civic_access_permits.md`; send it through
+  CBJ's permit-record request channel. Pursue a statewide Fire Marshal
+  application export in parallel. Do not crawl sequential internal IDs,
+  automate undocumented vendor endpoints, retrieve attachments, or ingest
+  personal contact details.
 
 ### Hawaii Permit Sources
 

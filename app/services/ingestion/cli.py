@@ -43,6 +43,11 @@ from app.services.ingestion.scheduling import (
     source_schedule_policy,
     source_shard,
 )
+from app.services.ingestion.source_access import (
+    build_source_access_contract,
+    source_access_contract_json,
+    source_access_contract_markdown,
+)
 from app.services.ingestion.service import ActiveRunConflict, execute_source_run, list_sources
 from app.utils.org_scope import (
     SYSTEM_USER_ID,
@@ -138,6 +143,15 @@ def build_parser() -> argparse.ArgumentParser:
     candidate_host_audit.add_argument("--json", action="store_true")
     candidate_host_audit.add_argument("--print-required-hosts", action="store_true")
     candidate_host_audit.add_argument("--print-policy-digest", action="store_true")
+    source_request = catalog_commands.add_parser(
+        "source-request",
+        help="Build a reusable access contract for a blocked candidate source",
+    )
+    source_request.add_argument("--candidate-key", required=True)
+    source_request.add_argument(
+        "--format", choices=("markdown", "json"), default="markdown"
+    )
+    source_request.add_argument("--output", type=Path)
 
     brands = subcommands.add_parser("brands", help="Manage the retailer brand catalog")
     brand_commands = brands.add_subparsers(dest="brand_command", required=True)
@@ -660,6 +674,31 @@ def main(argv: list[str] | None = None) -> int:
                 f"prepared {args.candidate_key} in {args.output} "
                 f"({len(promoted)} promoted sources)"
             )
+            return 0
+        except Exception as exc:
+            print(f"error: {exc}")
+            return 1
+    if args.command == "catalog" and args.catalog_command == "source-request":
+        try:
+            candidates = {
+                candidate.key: candidate for candidate in load_candidate_catalog()
+            }
+            candidate = candidates.get(args.candidate_key)
+            if candidate is None:
+                raise ValueError(
+                    f"Ingestion candidate not found: {args.candidate_key}"
+                )
+            contract = build_source_access_contract(candidate)
+            content = (
+                source_access_contract_json(contract)
+                if args.format == "json"
+                else source_access_contract_markdown(contract)
+            )
+            if args.output:
+                args.output.write_text(content, encoding="utf-8")
+                print(f"wrote source access request to {args.output}")
+            else:
+                print(content, end="")
             return 0
         except Exception as exc:
             print(f"error: {exc}")

@@ -798,11 +798,11 @@
     "adapter": "portal",
     "record_type": "permit",
     "jurisdiction": "Anchorage, AK",
-    "base_url": "https://bsd.muni.org/Inspandreview/Default.aspx",
-    "official_landing_page": "https://bsd.muni.org/Inspandreview/Default.aspx",
-    "license": "Municipal open-data policy exists, but this non-portal dataset has no confirmed commercial redistribution grant",
+    "base_url": "https://www.muni.org/PermitCenter/Views/CDR/CDRLookUpMain.aspx",
+    "official_landing_page": "https://www.muni.org/PermitCenter/Views/CDR/CDRLookUpMain.aspx",
+    "license": "Municipality policy defines public data as open by default, license-free, and reusable; permits are not yet published as a supported bulk dataset",
     "status": "technical_hold",
-    "blocker_summary": "Current permit detail pages expose rich lifecycle records, but there is no supported list or export API, durable enumeration contract, update watermark, deletion feed, or dataset-specific commercial reuse confirmation.",
+    "blocker_summary": "The current CDR portal searches building, planning, project, and use-permit records, but there is no supported bulk/API delivery, durable enumeration contract, update watermark, deletion feed, or control total.",
     "early_warning_value": "Application screening, discipline review, corrections, approvals, inspections, owner, contractor, parcel, and work descriptions can reveal commercial projects before issuance.",
     "candidate_source_fields": [
       "permit_number",
@@ -816,9 +816,39 @@
       "review_events",
       "inspection_events"
     ],
-    "last_checked_on": "2026-08-11",
-    "next_audit_on": "2026-09-08",
-    "notes": "Request an official recurring export and confirmation that permit records fall under Anchorage's commercial open-data terms. Do not enumerate internal apbldgkey values or ingest personal contact details."
+    "last_checked_on": "2026-08-15",
+    "next_audit_on": "2026-09-12",
+    "notes": "Generate the standardized source-access contract and request an official recurring export from Development Services and OIT. Do not automate portal internals, enumerate record keys, fetch attachments, or ingest personal contact details."
+  },
+  {
+    "key": "juneau_ak_civic_access_permits",
+    "name": "Juneau Civic Access Permits",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Juneau, AK",
+    "base_url": "https://cityandboroughofjuneauak-energovweb.tylerhost.net/apps/selfservice#/search",
+    "official_landing_page": "https://juneau.org/community-development",
+    "license": "Public records are available under Alaska public-records law, but no permit-specific automated commercial reuse or redistribution terms are published",
+    "status": "technical_hold",
+    "blocker_summary": "The current Civic Access portal exposes fresh application-through-final permit records and a bounded UI export, but no supported recurring API, modification cursor, deletion feed, authoritative control totals, or commercial automation grant is documented.",
+    "early_warning_value": "Submitted, documents-required, applicant-response, in-review, on-hold, and fees-due records can reveal commercial projects and named retailers before issuance.",
+    "candidate_source_fields": [
+      "record_id",
+      "permit_number",
+      "permit_type",
+      "project_name",
+      "status",
+      "applied_date",
+      "issued_date",
+      "expiration_date",
+      "finalized_date",
+      "parcel",
+      "address",
+      "description"
+    ],
+    "last_checked_on": "2026-08-15",
+    "next_audit_on": "2026-09-12",
+    "notes": "Generate the standardized source-access contract and request a supported CBJ/Tyler export. After authorization, use overlapping applied-date windows, refresh all nonterminal records, query issued/finalized ranges, and reconcile recent IDs. Do not automate undocumented portal APIs, exceed UI export limits, fetch attachments, or ingest personal contacts."
   },
   {
     "key": "honolulu_hi_building_permits_2005_2025",
