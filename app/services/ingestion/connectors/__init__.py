@@ -14,6 +14,7 @@ from .base import (
     Record,
     RetryingHttpClient,
 )
+from .civicplus_newsflash import CivicPlusNewsFlashConnector
 from .ckan import CKANConnector, CKANDataStoreConnector
 from .csv import CSVConnector, CsvConnector
 from .factory import build_connector
@@ -33,6 +34,7 @@ __all__ = [
     "ConnectorResponseError",
     "CKANConnector",
     "CKANDataStoreConnector",
+    "CivicPlusNewsFlashConnector",
     "CSVConnector",
     "CsvConnector",
     "FetchEnvelope",

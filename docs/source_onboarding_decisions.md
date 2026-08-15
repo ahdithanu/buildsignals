@@ -3434,9 +3434,17 @@ Evidence URLs:
   not interpret disappearance from the recent RSS window as project withdrawal.
   The generic RSS connector can be reused for other official CivicPlus notice
   feeds, but each category still requires lifecycle filters and rights review.
-- San Marcos, Texas Planning Application Notices remains a freshness hold on
-  the CivicPlus RSS adapter: its declared feed was still empty on August 14,
-  2026. Taylor's Development Notices feed resumed and published PZ 2026-2715
+- San Marcos, Texas Planning Application Notices moved from a freshness hold to
+  a runnable no-write candidate on August 14, 2026. Its legacy CivicPlus RSS
+  category remains empty, but the official NewsFlash archive published fresh
+  applications on August 10-12 with stable article IDs, canonical links,
+  posted dates, and project summaries. A generic archive connector now reads
+  only that bounded current window and suppresses email addresses and phone
+  numbers before emitting candidate records. It does not follow detail pages
+  or linked documents. A 10-record no-write canary passed with 10 valid
+  pre-approval records and zero failures. Production still requires an
+  explicit rights/data-minimization approval. Taylor's Development Notices
+  feed resumed and published PZ 2026-2715
   on August 7, and its bounded August 14 canary validated one pre-approval row
   with zero errors. The Build Signals owner approved the minimized production
   scope, so Taylor is now a daily production source retaining stable GUID,

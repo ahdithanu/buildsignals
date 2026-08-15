@@ -8,6 +8,7 @@ import pytest
 
 from app.services.ingestion.connectors import (
     ArcGISConnector,
+    CivicPlusNewsFlashConnector,
     CKANConnector,
     ConnectorRequestError,
     CSVConnector,
@@ -196,6 +197,82 @@ def test_rss_factory_passes_public_headers():
     assert isinstance(connector, RSSConnector)
     assert connector.page_size == 25
     assert connector.headers["User-Agent"] == "Mozilla/5.0"
+
+
+def test_civicplus_newsflash_parses_pages_and_suppresses_contacts():
+    archive = """
+    <div id="articles-category-30">
+      <ul>
+        <li id="list-articles-category-30-2618">
+          <a class="article-title-link" href="/m/newsflash/Home/Detail/2618">
+            ZC-26-05 (906 N. LBJ Drive)
+          </a>
+          <div class="article-preview"><p>A zoning application was submitted by
+            Acme LLC. Call 5123938230 or email planner@example.gov.</p>
+            <ul><li>Public hearing pending</li></ul></div>
+          <div class="fst-italic text-body-secondary">
+            Posted on August 12, 2026 | Last Updated on August 13, 2026
+          </div>
+        </li>
+        <li id="list-articles-category-30-2617">
+          <a class="article-title-link" href="/m/newsflash/Home/Detail/2617">ZC-26-07</a>
+          <div class="article-preview">Business park application.</div>
+          <div class="fst-italic text-body-secondary">Posted on August 11, 2026</div>
+        </li>
+      </ul>
+    </div>
+    """
+    http = FakeHttpClient([archive, archive])
+    connector = CivicPlusNewsFlashConnector(
+        "https://example.gov/m/newsflash",
+        category_id=30,
+        page_size=1,
+        http_client=http,
+    )
+
+    first, second = list(connector.iter_pages())
+
+    assert first.records[0] == {
+        "article_id": "2618",
+        "title": "ZC-26-05 (906 N. LBJ Drive)",
+        "link": "https://example.gov/m/newsflash/Home/Detail/2618",
+        "published_at": "August 12, 2026",
+        "description": (
+            "A zoning application was submitted by Acme LLC. "
+            "Call [phone suppressed] or email [email suppressed]. Public hearing pending"
+        ),
+    }
+    assert first.checkpoint == {"offset": 1}
+    assert second.records[0]["article_id"] == "2617"
+    assert second.has_more is False
+    assert http.calls[0][1] == {"cat": 30}
+    assert http.calls[0][2]["Accept"] == "text/html,application/xhtml+xml"
+
+
+def test_civicplus_newsflash_rejects_unexpected_category_markup():
+    connector = CivicPlusNewsFlashConnector(
+        "https://example.gov/m/newsflash",
+        category_id=30,
+        http_client=FakeHttpClient(['<div id="articles-category-31"></div>']),
+    )
+
+    with pytest.raises(Exception, match="did not contain category 30"):
+        connector.fetch()
+
+
+def test_civicplus_newsflash_factory_builds_bounded_connector():
+    connector = build_connector("civicplus_newsflash", {
+        "endpoint": "https://example.gov/m/newsflash",
+        "category_id": 30,
+        "page_size": 10,
+        "max_records": 100,
+        "max_description_chars": 500,
+    })
+
+    assert isinstance(connector, CivicPlusNewsFlashConnector)
+    assert connector.category_id == 30
+    assert connector.page_size == 10
+    assert connector.max_description_chars == 500
 
 
 def test_opendatasoft_returns_flattened_checkpointed_pages():

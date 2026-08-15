@@ -9,6 +9,7 @@ from app.services.ingestion.host_policy import configured_ingestion_hosts
 
 from .arcgis import ArcGISConnector
 from .base import Connector, RetryingHttpClient
+from .civicplus_newsflash import CivicPlusNewsFlashConnector
 from .ckan import CKANConnector
 from .csv import CSVConnector
 from .json_array import JSONArrayConnector
@@ -85,6 +86,16 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
         return RSSConnector(
             _required(config, "endpoint"),
             max_records=int(config.get("max_records", 1000)),
+            query=_mapping(config.get("query")),
+            headers=_public_headers(config),
+            **common,
+        )
+    if connector_type in {"civicplus_newsflash", "newsflash"}:
+        return CivicPlusNewsFlashConnector(
+            _required(config, "endpoint"),
+            category_id=int(config.get("category_id", 0)),
+            max_records=int(config.get("max_records", 100)),
+            max_description_chars=int(config.get("max_description_chars", 2000)),
             query=_mapping(config.get("query")),
             headers=_public_headers(config),
             **common,

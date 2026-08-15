@@ -2,26 +2,90 @@
   {
     "key": "san_marcos_tx_planning_application_notices",
     "name": "San Marcos Planning Application Notices",
-    "adapter": "rss",
+    "adapter": "civicplus_newsflash",
     "record_type": "permit",
     "jurisdiction": "San Marcos, TX",
-    "base_url": "https://www.sanmarcostx.gov/RSSFeed.aspx?ModID=1&CID=30",
+    "base_url": "https://www.sanmarcostx.gov/m/newsflash",
     "official_landing_page": "https://www.sanmarcostx.gov/1537/Public-and-Application-Notices",
     "license": "Official public notice feed",
-    "status": "freshness_hold",
-    "blocker_summary": "The City explicitly publishes a Planning Application Notices RSS category, but the official feed returned zero items during the August 1, 2026 audit.",
+    "status": "operational_retry",
+    "blocker_summary": "The official NewsFlash archive connector passed a 10-record no-write pre-approval canary on August 14, 2026. Explicit production rights and data-minimization review remain before promotion.",
     "early_warning_value": "Application-submitted notices for zoning, annexation, demolition, comprehensive-plan, and historic-district actions before hearings or final decisions.",
     "candidate_source_fields": [
-      "guid",
+      "article_id",
       "title",
       "link",
       "published_at",
       "description"
     ],
-    "can_run_canary": false,
-    "last_checked_on": "2026-08-01",
-    "next_audit_on": "2026-08-08",
-    "notes": "Recheck the declared RSS feed and notification archive. Do not promote from archived HTML alone without a stable recent-item reconciliation path. If items return, retain only project notice fields and suppress contacts, linked document bodies, enclosures, and raw exports."
+    "probe_settings": {
+      "connector": {
+        "category_id": 30,
+        "page_size": 25,
+        "max_records": 100,
+        "max_description_chars": 2000,
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public NewsFlash reader)"
+        }
+      },
+      "defaults": {
+        "city": "San Marcos",
+        "state": "TX",
+        "jurisdiction": "San Marcos",
+        "permit_type": "planning_application_notice",
+        "approval_stage": "pre_approval",
+        "status": "application_notice"
+      },
+      "signal_stage": "pre_approval",
+      "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 336,
+      "canary_required_fields": [
+        "article_id",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ]
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "article_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "source_field": "title",
+          "pattern": "(?i)\\b((?:ZC|AN|PDD|PSA|SNC)-\\d{2}-\\d+(?:\\([A-Z]\\))?|\\d{4}-\\d{5})\\b"
+        }
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "description",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "link",
+        "canonical_field": "source_url"
+      }
+    ],
+    "production_page_size": 100,
+    "can_run_canary": true,
+    "last_checked_on": "2026-08-14",
+    "next_audit_on": "2026-08-14",
+    "notes": "The official archive showed current August 10-12 planning applications while the legacy RSS channel remained empty. An August 14 no-write canary fetched and validated 10 pre-approval records with zero failures. Use the stable CivicPlus article ID and canonical detail link, bounded current-window reconciliation, and connector-level contact suppression. Do not fetch detail pages, linked permit documents, attachments, or raw replacement exports. Production promotion still requires an explicit narrow-scope approval."
   },
   {
     "key": "taylor_tx_development_notices",

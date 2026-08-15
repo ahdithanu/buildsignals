@@ -68,13 +68,15 @@ def test_rollout_manifest_matches_catalog_wave_classification():
     ]
 
 
-def test_rollout_manifest_candidate_scope_excludes_promoted_sources():
+def test_rollout_manifest_candidate_scope_includes_only_unpromoted_runnable_sources():
     manifest = _manifest()
 
-    assert manifest.candidate_retries.candidate_count == 0
-    assert manifest.candidate_retries.candidate_keys == []
-    assert manifest.candidate_retries.required_hosts == []
-    assert manifest.candidate_retries.allowed_hosts_value == ""
+    assert manifest.candidate_retries.candidate_count == 1
+    assert manifest.candidate_retries.candidate_keys == [
+        "san_marcos_tx_planning_application_notices"
+    ]
+    assert manifest.candidate_retries.required_hosts == ["www.sanmarcostx.gov"]
+    assert manifest.candidate_retries.allowed_hosts_value == "www.sanmarcostx.gov"
 
 
 def test_rollout_classification_uses_settings_state_and_rejects_unknown_state():

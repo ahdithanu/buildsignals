@@ -1,16 +1,20 @@
 {
   "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.stlcitypermits.com,www.taylortx.gov",
   "candidate_retries": {
-    "allowed_hosts_value": "",
-    "candidate_catalog_fingerprint": "1a03a989222d09a7997030664f508ca9a3f45709a33f866772c53b06405d0044",
-    "candidate_count": 0,
-    "candidate_keys": [],
-    "policy_digest": "71c92f3d9c19b0dce7b2e31dac7f533536760cf6c86de049be76d22eb79d4eba",
-    "required_hosts": [],
+    "allowed_hosts_value": "www.sanmarcostx.gov",
+    "candidate_catalog_fingerprint": "4af80415a12180d348ffd6c96f7a10ad91d1d3679805dcf903dad630c2c78e0b",
+    "candidate_count": 1,
+    "candidate_keys": [
+      "san_marcos_tx_planning_application_notices"
+    ],
+    "policy_digest": "f6a5e11c5ebaa273414264d34ff50d9a0a99a7864781c97b514da7f7640f4a6d",
+    "required_hosts": [
+      "www.sanmarcostx.gov"
+    ],
     "sample_size": 10
   },
   "catalog_fingerprint": "df5f1c062519cd6f626bed8077372e1ec3029a7739a1427d11fbfa472ba9db1b",
-  "manifest_digest": "c20d4521668429f2aa98dd740e7e35210e21a00e5cbf9ce47d7507a17df9fc42",
+  "manifest_digest": "a4c1ba0c842a2c51361ab5078dabababae05cf1aad02a85547ca430a769fd524",
   "policy_digest": "8b450c440fa0ae162b7b88170c5d61e967faf68ec2229531624bbe9cc5fef1e2",
   "required_hosts": [
     "anrmaps.vermont.gov",
