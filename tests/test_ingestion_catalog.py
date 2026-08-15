@@ -279,6 +279,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     entries = load_candidate_catalog()
 
     assert {entry.key for entry in entries} == {
+        "detroit_mi_bseed_building_plan_reviews",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -299,6 +300,13 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "cheyenne_wy_opengov_permits",
     }
     by_key = {entry.key: entry for entry in entries}
+
+    detroit = by_key["detroit_mi_bseed_building_plan_reviews"]
+    assert detroit.status == "operational_retry"
+    assert detroit.can_run_canary is True
+    assert detroit.probe_settings["signal_stage"] == "pre_approval_and_approved"
+    assert "40 of 40" in detroit.blocker_summary
+    assert detroit.next_audit_on.isoformat() == "2026-08-22"
 
     assert "san_marcos_tx_planning_application_notices" not in by_key
     assert "taylor_tx_development_notices" not in by_key

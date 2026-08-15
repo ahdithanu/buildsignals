@@ -2083,16 +2083,25 @@ Evidence URLs:
 
 - Official ArcGIS layers: `bseed_building_permit_plan_reviews` and
   `bseed_building_permits`.
-- Decision: legal hold.
-- Technical fit: same-day plan-review and issued-permit layers, stable unique
-  `task_id` and `record_id`, project/use narrative, address, parcel, valuation,
-  units, zoning, and coordinates. `record_id` joins review tasks to later
-  issued records.
-- Rights blocker: both official items are public and authoritative, but their
-  license metadata and copyright fields contain no affirmative commercial use
-  or redistribution grant.
-- Release condition: a City of Detroit license or written authorization that
-  covers both item IDs and downstream normalized redistribution.
+- Decision: issued permits are in production as approved-only confirmation;
+  plan reviews are an `operational_retry` candidate awaiting narrow production
+  approval after a successful canary.
+- Rights basis: both items are official, public-authoritative City layers with
+  BSEED attribution. The City of Detroit's official FOIA guidance identifies
+  permitting information on its open-data portal as free, public-domain
+  information. Preserve City/BSEED attribution and official evidence links;
+  do not offer a raw-source replacement export.
+- Technical fit: the plan-review layer contained 39,489 rows and 39,489
+  distinct `record_id` values on August 15, 2026, with activity through August
+  14. `record_id` is the durable identity and joins a review filing to the
+  later issued record. Accepted and routed statuses map to `pre_approval`;
+  `Plans Approved` maps to `approved`.
+- Canary evidence: the August 15 no-write run fetched and validated 40 of 40
+  records with zero failures, including dedicated pre-approval and approved
+  stage probes.
+- Release condition: explicit Build Signals owner approval of the reviewed
+  field allowlist, suppression policy, attribution, and derived-only export
+  scope in `docs/reviews/detroit_mi_bseed_building_plan_reviews.md`.
 
 ### Philadelphia And Pennsylvania Early-Warning Sources
 
