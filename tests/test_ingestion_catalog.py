@@ -304,8 +304,15 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
 
     taylor = by_key["taylor_tx_development_notices"]
     assert taylor.adapter == "rss"
-    assert taylor.status == "freshness_hold"
-    assert taylor.can_run_canary is False
+    assert taylor.status == "operational_retry"
+    assert taylor.can_run_canary is True
+    assert taylor.probe_settings["defaults"]["approval_stage"] == "pre_approval"
+    assert taylor.next_audit_on.isoformat() == "2026-08-14"
+    assert any(
+        mapping.canonical_field == "application_number"
+        and mapping.transform == "regex_extract"
+        for mapping in taylor.probe_field_mappings
+    )
     assert "before-action" in taylor.early_warning_value.casefold()
 
     assert not {key for key in by_key if key.startswith("bend_or_")}

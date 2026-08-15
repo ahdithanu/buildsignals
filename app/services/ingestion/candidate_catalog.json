@@ -32,8 +32,8 @@
     "base_url": "https://www.taylortx.gov/RSSFeed.aspx?ModID=1&CID=31",
     "official_landing_page": "https://www.taylortx.gov/1386/Development-News-and-Notices",
     "license": "Official public notice feed",
-    "status": "freshness_hold",
-    "blocker_summary": "Taylor publishes rich before-action development notices, but its official Development Notices RSS feed returned zero items during the August 1, 2026 audit.",
+    "status": "operational_retry",
+    "blocker_summary": "The official feed resumed with a current August 7, 2026 before-action notice and passed a bounded lifecycle canary on August 14. Explicit production rights and data-minimization review remain.",
     "early_warning_value": "Before-action zoning, special-use, neighborhood-plan, and employment-center cases with project numbers, addresses, parcels, proposed uses, and applicant organizations.",
     "candidate_source_fields": [
       "guid",
@@ -42,10 +42,63 @@
       "published_at",
       "description"
     ],
-    "can_run_canary": false,
-    "last_checked_on": "2026-08-01",
-    "next_audit_on": "2026-08-08",
-    "notes": "The official page currently shows before-action cases such as PZ 2025-2558, while the declared RSS category is empty. Recheck for current feed entries. Suppress individual contact details and linked submittal bodies; retain organization names only after field-level review."
+    "probe_settings": {
+      "connector": {
+        "page_size": 25,
+        "max_records": 100,
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public RSS reader)"
+        }
+      },
+      "defaults": {
+        "city": "Taylor",
+        "state": "TX",
+        "jurisdiction": "Taylor",
+        "permit_type": "development_notice",
+        "approval_stage": "pre_approval",
+        "status": "before_action_notice"
+      },
+      "signal_stage": "pre_approval",
+      "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at"
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "guid",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "source_field": "title",
+          "pattern": "(?i)\\b(PZ\\s+\\d{4}-\\d+)\\b"
+        }
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "link",
+        "canonical_field": "source_url"
+      }
+    ],
+    "can_run_canary": true,
+    "last_checked_on": "2026-08-14",
+    "next_audit_on": "2026-08-14",
+    "notes": "The official RSS category resumed with PZ 2026-2715, published August 7, 2026. An August 14 no-write canary fetched one record, validated one pre-approval record, and returned zero errors with the stable feed GUID as identity. Retain only feed metadata and official links; suppress individual contacts, linked document bodies, enclosures, and raw exports."
   },
   {
     "key": "bend_or_planning_applications",

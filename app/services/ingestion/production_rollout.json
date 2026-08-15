@@ -1,16 +1,20 @@
 {
   "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.stlcitypermits.com",
   "candidate_retries": {
-    "allowed_hosts_value": "",
-    "candidate_catalog_fingerprint": "daf8fcb82987f8abc811ed458b8cca89363d925e2241cdf902e4fe9eaca912f7",
-    "candidate_count": 0,
-    "candidate_keys": [],
-    "policy_digest": "71c92f3d9c19b0dce7b2e31dac7f533536760cf6c86de049be76d22eb79d4eba",
-    "required_hosts": [],
+    "allowed_hosts_value": "www.taylortx.gov",
+    "candidate_catalog_fingerprint": "4666148528375847abe0649a45f8f5f5d7b0fb77610d967d191215319ae1a9f2",
+    "candidate_count": 1,
+    "candidate_keys": [
+      "taylor_tx_development_notices"
+    ],
+    "policy_digest": "df97e00f4dc0cbace0fdd9c48ef9ea364898161d8a334073db07bec0a79dba17",
+    "required_hosts": [
+      "www.taylortx.gov"
+    ],
     "sample_size": 10
   },
   "catalog_fingerprint": "979e0034e4e36a1390d9282b61d2dd4a43feda20c6ff88d6da490d8f782c57e3",
-  "manifest_digest": "47156a2d5d548dfec8f14432ddb3770da08570d20211b235fcf1611c57168a1e",
+  "manifest_digest": "bd288db1903427a4b561f808c3717d545b5acc45f89159f2e3b68a9b23fba15c",
   "policy_digest": "924bdeb4ed8a00b5965c3622bf0ea26680aac2d5dd63d468f93e8821680344a6",
   "required_hosts": [
     "anrmaps.vermont.gov",
