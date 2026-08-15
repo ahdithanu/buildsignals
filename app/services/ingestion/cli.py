@@ -43,12 +43,12 @@ from app.services.ingestion.scheduling import (
     source_schedule_policy,
     source_shard,
 )
+from app.services.ingestion.service import ActiveRunConflict, execute_source_run, list_sources
 from app.services.ingestion.source_access import (
     build_source_access_contract,
     source_access_contract_json,
     source_access_contract_markdown,
 )
-from app.services.ingestion.service import ActiveRunConflict, execute_source_run, list_sources
 from app.utils.org_scope import (
     SYSTEM_USER_ID,
     RequestContext,

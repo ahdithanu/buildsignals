@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import json
+from dataclasses import asdict, dataclass
 
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
 
