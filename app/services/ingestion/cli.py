@@ -15,15 +15,15 @@ from app.db import SessionLocal
 from app.models.ingestion import IngestionSource
 from app.models.organization import Organization
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
-from app.services.ingestion.catalog import (
-    load_candidate_catalog,
-    load_catalog,
-    sync_catalog,
-)
 from app.services.ingestion.build_signals_export import (
     build_batches,
     list_exportable_permits,
     publish_batch,
+)
+from app.services.ingestion.catalog import (
+    load_candidate_catalog,
+    load_catalog,
+    sync_catalog,
 )
 from app.services.ingestion.health import (
     CandidateCanaryResult,
