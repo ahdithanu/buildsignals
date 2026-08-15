@@ -297,10 +297,13 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     by_key = {entry.key: entry for entry in entries}
 
     san_marcos = by_key["san_marcos_tx_planning_application_notices"]
-    assert san_marcos.adapter == "rss"
-    assert san_marcos.status == "freshness_hold"
-    assert san_marcos.can_run_canary is False
-    assert san_marcos.probe_settings is None
+    assert san_marcos.adapter == "civicplus_newsflash"
+    assert san_marcos.status == "operational_retry"
+    assert san_marcos.can_run_canary is True
+    assert san_marcos.probe_settings["connector"]["category_id"] == 30
+    assert san_marcos.probe_settings["freshness_semantics"] == "filing_event_at"
+    assert san_marcos.probe_field_mappings[0].source_field == "article_id"
+    assert san_marcos.production_page_size == 100
 
     assert "taylor_tx_development_notices" not in by_key
     assert not {key for key in by_key if key.startswith("bend_or_")}
