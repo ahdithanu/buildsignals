@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from time import sleep
 from typing import Iterable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
@@ -16,6 +17,7 @@ from app.utils.org_scope import active_query
 CONTRACT_VERSION = "1.0"
 MAX_BATCH_RECORDS = 500
 EXPORTABLE_STAGES = {"pre_approval", "approved"}
+RETRYABLE_HTTP_STATUSES = {408, 425, 429, 500, 502, 503, 504}
 
 
 @dataclass(frozen=True)
@@ -189,36 +191,98 @@ def validate_target_url(target_url: str) -> None:
     raise ValueError("Build Signals target URL must use HTTPS (HTTP is allowed only for localhost)")
 
 
-def publish_batch(target_url: str, secret: str, batch: dict, *, timeout: int = 30) -> PublishResult:
+def _retry_delay_seconds(error: HTTPError | None, attempt: int) -> float:
+    if error is not None and error.headers is not None:
+        retry_after = error.headers.get("Retry-After")
+        if retry_after:
+            try:
+                return min(30.0, max(0.0, float(retry_after)))
+            except ValueError:
+                pass
+    return min(8.0, float(2 ** (attempt - 1)))
+
+
+def _parse_acknowledgement(batch: dict, payload: object) -> PublishResult:
+    if not isinstance(payload, dict) or not payload.get("ok"):
+        raise RuntimeError("Build Signals import returned an invalid acknowledgement")
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        raise RuntimeError("Build Signals import returned an invalid acknowledgement")
+
+    expected_batch_id = str(batch.get("batchId", ""))
+    expected_source_key = str((batch.get("source") or {}).get("key", ""))
+    if str(result.get("batchId", "")) != expected_batch_id:
+        raise RuntimeError("Build Signals acknowledgement batch ID did not match the request")
+    if str(result.get("sourceKey", "")) != expected_source_key:
+        raise RuntimeError("Build Signals acknowledgement source key did not match the request")
+
+    try:
+        records_found = int(result["recordsFound"])
+        records_inserted = int(result["recordsInserted"])
+        records_updated = int(result["recordsUpdated"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError("Build Signals acknowledgement counts were invalid") from exc
+    if min(records_found, records_inserted, records_updated) < 0:
+        raise RuntimeError("Build Signals acknowledgement counts were invalid")
+    if records_inserted + records_updated != records_found:
+        raise RuntimeError("Build Signals acknowledgement counts did not reconcile")
+
+    return PublishResult(
+        batch_id=expected_batch_id,
+        source_key=expected_source_key,
+        records_found=records_found,
+        records_inserted=records_inserted,
+        records_updated=records_updated,
+    )
+
+
+def publish_batch(
+    target_url: str,
+    secret: str,
+    batch: dict,
+    *,
+    timeout: int = 30,
+    max_attempts: int = 3,
+) -> PublishResult:
     validate_target_url(target_url)
     if not secret.strip():
         raise ValueError("BUILD_SIGNALS_INGESTION_SECRET is required")
-    request = Request(
-        target_url,
-        data=json.dumps(batch, separators=(",", ":")).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {secret}",
-            "Content-Type": "application/json",
-            "User-Agent": "build-signals-nationwide-ingestion/1.0",
-        },
-        method="POST",
-    )
-    try:
-        with urlopen(request, timeout=timeout) as response:  # noqa: S310 - URL validated above
-            payload = json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:1_000]
-        raise RuntimeError(f"Build Signals import returned HTTP {exc.code}: {detail}") from exc
-    except URLError as exc:
-        raise RuntimeError(f"Build Signals import request failed: {exc.reason}") from exc
+    if max_attempts < 1 or max_attempts > 10:
+        raise ValueError("max_attempts must be between 1 and 10")
 
-    if not payload.get("ok") or not isinstance(payload.get("result"), dict):
-        raise RuntimeError("Build Signals import returned an invalid acknowledgement")
-    result = payload["result"]
-    return PublishResult(
-        batch_id=str(result["batchId"]),
-        source_key=str(result["sourceKey"]),
-        records_found=int(result["recordsFound"]),
-        records_inserted=int(result["recordsInserted"]),
-        records_updated=int(result["recordsUpdated"]),
-    )
+    for attempt in range(1, max_attempts + 1):
+        request = Request(
+            target_url,
+            data=json.dumps(batch, separators=(",", ":")).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {secret}",
+                "Content-Type": "application/json",
+                "User-Agent": "build-signals-nationwide-ingestion/1.0",
+                "X-Build-Signals-Batch-ID": str(batch.get("batchId", "")),
+            },
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=timeout) as response:  # noqa: S310 - URL validated above
+                try:
+                    payload = json.loads(response.read().decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise RuntimeError(
+                        "Build Signals import returned an invalid JSON acknowledgement"
+                    ) from exc
+            return _parse_acknowledgement(batch, payload)
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:1_000]
+            if exc.code not in RETRYABLE_HTTP_STATUSES or attempt == max_attempts:
+                raise RuntimeError(
+                    f"Build Signals import returned HTTP {exc.code}: {detail}"
+                ) from exc
+            sleep(_retry_delay_seconds(exc, attempt))
+        except URLError as exc:
+            if attempt == max_attempts:
+                raise RuntimeError(
+                    f"Build Signals import request failed after {attempt} attempts: {exc.reason}"
+                ) from exc
+            sleep(_retry_delay_seconds(None, attempt))
+
+    raise RuntimeError("Build Signals import request failed")

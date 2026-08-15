@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
+from email.message import Message
+from io import BytesIO
 from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -126,8 +129,143 @@ def test_publish_sends_bearer_auth_and_parses_acknowledgement():
 
     request = open_request.call_args.args[0]
     assert request.get_header("Authorization") == "Bearer shared-secret"
+    assert request.get_header("X-build-signals-batch-id") == batch["batchId"]
     assert result.records_inserted == 1
     assert result.source_key == "mesa_az_commercial_permit_submittals"
+
+
+def test_publish_retries_transient_http_failure_and_respects_retry_after():
+    batch = build_batches([_permit()])[0]
+    headers = Message()
+    headers["Retry-After"] = "0"
+    unavailable = HTTPError(
+        "https://www.buildsignals.ai/api/internal/ingestion/import",
+        503,
+        "Unavailable",
+        headers,
+        BytesIO(b'{"error":"try again"}'),
+    )
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self):
+            return json.dumps({
+                "ok": True,
+                "result": {
+                    "batchId": batch["batchId"],
+                    "sourceKey": batch["source"]["key"],
+                    "recordsFound": 1,
+                    "recordsInserted": 0,
+                    "recordsUpdated": 1,
+                },
+            }).encode()
+
+    with (
+        patch(
+            "app.services.ingestion.build_signals_export.urlopen",
+            side_effect=[unavailable, FakeResponse()],
+        ) as open_request,
+        patch("app.services.ingestion.build_signals_export.sleep") as wait,
+    ):
+        result = publish_batch(
+            "https://www.buildsignals.ai/api/internal/ingestion/import",
+            "shared-secret",
+            batch,
+        )
+
+    assert open_request.call_count == 2
+    wait.assert_called_once_with(0.0)
+    assert result.records_updated == 1
+
+
+def test_publish_does_not_retry_permanent_http_failure():
+    batch = build_batches([_permit()])[0]
+    forbidden = HTTPError(
+        "https://www.buildsignals.ai/api/internal/ingestion/import",
+        403,
+        "Forbidden",
+        Message(),
+        BytesIO(b'{"error":"forbidden"}'),
+    )
+
+    with (
+        patch(
+            "app.services.ingestion.build_signals_export.urlopen",
+            side_effect=forbidden,
+        ) as open_request,
+        patch("app.services.ingestion.build_signals_export.sleep") as wait,
+        pytest.raises(RuntimeError, match="HTTP 403"),
+    ):
+        publish_batch(
+            "https://www.buildsignals.ai/api/internal/ingestion/import",
+            "shared-secret",
+            batch,
+        )
+
+    assert open_request.call_count == 1
+    wait.assert_not_called()
+
+
+def test_publish_rejects_mismatched_acknowledgement():
+    batch = build_batches([_permit()])[0]
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self):
+            return json.dumps({
+                "ok": True,
+                "result": {
+                    "batchId": "different-batch",
+                    "sourceKey": batch["source"]["key"],
+                    "recordsFound": 1,
+                    "recordsInserted": 1,
+                    "recordsUpdated": 0,
+                },
+            }).encode()
+
+    with (
+        patch(
+            "app.services.ingestion.build_signals_export.urlopen",
+            return_value=FakeResponse(),
+        ),
+        pytest.raises(RuntimeError, match="batch ID did not match"),
+    ):
+        publish_batch(
+            "https://www.buildsignals.ai/api/internal/ingestion/import",
+            "shared-secret",
+            batch,
+        )
+
+
+def test_publish_exhausts_network_retries():
+    batch = build_batches([_permit()])[0]
+
+    with (
+        patch(
+            "app.services.ingestion.build_signals_export.urlopen",
+            side_effect=URLError("connection reset"),
+        ) as open_request,
+        patch("app.services.ingestion.build_signals_export.sleep") as wait,
+        pytest.raises(RuntimeError, match="after 3 attempts"),
+    ):
+        publish_batch(
+            "https://www.buildsignals.ai/api/internal/ingestion/import",
+            "shared-secret",
+            batch,
+        )
+
+    assert open_request.call_count == 3
+    assert wait.call_count == 2
 
 
 def test_rejects_insecure_remote_target():

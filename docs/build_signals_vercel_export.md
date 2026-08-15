@@ -38,5 +38,10 @@ default. Records are grouped by source and market and sent in bounded 500-record
 uses source key plus external record ID for idempotency, so retries update records rather than
 duplicating them.
 
+Each batch publish uses a bounded three-attempt retry policy for connection failures, rate limits,
+request timeouts, and transient server errors. `Retry-After` is honored up to 30 seconds. Permanent
+client errors fail immediately. A publish is counted as successful only when the receiver returns
+the same batch ID and source key and its inserted and updated counts reconcile to the received count.
+
 Start with one reviewed source, compare producer counts to the Vercel data-health page, and then
 expand through the existing rollout waves. Do not publish candidate or legal-hold sources.
