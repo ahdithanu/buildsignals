@@ -601,6 +601,169 @@
     "notes": "This corridor-linked view gives development-motion context before final issuance. An August 2, 2026 canary validated 30 rows with 24 approved and 6 pre-approval observations plus tax-lot, valuation, size, use, and address context with zero failures. The ArcGIS line layer rejects centroid requests, so no derived coordinates are claimed. Retain candidate status until explicit promotion and rights signoff."
   },
   {
+    "key": "detroit_mi_bseed_building_plan_reviews",
+    "name": "Detroit BSEED Building Permit Plan Reviews",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Detroit, MI",
+    "base_url": "https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/bseed_building_permit_plan_reviews/FeatureServer/0/query",
+    "official_landing_page": "https://www.arcgis.com/home/item.html?id=b47bda202cac49dcbef8d477e9ecb09b",
+    "license": "City of Detroit open-portal permitting information is identified as public-domain; official item is public authoritative with BSEED attribution",
+    "status": "operational_retry",
+    "blocker_summary": "The August 15 no-write lifecycle canary passed 40 of 40 records across pre-approval and approved stages; explicit Build Signals owner approval of the narrow production scope remains required.",
+    "early_warning_value": "Accepted, routed-for-review, and plans-approved building applications expose tenant improvements, changes of use, retail buildouts, addresses, parcels, and work descriptions before permit issuance.",
+    "candidate_source_fields": [
+      "record_id",
+      "task_id",
+      "address",
+      "submitted_date",
+      "task",
+      "task_status",
+      "task_status_date",
+      "work_description",
+      "parcel_id",
+      "longitude",
+      "latitude"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 30,
+        "where": "record_id IS NOT NULL AND address IS NOT NULL AND submitted_date IS NOT NULL",
+        "out_fields": "ObjectId,record_id,task_id,address,submitted_date,task,task_status,task_status_date,work_description,parcel_id,longitude,latitude",
+        "order_by_fields": "task_status_date DESC,ObjectId DESC",
+        "include_geometry": false,
+        "query": {
+          "f": "json",
+          "outSR": 4326
+        }
+      },
+      "defaults": {
+        "city": "Detroit",
+        "state": "MI",
+        "jurisdiction": "Detroit",
+        "permit_type": "building_plan_review"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_field": "task_status_date",
+      "freshness_semantics": "status_event_at",
+      "freshness_sla_hours": 72,
+      "canary_required_fields": [
+        "record_id",
+        "address",
+        "submitted_date",
+        "task_status",
+        "task_status_date"
+      ],
+      "canary_stage_probes": [
+        {
+          "name": "detroit_plan_review_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 15,
+          "connector": {
+            "where": "record_id IS NOT NULL AND address IS NOT NULL AND submitted_date IS NOT NULL AND task_status <> 'Plans Approved'"
+          }
+        },
+        {
+          "name": "detroit_plan_review_approved",
+          "expected_stage": "approved",
+          "sample_size": 15,
+          "connector": {
+            "where": "record_id IS NOT NULL AND address IS NOT NULL AND submitted_date IS NOT NULL AND task_status = 'Plans Approved'"
+          }
+        }
+      ]
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "record_id",
+        "canonical_field": "permit_number",
+        "is_active": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": ["record_id"]
+        },
+        "is_active": true
+      },
+      {
+        "source_field": "submitted_date",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "task_status",
+              "operator": "in",
+              "values": ["Plans Approved"],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        },
+        "is_active": true
+      },
+      {
+        "source_field": "task_status",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "task_status_date",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      },
+      {
+        "source_field": "task",
+        "canonical_field": "review_type",
+        "is_active": true
+      },
+      {
+        "source_field": "work_description",
+        "canonical_field": "description",
+        "is_active": true
+      },
+      {
+        "source_field": "address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "parcel_id",
+        "canonical_field": "parcel_id",
+        "is_active": true
+      },
+      {
+        "source_field": "longitude",
+        "canonical_field": "longitude",
+        "is_active": true
+      },
+      {
+        "source_field": "latitude",
+        "canonical_field": "latitude",
+        "is_active": true
+      }
+    ],
+    "production_page_size": 1000,
+    "can_run_canary": true,
+    "last_checked_on": "2026-08-15",
+    "next_audit_on": "2026-08-22",
+    "notes": "The official public-authoritative layer contained 39,489 rows and 39,489 distinct record IDs, with submitted and task-status activity through August 14, 2026. August 1-14 contained accepted, routed-for-review, and plans-approved records. An August 15 no-write canary fetched and validated 40 of 40 records with zero failures across both lifecycle stages. Use record_id as durable identity and join key to Detroit's issued-permit confirmation source. Retain BSEED attribution, source links, and retrieval timestamps; suppress attachments, contacts, raw geometry, and raw source-replacement exports."
+  },
+  {
     "key": "orlando_fl_planning_applications",
     "name": "Orlando Planning Applications",
     "adapter": "socrata",

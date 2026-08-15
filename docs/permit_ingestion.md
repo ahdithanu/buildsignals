@@ -127,6 +127,10 @@ used by nearby acquisition discovery. Current permit feeds include:
 - Detroit BSEED Building Permits (`bseed_building_permits`) as an approved-only
   confirmation source with same-day permit lifecycle, project, valuation, and
   parcel context.
+- Detroit BSEED Building Permit Plan Reviews
+  (`bseed_building_permit_plan_reviews`) as a canary-validated candidate for
+  accepted, routed-for-review, and plans-approved filings before issuance. Its
+  shared `record_id` connects early review evidence to the issued source.
 - Bend Planning Applications, Permit Applications Point, and Permit
   Applications Line for nightly planning and permit lifecycle coverage with
   pre-approval, approved, tax-lot, owner, valuation, use, and address context.
@@ -196,10 +200,11 @@ human review before promotion.
 The same review surface now carries approved-opening retailer signals as well
 as pre-approval signals. That lets the dashboard show both early chain motion
 and official openings without splitting the user into separate workflows.
-Approved-only confirmation sources such as Detroit BSEED still remain
-distinct, while retailer-opening feeds like Texas Comptroller sales tax
-locations and Washington DC business licenses are exposed as live opening
-coverage in the operations UI.
+Approved-only confirmation sources such as Detroit BSEED remain distinct from
+their pre-approval companions, while shared source identities connect the
+lifecycle. Retailer-opening feeds like Texas Comptroller sales tax locations
+and Washington DC business licenses remain exposed as live opening coverage in
+the operations UI.
 San Francisco Planning Department non-project records add entitlement and
 review context before or alongside building permits. The narrow production
 slice keeps planning record types such as conditional use and discretionary

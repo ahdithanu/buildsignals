@@ -893,6 +893,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
     assert response.status_code == 200, response.text
     body = response.json()
     assert {row["key"] for row in body} == {
+        "detroit_mi_bseed_building_plan_reviews",
         "san_marcos_tx_planning_application_notices",
         "taylor_tx_development_notices",
         "orlando_fl_planning_applications",

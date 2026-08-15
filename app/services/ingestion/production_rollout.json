@@ -1,16 +1,20 @@
 {
   "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.sanmarcostx.gov,www.stlcitypermits.com,www.taylortx.gov",
   "candidate_retries": {
-    "allowed_hosts_value": "",
-    "candidate_catalog_fingerprint": "efb3ed84370508d02a260bbfff9d0d75caae9bf6b498e5b2eaa69c04c8d12aa0",
-    "candidate_count": 0,
-    "candidate_keys": [],
-    "policy_digest": "71c92f3d9c19b0dce7b2e31dac7f533536760cf6c86de049be76d22eb79d4eba",
-    "required_hosts": [],
+    "allowed_hosts_value": "services2.arcgis.com",
+    "candidate_catalog_fingerprint": "1e36ba6cc211bdd5c0bbd4b2fe8ecb5a8323a2656e4f9685410145b8ca6dd0dd",
+    "candidate_count": 1,
+    "candidate_keys": [
+      "detroit_mi_bseed_building_plan_reviews"
+    ],
+    "policy_digest": "9ad4fe01d44ca4cd1003184e65a80960c3161eef2af6bd69c1173eace5bdc0ef",
+    "required_hosts": [
+      "services2.arcgis.com"
+    ],
     "sample_size": 10
   },
   "catalog_fingerprint": "674e3bf1ef98f6b36c06bc218e43b8cc66041993a7ae55039d17a2bb8ac0379e",
-  "manifest_digest": "ca1fce5fb1c1a3ed3b9d7312b3d320293d8bde92ad3f2bd5989c876e5fa020d2",
+  "manifest_digest": "5767453955502836615ddecfaa41b5f826ae1456e09cac80fc4feb84d8ceee06",
   "policy_digest": "6dea1cb6fae1bdf4cf8e908da3a200a2c2407f06e87a4e2b9f7525bfafeee907",
   "required_hosts": [
     "anrmaps.vermont.gov",
