@@ -58,7 +58,7 @@ def test_applicant_mappings_declare_conservative_value_semantics():
         if mapping.canonical_field == "applicant_name"
     }
 
-    assert len(applicant_mappings) == 23
+    assert len(applicant_mappings) == 24
     assert set(applicant_mappings.values()) <= {
         "unknown", "business_dba", "legal_entity", "person"
     }
@@ -76,6 +76,9 @@ def test_applicant_mappings_declare_conservative_value_semantics():
     ] == "legal_entity"
     assert applicant_mappings[
         ("new_york_ny_dob_now_job_applications", "applicant_business_name")
+    ] == "unknown"
+    assert applicant_mappings[
+        ("san_marcos_tx_planning_application_notices", "__applicant_name")
     ] == "unknown"
 
 
@@ -5838,6 +5841,8 @@ def test_san_marcos_notices_promote_contact_suppressed_preapproval_evidence():
     assert normalized.values["application_number"] == "ZC-26-07"
     assert normalized.values["project_name"] == record["title"]
     assert normalized.values["description"] == record["description"]
+    assert normalized.values["applicant_name"] == "Drenner Group"
+    assert normalized.values["owner_name"] == "SM Hwy 123 Landholdings, LLC"
     assert normalized.values["approval_stage"] == "pre_approval"
     assert normalized.values["source_url"] == record["link"]
     assert entry.adapter == "civicplus_newsflash"
@@ -5853,6 +5858,11 @@ def test_san_marcos_notices_promote_contact_suppressed_preapproval_evidence():
     ]
     assert entry.settings["connector"]["category_id"] == 30
     assert entry.settings["connector"]["max_description_chars"] == 2000
+    mapping_by_canonical = {
+        mapping.canonical_field: mapping for mapping in entry.field_mappings
+    }
+    assert mapping_by_canonical["applicant_name"].value_semantics == "unknown"
+    assert mapping_by_canonical["owner_name"].value_semantics == "unknown"
     assert {
         "email_address",
         "phone_number",
@@ -5861,6 +5871,57 @@ def test_san_marcos_notices_promote_contact_suppressed_preapproval_evidence():
         "attachment",
         "raw_source_export",
     } <= set(entry.settings["suppressed_fields"])
+
+
+@pytest.mark.parametrize(
+    ("description", "applicant", "owner"),
+    [
+        (
+            "A Zoning Change Application has beensubmitted by the Drenner Group, "
+            "onbehalf of SM Hwy 123 Landholdings, LLC, for approximately 4.64 acres.",
+            "Drenner Group",
+            "SM Hwy 123 Landholdings, LLC",
+        ),
+        (
+            "A request was submitted by Shane Glosson, TWWG, LLC, on behalf of "
+            "Sinai Pentecostal Church for approximately 14.72 acres.",
+            "Shane Glosson, TWWG, LLC",
+            "Sinai Pentecostal Church",
+        ),
+        (
+            "A request has been submitted by Quiddity Engineering, LLC, on behalf "
+            "of HEB, LP, to modify standards within the district.",
+            "Quiddity Engineering, LLC",
+            "HEB, LP",
+        ),
+    ],
+)
+def test_san_marcos_party_extraction_stops_at_project_narrative(
+    description, applicant, owner
+):
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "san_marcos_tx_planning_application_notices"
+    )
+    mappings = [
+        SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings
+    ]
+    record = {
+        "article_id": "test-party",
+        "title": "ZC-26-99 Test",
+        "link": "https://www.sanmarcostx.gov/m/newsflash/Home/Detail/test-party",
+        "published_at": "August 14, 2026",
+        "description": description,
+    }
+
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared, field_mapping, defaults=entry.settings["defaults"]
+    )
+
+    assert normalized.values["applicant_name"] == applicant
+    assert normalized.values["owner_name"] == owner
 
 
 def test_catalog_sync_updates_mutable_fields_and_rejects_adapter_change(db):

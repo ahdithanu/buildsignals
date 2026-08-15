@@ -43,6 +43,12 @@ including developers, applicants, representatives, and owners, for entity
 resolution and evidence-backed graph relationships. The connector removes email
 addresses and phone numbers before normalization.
 
+Where the City's own summary uses explicit `submitted by` and `on behalf of`
+language, declarative transforms map those values conservatively to canonical
+applicant and owner fields. Applicant values keep `unknown` semantics and are
+not relabeled as developers. Owner values can project through the shared graph
+service as evidence-backed property-owner relationships.
+
 Suppress and do not fetch:
 
 - email addresses, phone numbers, and other applicant or planner contact fields
