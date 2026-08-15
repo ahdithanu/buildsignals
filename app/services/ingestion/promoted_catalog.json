@@ -825,6 +825,30 @@
         "value_semantics": "unknown"
       },
       {
+        "canonical_field": "applicant_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__applicant_name",
+        "transform": "regex_extract",
+        "transform_options": {
+          "pattern": "(?is)\\b(?:has\\s*)?(?:been\\s*)?submitted by\\s+(?:the\\s+)?(.+?)(?:,?\\s*on\\s*behalf\\s+of\\b|,?\\s+for approximately\\b|,\\s*for\\b|\\.(?:\\s|$)|$)",
+          "source_field": "description"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "owner_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__owner_name",
+        "transform": "regex_extract",
+        "transform_options": {
+          "pattern": "(?is)\\bon\\s*behalf\\s+of\\s+(.+?)(?:,?\\s+for approximately\\b|,\\s*to\\b|,\\s*for\\b|\\.(?:\\s|$)|$)",
+          "source_field": "description"
+        },
+        "value_semantics": "unknown"
+      },
+      {
         "canonical_field": "filed_at",
         "is_active": true,
         "is_required": false,
