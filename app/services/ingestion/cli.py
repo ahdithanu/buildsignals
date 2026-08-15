@@ -20,6 +20,11 @@ from app.services.ingestion.catalog import (
     load_catalog,
     sync_catalog,
 )
+from app.services.ingestion.build_signals_export import (
+    build_batches,
+    list_exportable_permits,
+    publish_batch,
+)
 from app.services.ingestion.health import (
     CandidateCanaryResult,
     evaluate_source_health,
@@ -184,6 +189,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--source-key", action="append", dest="source_keys",
         help="Run only this source key (repeat for multiple sources)",
     )
+
+    publish = subcommands.add_parser(
+        "publish-build-signals",
+        help="Publish normalized pre-approval and approved records to the Vercel application",
+    )
+    publish.add_argument("--organization", required=True, help="Organization ID or slug")
+    publish.add_argument(
+        "--target-url",
+        default=os.environ.get("BUILD_SIGNALS_INGESTION_URL"),
+        help="Versioned import endpoint (defaults to BUILD_SIGNALS_INGESTION_URL)",
+    )
+    publish.add_argument(
+        "--source-key", action="append", dest="source_keys",
+        help="Publish only this source key (repeat for multiple sources)",
+    )
+    publish.add_argument(
+        "--stage", choices=("pre_approval_and_approved", "approved_only"),
+        default="pre_approval_and_approved",
+    )
+    publish.add_argument("--limit", type=int, default=5_000, choices=range(1, 50_001))
+    publish.add_argument("--dry-run", action="store_true")
+    publish.add_argument("--output", type=Path, help="Write dry-run contract JSON to this file")
 
     scheduled = subcommands.add_parser(
         "scheduled",
@@ -749,6 +776,50 @@ def main(argv: list[str] | None = None) -> int:
                 _select_sources(db, source_keys=args.source_keys),
                 as_json=args.json,
             )
+
+        if args.command == "publish-build-signals":
+            stages = {"approved"} if args.stage == "approved_only" else {
+                "pre_approval", "approved"
+            }
+            permits = list_exportable_permits(
+                db,
+                source_keys=args.source_keys,
+                stages=stages,
+                limit=args.limit,
+            )
+            batches = build_batches(permits)
+            if args.dry_run:
+                content = json.dumps(batches, indent=2, sort_keys=True) + "\n"
+                if args.output:
+                    args.output.write_text(content, encoding="utf-8")
+                    print(
+                        f"wrote {len(batches)} Build Signals batches "
+                        f"({len(permits)} records) to {args.output}"
+                    )
+                else:
+                    print(content, end="")
+                return 0
+            if not args.target_url:
+                raise ValueError(
+                    "--target-url or BUILD_SIGNALS_INGESTION_URL is required"
+                )
+            secret = os.environ.get("BUILD_SIGNALS_INGESTION_SECRET", "")
+            inserted = updated = found = 0
+            for batch in batches:
+                result = publish_batch(args.target_url, secret, batch)
+                found += result.records_found
+                inserted += result.records_inserted
+                updated += result.records_updated
+                print(
+                    f"published {result.source_key} batch={result.batch_id} "
+                    f"found={result.records_found} inserted={result.records_inserted} "
+                    f"updated={result.records_updated}"
+                )
+            print(
+                f"Build Signals publish complete: batches={len(batches)} "
+                f"found={found} inserted={inserted} updated={updated}"
+            )
+            return 0
 
         if args.command == "retry-candidates":
             selected = _select_due_candidates(
