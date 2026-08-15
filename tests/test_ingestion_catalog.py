@@ -228,6 +228,7 @@ def test_catalog_loads_first_live_source_cohort():
             "bend_or_planning_applications",
             "bend_or_permit_applications_point",
             "bend_or_permit_applications_line",
+            "taylor_tx_development_notices",
         }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
@@ -275,7 +276,6 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
 
     assert {entry.key for entry in entries} == {
         "san_marcos_tx_planning_application_notices",
-        "taylor_tx_development_notices",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -302,19 +302,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert san_marcos.can_run_canary is False
     assert san_marcos.probe_settings is None
 
-    taylor = by_key["taylor_tx_development_notices"]
-    assert taylor.adapter == "rss"
-    assert taylor.status == "operational_retry"
-    assert taylor.can_run_canary is True
-    assert taylor.probe_settings["defaults"]["approval_stage"] == "pre_approval"
-    assert taylor.next_audit_on.isoformat() == "2026-08-14"
-    assert any(
-        mapping.canonical_field == "application_number"
-        and mapping.transform == "regex_extract"
-        for mapping in taylor.probe_field_mappings
-    )
-    assert "before-action" in taylor.early_warning_value.casefold()
-
+    assert "taylor_tx_development_notices" not in by_key
     assert not {key for key in by_key if key.startswith("bend_or_")}
 
     orlando = by_key["orlando_fl_planning_applications"]
@@ -399,11 +387,13 @@ def test_candidate_catalog_can_include_promoted_history():
         "bend_or_permit_applications_line",
         "bend_or_permit_applications_point",
         "bend_or_planning_applications",
+        "taylor_tx_development_notices",
     } <= set(by_key)
     for key in (
         "bend_or_permit_applications_line",
         "bend_or_permit_applications_point",
         "bend_or_planning_applications",
+        "taylor_tx_development_notices",
     ):
         production = catalog_source_for_candidate(by_key[key])
         assert production is not None
@@ -5775,6 +5765,52 @@ def test_promoted_washington_sources_bootstrap_from_production_catalog(db):
     assert second.unchanged == 2
 
 
+def test_taylor_development_notices_promote_minimized_preapproval_evidence():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "taylor_tx_development_notices"
+    )
+    record = {
+        "guid": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079/639217198500000000",
+        "title": "Notice of Public Hearings - PZ 2026-2715 - Employment Center Plan - Project Mustang",
+        "link": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079",
+        "published_at": "Fri, 07 Aug 2026 16:17:30 -0600",
+        "description": "",
+    }
+    mappings = [
+        SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings
+    ]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == record["guid"]
+    assert normalized.values["application_number"] == "PZ 2026-2715"
+    assert normalized.values["project_name"] == record["title"]
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["source_url"] == record["link"]
+    assert entry.settings["candidate_status"] == "approved_for_production"
+    assert entry.settings["promotion_rights_approved"] is True
+    assert entry.settings["field_allowlist"] == [
+        "guid",
+        "title",
+        "link",
+        "published_at",
+        "description",
+    ]
+    assert {
+        "applicant_contact",
+        "planner_contact",
+        "linked_document_body",
+        "enclosure",
+        "raw_source_export",
+    } <= set(entry.settings["suppressed_fields"])
+
+
 def test_catalog_sync_updates_mutable_fields_and_rejects_adapter_change(db):
     original = load_catalog()[0]
     sync_catalog(db, [original])
@@ -8662,6 +8698,13 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "link": "https://www.everettwa.gov/DocumentCenter/View/54345/Notice-of-Application-REVII26-014",
             "published_at": "Fri, 31 Jul 2026 15:07:37 -0800",
             "description": "Application for replacement of two commercial storage silos.",
+        },
+        "taylor_tx_development_notices": {
+            "guid": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079/639217198500000000",
+            "title": "Notice of Public Hearings - PZ 2026-2715 - Employment Center Plan - Project Mustang",
+            "link": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079",
+            "published_at": "Fri, 07 Aug 2026 16:17:30 -0600",
+            "description": "",
         },
     }
 

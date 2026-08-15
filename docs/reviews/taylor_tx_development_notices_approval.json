@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "candidate_key": "taylor_tx_development_notices",
+  "decision": "approved_for_production",
+  "reviewed_by": "Build Signals Owner",
+  "reviewed_on": "2026-08-14",
+  "candidate_canary_completed_on": "2026-08-14",
+  "rights_approved": true,
+  "data_minimization_approved": true,
+  "settings": {
+    "official_landing_page": "https://www.taylortx.gov/1386/Development-News-and-Notices",
+    "license": "Official public notice feed",
+    "reconciliation_mode": "rss_recent_window",
+    "refresh_frequency": "daily",
+    "collection_interval_minutes": 1440,
+    "collection_sla_hours": 24,
+    "retry_interval_minutes": 360,
+    "schedule_mode": "automatic",
+    "freshness_field": "published_at",
+    "freshness_semantics": "filing_event_at",
+    "freshness_sla_hours": 336,
+    "signal_stage": "pre_approval_and_approved",
+    "attribution_required": true,
+    "rights_basis": "Approved by the Build Signals owner on 2026-08-14 for commercial storage and customer-facing derived intelligence from the City of Taylor's intentionally published official RSS notice metadata. Preserve City attribution and official links; do not fetch linked documents, contacts, enclosures, or offer raw feed replacement exports.",
+    "export_policy": "derived_development_notice_context_only_no_raw_document_export",
+    "field_allowlist": [
+      "guid",
+      "title",
+      "link",
+      "published_at",
+      "description"
+    ],
+    "suppressed_fields": [
+      "applicant_contact",
+      "planner_contact",
+      "linked_document_body",
+      "enclosure",
+      "raw_source_export"
+    ],
+    "canary_required_fields": [
+      "guid",
+      "title",
+      "link",
+      "published_at"
+    ],
+    "connector": {
+      "page_size": 100,
+      "max_records": 1000,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public RSS reader)"
+      }
+    },
+    "defaults": {
+      "city": "Taylor",
+      "state": "TX",
+      "jurisdiction": "Taylor",
+      "permit_type": "development_notice",
+      "approval_stage": "pre_approval",
+      "status": "before_action_notice"
+    }
+  },
+  "field_mappings": [
+    {
+      "source_field": "guid",
+      "canonical_field": "source_record_id",
+      "is_required": true
+    },
+    {
+      "source_field": "__application_number",
+      "canonical_field": "application_number",
+      "transform": "regex_extract",
+      "transform_options": {
+        "source_field": "title",
+        "pattern": "(?i)\\b(PZ\\s+\\d{4}-\\d+)\\b"
+      }
+    },
+    {
+      "source_field": "title",
+      "canonical_field": "project_name"
+    },
+    {
+      "source_field": "description",
+      "canonical_field": "description"
+    },
+    {
+      "source_field": "published_at",
+      "canonical_field": "filed_at",
+      "transform": "date"
+    },
+    {
+      "source_field": "link",
+      "canonical_field": "source_url"
+    }
+  ]
+}

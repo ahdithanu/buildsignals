@@ -40,7 +40,7 @@ def test_rollout_manifest_assigns_every_source_to_one_wave_and_shard():
     manifest = _manifest()
     all_wave_keys = [key for wave in manifest.waves for key in wave.source_keys]
 
-    assert manifest.source_count == len(entries) == 121
+    assert manifest.source_count == len(entries) == 122
     assert manifest.state_count == 40
     assert len(all_wave_keys) == len(set(all_wave_keys)) == len(entries)
     assert set(all_wave_keys) == {entry.key for entry in entries}
@@ -61,22 +61,20 @@ def test_rollout_manifest_matches_catalog_wave_classification():
 
     assert wave_by_key == {entry.key: source_rollout_wave(entry) for entry in entries}
     assert [(wave.wave, wave.source_count) for wave in manifest.waves] == [
-        (1, 21),
+        (1, 22),
         (2, 26),
         (3, 11),
         (4, 63),
     ]
 
 
-def test_rollout_manifest_candidate_scope_contains_only_runnable_unpromoted_sources():
+def test_rollout_manifest_candidate_scope_excludes_promoted_sources():
     manifest = _manifest()
 
-    assert manifest.candidate_retries.candidate_count == 1
-    assert manifest.candidate_retries.candidate_keys == [
-        "taylor_tx_development_notices"
-    ]
-    assert manifest.candidate_retries.required_hosts == ["www.taylortx.gov"]
-    assert manifest.candidate_retries.allowed_hosts_value == "www.taylortx.gov"
+    assert manifest.candidate_retries.candidate_count == 0
+    assert manifest.candidate_retries.candidate_keys == []
+    assert manifest.candidate_retries.required_hosts == []
+    assert manifest.candidate_retries.allowed_hosts_value == ""
 
 
 def test_rollout_classification_uses_settings_state_and_rejects_unknown_state():

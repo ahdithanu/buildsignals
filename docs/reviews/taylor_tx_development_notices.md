@@ -2,9 +2,9 @@
 
 ## Status
 
-Awaiting explicit Build Signals data-governance approval for production rights
-and data minimization. The source remains `operational_retry`; this document is
-not an approval or a production promotion manifest.
+Approved by the Build Signals owner on August 14, 2026 for the narrow production
+rights and data-minimization scope below. The machine-readable approval is in
+`docs/reviews/taylor_tx_development_notices_approval.json`.
 
 ## Source
 
@@ -60,9 +60,9 @@ notice source. Before promotion, an authorized reviewer must still explicitly
 approve commercial storage and customer-facing derived intelligence under the
 minimized scope above.
 
-## Approval Needed
+## Approval Record
 
-Approve both of these statements before generating the production manifest:
+The Build Signals owner approved both statements on August 14, 2026:
 
 1. Build Signals may store and process the official Taylor RSS notice metadata
    for commercial, customer-facing derived development intelligence with City

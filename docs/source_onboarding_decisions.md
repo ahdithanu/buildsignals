@@ -3437,11 +3437,12 @@ Evidence URLs:
 - San Marcos, Texas Planning Application Notices remains a freshness hold on
   the CivicPlus RSS adapter: its declared feed was still empty on August 14,
   2026. Taylor's Development Notices feed resumed and published PZ 2026-2715
-  on August 7, so Taylor advances to `operational_retry` with a bounded,
-  no-write pre-approval canary. The canary retains stable GUID, title,
-  publication time, extracted PZ case number, and official link only. Do not
-  promote until identity, lifecycle, freshness, and evidence pass review; do
-  not fetch linked documents, contacts, enclosures, or raw replacement exports.
+  on August 7, and its bounded August 14 canary validated one pre-approval row
+  with zero errors. The Build Signals owner approved the minimized production
+  scope, so Taylor is now a daily production source retaining stable GUID,
+  title, publication time, extracted PZ case number, short RSS description,
+  and official link only. It does not fetch linked documents, contacts,
+  enclosures, or raw replacement exports.
 - Bellevue, Tacoma, and Spokane expose technically strong pre-approval permit
   or permit-activity layers, but remain rights holds. Bellevue explicitly
   prohibits commercial use or sale without written authorization; Tacoma and
