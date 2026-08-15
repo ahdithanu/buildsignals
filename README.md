@@ -61,6 +61,15 @@ npm run dev
 The frontend talks to `http://localhost:8000` by default
 (`VITE_API_BASE_URL`). All API routes are versioned under `/v1`.
 
+### Production frontend (Vercel)
+
+This repository is the canonical source for both the Build Signals frontend and
+backend. Vercel builds the React/Vite application from the repository root
+using `vercel.json` and publishes `dist/`. Set `VITE_API_BASE_URL` to the HTTPS
+origin of the production FastAPI service before promoting a preview. The
+separate `deal-signal-terminal` repository is superseded and receives no new
+product work. See [`docs/adr/003-unified-product-repository.md`](docs/adr/003-unified-product-repository.md).
+
 ---
 
 ## Environment
