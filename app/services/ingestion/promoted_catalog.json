@@ -788,6 +788,130 @@
     }
   },
   {
+    "adapter": "civicplus_newsflash",
+    "base_url": "https://www.sanmarcostx.gov/m/newsflash",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "article_id",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "application_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "pattern": "(?i)\\b((?:ZC|AN|PDD|PSA|SNC)-\\d{2}-\\d+(?:\\([A-Z]\\))?|\\d{4}-\\d{5})\\b",
+          "source_field": "title"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "project_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "title",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "description",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "filed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "published_at",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "source_url",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "link",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "San Marcos, TX",
+    "key": "san_marcos_tx_planning_application_notices",
+    "name": "San Marcos Planning Application Notices",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "article_id",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ],
+      "candidate_canary_completed_on": "2026-08-14",
+      "candidate_key": "san_marcos_tx_planning_application_notices",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "connector": {
+        "category_id": 30,
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public NewsFlash reader)"
+        },
+        "max_description_chars": 2000,
+        "max_records": 100,
+        "page_size": 100
+      },
+      "defaults": {
+        "approval_stage": "pre_approval",
+        "city": "San Marcos",
+        "jurisdiction": "San Marcos",
+        "permit_type": "planning_application_notice",
+        "state": "TX",
+        "status": "application_notice"
+      },
+      "export_policy": "derived_planning_notice_context_only_no_raw_document_export",
+      "field_allowlist": [
+        "article_id",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ],
+      "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 336,
+      "license": "Official public notice archive",
+      "official_landing_page": "https://www.sanmarcostx.gov/1537/Public-and-Application-Notices",
+      "promotion_data_minimization_approved": true,
+      "promotion_reviewed_by": "Build Signals Owner",
+      "promotion_reviewed_on": "2026-08-14",
+      "promotion_rights_approved": true,
+      "reconciliation_mode": "newsflash_current_window",
+      "refresh_frequency": "daily",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by the Build Signals owner on 2026-08-14 for commercial storage and customer-facing derived intelligence from the City of San Marcos's intentionally published official Planning Application Notices archive. Preserve City attribution and official links; retain only bounded project summaries after connector-level contact suppression; do not fetch detail pages, linked documents, attachments, or offer raw archive replacement exports.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "email_address",
+        "phone_number",
+        "applicant_contact",
+        "planner_contact",
+        "linked_detail_body",
+        "linked_document_body",
+        "attachment",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
     "adapter": "rss",
     "base_url": "https://www.taylortx.gov/RSSFeed.aspx?ModID=1&CID=31",
     "field_mappings": [

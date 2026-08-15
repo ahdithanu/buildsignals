@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "candidate_key": "san_marcos_tx_planning_application_notices",
+  "decision": "approved_for_production",
+  "reviewed_by": "Build Signals Owner",
+  "reviewed_on": "2026-08-14",
+  "candidate_canary_completed_on": "2026-08-14",
+  "rights_approved": true,
+  "data_minimization_approved": true,
+  "settings": {
+    "official_landing_page": "https://www.sanmarcostx.gov/1537/Public-and-Application-Notices",
+    "license": "Official public notice archive",
+    "reconciliation_mode": "newsflash_current_window",
+    "refresh_frequency": "daily",
+    "collection_interval_minutes": 1440,
+    "collection_sla_hours": 24,
+    "retry_interval_minutes": 360,
+    "schedule_mode": "automatic",
+    "freshness_field": "published_at",
+    "freshness_semantics": "filing_event_at",
+    "freshness_sla_hours": 336,
+    "signal_stage": "pre_approval_and_approved",
+    "attribution_required": true,
+    "rights_basis": "Approved by the Build Signals owner on 2026-08-14 for commercial storage and customer-facing derived intelligence from the City of San Marcos's intentionally published official Planning Application Notices archive. Preserve City attribution and official links; retain only bounded project summaries after connector-level contact suppression; do not fetch detail pages, linked documents, attachments, or offer raw archive replacement exports.",
+    "export_policy": "derived_planning_notice_context_only_no_raw_document_export",
+    "field_allowlist": [
+      "article_id",
+      "title",
+      "link",
+      "published_at",
+      "description"
+    ],
+    "suppressed_fields": [
+      "email_address",
+      "phone_number",
+      "applicant_contact",
+      "planner_contact",
+      "linked_detail_body",
+      "linked_document_body",
+      "attachment",
+      "raw_source_export"
+    ],
+    "canary_required_fields": [
+      "article_id",
+      "title",
+      "link",
+      "published_at",
+      "description"
+    ],
+    "connector": {
+      "category_id": 30,
+      "page_size": 100,
+      "max_records": 100,
+      "max_description_chars": 2000,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public NewsFlash reader)"
+      }
+    },
+    "defaults": {
+      "city": "San Marcos",
+      "state": "TX",
+      "jurisdiction": "San Marcos",
+      "permit_type": "planning_application_notice",
+      "approval_stage": "pre_approval",
+      "status": "application_notice"
+    }
+  },
+  "field_mappings": [
+    {
+      "source_field": "article_id",
+      "canonical_field": "source_record_id",
+      "is_required": true
+    },
+    {
+      "source_field": "__application_number",
+      "canonical_field": "application_number",
+      "transform": "regex_extract",
+      "transform_options": {
+        "source_field": "title",
+        "pattern": "(?i)\\b((?:ZC|AN|PDD|PSA|SNC)-\\d{2}-\\d+(?:\\([A-Z]\\))?|\\d{4}-\\d{5})\\b"
+      }
+    },
+    {
+      "source_field": "title",
+      "canonical_field": "project_name"
+    },
+    {
+      "source_field": "description",
+      "canonical_field": "description"
+    },
+    {
+      "source_field": "published_at",
+      "canonical_field": "filed_at",
+      "transform": "date"
+    },
+    {
+      "source_field": "link",
+      "canonical_field": "source_url"
+    }
+  ]
+}
