@@ -229,6 +229,7 @@ def test_catalog_loads_first_live_source_cohort():
             "bend_or_permit_applications_point",
             "bend_or_permit_applications_line",
             "taylor_tx_development_notices",
+            "san_marcos_tx_planning_application_notices",
         }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
@@ -275,7 +276,6 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     entries = load_candidate_catalog()
 
     assert {entry.key for entry in entries} == {
-        "san_marcos_tx_planning_application_notices",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -296,15 +296,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     }
     by_key = {entry.key: entry for entry in entries}
 
-    san_marcos = by_key["san_marcos_tx_planning_application_notices"]
-    assert san_marcos.adapter == "civicplus_newsflash"
-    assert san_marcos.status == "operational_retry"
-    assert san_marcos.can_run_canary is True
-    assert san_marcos.probe_settings["connector"]["category_id"] == 30
-    assert san_marcos.probe_settings["freshness_semantics"] == "filing_event_at"
-    assert san_marcos.probe_field_mappings[0].source_field == "article_id"
-    assert san_marcos.production_page_size == 100
-
+    assert "san_marcos_tx_planning_application_notices" not in by_key
     assert "taylor_tx_development_notices" not in by_key
     assert not {key for key in by_key if key.startswith("bend_or_")}
 
@@ -391,12 +383,14 @@ def test_candidate_catalog_can_include_promoted_history():
         "bend_or_permit_applications_point",
         "bend_or_planning_applications",
         "taylor_tx_development_notices",
+        "san_marcos_tx_planning_application_notices",
     } <= set(by_key)
     for key in (
         "bend_or_permit_applications_line",
         "bend_or_permit_applications_point",
         "bend_or_planning_applications",
         "taylor_tx_development_notices",
+        "san_marcos_tx_planning_application_notices",
     ):
         production = catalog_source_for_candidate(by_key[key])
         assert production is not None
@@ -5814,6 +5808,61 @@ def test_taylor_development_notices_promote_minimized_preapproval_evidence():
     } <= set(entry.settings["suppressed_fields"])
 
 
+def test_san_marcos_notices_promote_contact_suppressed_preapproval_evidence():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "san_marcos_tx_planning_application_notices"
+    )
+    record = {
+        "article_id": "2617",
+        "title": "ZC-26-07 (Wonder World Medical CM to BP)",
+        "link": "https://www.sanmarcostx.gov/m/newsflash/Home/Detail/2617",
+        "published_at": "August 11, 2026",
+        "description": (
+            "A Zoning Change Application from Commercial to Business Park was "
+            "submitted by the Drenner Group on behalf of SM Hwy 123 Landholdings, LLC."
+        ),
+    }
+    mappings = [
+        SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings
+    ]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == "2617"
+    assert normalized.values["application_number"] == "ZC-26-07"
+    assert normalized.values["project_name"] == record["title"]
+    assert normalized.values["description"] == record["description"]
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["source_url"] == record["link"]
+    assert entry.adapter == "civicplus_newsflash"
+    assert entry.settings["candidate_status"] == "approved_for_production"
+    assert entry.settings["promotion_rights_approved"] is True
+    assert entry.settings["promotion_data_minimization_approved"] is True
+    assert entry.settings["field_allowlist"] == [
+        "article_id",
+        "title",
+        "link",
+        "published_at",
+        "description",
+    ]
+    assert entry.settings["connector"]["category_id"] == 30
+    assert entry.settings["connector"]["max_description_chars"] == 2000
+    assert {
+        "email_address",
+        "phone_number",
+        "linked_detail_body",
+        "linked_document_body",
+        "attachment",
+        "raw_source_export",
+    } <= set(entry.settings["suppressed_fields"])
+
+
 def test_catalog_sync_updates_mutable_fields_and_rejects_adapter_change(db):
     original = load_catalog()[0]
     sync_catalog(db, [original])
@@ -8708,6 +8757,13 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "link": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079",
             "published_at": "Fri, 07 Aug 2026 16:17:30 -0600",
             "description": "",
+        },
+        "san_marcos_tx_planning_application_notices": {
+            "article_id": "2617",
+            "title": "ZC-26-07 (Wonder World Medical CM to BP)",
+            "link": "https://www.sanmarcostx.gov/m/newsflash/Home/Detail/2617",
+            "published_at": "August 11, 2026",
+            "description": "Commercial to Business Park zoning application.",
         },
     }
 

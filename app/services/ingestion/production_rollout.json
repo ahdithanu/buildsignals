@@ -1,21 +1,17 @@
 {
-  "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.stlcitypermits.com,www.taylortx.gov",
+  "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.sanmarcostx.gov,www.stlcitypermits.com,www.taylortx.gov",
   "candidate_retries": {
-    "allowed_hosts_value": "www.sanmarcostx.gov",
-    "candidate_catalog_fingerprint": "4af80415a12180d348ffd6c96f7a10ad91d1d3679805dcf903dad630c2c78e0b",
-    "candidate_count": 1,
-    "candidate_keys": [
-      "san_marcos_tx_planning_application_notices"
-    ],
-    "policy_digest": "f6a5e11c5ebaa273414264d34ff50d9a0a99a7864781c97b514da7f7640f4a6d",
-    "required_hosts": [
-      "www.sanmarcostx.gov"
-    ],
+    "allowed_hosts_value": "",
+    "candidate_catalog_fingerprint": "b43ad530f116f47a8f3e135d10b2b4bb64d6f8c451e752d05ff4d3dc670b40b1",
+    "candidate_count": 0,
+    "candidate_keys": [],
+    "policy_digest": "71c92f3d9c19b0dce7b2e31dac7f533536760cf6c86de049be76d22eb79d4eba",
+    "required_hosts": [],
     "sample_size": 10
   },
-  "catalog_fingerprint": "df5f1c062519cd6f626bed8077372e1ec3029a7739a1427d11fbfa472ba9db1b",
-  "manifest_digest": "a4c1ba0c842a2c51361ab5078dabababae05cf1aad02a85547ca430a769fd524",
-  "policy_digest": "8b450c440fa0ae162b7b88170c5d61e967faf68ec2229531624bbe9cc5fef1e2",
+  "catalog_fingerprint": "5d9a9275ef596824a865f5e8f742f47b5876e55d181eb4768ed452e568f191a9",
+  "manifest_digest": "2b0f15d7c09be6fb4a81d733c76a06d35ee587918b7321da265b6e29c20b8951",
+  "policy_digest": "6dea1cb6fae1bdf4cf8e908da3a200a2c2407f06e87a4e2b9f7525bfafeee907",
   "required_hosts": [
     "anrmaps.vermont.gov",
     "arcgis.tampagov.net",
@@ -100,12 +96,13 @@
     "www.fairfaxcounty.gov",
     "www.gcgis.org",
     "www.portlandmaps.com",
+    "www.sanmarcostx.gov",
     "www.stlcitypermits.com",
     "www.taylortx.gov"
   ],
   "schema_version": 1,
   "shard_count": 4,
-  "source_count": 122,
+  "source_count": 123,
   "state_count": 40,
   "waves": [
     {
@@ -113,8 +110,8 @@
       "label": "Texas, Washington, New York",
       "manual_source_count": 0,
       "parcel_source_count": 2,
-      "permit_source_count": 20,
-      "pre_approval_source_count": 17,
+      "permit_source_count": 21,
+      "pre_approval_source_count": 18,
       "required_hosts": [
         "data.austintexas.gov",
         "data.buffalony.gov",
@@ -127,6 +124,7 @@
         "maps.cob.org",
         "services2.arcgis.com",
         "www.everettwa.gov",
+        "www.sanmarcostx.gov",
         "www.taylortx.gov"
       ],
       "shards": [
@@ -170,14 +168,15 @@
         },
         {
           "shard_index": 3,
-          "source_count": 2,
+          "source_count": 3,
           "source_keys": [
             "austin_tx_issued_construction_permits",
+            "san_marcos_tx_planning_application_notices",
             "washington_ecology_sepa_register"
           ]
         }
       ],
-      "source_count": 22,
+      "source_count": 23,
       "source_keys": [
         "austin_tx_issued_construction_permits",
         "austin_tx_plan_review_cases",
@@ -194,6 +193,7 @@
         "new_york_ny_pluto_parcels",
         "new_york_state_sla_pending_licenses",
         "pierce_county_wa_pals_permits",
+        "san_marcos_tx_planning_application_notices",
         "seattle_wa_issued_building_permits",
         "seattle_wa_land_use_permits",
         "seattle_wa_street_use_public_notices",

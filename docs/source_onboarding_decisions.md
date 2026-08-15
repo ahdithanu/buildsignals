@@ -3440,10 +3440,11 @@ Evidence URLs:
   applications on August 10-12 with stable article IDs, canonical links,
   posted dates, and project summaries. A generic archive connector now reads
   only that bounded current window and suppresses email addresses and phone
-  numbers before emitting candidate records. It does not follow detail pages
-  or linked documents. A 10-record no-write canary passed with 10 valid
-  pre-approval records and zero failures. Production still requires an
-  explicit rights/data-minimization approval. Taylor's Development Notices
+  numbers before emitting records. It does not follow detail pages or linked
+  documents. A 10-record no-write canary passed with 10 valid pre-approval
+  records and zero failures. The Build Signals owner approved the bounded,
+  contact-suppressed scope, so San Marcos is now a daily production source.
+  Taylor's Development Notices
   feed resumed and published PZ 2026-2715
   on August 7, and its bounded August 14 canary validated one pre-approval row
   with zero errors. The Build Signals owner approved the minimized production
