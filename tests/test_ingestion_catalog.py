@@ -226,6 +226,7 @@ def test_catalog_loads_first_live_source_cohort():
         "hartford_ct_building_permits_lifecycle",
         "new_york_state_sla_pending_licenses",
         "detroit_mi_bseed_building_permits",
+        "detroit_mi_bseed_building_plan_reviews",
         "washington_state_lcb_local_authority_letters",
             "everett_wa_planning_application_notices",
             "bend_or_planning_applications",
@@ -279,7 +280,6 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     entries = load_candidate_catalog()
 
     assert {entry.key for entry in entries} == {
-        "detroit_mi_bseed_building_plan_reviews",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -301,13 +301,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     }
     by_key = {entry.key: entry for entry in entries}
 
-    detroit = by_key["detroit_mi_bseed_building_plan_reviews"]
-    assert detroit.status == "operational_retry"
-    assert detroit.can_run_canary is True
-    assert detroit.probe_settings["signal_stage"] == "pre_approval_and_approved"
-    assert "40 of 40" in detroit.blocker_summary
-    assert detroit.next_audit_on.isoformat() == "2026-08-22"
-
+    assert "detroit_mi_bseed_building_plan_reviews" not in by_key
     assert "san_marcos_tx_planning_application_notices" not in by_key
     assert "taylor_tx_development_notices" not in by_key
     assert not {key for key in by_key if key.startswith("bend_or_")}
@@ -5820,6 +5814,70 @@ def test_taylor_development_notices_promote_minimized_preapproval_evidence():
     } <= set(entry.settings["suppressed_fields"])
 
 
+@pytest.mark.parametrize(
+    ("task_status", "expected_stage"),
+    [
+        ("Routed for Electronic Review", "pre_approval"),
+        ("Plans Approved", "approved"),
+    ],
+)
+def test_detroit_plan_reviews_promote_minimized_lifecycle_evidence(
+    task_status, expected_stage
+):
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "detroit_mi_bseed_building_plan_reviews"
+    )
+    record = {
+        "ObjectId": 91382,
+        "record_id": "BLD2026-01024",
+        "address": "1200 WOODWARD AVE",
+        "submitted_date": 1786752000000,
+        "task": "Building Plan Review",
+        "task_status": task_status,
+        "task_status_date": 1786752000000,
+        "work_description": "INTERIOR TENANT BUILDOUT",
+        "parcel_id": "01000123.",
+        "longitude": -83.0458,
+        "latitude": 42.3314,
+    }
+    mappings = [
+        SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings
+    ]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == "BLD2026-01024"
+    assert normalized.values["approval_stage"] == expected_stage
+    assert normalized.values["parcel_id"] == "01000123."
+    assert entry.settings["candidate_status"] == "approved_for_production"
+    assert entry.settings["promotion_rights_approved"] is True
+    assert entry.settings["promotion_data_minimization_approved"] is True
+    assert entry.settings["connector"]["include_geometry"] is False
+    assert entry.settings["connector"]["out_fields"] == ",".join(
+        entry.settings["field_allowlist"]
+    )
+    assert {
+        "applicant_name",
+        "owner_name",
+        "contractor_name",
+        "architect_name",
+        "engineer_name",
+        "reviewer_name",
+        "task_id",
+        "plan_file",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export",
+    } <= set(entry.settings["suppressed_fields"])
+
+
 def test_san_marcos_notices_promote_contact_suppressed_preapproval_evidence():
     entry = next(
         source
@@ -8834,6 +8892,19 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "link": "https://www.sanmarcostx.gov/m/newsflash/Home/Detail/2617",
             "published_at": "August 11, 2026",
             "description": "Commercial to Business Park zoning application.",
+        },
+        "detroit_mi_bseed_building_plan_reviews": {
+            "ObjectId": 91382,
+            "record_id": "BLD2026-01024",
+            "address": "1200 WOODWARD AVE",
+            "submitted_date": 1786752000000,
+            "task": "Building Plan Review",
+            "task_status": "Routed for Electronic Review",
+            "task_status_date": 1786752000000,
+            "work_description": "INTERIOR TENANT BUILDOUT",
+            "parcel_id": "01000123.",
+            "longitude": -83.0458,
+            "latitude": 42.3314,
         },
     }
 

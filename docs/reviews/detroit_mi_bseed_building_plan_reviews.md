@@ -2,8 +2,8 @@
 
 ## Status
 
-Awaiting Build Signals owner approval of the narrow production rights and
-data-minimization scope below.
+Approved by the Build Signals owner on August 15, 2026 for the narrow
+production rights and data-minimization scope below.
 
 ## Source
 
@@ -58,7 +58,7 @@ Suppress and do not fetch:
 The proposed export policy is
 `derived_plan_review_intelligence_only_no_raw_source_replacement`.
 
-## Approval Requested
+## Approved Scope
 
 1. Build Signals may store and process the allowlisted fields for commercial,
    customer-facing derived development intelligence with City/BSEED
@@ -66,3 +66,6 @@ The proposed export policy is
 2. The field allowlist, contact and document suppression, coordinate-only
    geospatial policy, and reconciliation policy above are sufficient for a
    narrow production promotion.
+
+The machine-readable approval record is
+`detroit_mi_bseed_building_plan_reviews_approval.json`.
