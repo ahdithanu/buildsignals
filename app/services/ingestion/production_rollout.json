@@ -1,20 +1,16 @@
 {
   "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.sanmarcostx.gov,www.stlcitypermits.com,www.taylortx.gov",
   "candidate_retries": {
-    "allowed_hosts_value": "services2.arcgis.com",
-    "candidate_catalog_fingerprint": "1e36ba6cc211bdd5c0bbd4b2fe8ecb5a8323a2656e4f9685410145b8ca6dd0dd",
-    "candidate_count": 1,
-    "candidate_keys": [
-      "detroit_mi_bseed_building_plan_reviews"
-    ],
-    "policy_digest": "9ad4fe01d44ca4cd1003184e65a80960c3161eef2af6bd69c1173eace5bdc0ef",
-    "required_hosts": [
-      "services2.arcgis.com"
-    ],
+    "allowed_hosts_value": "",
+    "candidate_catalog_fingerprint": "efb3ed84370508d02a260bbfff9d0d75caae9bf6b498e5b2eaa69c04c8d12aa0",
+    "candidate_count": 0,
+    "candidate_keys": [],
+    "policy_digest": "71c92f3d9c19b0dce7b2e31dac7f533536760cf6c86de049be76d22eb79d4eba",
+    "required_hosts": [],
     "sample_size": 10
   },
-  "catalog_fingerprint": "674e3bf1ef98f6b36c06bc218e43b8cc66041993a7ae55039d17a2bb8ac0379e",
-  "manifest_digest": "5767453955502836615ddecfaa41b5f826ae1456e09cac80fc4feb84d8ceee06",
+  "catalog_fingerprint": "f4c970b578b5db74c07c579abed0d41d9c0dabee6d9f5a2d797dbbfc0c54004e",
+  "manifest_digest": "4f3e0f138b421627a20c9d0c2f393a70983bde1d22de731d43e01b7d128107c0",
   "policy_digest": "6dea1cb6fae1bdf4cf8e908da3a200a2c2407f06e87a4e2b9f7525bfafeee907",
   "required_hosts": [
     "anrmaps.vermont.gov",
@@ -106,7 +102,7 @@
   ],
   "schema_version": 1,
   "shard_count": 4,
-  "source_count": 123,
+  "source_count": 124,
   "state_count": 40,
   "waves": [
     {
@@ -411,8 +407,8 @@
       "label": "Nationwide expansion queue",
       "manual_source_count": 0,
       "parcel_source_count": 23,
-      "permit_source_count": 40,
-      "pre_approval_source_count": 32,
+      "permit_source_count": 41,
+      "pre_approval_source_count": 33,
       "required_hosts": [
         "anrmaps.vermont.gov",
         "data.brla.gov",
@@ -467,10 +463,11 @@
       "shards": [
         {
           "shard_index": 0,
-          "source_count": 13,
+          "source_count": 14,
           "source_keys": [
             "bismarck_nd_development_activities",
             "delaware_dnrec_stormwater_noi",
+            "detroit_mi_bseed_building_plan_reviews",
             "hartford_ct_building_permits_lifecycle",
             "henderson_nv_commercial_development_permits",
             "maine_dep_land_applications_and_permits",
@@ -553,7 +550,7 @@
           ]
         }
       ],
-      "source_count": 63,
+      "source_count": 64,
       "source_keys": [
         "allegheny_county_pa_parcels_nearby_narrow",
         "allegheny_county_pa_property_assessments",
@@ -573,6 +570,7 @@
         "delaware_dnrec_stormwater_noi",
         "delaware_firstmap_statewide_parcels_narrow",
         "detroit_mi_bseed_building_permits",
+        "detroit_mi_bseed_building_plan_reviews",
         "east_baton_rouge_la_building_permits",
         "fairfax_county_va_development_tracker_site_records",
         "fayetteville_ar_permit_lifecycle_narrow",

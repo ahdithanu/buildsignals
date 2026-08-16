@@ -610,7 +610,7 @@
     "official_landing_page": "https://www.arcgis.com/home/item.html?id=b47bda202cac49dcbef8d477e9ecb09b",
     "license": "City of Detroit open-portal permitting information is identified as public-domain; official item is public authoritative with BSEED attribution",
     "status": "operational_retry",
-    "blocker_summary": "The August 15 no-write lifecycle canary passed 40 of 40 records across pre-approval and approved stages; explicit Build Signals owner approval of the narrow production scope remains required.",
+    "blocker_summary": "The August 15 no-write lifecycle canary passed 40 of 40 records across pre-approval and approved stages, and the Build Signals owner approved the narrow production scope on August 15.",
     "early_warning_value": "Accepted, routed-for-review, and plans-approved building applications expose tenant improvements, changes of use, retail buildouts, addresses, parcels, and work descriptions before permit issuance.",
     "candidate_source_fields": [
       "record_id",
@@ -760,8 +760,8 @@
     "production_page_size": 1000,
     "can_run_canary": true,
     "last_checked_on": "2026-08-15",
-    "next_audit_on": "2026-08-22",
-    "notes": "The official public-authoritative layer contained 39,489 rows and 39,489 distinct record IDs, with submitted and task-status activity through August 14, 2026. August 1-14 contained accepted, routed-for-review, and plans-approved records. An August 15 no-write canary fetched and validated 40 of 40 records with zero failures across both lifecycle stages. Use record_id as durable identity and join key to Detroit's issued-permit confirmation source. Retain BSEED attribution, source links, and retrieval timestamps; suppress attachments, contacts, raw geometry, and raw source-replacement exports."
+    "next_audit_on": "2026-08-15",
+    "notes": "The official public-authoritative layer contained 39,489 rows and 39,489 distinct record IDs, with submitted and task-status activity through August 14, 2026. August 1-14 contained accepted, routed-for-review, and plans-approved records. An August 15 no-write canary fetched and validated 40 of 40 records with zero failures across both lifecycle stages. The Build Signals owner approved the narrow production scope on August 15. Use record_id as durable identity and join key to Detroit's issued-permit confirmation source. Retain BSEED attribution, source links, and retrieval timestamps; suppress attachments, contacts, raw geometry, and raw source-replacement exports."
   },
   {
     "key": "orlando_fl_planning_applications",

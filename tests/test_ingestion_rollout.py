@@ -40,7 +40,7 @@ def test_rollout_manifest_assigns_every_source_to_one_wave_and_shard():
     manifest = _manifest()
     all_wave_keys = [key for wave in manifest.waves for key in wave.source_keys]
 
-    assert manifest.source_count == len(entries) == 123
+    assert manifest.source_count == len(entries) == 124
     assert manifest.state_count == 40
     assert len(all_wave_keys) == len(set(all_wave_keys)) == len(entries)
     assert set(all_wave_keys) == {entry.key for entry in entries}
@@ -64,19 +64,17 @@ def test_rollout_manifest_matches_catalog_wave_classification():
         (1, 23),
         (2, 26),
         (3, 11),
-        (4, 63),
+        (4, 64),
     ]
 
 
 def test_rollout_manifest_candidate_scope_excludes_promoted_sources():
     manifest = _manifest()
 
-    assert manifest.candidate_retries.candidate_count == 1
-    assert manifest.candidate_retries.candidate_keys == [
-        "detroit_mi_bseed_building_plan_reviews"
-    ]
-    assert manifest.candidate_retries.required_hosts == ["services2.arcgis.com"]
-    assert manifest.candidate_retries.allowed_hosts_value == "services2.arcgis.com"
+    assert manifest.candidate_retries.candidate_count == 0
+    assert manifest.candidate_retries.candidate_keys == []
+    assert manifest.candidate_retries.required_hosts == []
+    assert manifest.candidate_retries.allowed_hosts_value == ""
 
 
 def test_rollout_classification_uses_settings_state_and_rejects_unknown_state():
