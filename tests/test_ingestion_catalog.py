@@ -280,6 +280,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     entries = load_candidate_catalog()
 
     assert {entry.key for entry in entries} == {
+        "savannah_ga_commercial_building_permits",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -300,6 +301,14 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "cheyenne_wy_opengov_permits",
     }
     by_key = {entry.key: entry for entry in entries}
+
+    savannah = by_key["savannah_ga_commercial_building_permits"]
+    assert savannah.status == "operational_retry"
+    assert savannah.can_run_canary is True
+    assert savannah.probe_settings["signal_stage"] == "pre_approval_and_approved"
+    assert savannah.probe_settings["connector"]["include_geometry"] is False
+    assert "ApplicantName" not in savannah.probe_settings["connector"]["out_fields"]
+    assert savannah.next_audit_on.isoformat() == "2026-08-20"
 
     assert "detroit_mi_bseed_building_plan_reviews" not in by_key
     assert "san_marcos_tx_planning_application_notices" not in by_key
@@ -363,6 +372,55 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "cheyenne_wy_opengov_permits",
     }
     assert all(by_key[key].can_run_canary is False for key in nationwide_holds)
+
+
+def test_savannah_candidate_preserves_distinct_minimized_lifecycle_rows():
+    candidate = next(
+        entry
+        for entry in load_candidate_catalog()
+        if entry.key == "savannah_ga_commercial_building_permits"
+    )
+    base_record = {
+        "PIN": "20005 02003",
+        "PermitNumber": "26-03951-BC",
+        "PermitType": "Building Commercial Permit",
+        "WorkClass": "New",
+        "PermitStatus": "In Review",
+        "District": "Hitch Village/Fred Wessels Homes",
+        "IssuedDate": None,
+        "FinalizedDate": None,
+        "Address": "620 EAST BAY ST",
+        "Description": "FOUNDATION PERMIT - HOTEL WITH BASEMENT",
+        "Permit_Value": 450000,
+    }
+    mappings = [
+        SimpleNamespace(**mapping.model_dump())
+        for mapping in candidate.probe_field_mappings
+    ]
+
+    normalized = []
+    for object_id in (104549, 104550):
+        prepared, field_mapping = prepare_mapped_record(
+            {**base_record, "OBJECTID": object_id}, mappings
+        )
+        normalized.append(
+            normalize_permit(
+                prepared,
+                field_mapping,
+                defaults=candidate.probe_settings["defaults"],
+            )
+        )
+
+    assert normalized[0].source_record_id == (
+        "26-03951-BC|620 EAST BAY ST|104549"
+    )
+    assert normalized[1].source_record_id == (
+        "26-03951-BC|620 EAST BAY ST|104550"
+    )
+    assert normalized[0].values["permit_number"] == "26-03951-BC"
+    assert normalized[0].values["approval_stage"] == "pre_approval"
+    assert normalized[0].values["parcel_id"] == "20005 02003"
+    assert "ApplicantName" not in candidate.candidate_source_fields
 
 
 def test_candidate_catalog_closes_the_fifty_state_research_gap():

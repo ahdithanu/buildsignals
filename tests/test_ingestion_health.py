@@ -893,6 +893,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
     assert response.status_code == 200, response.text
     body = response.json()
     assert {row["key"] for row in body} == {
+        "savannah_ga_commercial_building_permits",
         "detroit_mi_bseed_building_plan_reviews",
         "san_marcos_tx_planning_application_notices",
         "taylor_tx_development_notices",
@@ -923,6 +924,13 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         for row in body
         if row["key"].startswith("bend_or_")
     )
+    savannah = next(
+        row for row in body
+        if row["key"] == "savannah_ga_commercial_building_permits"
+    )
+    assert savannah["status"] == "operational_retry"
+    assert savannah["can_run_canary"] is True
+    assert savannah["catalog_backed"] is False
 
 
 def test_ingestion_candidates_endpoint_filters_by_state(client):

@@ -71,10 +71,12 @@ def test_rollout_manifest_matches_catalog_wave_classification():
 def test_rollout_manifest_candidate_scope_excludes_promoted_sources():
     manifest = _manifest()
 
-    assert manifest.candidate_retries.candidate_count == 0
-    assert manifest.candidate_retries.candidate_keys == []
-    assert manifest.candidate_retries.required_hosts == []
-    assert manifest.candidate_retries.allowed_hosts_value == ""
+    assert manifest.candidate_retries.candidate_count == 1
+    assert manifest.candidate_retries.candidate_keys == [
+        "savannah_ga_commercial_building_permits"
+    ]
+    assert manifest.candidate_retries.required_hosts == ["pub.sagis.org"]
+    assert manifest.candidate_retries.allowed_hosts_value == "pub.sagis.org"
 
 
 def test_rollout_classification_uses_settings_state_and_rejects_unknown_state():

@@ -1,5 +1,156 @@
 [
   {
+    "key": "savannah_ga_commercial_building_permits",
+    "name": "Savannah Commercial Building Permit Tracker",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Savannah, GA",
+    "base_url": "https://pub.sagis.org/arcgis/rest/services/Savannah/BuildingPermit_FC/FeatureServer/0/query",
+    "official_landing_page": "https://www.savannahga.gov/4290/Permit-Tracker",
+    "license": "Official SAGIS public-use and no-cost download posture; commercial derived-output scope still requires explicit owner approval",
+    "status": "operational_retry",
+    "blocker_summary": "An August 20 bounded lifecycle canary fetched and validated 70 of 70 commercial tracker observations with zero failures across In Review, Approved, and Issued stages. Explicit production rights and data-minimization approval remain before promotion.",
+    "early_warning_value": "Commercial permits in review expose new construction, tenant buildouts, hotels, grocery stores, restaurants, changes of use, addresses, parcels, scope, and valuation before issuance.",
+    "candidate_source_fields": [
+      "OBJECTID",
+      "PIN",
+      "PermitNumber",
+      "PermitType",
+      "WorkClass",
+      "PermitStatus",
+      "District",
+      "IssuedDate",
+      "FinalizedDate",
+      "Address",
+      "Description",
+      "Permit_Value"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 40,
+        "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('In Review','Approved','Issued')",
+        "out_fields": "OBJECTID,PIN,PermitNumber,PermitType,WorkClass,PermitStatus,District,IssuedDate,FinalizedDate,Address,Description,Permit_Value",
+        "keyset_field": "OBJECTID",
+        "order_by_fields": "OBJECTID ASC",
+        "include_geometry": false,
+        "query": {
+          "outSR": 4326
+        }
+      },
+      "defaults": {
+        "city": "Savannah",
+        "state": "GA",
+        "jurisdiction": "Savannah",
+        "source_url": "https://www.savannahga.gov/4290/Permit-Tracker"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "refresh_frequency": "weekly",
+      "freshness_sla_hours": 192,
+      "canary_required_fields": [
+        "PermitNumber",
+        "PermitStatus",
+        "Address"
+      ],
+      "canary_stage_probes": [
+        {
+          "name": "savannah_commercial_in_review",
+          "expected_stage": "pre_approval",
+          "sample_size": 15,
+          "connector": {
+            "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus = 'In Review'"
+          }
+        },
+        {
+          "name": "savannah_commercial_approved",
+          "expected_stage": "approved",
+          "sample_size": 15,
+          "connector": {
+            "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('Approved','Issued')"
+          }
+        }
+      ]
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "__source_record_id",
+        "canonical_field": "source_record_id",
+        "transform": "join_fields",
+        "transform_options": {
+          "fields": ["PermitNumber", "Address", "OBJECTID"],
+          "separator": "|"
+        },
+        "is_required": true
+      },
+      {
+        "source_field": "PermitNumber",
+        "canonical_field": "permit_number"
+      },
+      {
+        "source_field": "PermitNumber",
+        "canonical_field": "application_number"
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "PermitStatus",
+              "operator": "in",
+              "values": ["Approved", "Issued"],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "PermitType",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "WorkClass",
+        "canonical_field": "work_class"
+      },
+      {
+        "source_field": "PermitStatus",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "Description",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "IssuedDate",
+        "canonical_field": "issued_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "FinalizedDate",
+        "canonical_field": "completed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "Permit_Value",
+        "canonical_field": "valuation"
+      },
+      {
+        "source_field": "Address",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "PIN",
+        "canonical_field": "parcel_id"
+      }
+    ],
+    "production_page_size": 2000,
+    "can_run_canary": true,
+    "last_checked_on": "2026-08-20",
+    "next_audit_on": "2026-08-20",
+    "notes": "The City of Savannah identifies the tracker as Development Services-managed, updated weekly, and intended for public permit-status access. SAGIS advertises publicly available datasets for no-cost download and public use. An August 20 bounded lifecycle canary fetched and validated 70 of 70 observations with zero failures: 18 pre-approval and 52 approved. Current 2026 rows include grocery, hotel, restaurant, change-of-use, and tenant-buildout signals. Use PermitNumber, Address, and OBJECTID as source-row identity because one permit/address pair can repeat across tracker observations; retain PermitNumber separately as the business identity. Do not fetch ApplicantName, contact details, attachments, documents, or raw geometry. Production still requires explicit narrow-scope approval."
+  },
+  {
     "key": "san_marcos_tx_planning_application_notices",
     "name": "San Marcos Planning Application Notices",
     "adapter": "civicplus_newsflash",
