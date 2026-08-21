@@ -9,7 +9,7 @@ export function BuildSignalsLogo({ compact = false, className }: { compact?: boo
         alt=""
         className={cn("w-auto shrink-0 object-contain", compact ? "h-5" : "h-6")}
       />
-      <span className={cn("whitespace-nowrap font-semibold text-foreground", compact ? "text-[13px]" : "text-[15px]")}> 
+      <span className={cn("whitespace-nowrap font-semibold text-foreground", compact ? "text-[13px]" : "text-[15px]")}>
         Build<span className="text-[#1a63c7]">Signals</span>
       </span>
     </Link>
