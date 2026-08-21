@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict
+from pathlib import Path
 
 import pytest
 
 from app.schemas.ingestion import IngestionSourceCreate
 from app.services.ingestion.catalog import load_candidate_catalog, load_catalog
+from app.services.ingestion.host_policy import audit_ingestion_hosts
 from app.services.ingestion.rollout import (
     DEFAULT_ROLLOUT_MANIFEST_PATH,
     build_production_rollout_manifest,
@@ -75,6 +78,31 @@ def test_rollout_manifest_candidate_scope_excludes_promoted_sources():
     assert manifest.candidate_retries.candidate_keys == []
     assert manifest.candidate_retries.required_hosts == []
     assert manifest.candidate_retries.allowed_hosts_value == ""
+
+
+def test_render_savannah_worker_is_pinned_to_reviewed_scope():
+    source = next(
+        entry for entry in load_catalog()
+        if entry.key == "savannah_ga_commercial_building_permits"
+    )
+    manifest = _manifest()
+    host_policy = audit_ingestion_hosts([source], allowed_hosts="pub.sagis.org")
+    blueprint = Path("render.yaml").read_text(encoding="utf-8")
+    match = re.search(
+        r"(?ms)^  - type: cron\n"
+        r"    name: dealsignal-savannah-permit-ingestion\n"
+        r"(?P<body>.*?)(?=^  - type:|\Z)",
+        blueprint,
+    )
+
+    assert match is not None
+    worker = match.group("body")
+    assert 'schedule: "30 10 * * 1"' in worker
+    assert "--source-key savannah_ga_commercial_building_permits" in worker
+    assert "--rollout-wave 4" in worker
+    assert "value: pub.sagis.org" in worker
+    assert f"value: {host_policy.policy_digest}" in worker
+    assert f"value: {manifest.manifest_digest}" in worker
 
 
 def test_rollout_classification_uses_settings_state_and_rejects_unknown_state():

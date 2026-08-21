@@ -1,6 +1,6 @@
 # Scheduled permit & parcel ingestion
 
-DealSignal manages **83 permit feeds** and **38 parcel feeds** in the checked-in
+DealSignal manages **87 permit feeds** and **38 parcel feeds** in the checked-in
 production catalog. Each dispatcher run syncs the catalog, computes due work
 from explicit numeric source cadence, and fetches only due active sources.
 
@@ -49,6 +49,12 @@ uses the catalog-driven due planner. The current production Blueprint retains
 its explicit cohort until the production outbound-host allowlist is expanded
 and a plan-only parity window is reviewed. See
 [first-deploy.md](first-deploy.md). Skip this section if you are on AWS.
+
+Savannah runs separately as `dealsignal-savannah-permit-ingestion` every Monday
+at 10:30 UTC. It uses `scheduled-due`, is pinned to rollout wave 4 and the exact
+reviewed manifest digest, and authorizes only `pub.sagis.org`. Its first manual
+execution should remain bounded and be reviewed before relying on the recurring
+schedule.
 
 ---
 
