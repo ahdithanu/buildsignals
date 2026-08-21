@@ -234,6 +234,7 @@ def test_catalog_loads_first_live_source_cohort():
             "bend_or_permit_applications_line",
             "taylor_tx_development_notices",
             "san_marcos_tx_planning_application_notices",
+            "savannah_ga_commercial_building_permits",
         }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
@@ -280,7 +281,6 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     entries = load_candidate_catalog()
 
     assert {entry.key for entry in entries} == {
-        "savannah_ga_commercial_building_permits",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -302,14 +302,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     }
     by_key = {entry.key: entry for entry in entries}
 
-    savannah = by_key["savannah_ga_commercial_building_permits"]
-    assert savannah.status == "operational_retry"
-    assert savannah.can_run_canary is True
-    assert savannah.probe_settings["signal_stage"] == "pre_approval_and_approved"
-    assert savannah.probe_settings["connector"]["include_geometry"] is False
-    assert "ApplicantName" not in savannah.probe_settings["connector"]["out_fields"]
-    assert savannah.next_audit_on.isoformat() == "2026-08-20"
-
+    assert "savannah_ga_commercial_building_permits" not in by_key
     assert "detroit_mi_bseed_building_plan_reviews" not in by_key
     assert "san_marcos_tx_planning_application_notices" not in by_key
     assert "taylor_tx_development_notices" not in by_key
@@ -374,10 +367,10 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert all(by_key[key].can_run_canary is False for key in nationwide_holds)
 
 
-def test_savannah_candidate_preserves_distinct_minimized_lifecycle_rows():
-    candidate = next(
+def test_savannah_production_source_preserves_distinct_minimized_lifecycle_rows():
+    source = next(
         entry
-        for entry in load_candidate_catalog()
+        for entry in load_catalog()
         if entry.key == "savannah_ga_commercial_building_permits"
     )
     base_record = {
@@ -393,10 +386,7 @@ def test_savannah_candidate_preserves_distinct_minimized_lifecycle_rows():
         "Description": "FOUNDATION PERMIT - HOTEL WITH BASEMENT",
         "Permit_Value": 450000,
     }
-    mappings = [
-        SimpleNamespace(**mapping.model_dump())
-        for mapping in candidate.probe_field_mappings
-    ]
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in source.field_mappings]
 
     normalized = []
     for object_id in (104549, 104550):
@@ -407,7 +397,7 @@ def test_savannah_candidate_preserves_distinct_minimized_lifecycle_rows():
             normalize_permit(
                 prepared,
                 field_mapping,
-                defaults=candidate.probe_settings["defaults"],
+                defaults=source.settings["defaults"],
             )
         )
 
@@ -420,7 +410,10 @@ def test_savannah_candidate_preserves_distinct_minimized_lifecycle_rows():
     assert normalized[0].values["permit_number"] == "26-03951-BC"
     assert normalized[0].values["approval_stage"] == "pre_approval"
     assert normalized[0].values["parcel_id"] == "20005 02003"
-    assert "ApplicantName" not in candidate.candidate_source_fields
+    assert source.settings["reconciliation_mode"] == "weekly_full_snapshot"
+    assert source.settings["connector"]["include_geometry"] is False
+    assert "ApplicantName" not in source.settings["field_allowlist"]
+    assert "ApplicantName" in source.settings["suppressed_fields"]
 
 
 def test_candidate_catalog_closes_the_fifty_state_research_gap():
@@ -429,11 +422,11 @@ def test_candidate_catalog_closes_the_fifty_state_research_gap():
     assert coverage.researched_state_count == 50
     assert coverage.unresearched_state_count == 0
     assert coverage.unresearched_states == []
-    assert coverage.covered_state_count == 39
-    assert coverage.missing_state_count == 11
-    assert coverage.candidate_only_state_count == 11
+    assert coverage.covered_state_count == 40
+    assert coverage.missing_state_count == 10
+    assert coverage.candidate_only_state_count == 10
     assert set(coverage.candidate_only_states) == {
-        "AK", "GA", "HI", "IA", "ID", "MS", "MT", "NM", "OK", "WV", "WY",
+        "AK", "HI", "IA", "ID", "MS", "MT", "NM", "OK", "WV", "WY",
     }
     assert set(coverage.missing_states) == set(coverage.candidate_only_states)
 
@@ -448,6 +441,7 @@ def test_candidate_catalog_can_include_promoted_history():
         "bend_or_planning_applications",
         "taylor_tx_development_notices",
         "san_marcos_tx_planning_application_notices",
+        "savannah_ga_commercial_building_permits",
     } <= set(by_key)
     for key in (
         "bend_or_permit_applications_line",
@@ -455,6 +449,7 @@ def test_candidate_catalog_can_include_promoted_history():
         "bend_or_planning_applications",
         "taylor_tx_development_notices",
         "san_marcos_tx_planning_application_notices",
+        "savannah_ga_commercial_building_permits",
     ):
         production = catalog_source_for_candidate(by_key[key])
         assert production is not None
@@ -8950,6 +8945,20 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "link": "https://www.sanmarcostx.gov/m/newsflash/Home/Detail/2617",
             "published_at": "August 11, 2026",
             "description": "Commercial to Business Park zoning application.",
+        },
+        "savannah_ga_commercial_building_permits": {
+            "OBJECTID": 104549,
+            "PIN": "20005 02003",
+            "PermitNumber": "26-03951-BC",
+            "PermitType": "Building Commercial Permit",
+            "WorkClass": "New",
+            "PermitStatus": "In Review",
+            "District": "Hitch Village/Fred Wessels Homes",
+            "IssuedDate": None,
+            "FinalizedDate": None,
+            "Address": "620 EAST BAY ST",
+            "Description": "FOUNDATION PERMIT - HOTEL WITH BASEMENT",
+            "Permit_Value": 450000,
         },
         "detroit_mi_bseed_building_plan_reviews": {
             "ObjectId": 91382,

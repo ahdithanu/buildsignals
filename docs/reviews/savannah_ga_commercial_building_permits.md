@@ -2,10 +2,11 @@
 
 ## Decision
 
-Status: `operational_retry`
+Status: `approved_for_production`
 
 The official City of Savannah Permit Tracker and SAGIS feature service passed a
-bounded no-write lifecycle canary. Production use is not yet approved.
+bounded no-write lifecycle canary. The Build Signals owner approved the narrow
+production scope on August 21, 2026.
 
 ## Source Contract
 
@@ -34,9 +35,10 @@ attachments, documents, or raw geometry.
 
 The City identifies the tracker as Development Services-managed and updated
 weekly. SAGIS describes its open-data catalog as publicly available for no-cost
-download and public use. Before production promotion, the Build Signals owner
-must explicitly approve the narrow commercial derived-intelligence scope,
-attribution, evidence retention, and raw-source replacement prohibition.
+download and public use. The approved scope permits commercial storage and
+customer-facing derived intelligence while requiring City/SAGIS attribution,
+source links, retrieval timestamps, weekly-currentness caveats, and no raw
+source replacement.
 
 ## Initial Evidence
 
@@ -45,3 +47,17 @@ observations with zero failures: 18 pre-approval and 52 approved. Separate stage
 probes confirmed both `In Review` and `Approved`/`Issued` behavior. Current 2026
 examples included a grocery store, hotels, new commercial construction, and
 tenant buildouts.
+
+## Approved Scope
+
+1. Run a weekly full snapshot of commercial `In Review`, `Approved`, and
+   `Issued` records so status changes and removals reconcile.
+2. Retain only allowlisted identity, site, lifecycle, work, parcel, district,
+   date, and valuation fields.
+3. Do not collect applicant or contact data, attachments, documents, or raw
+   geometry.
+4. Preserve City of Savannah and SAGIS attribution and official source links;
+   expose derived permit intelligence only, never a raw-source replacement.
+
+The machine-readable approval is recorded in
+`savannah_ga_commercial_building_permits_approval.json`.
