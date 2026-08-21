@@ -697,6 +697,8 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
     }
     item = body["items"][0]
     assert item["parcel"]["external_parcel_id"] == "P-RADAR"
+    assert {fact["fact_type"] for fact in item["facts"]} == {"zoning"}
+    assert item["facts"][0]["source_url"] == "https://example.gov/parcels"
     assert item["opportunity_count"] == 2
     assert item["appearance_count"] == 2
     assert item["personas"] == ["broker", "developer"]

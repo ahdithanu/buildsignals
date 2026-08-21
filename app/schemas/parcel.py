@@ -192,6 +192,7 @@ class AcquisitionRadarSignalResponse(BaseModel):
 
 class AcquisitionRadarItemResponse(BaseModel):
     parcel: ParcelSummaryResponse
+    facts: list[ParcelFactResponse] = Field(default_factory=list)
     candidate_id: str
     acquisition_case_id: Optional[str] = None
     radar_score: float

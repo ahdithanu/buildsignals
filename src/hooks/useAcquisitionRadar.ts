@@ -32,5 +32,8 @@ export function useAcquisitionRadar(params: AcquisitionRadarParams) {
       parcelsApi.promote(candidateId, { name }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['acquisition-radar'] }),
   });
-  return { ...radar, updateCase, recordActivity, promote };
+  const exportSearch = useMutation({
+    mutationFn: (searchId: string) => parcelsApi.exportSearch(searchId),
+  });
+  return { ...radar, updateCase, recordActivity, promote, exportSearch };
 }
