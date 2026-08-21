@@ -180,6 +180,7 @@ export interface AcquisitionRadarSignal {
 
 export interface AcquisitionRadarItem {
   parcel: ParcelSummary;
+  facts?: ParcelFact[];
   candidate_id: string;
   acquisition_case_id?: string | null;
   radar_score: number;

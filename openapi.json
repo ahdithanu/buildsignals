@@ -106,6 +106,13 @@
             ],
             "title": "Contacted At"
           },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelFactResponse"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
           "follow_up_at": {
             "anyOf": [
               {

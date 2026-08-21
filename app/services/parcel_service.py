@@ -207,6 +207,7 @@ def list_acquisition_radar(
         assignment=assignment,
     ).options(
         joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.source),
+        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.deal),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_brand_match),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_permit),
@@ -279,6 +280,7 @@ def list_acquisition_radar(
             })
         items.append({
             "parcel": representative.parcel,
+            "facts": [fact for fact in representative.parcel.facts if fact.is_current],
             "candidate_id": representative.id,
             "acquisition_case_id": acquisition_case.id if acquisition_case else None,
             "radar_score": round(final_score, 1),
