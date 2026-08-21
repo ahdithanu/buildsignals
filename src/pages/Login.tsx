@@ -53,6 +53,7 @@ export default function Login() {
             <label className="block">
               <span className="section-label">Work email</span>
               <input
+                id="email"
                 type="email"
                 autoComplete="email"
                 required
@@ -69,6 +70,7 @@ export default function Login() {
                 <Link to="/forgot-password" className="text-[10px] font-medium text-destructive hover:underline">Forgot password</Link>
               </span>
               <input
+                id="password"
                 type="password"
                 autoComplete="current-password"
                 required

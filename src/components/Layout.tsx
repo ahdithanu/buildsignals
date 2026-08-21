@@ -85,7 +85,10 @@ export function Layout({ children }: LayoutProps) {
             <span className="text-muted-foreground">last ingest 14m</span>
           </Link>
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex h-8 items-center gap-2 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <DropdownMenuTrigger
+              aria-label="Account menu"
+              className="flex h-8 items-center gap-2 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <CircleUserRound className="h-4 w-4" />
               <span className="hidden max-w-28 truncate text-[10px] font-medium md:block">{user?.full_name || "Account"}</span>
             </DropdownMenuTrigger>
