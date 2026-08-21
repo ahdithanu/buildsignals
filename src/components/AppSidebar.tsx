@@ -8,6 +8,7 @@ import {
   Radio,
   Radar,
   Settings,
+  ShieldCheck,
   Store,
   User,
   Users,
@@ -38,6 +39,7 @@ const navItems = [
   { title: "Market Signals", url: "/signals", icon: Radio },
   { title: "Retailer Signals", url: "/permit-review", icon: Store },
   { title: "Acquisition Radar", url: "/acquisition-radar", icon: Radar },
+  { title: "Graph Verification", url: "/graph/verification", icon: ShieldCheck, reviewOnly: true },
   { title: "Team", url: "/team", icon: Users },
   { title: "Account", url: "/account", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -81,7 +83,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {navItems.filter((item) => !item.reviewOnly || role === "admin" || role === "editor").map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="default">
                     <NavLink

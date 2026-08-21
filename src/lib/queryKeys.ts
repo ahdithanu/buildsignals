@@ -50,6 +50,8 @@ export const queryKeys = {
     mergeCandidates: (entityId: string) => ['graph', 'merge-candidates', entityId] as const,
     relationshipDetail: (relationshipId: string) =>
       ['graph', 'relationship', relationshipId] as const,
+    relationshipReviewQueue: (dueWithinDays: number) =>
+      ['graph', 'relationship-review-queue', dueWithinDays] as const,
   },
   organizations: {
     members: (orgId: string) => ['organizations', 'members', orgId] as const,

@@ -58,6 +58,7 @@ Every relationship stores:
 - `created_at`
 - `updated_at`
 - `last_verified_at`
+- `verification_due_at`, indexed with organization and current-state fields for scalable review queues
 - optional `attributes`
 
 ### `graph_relationship_evidence`
@@ -98,6 +99,8 @@ Normalization removes punctuation, common company suffixes, and common address e
 - `POST /graph/relationships`: create/update a relationship with evidence.
 - `GET /graph/relationships/{relationship_id}`: relationship detail with source
   and target entities plus full evidence.
+- `GET /graph/relationships/review-queue`: current relationships that are due or overdue for evidence review.
+- `POST /graph/relationships/{relationship_id}/verify`: renew a relationship with required source evidence, a review reason, confidence, and the next verification interval.
 - `GET /graph/paths`: find short relationship paths between two entities.
 - `GET /opportunities/{opportunity_id}/graph-context`: opportunity context grouped by role.
 - `GET /deals/{deal_id}/graph-context`: alias used by the current frontend.
@@ -146,6 +149,23 @@ retired entity is deleted only after its merge snapshot is durable. Cross-type
 and self-merges are rejected. The audit log records the review reason and merge
 provenance ID.
 
+## Relationship Verification
+
+Relationship freshness is explicit rather than inferred from a page view. New
+edges receive a default 90-day verification window. Editors and admins can
+renew an edge with a source-specific interval from one day to ten years, but a
+renewal is rejected unless it includes new source evidence and a review reason.
+The service records the evidence, updates confidence when supplied, advances
+`last_verified_at` and `verification_due_at`, and writes an audit event.
+
+Responses classify current edges as `fresh`, `due` (within 14 days), or
+`stale`; expired historical edges remain `historical`. The opportunity graph
+panel exposes due and stale warnings, while the indexed review-queue endpoint
+orders overdue relationships before lower-confidence due relationships. This
+policy is generic: source adapters choose an appropriate interval without the
+graph layer knowing whether the evidence came from a permit, assessor, filing,
+CRM record, or another source.
+
 ## Tradeoffs
 
 This implementation keeps graph traversal in the service layer using bounded breadth-first search. That keeps the first version portable across SQLite tests and Postgres production, and it avoids adding a graph database before query patterns are proven.
@@ -159,7 +179,7 @@ Near-term improvements:
 - Add importer-specific services for permit feeds, assessor records, and broker intelligence.
 - Store geocoded parcel/property keys and normalized APNs.
 - Add relationship merge jobs for duplicate edges with complementary evidence.
-- Track verification jobs and stale relationship queues using `last_verified_at`.
+- Add scheduled verification assignments and reviewer ownership on top of the indexed queue.
 - Materialize current parcel ancestry and descendant closures if lineage path
   traffic outgrows bounded graph traversal.
 

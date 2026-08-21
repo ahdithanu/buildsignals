@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import uuid4
 
@@ -27,6 +27,10 @@ from app.models.mixins import OrgMixin
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _default_verification_due_at() -> datetime:
+    return _utcnow() + timedelta(days=90)
 
 
 class GraphEntityType(str, enum.Enum):
@@ -224,6 +228,9 @@ class GraphRelationship(OrgMixin, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
     last_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    verification_due_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_default_verification_due_at, nullable=False
+    )
 
     source_entity: Mapped["GraphEntity"] = relationship(
         "GraphEntity", back_populates="outgoing_relationships", foreign_keys=[source_entity_id]
@@ -247,6 +254,12 @@ class GraphRelationship(OrgMixin, Base):
         ),
         Index("ix_graph_relationship_source_target", "organization_id", "source_entity_id", "target_entity_id"),
         Index("ix_graph_relationship_current", "organization_id", "is_current"),
+        Index(
+            "ix_graph_relationship_verification_queue",
+            "organization_id",
+            "is_current",
+            "verification_due_at",
+        ),
     )
 
 

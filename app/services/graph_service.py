@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from typing import Any, Iterable, Optional
 
@@ -23,7 +23,12 @@ from app.models.graph import (
     GraphRelationshipEvidence,
     GraphRelationshipType,
 )
-from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
+from app.schemas.graph import (
+    GraphEntityCreate,
+    GraphEvidenceCreate,
+    GraphRelationshipCreate,
+    GraphRelationshipVerify,
+)
 from app.utils.org_scope import active_query, get_org_id
 
 COMPANY_SUFFIXES = {
@@ -574,6 +579,7 @@ def create_relationship(
         GraphRelationship.source_system == payload.source_system,
         GraphRelationship.source_id == payload.source_id,
     ).first()
+    verified_at = utcnow()
     if relationship is None:
         relationship = GraphRelationship(
             organization_id=get_org_id(),
@@ -585,20 +591,64 @@ def create_relationship(
             source_id=payload.source_id,
             attributes=payload.attributes,
             is_current=True,
-            valid_from=utcnow(),
-            last_verified_at=utcnow(),
+            valid_from=verified_at,
+            last_verified_at=verified_at,
+            verification_due_at=verified_at + timedelta(days=90),
         )
         db.add(relationship)
         db.flush()
     else:
         relationship.confidence = max(relationship.confidence, payload.confidence)
         relationship.attributes = {**(relationship.attributes or {}), **(payload.attributes or {})} or None
-        relationship.last_verified_at = utcnow()
+        relationship.last_verified_at = verified_at
+        relationship.verification_due_at = verified_at + timedelta(days=90)
         relationship.is_current = True
         relationship.valid_to = None
 
     for evidence in payload.evidence:
         add_relationship_evidence(db, relationship, evidence)
+    return relationship
+
+
+def relationship_review_queue(
+    db: Session,
+    *,
+    due_before: datetime,
+    limit: int = 100,
+    maximum_confidence: Optional[float] = None,
+) -> list[GraphRelationship]:
+    query = active_query(db.query(GraphRelationship), GraphRelationship).options(
+        joinedload(GraphRelationship.evidence),
+        joinedload(GraphRelationship.source_entity),
+        joinedload(GraphRelationship.target_entity),
+    ).filter(
+        GraphRelationship.is_current.is_(True),
+        GraphRelationship.verification_due_at <= due_before,
+    )
+    if maximum_confidence is not None:
+        query = query.filter(GraphRelationship.confidence <= maximum_confidence)
+    return query.order_by(
+        GraphRelationship.verification_due_at.asc(),
+        GraphRelationship.confidence.asc(),
+        GraphRelationship.created_at.asc(),
+    ).limit(limit).all()
+
+
+def verify_relationship(
+    db: Session,
+    relationship: GraphRelationship,
+    payload: GraphRelationshipVerify,
+) -> GraphRelationship:
+    verified_at = utcnow()
+    for evidence in payload.evidence:
+        add_relationship_evidence(db, relationship, evidence)
+    relationship.last_verified_at = verified_at
+    relationship.verification_due_at = verified_at + timedelta(
+        days=payload.verification_interval_days
+    )
+    if payload.confidence is not None:
+        relationship.confidence = payload.confidence
+    relationship.updated_at = verified_at
     return relationship
 
 

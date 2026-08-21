@@ -1,10 +1,26 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRightLeft, Link2, Network } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Link2, Network, ShieldCheck } from "lucide-react";
 
 import { Layout } from "@/components/Layout";
 import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { useGraphRelationship } from "@/hooks/useGraphRelationship";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
+import { useGraphRelationship, useVerifyGraphRelationship } from "@/hooks/useGraphRelationship";
+import { useToast } from "@/hooks/use-toast";
 
 function relationshipLabel(value: string) {
   return value.replace(/_/g, " ");
@@ -35,7 +51,18 @@ function entityHref(entity: { id: string; entity_type: string; attributes?: Reco
 export default function GraphRelationshipDetail() {
   const { relationshipId } = useParams();
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const { toast } = useToast();
   const { data, isLoading, error, refetch } = useGraphRelationship(relationshipId);
+  const verifyRelationship = useVerifyGraphRelationship(relationshipId);
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [sourceSystem, setSourceSystem] = useState("");
+  const [sourceId, setSourceId] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [excerpt, setExcerpt] = useState("");
+  const [reason, setReason] = useState("");
+  const [intervalDays, setIntervalDays] = useState("90");
+  const canVerify = role === "admin" || role === "editor";
 
   if (isLoading) {
     return (
@@ -62,6 +89,33 @@ export default function GraphRelationshipDetail() {
   }
 
   const { relationship, source_entity: sourceEntity, target_entity: targetEntity } = data;
+  const submitVerification = () => {
+    if (!sourceSystem.trim() || reason.trim().length < 3) return;
+    verifyRelationship.mutate({
+      sourceSystem: sourceSystem.trim(),
+      sourceId: sourceId.trim() || undefined,
+      sourceUrl: sourceUrl.trim() || undefined,
+      excerpt: excerpt.trim() || undefined,
+      reason: reason.trim(),
+      confidence: relationship.confidence,
+      verificationIntervalDays: Number(intervalDays) || 90,
+    }, {
+      onSuccess: () => {
+        setVerifyOpen(false);
+        setSourceSystem("");
+        setSourceId("");
+        setSourceUrl("");
+        setExcerpt("");
+        setReason("");
+        toast({ title: "Relationship verified", description: "The freshness window and evidence trail were updated." });
+      },
+      onError: () => toast({
+        title: "Verification was not recorded",
+        description: "Check the evidence details and try again.",
+        variant: "destructive",
+      }),
+    });
+  };
 
   return (
     <Layout>
@@ -84,11 +138,23 @@ export default function GraphRelationshipDetail() {
               <Badge variant="outline" className="capitalize">
                 {relationship.is_current ? "Current" : "Historical"}
               </Badge>
+              <Badge
+                variant={relationship.verification_status === "stale" ? "destructive" : "outline"}
+                className="capitalize"
+              >
+                {relationship.verification_status || "fresh"}
+              </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {sourceEntity.display_name} to {targetEntity.display_name}
             </p>
           </div>
+          {canVerify && relationship.is_current && (
+            <Button type="button" size="sm" onClick={() => setVerifyOpen(true)}>
+              <ShieldCheck className="mr-1.5 h-4 w-4" />
+              Record verification
+            </Button>
+          )}
         </div>
 
         <section className="rounded-md border bg-card p-4 card-shadow">
@@ -103,6 +169,7 @@ export default function GraphRelationshipDetail() {
             <Detail label="Evidence count" value={String(relationship.evidence.length)} />
             <Detail label="Created" value={formatDateTime(relationship.created_at)} />
             <Detail label="Last verified" value={formatDateTime(relationship.last_verified_at)} />
+            <Detail label="Verification due" value={formatDateTime(relationship.verification_due_at)} />
             <Detail label="Valid from" value={formatDateTime(relationship.valid_from)} />
             <Detail label="Valid to" value={formatDateTime(relationship.valid_to)} />
           </div>
@@ -196,6 +263,57 @@ export default function GraphRelationshipDetail() {
             </div>
           )}
         </section>
+
+        <AlertDialog open={verifyOpen} onOpenChange={(open) => !verifyRelationship.isPending && setVerifyOpen(open)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Record relationship verification</AlertDialogTitle>
+              <AlertDialogDescription>
+                Attach the source checked during this review. The relationship cannot be renewed without evidence.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-3">
+              <label className="text-xs text-muted-foreground">
+                Source system
+                <Input className="mt-1" value={sourceSystem} onChange={(event) => setSourceSystem(event.target.value)} placeholder="County assessor" />
+              </label>
+              <label className="text-xs text-muted-foreground">
+                Source record ID
+                <Input className="mt-1" value={sourceId} onChange={(event) => setSourceId(event.target.value)} placeholder="Document or filing identifier" />
+              </label>
+              <label className="text-xs text-muted-foreground">
+                Source URL
+                <Input className="mt-1" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://..." />
+              </label>
+              <label className="text-xs text-muted-foreground">
+                Evidence excerpt
+                <Textarea className="mt-1 min-h-20" value={excerpt} onChange={(event) => setExcerpt(event.target.value)} placeholder="What the source confirms" />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs text-muted-foreground">
+                  Review reason
+                  <Input className="mt-1" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Annual source review" />
+                </label>
+                <label className="text-xs text-muted-foreground">
+                  Review again in days
+                  <Input className="mt-1" type="number" min="1" max="3650" value={intervalDays} onChange={(event) => setIntervalDays(event.target.value)} />
+                </label>
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={verifyRelationship.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={!sourceSystem.trim() || reason.trim().length < 3 || verifyRelationship.isPending}
+                onClick={(event) => {
+                  event.preventDefault();
+                  submitVerification();
+                }}
+              >
+                {verifyRelationship.isPending ? "Recording..." : "Record verification"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

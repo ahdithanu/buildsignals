@@ -23,6 +23,7 @@ import IngestionSourceDetail from "./pages/IngestionSourceDetail";
 import GraphEntityDetail from "./pages/GraphEntityDetail";
 import GraphRelationshipDetail from "./pages/GraphRelationshipDetail";
 import GraphExplorer from "./pages/GraphExplorer";
+import GraphVerificationQueue from "./pages/GraphVerificationQueue";
 import ParcelDetail from "./pages/ParcelDetail";
 import AcquisitionRadar from "./pages/AcquisitionRadar";
 import AcquisitionMap from "./pages/AcquisitionMap";
@@ -208,6 +209,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <GraphExplorer />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/graph/verification"
+              element={
+                <RequireAuth>
+                  <GraphVerificationQueue />
                 </RequireAuth>
               }
             />

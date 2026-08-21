@@ -6,6 +6,7 @@ import GraphRelationshipDetail from "@/pages/GraphRelationshipDetail";
 
 vi.mock("@/hooks/useGraphRelationship", () => ({
   useGraphRelationship: vi.fn(),
+  useVerifyGraphRelationship: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
@@ -35,6 +36,8 @@ describe("<GraphRelationshipDetail>", () => {
           updated_at: "2026-07-23T12:00:00Z",
           created_at: "2026-07-22T12:00:00Z",
           last_verified_at: "2026-07-23T12:00:00Z",
+          verification_due_at: "2026-10-21T12:00:00Z",
+          verification_status: "fresh",
           evidence: [
             {
               id: "evidence-1",
@@ -83,6 +86,8 @@ describe("<GraphRelationshipDetail>", () => {
     expect(screen.getByText("Acme Development LLC")).toBeInTheDocument();
     expect(screen.getByText("Developer: Acme Development LLC")).toBeInTheDocument();
     expect(screen.getAllByText("91% confidence")).toHaveLength(2);
+    expect(screen.getByText("fresh")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Record verification" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open source entity" })).toHaveAttribute("href", "/graph/entities/entity-2");
     expect(screen.getByRole("link", { name: "Open target entity" })).toHaveAttribute("href", "/graph/entities/entity-1");
     expect(screen.getByRole("link", { name: "Open source record" })).toHaveAttribute(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -24,6 +25,8 @@ from app.schemas.graph import (
     GraphRelationshipCreate,
     GraphRelationshipDetailResponse,
     GraphRelationshipResponse,
+    GraphRelationshipReviewQueueItem,
+    GraphRelationshipVerify,
     GraphSharedParcelSummary,
     OpportunityGraphContextResponse,
 )
@@ -37,11 +40,13 @@ from app.services.graph_service import (
     get_relationship_or_none,
     merge_graph_entities,
     opportunity_context,
+    relationship_review_queue,
     relationships_for_entity,
     resolve_entity,
     search_entities,
     sync_deal_contacts_to_graph,
     upsert_deal_graph_context,
+    verify_relationship,
 )
 from app.services.parcel_service import (
     count_nearby_parcel_searches_for_deal,
@@ -254,11 +259,88 @@ def add_relationship(payload: GraphRelationshipCreate, db: Session = Depends(get
     return relationship
 
 
+@router.get(
+    "/relationships/review-queue",
+    response_model=list[GraphRelationshipReviewQueueItem],
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def relationship_verification_queue(
+    due_within_days: int = Query(14, ge=0, le=365),
+    maximum_confidence: Optional[float] = Query(None, ge=0, le=1),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(timezone.utc)
+    rows = relationship_review_queue(
+        db,
+        due_before=now + timedelta(days=due_within_days),
+        maximum_confidence=maximum_confidence,
+        limit=limit,
+    )
+    items = []
+    for relationship in rows:
+        due_at = relationship.verification_due_at
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=timezone.utc)
+        reasons = ["verification_overdue" if due_at <= now else "verification_due"]
+        if maximum_confidence is not None and relationship.confidence <= maximum_confidence:
+            reasons.append("low_confidence")
+        items.append(GraphRelationshipReviewQueueItem(
+            relationship=GraphRelationshipResponse.model_validate(relationship),
+            source_entity=GraphEntityResponse.model_validate(relationship.source_entity),
+            target_entity=GraphEntityResponse.model_validate(relationship.target_entity),
+            review_reasons=reasons,
+        ))
+    return items
+
+
 @router.get("/relationships/{relationship_id}", response_model=GraphRelationshipDetailResponse)
 def get_relationship(relationship_id: str, db: Session = Depends(get_db)):
     relationship = get_relationship_or_none(db, relationship_id)
     if relationship is None:
         raise HTTPException(status_code=404, detail=f"Relationship {relationship_id} not found")
+    return GraphRelationshipDetailResponse(
+        relationship=GraphRelationshipResponse.model_validate(relationship),
+        source_entity=GraphEntityResponse.model_validate(relationship.source_entity),
+        target_entity=GraphEntityResponse.model_validate(relationship.target_entity),
+    )
+
+
+@router.post(
+    "/relationships/{relationship_id}/verify",
+    response_model=GraphRelationshipDetailResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def verify_graph_relationship(
+    relationship_id: str,
+    payload: GraphRelationshipVerify,
+    db: Session = Depends(get_db),
+):
+    relationship = get_relationship_or_none(db, relationship_id)
+    if relationship is None:
+        raise HTTPException(status_code=404, detail=f"Relationship {relationship_id} not found")
+    old_values = {
+        "confidence": relationship.confidence,
+        "last_verified_at": relationship.last_verified_at.isoformat(),
+        "verification_due_at": relationship.verification_due_at.isoformat(),
+    }
+    verify_relationship(db, relationship, payload)
+    log_change(
+        db,
+        "graph_relationship",
+        relationship_id,
+        "verify",
+        old_values=old_values,
+        new_values={
+            "confidence": relationship.confidence,
+            "verification_due_at": relationship.verification_due_at.isoformat(),
+            "reason": payload.reason,
+            "evidence_count": len(payload.evidence),
+        },
+        organization_id=get_org_id(),
+    )
+    db.commit()
+    relationship = get_relationship_or_none(db, relationship_id)
     return GraphRelationshipDetailResponse(
         relationship=GraphRelationshipResponse.model_validate(relationship),
         source_entity=GraphEntityResponse.model_validate(relationship.source_entity),
