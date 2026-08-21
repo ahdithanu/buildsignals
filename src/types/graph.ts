@@ -89,6 +89,12 @@ export interface GraphRelatedEntity {
 
 export interface GraphEntityDetail extends GraphEntity {
   aliases: string[];
+  source_identities?: {
+    source_system: string;
+    source_id: string;
+    confidence: number;
+    last_verified_at: string;
+  }[];
   links: {
     record_type: string;
     record_id: string;
@@ -104,6 +110,19 @@ export interface GraphEntityMergeCandidate {
   entity: GraphEntity;
   score: number;
   reasons: string[];
+}
+
+export interface GraphEntityMergeResult {
+  merge_id: string;
+  merged_entity_id: string;
+  survivor: GraphEntity;
+  aliases_moved: number;
+  source_identities_moved: number;
+  links_moved: number;
+  relationships_rewired: number;
+  relationships_collapsed: number;
+  evidence_moved: number;
+  created_at: string;
 }
 
 export interface GraphRelationshipDetail {

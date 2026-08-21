@@ -14,8 +14,11 @@ from app.schemas.graph import (
     GraphEntityCreate,
     GraphEntityDetailResponse,
     GraphEntityMergeCandidateResponse,
+    GraphEntityMergeCreate,
+    GraphEntityMergeResponse,
     GraphEntityResponse,
     GraphEntitySearchResponse,
+    GraphEntitySourceIdentityResponse,
     GraphPathResponse,
     GraphRelatedEntityResponse,
     GraphRelationshipCreate,
@@ -24,6 +27,7 @@ from app.schemas.graph import (
     GraphSharedParcelSummary,
     OpportunityGraphContextResponse,
 )
+from app.services.audit_service import log_change
 from app.services.brand_intelligence import list_deal_brand_matches
 from app.services.graph_service import (
     create_relationship,
@@ -31,6 +35,7 @@ from app.services.graph_service import (
     find_relationship_paths,
     get_entity_or_none,
     get_relationship_or_none,
+    merge_graph_entities,
     opportunity_context,
     relationships_for_entity,
     resolve_entity,
@@ -44,7 +49,7 @@ from app.services.parcel_service import (
     summarize_shared_parcels_for_deal,
 )
 from app.utils.auth_deps import require_role
-from app.utils.org_scope import active_query
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 opportunity_router = APIRouter(tags=["graph"])
@@ -124,6 +129,10 @@ def get_entity(entity_id: str, db: Session = Depends(get_db)):
     return GraphEntityDetailResponse(
         **GraphEntityResponse.model_validate(entity).model_dump(),
         aliases=[alias.alias for alias in entity.aliases],
+        source_identities=[
+            GraphEntitySourceIdentityResponse.model_validate(identity)
+            for identity in entity.source_identities
+        ],
         links=[
             {"record_type": link.record_type, "record_id": link.record_id}
             for link in entity.links
@@ -147,6 +156,53 @@ def search_graph_entities(
         )
         for entity in search_entities(db, q, entity_type=entity_type_enum, limit=limit)
     ]
+
+
+@router.post(
+    "/entities/{entity_id}/merge",
+    response_model=GraphEntityMergeResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def merge_entity(
+    entity_id: str,
+    payload: GraphEntityMergeCreate,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = merge_graph_entities(
+            db,
+            entity_id,
+            payload.duplicate_entity_id,
+            reason=payload.reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    log_change(
+        db,
+        "graph_entity",
+        entity_id,
+        "merge",
+        old_values={"merged_entity_id": payload.duplicate_entity_id},
+        new_values={"reason": payload.reason, "merge_id": result.merge.id},
+        organization_id=get_org_id(),
+    )
+    db.commit()
+    db.refresh(result.merge)
+    db.refresh(result.survivor)
+    return GraphEntityMergeResponse(
+        merge_id=result.merge.id,
+        merged_entity_id=result.merge.merged_entity_id,
+        survivor=GraphEntityResponse.model_validate(result.survivor),
+        aliases_moved=result.aliases_moved,
+        source_identities_moved=result.source_identities_moved,
+        links_moved=result.links_moved,
+        relationships_rewired=result.relationships_rewired,
+        relationships_collapsed=result.relationships_collapsed,
+        evidence_moved=result.evidence_moved,
+        created_at=result.merge.created_at,
+    )
 
 
 @router.get("/entities/{entity_id}/related", response_model=list[GraphRelatedEntityResponse])

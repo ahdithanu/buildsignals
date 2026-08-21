@@ -18,6 +18,8 @@ from app.models.graph import (  # noqa
     GraphEntity,
     GraphEntityAlias,
     GraphEntityLink,
+    GraphEntityMerge,
+    GraphEntitySourceIdentity,
     GraphRelationship,
     GraphRelationshipEvidence,
 )

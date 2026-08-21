@@ -24,6 +24,22 @@ Important fields:
 
 Alternate names and source ids for an entity. This lets the graph keep "ACME Dev LLC", "Acme Development", and a feed-specific owner name tied to the same canonical entity.
 
+### `graph_entity_source_identities`
+
+First-class external identities attached to a canonical entity. Unlike the
+single primary `source_system` / `source_id` pair on `graph_entities`, this
+table preserves every registry, permit-feed, assessor, CRM, or enrichment ID
+that resolves to the node. Resolution checks these identities before name or
+address matching, so a previously merged source record cannot recreate its
+retired duplicate.
+
+### `graph_entity_merges`
+
+Immutable provenance for reviewer-approved deduplication. Each row records the
+survivor, retired entity ID and display name, entity type, review reason,
+timestamp, and a JSON snapshot of the retired node's fields, aliases, source
+identities, record links, and relationship IDs.
+
 ### `graph_entity_links`
 
 Bridge table from graph nodes to app records. Today it links `record_type='deal'` to the property entity for an opportunity. Future importers can link `permit`, `contact`, `document`, or other records without changing the graph model.
@@ -57,10 +73,11 @@ the actual node being connected instead of only the relationship type.
 Resolution is implemented in `app/services/graph_service.py` and runs in this order:
 
 1. Exact match on `entity_type + source_system + source_id`.
-2. Exact alias match by source identity.
-3. Exact normalized name match, optionally constrained by normalized address.
-4. Exact normalized alias match.
-5. Conservative fuzzy match by normalized name, with address support for properties and parcels.
+2. Exact first-class source identity match.
+3. Exact alias match by source identity.
+4. Exact normalized name match, optionally constrained by normalized address.
+5. Exact normalized alias match.
+6. Conservative fuzzy match by normalized name, with address support for properties and parcels.
 
 Structured source attributes are also folded into the same resolution pass
 when they look like alternate names or identity strings. That includes common
@@ -76,6 +93,8 @@ Normalization removes punctuation, common company suffixes, and common address e
 - `POST /graph/entities`: create or resolve an entity.
 - `GET /graph/entities/{entity_id}`: entity detail, aliases, links, related entities.
 - `GET /graph/entities/{entity_id}/related`: adjacent graph entities.
+- `GET /graph/entities/{entity_id}/merge-candidates`: likely same-type duplicates for human review.
+- `POST /graph/entities/{entity_id}/merge`: retire a reviewed duplicate into the selected canonical entity while preserving provenance.
 - `POST /graph/relationships`: create/update a relationship with evidence.
 - `GET /graph/relationships/{relationship_id}`: relationship detail with source
   and target entities plus full evidence.
@@ -118,6 +137,15 @@ location signals, then surfaces the top likely duplicates in the entity detail
 view. That keeps review human-driven while still giving operators a fast path
 for cleanup.
 
+Editors and admins can complete that review from the entity page. A merge is a
+single transaction: aliases, source identities, record links, relationships,
+and relationship evidence move to the survivor; equivalent edges collapse and
+combine their evidence; direct survivor-to-duplicate edges are removed; entity
+attributes are combined with survivor values taking precedence; and the
+retired entity is deleted only after its merge snapshot is durable. Cross-type
+and self-merges are rejected. The audit log records the review reason and merge
+provenance ID.
+
 ## Tradeoffs
 
 This implementation keeps graph traversal in the service layer using bounded breadth-first search. That keeps the first version portable across SQLite tests and Postgres production, and it avoids adding a graph database before query patterns are proven.
@@ -139,7 +167,7 @@ Mid-term improvements:
 
 - Add Postgres recursive CTE queries for paths.
 - Add trigram indexes or vector embeddings for higher-quality entity resolution.
-- Add reviewer workflows for low-confidence merges.
+- Add batch review queues and reversible adjudication for low-confidence merges.
 - Add graph snapshots or materialized neighborhood tables for high-traffic opportunity pages.
 
 Long-term improvements:
