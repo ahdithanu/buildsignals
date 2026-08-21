@@ -9,6 +9,9 @@ from app.models.contact import Contact
 from app.models.graph import (
     GraphEntity,
     GraphEntityAlias,
+    GraphEntityLink,
+    GraphEntityMerge,
+    GraphEntitySourceIdentity,
     GraphEntityType,
     GraphRelationship,
     GraphRelationshipEvidence,
@@ -486,6 +489,148 @@ def test_merge_candidate_endpoint_surfaces_likely_duplicates(client, db):
     assert body[0]["entity"]["id"] == duplicate.id
     assert body[0]["score"] >= 0.9
     assert "exact normalized name match" in body[0]["reasons"] or "alias match" in body[0]["reasons"]
+
+
+def test_reviewed_entity_merge_preserves_source_ids_links_relationships_and_evidence(client, db):
+    survivor = GraphEntity(
+        organization_id="default-org",
+        entity_type=GraphEntityType.developer,
+        display_name="Summit Development Group LLC",
+        normalized_name="summit development",
+        source_system="registry",
+        source_id="summit-registry",
+        confidence=0.96,
+        attributes={"website": "https://summit.example"},
+    )
+    duplicate = GraphEntity(
+        organization_id="default-org",
+        entity_type=GraphEntityType.developer,
+        display_name="Summit Dev Group",
+        normalized_name="summit dev",
+        source_system="permit_feed",
+        source_id="summit-permit",
+        confidence=0.84,
+        attributes={"license": "GC-100"},
+    )
+    db.add_all([survivor, duplicate])
+    db.flush()
+    db.add(GraphEntityAlias(
+        organization_id="default-org",
+        entity_id=duplicate.id,
+        alias="SDG",
+        normalized_alias="sdg",
+        source_system="permit_feed",
+        source_id="summit-permit",
+        confidence=0.84,
+    ))
+    db.add(GraphEntityLink(
+        organization_id="default-org",
+        entity_id=duplicate.id,
+        record_type="contact",
+        record_id="contact-100",
+        source_system="crm",
+    ))
+    db.commit()
+    survivor_id = survivor.id
+    duplicate_id = duplicate.id
+
+    property_entity = _entity(
+        client,
+        entity_type="property",
+        display_name="Summit Retail Site",
+        source_system="assessor",
+        source_id="parcel-summit",
+        address="100 Summit Avenue",
+        city="Austin",
+        state="TX",
+    )
+    for target_id, evidence_id in (
+        (survivor_id, "filing-survivor"),
+        (duplicate_id, "filing-duplicate"),
+    ):
+        response = client.post("/graph/relationships", json={
+            "source_entity_id": property_entity["id"],
+            "target_entity_id": target_id,
+            "relationship_type": "developed_by",
+            "confidence": 0.9,
+            "source_system": "city_planning",
+            "source_id": "case-summit",
+            "evidence": [{
+                "source_system": "city_planning",
+                "source_id": evidence_id,
+                "excerpt": f"Developer evidence {evidence_id}",
+                "confidence": 0.9,
+            }],
+        })
+        assert response.status_code == 201, response.text
+
+    response = client.post(f"/graph/entities/{survivor_id}/merge", json={
+        "duplicate_entity_id": duplicate_id,
+        "reason": "Confirmed duplicate after registry and permit evidence review",
+    })
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["survivor"]["id"] == survivor_id
+    assert body["merged_entity_id"] == duplicate_id
+    assert body["relationships_collapsed"] == 1
+    assert body["evidence_moved"] == 1
+    db.expire_all()
+    assert db.get(GraphEntity, duplicate_id) is None
+    assert db.query(GraphRelationship).count() == 1
+    assert db.query(GraphRelationshipEvidence).count() == 2
+
+    detail = client.get(f"/graph/entities/{survivor_id}")
+    assert detail.status_code == 200, detail.text
+    detail_body = detail.json()
+    assert {"Summit Dev Group", "SDG"}.issubset(set(detail_body["aliases"]))
+    assert {
+        (item["source_system"], item["source_id"])
+        for item in detail_body["source_identities"]
+    } == {
+        ("registry", "summit-registry"),
+        ("permit_feed", "summit-permit"),
+    }
+    assert detail_body["links"] == [{"record_type": "contact", "record_id": "contact-100"}]
+    assert detail_body["attributes"]["website"] == "https://summit.example"
+    assert detail_body["attributes"]["license"] == "GC-100"
+    assert duplicate_id in detail_body["attributes"]["merged_from_entity_ids"]
+
+    merge = db.query(GraphEntityMerge).one()
+    assert merge.survivor_entity_id == survivor_id
+    assert merge.snapshot["source_id"] == "summit-permit"
+
+    repeated_source = _entity(
+        client,
+        display_name="Summit Dev Group",
+        source_system="permit_feed",
+        source_id="summit-permit",
+    )
+    assert repeated_source["id"] == survivor_id
+    assert repeated_source["display_name"] == "Summit Development Group LLC"
+    assert db.query(GraphEntitySourceIdentity).filter(
+        GraphEntitySourceIdentity.entity_id == survivor_id
+    ).count() == 2
+
+
+def test_entity_merge_rejects_cross_type_entities_without_changes(client, db):
+    developer = _entity(client, source_id="merge-developer")
+    owner = _entity(
+        client,
+        entity_type="owner",
+        display_name="Acme Development Owner",
+        source_id="merge-owner",
+    )
+
+    response = client.post(f"/graph/entities/{developer['id']}/merge", json={
+        "duplicate_entity_id": owner["id"],
+        "reason": "Names look similar",
+    })
+
+    assert response.status_code == 409
+    assert db.get(GraphEntity, developer["id"]) is not None
+    assert db.get(GraphEntity, owner["id"]) is not None
+    assert db.query(GraphEntityMerge).count() == 0
 
 
 def test_graph_detail_related_entities_and_paths_are_exposed_via_api(client):

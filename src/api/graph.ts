@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { GraphEntity, GraphEntityDetail, GraphEntityMergeCandidate, GraphEntitySearchResult, GraphPath, GraphRelationshipDetail, OpportunityGraphContext } from '@/types/graph';
+import type { GraphEntity, GraphEntityDetail, GraphEntityMergeCandidate, GraphEntityMergeResult, GraphEntitySearchResult, GraphPath, GraphRelationshipDetail, OpportunityGraphContext } from '@/types/graph';
 
 export const graphApi = {
   searchEntities: (query: string, entityType?: string, limit = 20): Promise<GraphEntitySearchResult[]> => {
@@ -15,6 +15,11 @@ export const graphApi = {
     apiClient.get<GraphEntityMergeCandidate[]>(
       `/graph/entities/${entityId}/merge-candidates?limit=${limit}&minimum_score=${minimumScore}`,
     ),
+  mergeEntity: (survivorEntityId: string, duplicateEntityId: string, reason: string): Promise<GraphEntityMergeResult> =>
+    apiClient.post<GraphEntityMergeResult>(`/graph/entities/${survivorEntityId}/merge`, {
+      duplicate_entity_id: duplicateEntityId,
+      reason,
+    }),
   relationshipDetail: (relationshipId: string): Promise<GraphRelationshipDetail> =>
     apiClient.get<GraphRelationshipDetail>(`/graph/relationships/${relationshipId}`),
   paths: (sourceEntityId: string, targetEntityId: string, maxDepth = 4): Promise<GraphPath[]> =>

@@ -115,6 +115,7 @@ class GraphRelationshipDetailResponse(BaseModel):
 
 class GraphEntityDetailResponse(GraphEntityResponse):
     aliases: list[str] = Field(default_factory=list)
+    source_identities: list["GraphEntitySourceIdentityResponse"] = Field(default_factory=list)
     links: list[dict[str, str]] = Field(default_factory=list)
     related: list[GraphRelatedEntityResponse] = Field(default_factory=list)
 
@@ -127,6 +128,33 @@ class GraphEntityMergeCandidateResponse(BaseModel):
     entity: GraphEntityResponse
     score: float
     reasons: list[str] = Field(default_factory=list)
+
+
+class GraphEntitySourceIdentityResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source_system: str
+    source_id: str
+    confidence: float
+    last_verified_at: datetime
+
+
+class GraphEntityMergeCreate(BaseModel):
+    duplicate_entity_id: str = Field(..., min_length=1, max_length=36)
+    reason: str = Field(..., min_length=3, max_length=500)
+
+
+class GraphEntityMergeResponse(BaseModel):
+    merge_id: str
+    merged_entity_id: str
+    survivor: GraphEntityResponse
+    aliases_moved: int
+    source_identities_moved: int
+    links_moved: int
+    relationships_rewired: int
+    relationships_collapsed: int
+    evidence_moved: int
+    created_at: datetime
 
 
 class GraphPathResponse(BaseModel):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from typing import Any, Iterable, Optional
@@ -15,6 +16,8 @@ from app.models.graph import (
     GraphEntity,
     GraphEntityAlias,
     GraphEntityLink,
+    GraphEntityMerge,
+    GraphEntitySourceIdentity,
     GraphEntityType,
     GraphRelationship,
     GraphRelationshipEvidence,
@@ -116,6 +119,18 @@ ADDRESS_AWARE_ENTITY_TYPES = {
     GraphEntityType.architect,
     GraphEntityType.engineer,
 }
+
+
+@dataclass(frozen=True)
+class GraphEntityMergeResult:
+    merge: GraphEntityMerge
+    survivor: GraphEntity
+    aliases_moved: int
+    source_identities_moved: int
+    links_moved: int
+    relationships_rewired: int
+    relationships_collapsed: int
+    evidence_moved: int
 
 
 def utcnow() -> datetime:
@@ -258,6 +273,25 @@ def resolve_entity(db: Session, payload: GraphEntityCreate) -> tuple[GraphEntity
                 payload.source_id,
             )
             return source_match, False
+
+        identity_match = active_query(
+            db.query(GraphEntitySourceIdentity), GraphEntitySourceIdentity
+        ).join(GraphEntitySourceIdentity.entity).filter(
+            GraphEntitySourceIdentity.source_system == payload.source_system,
+            GraphEntitySourceIdentity.source_id == payload.source_id,
+            GraphEntity.entity_type == payload.entity_type,
+        ).first()
+        if identity_match:
+            previous_display_name = identity_match.entity.display_name
+            _touch_entity(identity_match.entity, payload)
+            _ensure_aliases(
+                db,
+                identity_match.entity,
+                [*alias_candidates, previous_display_name],
+                payload.source_system,
+                payload.source_id,
+            )
+            return identity_match.entity, False
 
         alias_source_match = active_query(db.query(GraphEntityAlias), GraphEntityAlias).join(
             GraphEntityAlias.entity
@@ -426,6 +460,7 @@ def _ensure_aliases(
     source_system: Optional[str],
     source_id: Optional[str],
 ) -> None:
+    _ensure_source_identity(db, entity, source_system, source_id)
     seen = {
         alias.normalized_alias
         for alias in active_query(db.query(GraphEntityAlias), GraphEntityAlias).filter(GraphEntityAlias.entity_id == entity.id).all()
@@ -443,6 +478,38 @@ def _ensure_aliases(
             source_id=source_id,
         ))
         seen.add(normalized)
+
+
+def _ensure_source_identity(
+    db: Session,
+    entity: GraphEntity,
+    source_system: Optional[str],
+    source_id: Optional[str],
+    confidence: Optional[float] = None,
+) -> Optional[GraphEntitySourceIdentity]:
+    if not source_system or not source_id:
+        return None
+    existing = active_query(
+        db.query(GraphEntitySourceIdentity), GraphEntitySourceIdentity
+    ).filter(
+        GraphEntitySourceIdentity.entity_id == entity.id,
+        GraphEntitySourceIdentity.source_system == source_system,
+        GraphEntitySourceIdentity.source_id == source_id,
+    ).first()
+    if existing:
+        existing.confidence = max(existing.confidence, confidence or entity.confidence)
+        existing.last_verified_at = utcnow()
+        return existing
+    identity = GraphEntitySourceIdentity(
+        organization_id=get_org_id(),
+        entity_id=entity.id,
+        source_system=source_system,
+        source_id=source_id,
+        confidence=confidence or entity.confidence,
+        last_verified_at=utcnow(),
+    )
+    db.add(identity)
+    return identity
 
 
 def link_entity_to_record(
@@ -576,6 +643,7 @@ def add_relationship_evidence(
 def get_entity_or_none(db: Session, entity_id: str) -> Optional[GraphEntity]:
     return _entity_query(db).options(
         joinedload(GraphEntity.aliases),
+        joinedload(GraphEntity.source_identities),
         joinedload(GraphEntity.links),
     ).filter(GraphEntity.id == entity_id).first()
 
@@ -724,6 +792,231 @@ def entity_merge_candidates(
 
     scored.sort(key=lambda row: (-row[1], row[0].display_name.lower(), row[0].id))
     return scored[:limit]
+
+
+def merge_graph_entities(
+    db: Session,
+    survivor_entity_id: str,
+    merged_entity_id: str,
+    *,
+    reason: str,
+) -> GraphEntityMergeResult:
+    if survivor_entity_id == merged_entity_id:
+        raise ValueError("An entity cannot be merged into itself")
+
+    survivor = get_entity_or_none(db, survivor_entity_id)
+    duplicate = get_entity_or_none(db, merged_entity_id)
+    if survivor is None or duplicate is None:
+        raise LookupError("Survivor or duplicate entity was not found")
+    if survivor.entity_type != duplicate.entity_type:
+        raise ValueError("Only entities of the same type can be merged")
+
+    _ensure_source_identity(
+        db,
+        survivor,
+        survivor.source_system,
+        survivor.source_id,
+        survivor.confidence,
+    )
+    _ensure_source_identity(
+        db,
+        duplicate,
+        duplicate.source_system,
+        duplicate.source_id,
+        duplicate.confidence,
+    )
+    db.flush()
+
+    relationships = active_query(db.query(GraphRelationship), GraphRelationship).options(
+        joinedload(GraphRelationship.evidence)
+    ).filter(
+        or_(
+            GraphRelationship.source_entity_id == duplicate.id,
+            GraphRelationship.target_entity_id == duplicate.id,
+        )
+    ).all()
+    source_identities = active_query(
+        db.query(GraphEntitySourceIdentity), GraphEntitySourceIdentity
+    ).filter(GraphEntitySourceIdentity.entity_id == duplicate.id).all()
+
+    snapshot = {
+        "id": duplicate.id,
+        "entity_type": duplicate.entity_type.value,
+        "display_name": duplicate.display_name,
+        "normalized_name": duplicate.normalized_name,
+        "normalized_address": duplicate.normalized_address,
+        "source_system": duplicate.source_system,
+        "source_id": duplicate.source_id,
+        "address": duplicate.address,
+        "city": duplicate.city,
+        "state": duplicate.state,
+        "zip_code": duplicate.zip_code,
+        "confidence": duplicate.confidence,
+        "attributes": duplicate.attributes,
+        "aliases": [alias.alias for alias in duplicate.aliases],
+        "source_identities": [
+            {
+                "source_system": identity.source_system,
+                "source_id": identity.source_id,
+                "confidence": identity.confidence,
+            }
+            for identity in source_identities
+        ],
+        "link_ids": [link.id for link in duplicate.links],
+        "relationship_ids": [relationship.id for relationship in relationships],
+        "created_at": duplicate.created_at.isoformat(),
+        "last_verified_at": duplicate.last_verified_at.isoformat(),
+    }
+
+    aliases_before = len(survivor.aliases)
+    _ensure_aliases(
+        db,
+        survivor,
+        [duplicate.display_name],
+        duplicate.source_system,
+        duplicate.source_id,
+    )
+    for alias in duplicate.aliases:
+        _ensure_aliases(
+            db,
+            survivor,
+            [alias.alias],
+            alias.source_system,
+            alias.source_id,
+        )
+    db.flush()
+    aliases_after = active_query(db.query(GraphEntityAlias), GraphEntityAlias).filter(
+        GraphEntityAlias.entity_id == survivor.id
+    ).count()
+
+    source_identities_moved = 0
+    for identity in source_identities:
+        existing = active_query(
+            db.query(GraphEntitySourceIdentity), GraphEntitySourceIdentity
+        ).filter(
+            GraphEntitySourceIdentity.entity_id == survivor.id,
+            GraphEntitySourceIdentity.source_system == identity.source_system,
+            GraphEntitySourceIdentity.source_id == identity.source_id,
+        ).first()
+        if existing:
+            existing.confidence = max(existing.confidence, identity.confidence)
+            existing.last_verified_at = max(existing.last_verified_at, identity.last_verified_at)
+            db.delete(identity)
+        else:
+            identity.entity_id = survivor.id
+        source_identities_moved += 1
+
+    links_moved = 0
+    for link in list(duplicate.links):
+        existing = active_query(db.query(GraphEntityLink), GraphEntityLink).filter(
+            GraphEntityLink.entity_id == survivor.id,
+            GraphEntityLink.record_type == link.record_type,
+            GraphEntityLink.record_id == link.record_id,
+        ).first()
+        if existing:
+            db.delete(link)
+        else:
+            link.entity_id = survivor.id
+        links_moved += 1
+
+    relationships_rewired = 0
+    relationships_collapsed = 0
+    evidence_moved = 0
+    for relationship in relationships:
+        next_source_id = survivor.id if relationship.source_entity_id == duplicate.id else relationship.source_entity_id
+        next_target_id = survivor.id if relationship.target_entity_id == duplicate.id else relationship.target_entity_id
+        if next_source_id == next_target_id:
+            db.delete(relationship)
+            relationships_collapsed += 1
+            continue
+
+        equivalent = active_query(db.query(GraphRelationship), GraphRelationship).filter(
+            GraphRelationship.id != relationship.id,
+            GraphRelationship.source_entity_id == next_source_id,
+            GraphRelationship.target_entity_id == next_target_id,
+            GraphRelationship.relationship_type == relationship.relationship_type,
+            GraphRelationship.source_system == relationship.source_system,
+            GraphRelationship.source_id == relationship.source_id,
+        ).first()
+        if equivalent:
+            equivalent.confidence = max(equivalent.confidence, relationship.confidence)
+            equivalent.attributes = {
+                **(relationship.attributes or {}),
+                **(equivalent.attributes or {}),
+            } or None
+            equivalent.last_verified_at = max(
+                equivalent.last_verified_at,
+                relationship.last_verified_at,
+            )
+            equivalent.valid_from = min(equivalent.valid_from, relationship.valid_from)
+            equivalent.is_current = equivalent.is_current or relationship.is_current
+            if equivalent.is_current:
+                equivalent.valid_to = None
+            for evidence in relationship.evidence:
+                add_relationship_evidence(
+                    db,
+                    equivalent,
+                    GraphEvidenceCreate(
+                        source_system=evidence.source_system,
+                        source_id=evidence.source_id,
+                        source_url=evidence.source_url,
+                        evidence_type=evidence.evidence_type,
+                        excerpt=evidence.excerpt,
+                        observed_at=evidence.observed_at,
+                        confidence=evidence.confidence,
+                        payload=evidence.payload,
+                    ),
+                )
+                evidence_moved += 1
+            db.delete(relationship)
+            relationships_collapsed += 1
+            continue
+
+        relationship.source_entity_id = next_source_id
+        relationship.target_entity_id = next_target_id
+        relationships_rewired += 1
+
+    merged_from = list((survivor.attributes or {}).get("merged_from_entity_ids", []))
+    if duplicate.id not in merged_from:
+        merged_from.append(duplicate.id)
+    survivor.attributes = {
+        **(duplicate.attributes or {}),
+        **(survivor.attributes or {}),
+        "merged_from_entity_ids": merged_from,
+    }
+    survivor.confidence = max(survivor.confidence, duplicate.confidence)
+    survivor.last_verified_at = max(survivor.last_verified_at, duplicate.last_verified_at)
+    survivor.address = survivor.address or duplicate.address
+    survivor.city = survivor.city or duplicate.city
+    survivor.state = survivor.state or duplicate.state
+    survivor.zip_code = survivor.zip_code or duplicate.zip_code
+    survivor.normalized_address = survivor.normalized_address or duplicate.normalized_address
+
+    merge = GraphEntityMerge(
+        organization_id=get_org_id(),
+        survivor_entity_id=survivor.id,
+        merged_entity_id=duplicate.id,
+        entity_type=duplicate.entity_type,
+        merged_display_name=duplicate.display_name,
+        reason=reason,
+        snapshot=snapshot,
+    )
+    db.add(merge)
+    db.flush()
+    _entity_query(db).filter(GraphEntity.id == duplicate.id).delete(synchronize_session=False)
+    db.flush()
+    db.expire(survivor, ["aliases", "source_identities", "links"])
+
+    return GraphEntityMergeResult(
+        merge=merge,
+        survivor=survivor,
+        aliases_moved=max(0, aliases_after - aliases_before),
+        source_identities_moved=source_identities_moved,
+        links_moved=links_moved,
+        relationships_rewired=relationships_rewired,
+        relationships_collapsed=relationships_collapsed,
+        evidence_moved=evidence_moved,
+    )
 
 
 def entity_for_record(db: Session, record_type: str, record_id: str) -> Optional[GraphEntity]:

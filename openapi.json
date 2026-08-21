@@ -3746,6 +3746,13 @@
             ],
             "title": "Source Id"
           },
+          "source_identities": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEntitySourceIdentityResponse"
+            },
+            "title": "Source Identities",
+            "type": "array"
+          },
           "source_system": {
             "anyOf": [
               {
@@ -3820,6 +3827,86 @@
           "score"
         ],
         "title": "GraphEntityMergeCandidateResponse",
+        "type": "object"
+      },
+      "GraphEntityMergeCreate": {
+        "properties": {
+          "duplicate_entity_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Duplicate Entity Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "duplicate_entity_id",
+          "reason"
+        ],
+        "title": "GraphEntityMergeCreate",
+        "type": "object"
+      },
+      "GraphEntityMergeResponse": {
+        "properties": {
+          "aliases_moved": {
+            "title": "Aliases Moved",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence_moved": {
+            "title": "Evidence Moved",
+            "type": "integer"
+          },
+          "links_moved": {
+            "title": "Links Moved",
+            "type": "integer"
+          },
+          "merge_id": {
+            "title": "Merge Id",
+            "type": "string"
+          },
+          "merged_entity_id": {
+            "title": "Merged Entity Id",
+            "type": "string"
+          },
+          "relationships_collapsed": {
+            "title": "Relationships Collapsed",
+            "type": "integer"
+          },
+          "relationships_rewired": {
+            "title": "Relationships Rewired",
+            "type": "integer"
+          },
+          "source_identities_moved": {
+            "title": "Source Identities Moved",
+            "type": "integer"
+          },
+          "survivor": {
+            "$ref": "#/components/schemas/GraphEntityResponse"
+          }
+        },
+        "required": [
+          "merge_id",
+          "merged_entity_id",
+          "survivor",
+          "aliases_moved",
+          "source_identities_moved",
+          "links_moved",
+          "relationships_rewired",
+          "relationships_collapsed",
+          "evidence_moved",
+          "created_at"
+        ],
+        "title": "GraphEntityMergeResponse",
         "type": "object"
       },
       "GraphEntityResponse": {
@@ -4105,6 +4192,35 @@
           "last_verified_at"
         ],
         "title": "GraphEntitySearchResponse",
+        "type": "object"
+      },
+      "GraphEntitySourceIdentityResponse": {
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_system",
+          "source_id",
+          "confidence",
+          "last_verified_at"
+        ],
+        "title": "GraphEntitySourceIdentityResponse",
         "type": "object"
       },
       "GraphEntityType": {
@@ -14053,6 +14169,74 @@
           }
         },
         "summary": "Get Entity",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/entities/{entity_id}/merge": {
+      "post": {
+        "operationId": "merge_entity_v1_graph_entities__entity_id__merge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphEntityMergeCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphEntityMergeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Merge Entity",
         "tags": [
           "graph"
         ]
