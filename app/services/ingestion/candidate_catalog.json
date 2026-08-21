@@ -7,9 +7,9 @@
     "jurisdiction": "Savannah, GA",
     "base_url": "https://pub.sagis.org/arcgis/rest/services/Savannah/BuildingPermit_FC/FeatureServer/0/query",
     "official_landing_page": "https://www.savannahga.gov/4290/Permit-Tracker",
-    "license": "Official SAGIS public-use and no-cost download posture; commercial derived-output scope still requires explicit owner approval",
+    "license": "Official SAGIS public-use and no-cost download posture; narrow commercial derived-intelligence scope approved by the Build Signals owner on 2026-08-21",
     "status": "operational_retry",
-    "blocker_summary": "An August 20 bounded lifecycle canary fetched and validated 70 of 70 commercial tracker observations with zero failures across In Review, Approved, and Issued stages. Explicit production rights and data-minimization approval remain before promotion.",
+    "blocker_summary": "An August 20 bounded lifecycle canary fetched and validated 70 of 70 commercial tracker observations with zero failures across In Review, Approved, and Issued stages. The Build Signals owner approved the narrow production and data-minimization scope on August 21, 2026.",
     "early_warning_value": "Commercial permits in review expose new construction, tenant buildouts, hotels, grocery stores, restaurants, changes of use, addresses, parcels, scope, and valuation before issuance.",
     "candidate_source_fields": [
       "OBJECTID",
@@ -148,7 +148,7 @@
     "can_run_canary": true,
     "last_checked_on": "2026-08-20",
     "next_audit_on": "2026-08-20",
-    "notes": "The City of Savannah identifies the tracker as Development Services-managed, updated weekly, and intended for public permit-status access. SAGIS advertises publicly available datasets for no-cost download and public use. An August 20 bounded lifecycle canary fetched and validated 70 of 70 observations with zero failures: 18 pre-approval and 52 approved. Current 2026 rows include grocery, hotel, restaurant, change-of-use, and tenant-buildout signals. Use PermitNumber, Address, and OBJECTID as source-row identity because one permit/address pair can repeat across tracker observations; retain PermitNumber separately as the business identity. Do not fetch ApplicantName, contact details, attachments, documents, or raw geometry. Production still requires explicit narrow-scope approval."
+    "notes": "The City of Savannah identifies the tracker as Development Services-managed, updated weekly, and intended for public permit-status access. SAGIS advertises publicly available datasets for no-cost download and public use. An August 20 bounded lifecycle canary fetched and validated 70 of 70 observations with zero failures: 18 pre-approval and 52 approved. Current 2026 rows include grocery, hotel, restaurant, change-of-use, and tenant-buildout signals. Use PermitNumber, Address, and OBJECTID as source-row identity because one permit/address pair can repeat across tracker observations; retain PermitNumber separately as the business identity. Do not fetch ApplicantName, contact details, attachments, documents, or raw geometry. The Build Signals owner approved this narrow production scope on August 21, 2026."
   },
   {
     "key": "san_marcos_tx_planning_application_notices",

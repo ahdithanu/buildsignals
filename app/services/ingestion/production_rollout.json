@@ -1,21 +1,17 @@
 {
-  "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.sanmarcostx.gov,www.stlcitypermits.com,www.taylortx.gov",
+  "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,pub.sagis.org,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.sanmarcostx.gov,www.stlcitypermits.com,www.taylortx.gov",
   "candidate_retries": {
-    "allowed_hosts_value": "pub.sagis.org",
-    "candidate_catalog_fingerprint": "ce91ee7a6da03952b3406109a49299fc4e92b15de013435739b44ffa425afbdd",
-    "candidate_count": 1,
-    "candidate_keys": [
-      "savannah_ga_commercial_building_permits"
-    ],
-    "policy_digest": "a3e282659996966df47ab7297eb3c0c3fc4072066ceb34931584c965bf0fe5cd",
-    "required_hosts": [
-      "pub.sagis.org"
-    ],
+    "allowed_hosts_value": "",
+    "candidate_catalog_fingerprint": "efb3ed84370508d02a260bbfff9d0d75caae9bf6b498e5b2eaa69c04c8d12aa0",
+    "candidate_count": 0,
+    "candidate_keys": [],
+    "policy_digest": "71c92f3d9c19b0dce7b2e31dac7f533536760cf6c86de049be76d22eb79d4eba",
+    "required_hosts": [],
     "sample_size": 10
   },
-  "catalog_fingerprint": "f4c970b578b5db74c07c579abed0d41d9c0dabee6d9f5a2d797dbbfc0c54004e",
-  "manifest_digest": "79d37e6bddf22a642f4f00d5f428a029ecffd79016d253e474dcbe6175d7f794",
-  "policy_digest": "6dea1cb6fae1bdf4cf8e908da3a200a2c2407f06e87a4e2b9f7525bfafeee907",
+  "catalog_fingerprint": "06d15d347d2a23cec64086c5c2170a2ed891f74b9caf7fc03282bf1363c11617",
+  "manifest_digest": "5886118f151c59bfd0ed5a515ca26a89793c044fad97ac37dbe40ed283541006",
+  "policy_digest": "e71f6f6429770f5402de8a128c15d4525c769f288796281ed59c3175bc31b6b2",
   "required_hosts": [
     "anrmaps.vermont.gov",
     "arcgis.tampagov.net",
@@ -83,6 +79,7 @@
     "mapviewer.lynchburgva.gov",
     "mdgeodata.md.gov",
     "mgmgis.montgomeryal.gov",
+    "pub.sagis.org",
     "risegis.ri.gov",
     "services.arcgis.com",
     "services.dwr.virginia.gov",
@@ -106,8 +103,8 @@
   ],
   "schema_version": 1,
   "shard_count": 4,
-  "source_count": 124,
-  "state_count": 40,
+  "source_count": 125,
+  "state_count": 41,
   "waves": [
     {
       "approved_only_source_count": 3,
@@ -411,8 +408,8 @@
       "label": "Nationwide expansion queue",
       "manual_source_count": 0,
       "parcel_source_count": 23,
-      "permit_source_count": 41,
-      "pre_approval_source_count": 33,
+      "permit_source_count": 42,
+      "pre_approval_source_count": 34,
       "required_hosts": [
         "anrmaps.vermont.gov",
         "data.brla.gov",
@@ -449,6 +446,7 @@
         "maps8.stlouis-mo.gov",
         "mapviewer.lynchburgva.gov",
         "mgmgis.montgomeryal.gov",
+        "pub.sagis.org",
         "risegis.ri.gov",
         "services.arcgis.com",
         "services.dwr.virginia.gov",
@@ -467,7 +465,7 @@
       "shards": [
         {
           "shard_index": 0,
-          "source_count": 14,
+          "source_count": 15,
           "source_keys": [
             "bismarck_nd_development_activities",
             "delaware_dnrec_stormwater_noi",
@@ -480,6 +478,7 @@
             "norfolk_va_conditional_use_permits",
             "norfolk_va_permits_and_inspections_permit_records",
             "provo_ut_planning_applications",
+            "savannah_ga_commercial_building_permits",
             "sedgwick_county_ks_parcels_nearby_narrow",
             "virginia_vgin_statewide_parcels_narrow",
             "washington_dc_basic_business_licenses_retail_openings"
@@ -554,7 +553,7 @@
           ]
         }
       ],
-      "source_count": 64,
+      "source_count": 65,
       "source_keys": [
         "allegheny_county_pa_parcels_nearby_narrow",
         "allegheny_county_pa_property_assessments",
@@ -606,6 +605,7 @@
         "provo_ut_building_permit_applications",
         "provo_ut_planning_applications",
         "rhode_island_statewide_tax_parcels_narrow",
+        "savannah_ga_commercial_building_permits",
         "sedgwick_county_ks_parcels_nearby_narrow",
         "sioux_falls_sd_parcels_nearby_narrow",
         "st_louis_mo_city_parcels",
@@ -628,6 +628,7 @@
         "CT",
         "DC",
         "DE",
+        "GA",
         "IL",
         "IN",
         "KS",

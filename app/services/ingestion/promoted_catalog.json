@@ -1147,6 +1147,232 @@
     }
   },
   {
+    "adapter": "arcgis",
+    "base_url": "https://pub.sagis.org/arcgis/rest/services/Savannah/BuildingPermit_FC/FeatureServer/0/query",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "__source_record_id",
+        "transform": "join_fields",
+        "transform_options": {
+          "fields": [
+            "PermitNumber",
+            "Address",
+            "OBJECTID"
+          ],
+          "separator": "|"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "PermitNumber",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "application_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "PermitNumber"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "approval_stage",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "PermitStatus",
+              "operator": "in",
+              "value": "approved",
+              "values": [
+                "Approved",
+                "Issued"
+              ]
+            }
+          ],
+          "default": "pre_approval"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "PermitType",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "work_class",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "WorkClass",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "PermitStatus",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Description",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "issued_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "IssuedDate",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "completed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "FinalizedDate",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "valuation",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Permit_Value",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "address",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Address",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "parcel_id",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "PIN",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Savannah, GA",
+    "key": "savannah_ga_commercial_building_permits",
+    "name": "Savannah Commercial Building Permit Tracker",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "PermitNumber",
+        "PermitStatus",
+        "Address"
+      ],
+      "canary_stage_probes": [
+        {
+          "connector": {
+            "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus = 'In Review'"
+          },
+          "expected_stage": "pre_approval",
+          "name": "savannah_commercial_in_review",
+          "sample_size": 15
+        },
+        {
+          "connector": {
+            "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('Approved','Issued')"
+          },
+          "expected_stage": "approved",
+          "name": "savannah_commercial_approved",
+          "sample_size": 15
+        }
+      ],
+      "candidate_canary_completed_on": "2026-08-20",
+      "candidate_key": "savannah_ga_commercial_building_permits",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 192,
+      "connector": {
+        "include_geometry": false,
+        "keyset_field": "OBJECTID",
+        "order_by_fields": "OBJECTID ASC",
+        "out_fields": "OBJECTID,PIN,PermitNumber,PermitType,WorkClass,PermitStatus,District,IssuedDate,FinalizedDate,Address,Description,Permit_Value",
+        "page_size": 2000,
+        "query": {
+          "outSR": 4326
+        },
+        "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('In Review','Approved','Issued')"
+      },
+      "defaults": {
+        "city": "Savannah",
+        "jurisdiction": "Savannah",
+        "source_url": "https://www.savannahga.gov/4290/Permit-Tracker",
+        "state": "GA"
+      },
+      "export_policy": "derived_commercial_permit_intelligence_only_no_raw_source_replacement",
+      "field_allowlist": [
+        "OBJECTID",
+        "PIN",
+        "PermitNumber",
+        "PermitType",
+        "WorkClass",
+        "PermitStatus",
+        "District",
+        "IssuedDate",
+        "FinalizedDate",
+        "Address",
+        "Description",
+        "Permit_Value"
+      ],
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 192,
+      "license": "Official SAGIS public-use and no-cost download posture; narrow commercial derived-intelligence scope approved by the Build Signals owner on 2026-08-21",
+      "official_landing_page": "https://www.savannahga.gov/4290/Permit-Tracker",
+      "promotion_data_minimization_approved": true,
+      "promotion_reviewed_by": "Build Signals Owner",
+      "promotion_reviewed_on": "2026-08-21",
+      "promotion_rights_approved": true,
+      "reconciliation_mode": "weekly_full_snapshot",
+      "refresh_frequency": "weekly",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by the Build Signals owner on 2026-08-21 for commercial storage and customer-facing derived intelligence from the City of Savannah Permit Tracker and SAGIS public feature service. Preserve City of Savannah and SAGIS attribution, official source links, retrieval timestamps, and weekly-currentness caveats. Do not collect contacts, documents, attachments, raw geometry, or offer raw source replacement exports.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "ApplicantName",
+        "applicant_contact",
+        "owner_name",
+        "contractor_name",
+        "architect_name",
+        "engineer_name",
+        "phone_number",
+        "email_address",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
     "adapter": "rss",
     "base_url": "https://www.taylortx.gov/RSSFeed.aspx?ModID=1&CID=31",
     "field_mappings": [

@@ -37,7 +37,7 @@ Status meanings:
 | Delaware | DNREC statewide; FirstMap parcels; New Castle County / Wilmington | production / county holds | DNREC Storm Water NOI is admitted as a statewide pre-approval construction-intent signal, DNREC septic permits are admitted narrowly for site-readiness context, and FirstMap statewide parcels are admitted for derived nearby-parcel context. County permit/planning portals and assessor owner/value/sale feeds remain held pending supported bulk/API access and commercial reuse permission. |
 | District of Columbia | DOB building permits; Basic Business Licenses; owner parcels | production / opening context / parcel production | DC DOB's 2026 building-permit layer is admitted as a construction-focused pre-approval-through-approved lifecycle source with application screening, payment-pending, ready-for-issuance, issued, and completed status evidence. DC Basic Business Licenses add approved-only restaurant, grocery, hotel, food, fuel, and service-retail opening context with trade names, entity names, SSLs, addresses, and coordinates. DC owner parcels provide Phase 2 nearby-parcel context and parcel joins by SSL. |
 | Florida | Miami-Dade WASD; Orlando permit applications; DEP ERP; FDOR parcels; Jacksonville / Tampa holds | narrow production / statewide parcel production / legal and operational holds | Miami-Dade WASD unincorporated permit/process records are admitted as a narrow pre-approval-through-approved commercial/use signal, including active applied retail, package-store, office, industrial, commercial, and restaurant process rows. Orlando commercial permit applications add daily processed/under-review/pending-issuance/issued milestone evidence for retailer and tenant-work detection, with unissued Publix rows verified in July 2026. Florida DEP ERP applications add statewide environmental/site-development context for commercial redevelopment, warehouse, restaurant, hotel, subdivision, and similar projects. FDOR statewide cadastral parcels provide a parcel-proximity spine, with county property-appraiser feeds preferred where richer admitted coverage exists. Jacksonville and Tampa have rich portal evidence but no complete supported bulk feed or automation terms. |
-| Georgia | Savannah commercial permits; Atlanta hold | operational retry / legal hold | Savannah's official weekly Permit Tracker now has a runnable, minimized no-write candidate for commercial In Review, Approved, and Issued records. It exposes high-value grocery, hotel, restaurant, change-of-use, and tenant-buildout signals before issuance; applicant/contact fields and raw geometry are excluded. A lifecycle canary and explicit narrow production approval remain before Georgia counts as production. Atlanta remains held for unclear commercial reuse rights. |
+| Georgia | Savannah commercial permits; Atlanta hold | narrow production / legal hold | Savannah's official weekly Permit Tracker is admitted under an owner-approved, minimized production scope for commercial In Review, Approved, and Issued records. It exposes high-value grocery, hotel, restaurant, change-of-use, and tenant-buildout signals before issuance; applicant/contact fields, documents, attachments, and raw geometry are excluded. A 70-record lifecycle canary passed with zero failures before promotion. Atlanta remains held for unclear commercial reuse rights. |
 | Hawaii | Honolulu | legal and freshness hold | Rich mixed-lifecycle bulk data stopped in 2025, has a null license, and the replacement portal lacks a bulk export. |
 | Idaho | Boise / Ada County | legal hold | Excellent current preapplication-through-issued feeds directly support retailer detection, but neither publisher grants commercial redistribution rights. |
 | Illinois | Chicago / Cook County parcels | confirmation / parcel production | Chicago production feed is issued permits; pending applications remain a gap. Cook County Assessor current-year parcels are admitted as a geometry/context spine for Chicago-area nearby-parcel discovery, with address, owner, value, sale, deed, and raw parcel-export enrichment held for separately reviewed joins. |
@@ -82,16 +82,17 @@ Status meanings:
 ## Expansion Order
 
 1. Every state now has an explicit production or candidate-catalog decision;
-   39 states have production sources and 11 are candidate-only. This pass added
+   40 states have production sources and 10 are candidate-only. This pass added
    official-source holds for the 10 states that previously had no catalog
-   representation; Georgia was already candidate-only. Re-audit those holds
+   representation; Georgia has now moved from candidate-only to production.
+   Re-audit those holds
    when publishers add licensed bulk feeds or materially change platforms.
 2. Run parcel-source admission loops in production permit markets, starting
    with Austin/Travis County, Seattle/King County, and New York City tax lots.
 3. Continue in three-state loops, onboarding only sources that pass technical,
    lifecycle, freshness, identity, and licensing gates.
 4. Pursue written permissions in parallel for Orlando, Raleigh, Phoenix, and
-   Atlanta while advancing Savannah's technically ready Georgia candidate; a
+   Atlanta while monitoring Savannah's weekly production reconciliation; a
    legal hold should not consume connector engineering time.
 5. Add secondary jurisdictions after the first production-grade source in a
    state, prioritizing population growth, retail expansion, and data quality.

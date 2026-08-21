@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "candidate_key": "savannah_ga_commercial_building_permits",
+  "decision": "approved_for_production",
+  "reviewed_by": "Build Signals Owner",
+  "reviewed_on": "2026-08-21",
+  "candidate_canary_completed_on": "2026-08-20",
+  "rights_approved": true,
+  "data_minimization_approved": true,
+  "settings": {
+    "official_landing_page": "https://www.savannahga.gov/4290/Permit-Tracker",
+    "license": "Official SAGIS public-use and no-cost download posture; narrow commercial derived-intelligence scope approved by the Build Signals owner on 2026-08-21",
+    "reconciliation_mode": "weekly_full_snapshot",
+    "refresh_frequency": "weekly",
+    "collection_interval_minutes": 10080,
+    "collection_sla_hours": 192,
+    "retry_interval_minutes": 360,
+    "schedule_mode": "automatic",
+    "freshness_semantics": "ingestion_observed_at",
+    "freshness_sla_hours": 192,
+    "signal_stage": "pre_approval_and_approved",
+    "attribution_required": true,
+    "rights_basis": "Approved by the Build Signals owner on 2026-08-21 for commercial storage and customer-facing derived intelligence from the City of Savannah Permit Tracker and SAGIS public feature service. Preserve City of Savannah and SAGIS attribution, official source links, retrieval timestamps, and weekly-currentness caveats. Do not collect contacts, documents, attachments, raw geometry, or offer raw source replacement exports.",
+    "export_policy": "derived_commercial_permit_intelligence_only_no_raw_source_replacement",
+    "field_allowlist": [
+      "OBJECTID",
+      "PIN",
+      "PermitNumber",
+      "PermitType",
+      "WorkClass",
+      "PermitStatus",
+      "District",
+      "IssuedDate",
+      "FinalizedDate",
+      "Address",
+      "Description",
+      "Permit_Value"
+    ],
+    "suppressed_fields": [
+      "ApplicantName",
+      "applicant_contact",
+      "owner_name",
+      "contractor_name",
+      "architect_name",
+      "engineer_name",
+      "phone_number",
+      "email_address",
+      "mailing_address",
+      "attachment",
+      "document_body",
+      "raw_geometry",
+      "raw_source_export"
+    ],
+    "canary_required_fields": [
+      "PermitNumber",
+      "PermitStatus",
+      "Address"
+    ],
+    "canary_stage_probes": [
+      {
+        "name": "savannah_commercial_in_review",
+        "expected_stage": "pre_approval",
+        "sample_size": 15,
+        "connector": {
+          "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus = 'In Review'"
+        }
+      },
+      {
+        "name": "savannah_commercial_approved",
+        "expected_stage": "approved",
+        "sample_size": 15,
+        "connector": {
+          "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('Approved','Issued')"
+        }
+      }
+    ],
+    "connector": {
+      "page_size": 2000,
+      "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('In Review','Approved','Issued')",
+      "out_fields": "OBJECTID,PIN,PermitNumber,PermitType,WorkClass,PermitStatus,District,IssuedDate,FinalizedDate,Address,Description,Permit_Value",
+      "keyset_field": "OBJECTID",
+      "order_by_fields": "OBJECTID ASC",
+      "include_geometry": false,
+      "query": {
+        "outSR": 4326
+      }
+    },
+    "defaults": {
+      "city": "Savannah",
+      "state": "GA",
+      "jurisdiction": "Savannah",
+      "source_url": "https://www.savannahga.gov/4290/Permit-Tracker"
+    }
+  },
+  "field_mappings": [
+    {
+      "source_field": "__source_record_id",
+      "canonical_field": "source_record_id",
+      "transform": "join_fields",
+      "transform_options": {
+        "fields": [
+          "PermitNumber",
+          "Address",
+          "OBJECTID"
+        ],
+        "separator": "|"
+      },
+      "is_required": true
+    },
+    {
+      "source_field": "PermitNumber",
+      "canonical_field": "permit_number"
+    },
+    {
+      "source_field": "__application_number",
+      "canonical_field": "application_number",
+      "transform": "first_nonempty",
+      "transform_options": {
+        "fields": [
+          "PermitNumber"
+        ]
+      }
+    },
+    {
+      "source_field": "__approval_stage",
+      "canonical_field": "approval_stage",
+      "transform": "conditional_map",
+      "transform_options": {
+        "cases": [
+          {
+            "field": "PermitStatus",
+            "operator": "in",
+            "values": [
+              "Approved",
+              "Issued"
+            ],
+            "value": "approved"
+          }
+        ],
+        "default": "pre_approval"
+      }
+    },
+    {
+      "source_field": "PermitType",
+      "canonical_field": "permit_type"
+    },
+    {
+      "source_field": "WorkClass",
+      "canonical_field": "work_class"
+    },
+    {
+      "source_field": "PermitStatus",
+      "canonical_field": "status"
+    },
+    {
+      "source_field": "Description",
+      "canonical_field": "description"
+    },
+    {
+      "source_field": "IssuedDate",
+      "canonical_field": "issued_at",
+      "transform": "date"
+    },
+    {
+      "source_field": "FinalizedDate",
+      "canonical_field": "completed_at",
+      "transform": "date"
+    },
+    {
+      "source_field": "Permit_Value",
+      "canonical_field": "valuation"
+    },
+    {
+      "source_field": "Address",
+      "canonical_field": "address"
+    },
+    {
+      "source_field": "PIN",
+      "canonical_field": "parcel_id"
+    }
+  ]
+}

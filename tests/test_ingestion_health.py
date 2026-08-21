@@ -930,7 +930,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
     )
     assert savannah["status"] == "operational_retry"
     assert savannah["can_run_canary"] is True
-    assert savannah["catalog_backed"] is False
+    assert savannah["catalog_backed"] is True
 
 
 def test_ingestion_candidates_endpoint_filters_by_state(client):
@@ -1095,11 +1095,11 @@ def test_ingestion_coverage_endpoint_reports_active_catalog_footprint(client, db
     assert body["researched_state_count"] == 50
     assert body["unresearched_state_count"] == 0
     assert body["unresearched_states"] == []
-    assert body["covered_state_count"] == 39
-    assert body["missing_state_count"] == 11
-    assert body["candidate_only_state_count"] == 11
+    assert body["covered_state_count"] == 40
+    assert body["missing_state_count"] == 10
+    assert body["candidate_only_state_count"] == 10
     assert set(body["candidate_only_states"]) == {
-        "AK", "GA", "HI", "IA", "ID", "MS", "MT", "NM", "OK", "WV", "WY",
+        "AK", "HI", "IA", "ID", "MS", "MT", "NM", "OK", "WV", "WY",
     }
     assert set(body["missing_states"]) == set(body["candidate_only_states"])
 
