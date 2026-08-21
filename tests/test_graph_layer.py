@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from app.models.audit_log import AuditLog
 from app.models.brand import BrandProfile, PermitBrandMatch
 from app.models.contact import Contact
 from app.models.graph import (
@@ -401,6 +402,93 @@ def test_relationship_requires_source_evidence(client):
     })
 
     assert response.status_code == 422
+
+
+def test_relationship_review_queue_prioritizes_overdue_evidence(client, db):
+    source = _entity(client, source_id="queue-source")
+    target = _entity(client, source_id="queue-target", display_name="Queue Target")
+    created = client.post("/graph/relationships", json={
+        "source_entity_id": source["id"],
+        "target_entity_id": target["id"],
+        "relationship_type": "related_to",
+        "confidence": 0.72,
+        "source_system": "registry",
+        "source_id": "queue-relationship",
+        "evidence": [{
+            "source_system": "registry",
+            "source_id": "queue-evidence",
+            "confidence": 0.72,
+        }],
+    })
+    assert created.status_code == 201, created.text
+    relationship = db.get(GraphRelationship, created.json()["id"])
+    relationship.verification_due_at = datetime.now(timezone.utc) - timedelta(days=3)
+    db.commit()
+
+    response = client.get("/graph/relationships/review-queue", params={
+        "due_within_days": 14,
+        "limit": 10,
+    })
+
+    assert response.status_code == 200, response.text
+    item = response.json()[0]
+    assert item["relationship"]["id"] == relationship.id
+    assert item["relationship"]["verification_status"] == "stale"
+    assert item["review_reasons"] == ["verification_overdue"]
+    assert item["source_entity"]["id"] == source["id"]
+    assert item["target_entity"]["id"] == target["id"]
+
+
+def test_relationship_verification_requires_evidence_and_records_audit(client, db):
+    source = _entity(client, source_id="verify-source")
+    target = _entity(client, source_id="verify-target", display_name="Verify Target")
+    created = client.post("/graph/relationships", json={
+        "source_entity_id": source["id"],
+        "target_entity_id": target["id"],
+        "relationship_type": "related_to",
+        "confidence": 0.6,
+        "source_system": "assessor",
+        "source_id": "verify-relationship",
+        "evidence": [{
+            "source_system": "assessor",
+            "source_id": "original-evidence",
+            "confidence": 0.6,
+        }],
+    })
+    relationship_id = created.json()["id"]
+
+    missing_evidence = client.post(f"/graph/relationships/{relationship_id}/verify", json={
+        "evidence": [],
+        "reason": "Quarterly source review",
+    })
+    assert missing_evidence.status_code == 422
+
+    verified = client.post(f"/graph/relationships/{relationship_id}/verify", json={
+        "evidence": [{
+            "source_system": "county_assessor",
+            "source_id": "verification-2026-08-21",
+            "source_url": "https://example.gov/assessor/verify-relationship",
+            "evidence_type": "relationship_verification",
+            "excerpt": "Ownership remains unchanged.",
+            "confidence": 0.88,
+        }],
+        "confidence": 0.88,
+        "verification_interval_days": 30,
+        "reason": "Quarterly source review",
+    })
+
+    assert verified.status_code == 200, verified.text
+    body = verified.json()["relationship"]
+    assert body["confidence"] == 0.88
+    assert body["verification_status"] == "fresh"
+    assert len(body["evidence"]) == 2
+    assert datetime.fromisoformat(body["verification_due_at"]) > datetime.fromisoformat(body["last_verified_at"])
+    audit = db.query(AuditLog).filter(
+        AuditLog.entity_type == "graph_relationship",
+        AuditLog.entity_id == relationship_id,
+        AuditLog.action == "verify",
+    ).one()
+    assert "Quarterly source review" in audit.new_values
 
 
 def test_opportunity_graph_context_creates_a_linked_property_root(client):

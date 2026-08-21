@@ -4736,6 +4736,22 @@
               }
             ],
             "title": "Valid To"
+          },
+          "verification_due_at": {
+            "format": "date-time",
+            "title": "Verification Due At",
+            "type": "string"
+          },
+          "verification_status": {
+            "enum": [
+              "fresh",
+              "due",
+              "stale",
+              "historical"
+            ],
+            "readOnly": true,
+            "title": "Verification Status",
+            "type": "string"
           }
         },
         "required": [
@@ -4748,9 +4764,38 @@
           "valid_from",
           "created_at",
           "updated_at",
-          "last_verified_at"
+          "last_verified_at",
+          "verification_due_at",
+          "verification_status"
         ],
         "title": "GraphRelationshipResponse",
+        "type": "object"
+      },
+      "GraphRelationshipReviewQueueItem": {
+        "properties": {
+          "relationship": {
+            "$ref": "#/components/schemas/GraphRelationshipResponse"
+          },
+          "review_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Review Reasons",
+            "type": "array"
+          },
+          "source_entity": {
+            "$ref": "#/components/schemas/GraphEntityResponse"
+          },
+          "target_entity": {
+            "$ref": "#/components/schemas/GraphEntityResponse"
+          }
+        },
+        "required": [
+          "relationship",
+          "source_entity",
+          "target_entity"
+        ],
+        "title": "GraphRelationshipReviewQueueItem",
         "type": "object"
       },
       "GraphRelationshipType": {
@@ -4772,6 +4817,50 @@
         ],
         "title": "GraphRelationshipType",
         "type": "string"
+      },
+      "GraphRelationshipVerify": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEvidenceCreate"
+            },
+            "minItems": 1,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "verification_interval_days": {
+            "default": 90,
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Verification Interval Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "evidence",
+          "reason"
+        ],
+        "title": "GraphRelationshipVerify",
+        "type": "object"
       },
       "GraphSharedParcelSummary": {
         "properties": {
@@ -14484,6 +14573,101 @@
         ]
       }
     },
+    "/v1/graph/relationships/review-queue": {
+      "get": {
+        "operationId": "relationship_verification_queue_v1_graph_relationships_review_queue_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "due_within_days",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "maximum": 365,
+              "minimum": 0,
+              "title": "Due Within Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maximum_confidence",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Maximum Confidence"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GraphRelationshipReviewQueueItem"
+                  },
+                  "title": "Response Relationship Verification Queue V1 Graph Relationships Review Queue Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Relationship Verification Queue",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
     "/v1/graph/relationships/{relationship_id}": {
       "get": {
         "operationId": "get_relationship_v1_graph_relationships__relationship_id__get",
@@ -14521,6 +14705,74 @@
           }
         },
         "summary": "Get Relationship",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/relationships/{relationship_id}/verify": {
+      "post": {
+        "operationId": "verify_graph_relationship_v1_graph_relationships__relationship_id__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "relationship_id",
+            "required": true,
+            "schema": {
+              "title": "Relationship Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphRelationshipVerify"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphRelationshipDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Graph Relationship",
         "tags": [
           "graph"
         ]

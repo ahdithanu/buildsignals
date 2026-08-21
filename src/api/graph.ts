@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { GraphEntity, GraphEntityDetail, GraphEntityMergeCandidate, GraphEntityMergeResult, GraphEntitySearchResult, GraphPath, GraphRelationshipDetail, OpportunityGraphContext } from '@/types/graph';
+import type { GraphEntity, GraphEntityDetail, GraphEntityMergeCandidate, GraphEntityMergeResult, GraphEntitySearchResult, GraphPath, GraphRelationshipDetail, GraphRelationshipReviewQueueItem, GraphRelationshipVerificationInput, OpportunityGraphContext } from '@/types/graph';
 
 export const graphApi = {
   searchEntities: (query: string, entityType?: string, limit = 20): Promise<GraphEntitySearchResult[]> => {
@@ -22,6 +22,27 @@ export const graphApi = {
     }),
   relationshipDetail: (relationshipId: string): Promise<GraphRelationshipDetail> =>
     apiClient.get<GraphRelationshipDetail>(`/graph/relationships/${relationshipId}`),
+  relationshipReviewQueue: (dueWithinDays = 14, limit = 100): Promise<GraphRelationshipReviewQueueItem[]> =>
+    apiClient.get<GraphRelationshipReviewQueueItem[]>(
+      `/graph/relationships/review-queue?due_within_days=${dueWithinDays}&limit=${limit}`,
+    ),
+  verifyRelationship: (
+    relationshipId: string,
+    input: GraphRelationshipVerificationInput,
+  ): Promise<GraphRelationshipDetail> =>
+    apiClient.post<GraphRelationshipDetail>(`/graph/relationships/${relationshipId}/verify`, {
+      evidence: [{
+        source_system: input.sourceSystem,
+        source_id: input.sourceId || undefined,
+        source_url: input.sourceUrl || undefined,
+        evidence_type: 'relationship_verification',
+        excerpt: input.excerpt || undefined,
+        confidence: input.confidence ?? 1,
+      }],
+      confidence: input.confidence,
+      verification_interval_days: input.verificationIntervalDays,
+      reason: input.reason,
+    }),
   paths: (sourceEntityId: string, targetEntityId: string, maxDepth = 4): Promise<GraphPath[]> =>
     apiClient.get<GraphPath[]>(`/graph/paths?source_entity_id=${encodeURIComponent(sourceEntityId)}&target_entity_id=${encodeURIComponent(targetEntityId)}&max_depth=${maxDepth}`),
 };

@@ -78,7 +78,23 @@ export interface GraphRelationship {
   updated_at?: string;
   created_at: string;
   last_verified_at: string;
+  verification_due_at?: string;
+  verification_status?: 'fresh' | 'due' | 'stale' | 'historical';
   evidence: GraphEvidence[];
+}
+
+export interface GraphRelationshipVerificationInput {
+  sourceSystem: string;
+  sourceId?: string;
+  sourceUrl?: string;
+  excerpt?: string;
+  reason: string;
+  confidence?: number;
+  verificationIntervalDays: number;
+}
+
+export interface GraphRelationshipReviewQueueItem extends GraphRelationshipDetail {
+  review_reasons: string[];
 }
 
 export interface GraphRelatedEntity {
