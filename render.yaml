@@ -167,6 +167,42 @@ services:
       - key: INGESTION_ORGANIZATION
         sync: false
 
+  # Savannah publishes weekly. This worker uses the due planner so a retry can
+  # resume a partial snapshot without weakening the approved weekly cadence.
+  - type: cron
+    name: dealsignal-savannah-permit-ingestion
+    runtime: python
+    plan: starter
+    schedule: "30 10 * * 1"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli scheduled-due
+      --organization "$INGESTION_ORGANIZATION"
+      --source-key savannah_ga_commercial_building_permits
+      --rollout-wave 4
+      --max-pages-per-source 100
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        value: pub.sagis.org
+      - key: INGESTION_HOST_POLICY_DIGEST
+        value: a3e282659996966df47ab7297eb3c0c3fc4072066ceb34931584c965bf0fe5cd
+      - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
+        value: 5886118f151c59bfd0ed5a515ca26a89793c044fad97ac37dbe40ed283541006
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
   # Retries only overdue runnable candidates and persists every outcome. A
   # successful post-audit canary stops future retries but never auto-promotes.
   - type: cron
