@@ -25,6 +25,7 @@ import GraphRelationshipDetail from "./pages/GraphRelationshipDetail";
 import GraphExplorer from "./pages/GraphExplorer";
 import ParcelDetail from "./pages/ParcelDetail";
 import AcquisitionRadar from "./pages/AcquisitionRadar";
+import AcquisitionMap from "./pages/AcquisitionMap";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
 import Team from "./pages/Team";
@@ -135,6 +136,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <MarketSignals />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/map"
+              element={
+                <RequireAuth>
+                  <AcquisitionMap />
                 </RequireAuth>
               }
             />

@@ -1,78 +1,109 @@
 import { ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import { Link, useLocation } from "react-router-dom";
+import { ChevronDown, CircleUserRound, Search } from "lucide-react";
+import { BuildSignalsLogo } from "@/components/BuildSignalsLogo";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
-import { Search, Bell, ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface LayoutProps {
   children: ReactNode;
 }
 
+const primaryNavigation = [
+  { label: "Signals", href: "/signals" },
+  { label: "Map", href: "/map" },
+  { label: "Watchlist", href: "/inbox" },
+  { label: "Pipeline", href: "/pipeline" },
+  { label: "Coverage", href: "/source-health" },
+];
+
 export function Layout({ children }: LayoutProps) {
-  const { user, role, isAuthenticated, logout } = useAuth();
+  const { user, role, logout } = useAuth();
+  const location = useLocation();
+
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center justify-between border-b bg-card px-3 md:px-4 shrink-0">
-            <div className="flex items-center gap-2 md:gap-3">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div className="hidden md:flex items-center gap-2 rounded-lg bg-secondary px-3 py-1.5">
-                <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                <input
-                  type="text"
-                  aria-label="Search deals, markets, and signals"
-                  placeholder="Search deals, markets, signals..."
-                  className="bg-transparent text-sm outline-none w-64 placeholder:text-muted-foreground"
-                />
-              </div>
-              {/* Mobile search icon */}
-              <button aria-label="Search" className="md:hidden text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
-                <Search className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex items-center gap-3 md:gap-4">
-              <button aria-label="Notifications" className="relative text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
-              </button>
-              {isAuthenticated && user ? (
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="hidden md:flex flex-col items-end leading-tight">
-                    <span className="text-foreground">{user.full_name}</span>
-                    <span className="text-xs text-muted-foreground capitalize">{role}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={logout}
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label="Sign out"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="hidden md:inline text-muted-foreground">Demo mode</span>
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/login">Sign in</Link>
-                  </Button>
-                  <ChevronDown className="hidden md:inline h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto bg-background pb-16 md:pb-0">
-            {children}
-          </main>
-          <MobileBottomNav />
+    <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
+      <header className="sticky top-0 z-40 flex h-12 shrink-0 items-center border-b-2 border-foreground bg-card px-3 md:px-5">
+        <BuildSignalsLogo compact />
+
+        <nav className="ml-7 hidden h-full items-stretch lg:flex" aria-label="Primary navigation">
+          {primaryNavigation.map((item) => {
+            const active = location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  "flex items-center border-x border-transparent px-3 text-[11px] font-semibold transition-colors hover:bg-secondary",
+                  active && "bg-foreground text-background hover:bg-foreground",
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1 px-3 text-[11px] font-semibold hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              Admin <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48 rounded-none border-2 border-foreground">
+              <DropdownMenuLabel className="text-[10px] uppercase">Workspace controls</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild><Link to="/graph">Knowledge graph</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/permit-review">Permit review</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/team">Team</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/audit">Audit log</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/settings">Settings</Link></DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </nav>
+
+        <div className="ml-auto flex min-w-0 items-center gap-2 md:gap-3">
+          <button
+            type="button"
+            className="hidden h-7 w-52 items-center gap-2 border border-foreground bg-background px-2 text-left text-[10px] text-muted-foreground xl:flex"
+            aria-label="Search or run a command"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span className="truncate">Search permits, parcels, parties</span>
+            <kbd className="ml-auto font-mono text-[9px]">⌘K</kbd>
+          </button>
+          <Link
+            to="/source-health"
+            className="hidden border-l-2 border-foreground pl-3 text-right text-[9px] leading-tight sm:block"
+          >
+            <span className="block font-semibold text-foreground">97% fresh</span>
+            <span className="text-muted-foreground">last ingest 14m</span>
+          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex h-8 items-center gap-2 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <CircleUserRound className="h-4 w-4" />
+              <span className="hidden max-w-28 truncate text-[10px] font-medium md:block">{user?.full_name || "Account"}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-none border-2 border-foreground">
+              <DropdownMenuLabel>
+                <span className="block text-xs">{user?.full_name || "BuildSignals"}</span>
+                <span className="block text-[10px] font-normal capitalize text-muted-foreground">{role || "member"}</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild><Link to="/account">Account</Link></DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void logout()}>Sign out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </div>
-    </SidebarProvider>
+      </header>
+
+      <main className="min-h-0 flex-1 overflow-auto pb-11 md:pb-0">{children}</main>
+      <MobileBottomNav />
+    </div>
   );
 }
