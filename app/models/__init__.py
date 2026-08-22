@@ -55,3 +55,4 @@ from app.models.parcel_lineage import (  # noqa
     ParcelLineageEvidence,
     ParcelLineageParticipant,
 )
+from app.models.planning import PlanningCompanyMatch, PlanningRecord  # noqa

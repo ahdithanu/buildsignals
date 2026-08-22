@@ -150,7 +150,7 @@ class IngestionCandidateResponse(BaseModel):
     key: str
     name: str
     adapter: str
-    record_type: Literal["permit", "parcel"]
+    record_type: Literal["permit", "parcel", "planning"]
     jurisdiction: str
     base_url: str
     official_landing_page: str
