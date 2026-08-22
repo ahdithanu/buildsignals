@@ -1027,6 +1027,112 @@
         "title": "AuditLogPage",
         "type": "object"
       },
+      "BrandExpansionMarketResponse": {
+        "properties": {
+          "approved_count": {
+            "title": "Approved Count",
+            "type": "integer"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "latest_signal_at": {
+            "format": "date-time",
+            "title": "Latest Signal At",
+            "type": "string"
+          },
+          "pre_approval_count": {
+            "title": "Pre Approval Count",
+            "type": "integer"
+          },
+          "signal_count": {
+            "title": "Signal Count",
+            "type": "integer"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "signal_count",
+          "pre_approval_count",
+          "approved_count",
+          "latest_signal_at"
+        ],
+        "title": "BrandExpansionMarketResponse",
+        "type": "object"
+      },
+      "BrandExpansionSummaryResponse": {
+        "properties": {
+          "approved_count": {
+            "title": "Approved Count",
+            "type": "integer"
+          },
+          "average_confidence": {
+            "title": "Average Confidence",
+            "type": "number"
+          },
+          "brand": {
+            "$ref": "#/components/schemas/BrandProfileResponse"
+          },
+          "latest_signal_at": {
+            "format": "date-time",
+            "title": "Latest Signal At",
+            "type": "string"
+          },
+          "market_count": {
+            "title": "Market Count",
+            "type": "integer"
+          },
+          "markets": {
+            "items": {
+              "$ref": "#/components/schemas/BrandExpansionMarketResponse"
+            },
+            "title": "Markets",
+            "type": "array"
+          },
+          "parcel_candidate_count": {
+            "title": "Parcel Candidate Count",
+            "type": "integer"
+          },
+          "pre_approval_count": {
+            "title": "Pre Approval Count",
+            "type": "integer"
+          },
+          "signal_count": {
+            "title": "Signal Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "brand",
+          "signal_count",
+          "pre_approval_count",
+          "approved_count",
+          "market_count",
+          "parcel_candidate_count",
+          "average_confidence",
+          "latest_signal_at"
+        ],
+        "title": "BrandExpansionSummaryResponse",
+        "type": "object"
+      },
       "BrandMatchGraphContext": {
         "properties": {
           "confidence": {
@@ -11560,6 +11666,67 @@
         ]
       }
     },
+    "/v1/brand-expansion": {
+      "get": {
+        "operationId": "get_brand_expansion_v1_brand_expansion_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 180,
+              "maximum": 730,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BrandExpansionSummaryResponse"
+                  },
+                  "title": "Response Get Brand Expansion V1 Brand Expansion Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Brand Expansion",
+        "tags": [
+          "brand intelligence"
+        ]
+      }
+    },
     "/v1/brands": {
       "get": {
         "operationId": "get_brands_v1_brands_get",
@@ -16943,6 +17110,24 @@
       "get": {
         "operationId": "get_permit_brand_matches_v1_permit_brand_matches_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Brand Id"
+            }
+          },
           {
             "in": "query",
             "name": "review_status",

@@ -16,6 +16,7 @@ import MemoGenerator from "./pages/MemoGenerator";
 import Pipeline from "./pages/Pipeline";
 import MarketSignals from "./pages/MarketSignals";
 import PermitBrandReview from "./pages/PermitBrandReview";
+import BrandExpansion from "./pages/BrandExpansion";
 import PermitDetail from "./pages/PermitDetail";
 import IngestionOperations from "./pages/IngestionOperations";
 import IngestionCandidateDetail from "./pages/IngestionCandidateDetail";
@@ -145,6 +146,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <AcquisitionMap />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/brand-expansion"
+              element={
+                <RequireAuth>
+                  <BrandExpansion />
                 </RequireAuth>
               }
             />

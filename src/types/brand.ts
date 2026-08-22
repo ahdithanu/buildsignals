@@ -7,6 +7,7 @@ import type { Deal } from './deal';
 import type { NearbyParcelSearchSummary } from './parcel';
 
 export interface PermitBrandMatchListParams {
+  brand_id?: string;
   review_status?: BrandMatchReviewStatus;
   approval_stage?: BrandMatchApprovalStage;
   detection_method?: BrandDetectionMethod;
@@ -23,6 +24,27 @@ export interface BrandProfile {
   scale?: string | null;
   priority: number;
   is_active: boolean;
+}
+
+export interface BrandExpansionMarket {
+  city?: string | null;
+  state?: string | null;
+  signal_count: number;
+  pre_approval_count: number;
+  approved_count: number;
+  latest_signal_at: string;
+}
+
+export interface BrandExpansionSummary {
+  brand: BrandProfile;
+  signal_count: number;
+  pre_approval_count: number;
+  approved_count: number;
+  market_count: number;
+  parcel_candidate_count: number;
+  average_confidence: number;
+  latest_signal_at: string;
+  markets: BrandExpansionMarket[];
 }
 
 export interface LinkedDealSummary {

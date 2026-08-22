@@ -31,6 +31,7 @@ export const queryKeys = {
   },
   brands: {
     all: ['brands'] as const,
+    expansion: (days: number) => ['brands', 'expansion', days] as const,
     matches: (params?: Record<string, unknown>) => ['brands', 'matches', params] as const,
     forDeal: (dealId: string) => ['brands', 'deal', dealId] as const,
     evidence: (matchId: string) => ['brands', 'evidence', matchId] as const,
