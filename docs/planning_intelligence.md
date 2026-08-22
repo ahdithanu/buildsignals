@@ -107,6 +107,21 @@ withdrawal, and disappearance from a current-project table is not a final
 decision without corroborating evidence. Once a joined record has reliable
 geometry or an APN, it can enter nearby-parcel discovery.
 
+The `san_jose_ca_planning_director_hearings` candidate is fully configured for
+the bounded `planning_documents` adapter but remains `technical_hold`. Its
+probe limits index traversal to one page, 24 same-host documents, 10 MB per
+document, 100 items per document, and 250 records. The item rules recognize
+headings such as `4.A SP26-005 & ER26-024`, preserve every official file number,
+and extract project description, address, owner, environmental review, and
+staff recommendation with document hash and page provenance. Defaults label
+agenda items as pre-approval hearing signals and minutes as recorded decisions;
+freshness is measured from daily collection, with a seven-day SLA.
+
+An official-page probe using a production-style HTTP client returned HTTP 403
+on 2026-08-22. The candidate must not be promoted until San Jose provides or
+confirms a supported automated access path. Browser automation is explicitly
+not an activation strategy.
+
 ## Tradeoffs and Scaling
 
 - JSON categories are portable for the initial bounded queue; normalize them

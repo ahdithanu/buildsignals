@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -310,6 +311,8 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "tulsa_ok_development_plans",
         "charleston_wv_energov_permits",
         "cheyenne_wy_opengov_permits",
+        "san_jose_ca_planning_director_hearings",
+        "san_jose_ca_large_energy_projects",
     }
     by_key = {entry.key: entry for entry in entries}
 
@@ -9937,10 +9940,87 @@ def test_san_jose_planning_companion_sources_are_registered_for_document_ingesti
 
     hearings = candidates["san_jose_ca_planning_director_hearings"]
     assert hearings.record_type == "planning"
-    assert hearings.adapter == "html_document_index"
+    assert hearings.adapter == "planning_documents"
     assert hearings.status == "technical_hold"
+    assert hearings.can_run_canary is False
     assert "file_numbers" in hearings.candidate_source_fields
     assert "staff_recommendation" in hearings.candidate_source_fields
+
+    settings = hearings.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["document_allowed_hosts"] == ["www.sanjoseca.gov"]
+    assert connector["max_index_pages"] == 1
+    assert connector["max_documents"] == 24
+    assert connector["max_document_bytes"] == 10 * 1024 * 1024
+    assert connector["max_items_per_document"] == 100
+    assert connector["max_item_characters"] == 50_000
+    assert connector["max_records"] == 250
+    assert connector["meeting_name"] == "Planning Director Hearing"
+    assert connector["stages"] == {
+        "agenda": "hearing_scheduled",
+        "minutes": "decision_recorded",
+    }
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_semantics"] == "ingestion_observed_at"
+    assert settings["freshness_sla_hours"] == 168
+    assert settings["defaults"] == {
+        "jurisdiction": "San Jose, CA",
+        "city": "San Jose",
+        "state": "CA",
+        "confidence": 0.95,
+    }
+
+    item_pattern = re.compile(connector["item_pattern"], re.IGNORECASE | re.MULTILINE)
+    file_pattern = re.compile(connector["file_pattern"], re.IGNORECASE | re.MULTILINE)
+    heading = "4.A SP26-005 & ER26-024"
+    assert item_pattern.search(heading).group("item_number") == "4.A"
+    assert [match.group("file_number") for match in file_pattern.finditer(heading)] == [
+        "SP26-005",
+        "ER26-024",
+    ]
+
+    values = connector["value_patterns"]
+    assert set(values) == {
+        "project_description",
+        "address",
+        "owner_name",
+        "environmental_review",
+        "staff_recommendation",
+    }
+    sample = """4.A SP26-005 & ER26-024
+PROJECT DESCRIPTION: Special Use Permit for a retaining wall.
+PROJECT LOCATION: 6763 Crystal Springs Drive
+PROPERTY OWNER: Example Property Owner LLC
+ENVIRONMENTAL REVIEW: Exempt under CEQA Guidelines Section 15303.
+STAFF RECOMMENDATION: Consider the exemption and approve the permit.
+ADJOURNMENT
+"""
+    extracted = {
+        field: re.search(pattern, sample, re.IGNORECASE | re.MULTILINE).group("value").strip()
+        for field, pattern in values.items()
+    }
+    assert extracted["project_description"].startswith("Special Use Permit")
+    assert extracted["address"] == "6763 Crystal Springs Drive"
+    assert extracted["owner_name"] == "Example Property Owner LLC"
+    assert extracted["environmental_review"].startswith("Exempt under CEQA")
+    assert extracted["staff_recommendation"].startswith("Consider the exemption")
+
+    mappings = {
+        mapping.source_field: mapping.canonical_field for mapping in hearings.probe_field_mappings
+    }
+    assert mappings["source_record_id"] == "source_record_id"
+    assert mappings["stage"] == "stage"
+    assert mappings["address"] == "address"
+    assert mappings["owner_name"] == "owner_name"
+    assert mappings["meeting_at"] == "meeting_at"
+    assert mappings["source_url"] == "source_url"
+    assert "project_description" not in mappings
+    assert "environmental_review" not in mappings
+    assert "staff_recommendation" not in mappings
+    assert "HTTP 403" in hearings.blocker_summary
+    assert "2026-08-22" in hearings.blocker_summary
+    assert "browser automation" in hearings.blocker_summary
 
     energy = candidates["san_jose_ca_large_energy_projects"]
     assert energy.record_type == "planning"
