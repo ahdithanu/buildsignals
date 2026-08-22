@@ -103,13 +103,14 @@ export default function PermitBrandReview() {
   }, [searchParams]);
 
   const params = useMemo<PermitBrandMatchListParams>(() => ({
+    brand_id: searchParams.get('brand_id') || undefined,
     review_status: status === 'all' ? undefined : status,
     approval_stage: stage === 'all' ? undefined : stage,
     detection_method: method === 'all' ? undefined : method,
     freshness: freshness === 'all' ? undefined : freshness,
     sort_by: 'freshness',
     limit,
-  }), [status, stage, method, freshness, limit]);
+  }), [searchParams, status, stage, method, freshness, limit]);
 
   const { data, isLoading, isFetching, error, refetch, review, createOpportunity } = usePermitBrandMatchQueue(params);
   const matches = data ?? [];
@@ -122,6 +123,8 @@ export default function PermitBrandReview() {
 
   const queueHref = (nextStage: StageFilter) => {
     const params = new URLSearchParams();
+    const brandId = searchParams.get('brand_id');
+    if (brandId) params.set('brand_id', brandId);
     params.set('status', status === 'all' ? 'candidate' : status);
     params.set('stage', nextStage);
     if (method !== 'all') params.set('detection_method', method);
@@ -137,6 +140,8 @@ export default function PermitBrandReview() {
     const nextFreshness = next.freshness ?? freshness;
     const nextLimit = next.limit ?? limit;
     const params = new URLSearchParams();
+    const brandId = searchParams.get('brand_id');
+    if (brandId) params.set('brand_id', brandId);
     if (nextStatus !== 'candidate') params.set('status', nextStatus);
     if (nextStage !== 'all') params.set('stage', nextStage);
     if (nextMethod !== 'all') params.set('detection_method', nextMethod);

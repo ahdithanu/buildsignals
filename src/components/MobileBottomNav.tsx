@@ -1,11 +1,11 @@
-import { Map, Menu, Radio, Star } from "lucide-react";
+import { Map, Radio, Star, Store } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
 const items = [
   { label: "Signals", url: "/signals", icon: Radio },
+  { label: "Brands", url: "/brand-expansion", icon: Store },
   { label: "Map", url: "/map", icon: Map },
   { label: "Watch", url: "/inbox", icon: Star },
-  { label: "More", url: "/source-health", icon: Menu },
 ];
 
 export function MobileBottomNav() {

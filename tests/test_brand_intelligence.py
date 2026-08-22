@@ -229,6 +229,49 @@ def test_review_queue_ranks_recent_source_activity_before_confidence(client, db,
     assert not future_row["freshness_date"].startswith("2099-")
 
 
+def test_brand_expansion_ranks_active_signals_by_stage_and_market(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    for key in ("starbucks_early", "starbucks_approved", "starbucks_dismissed"):
+        csv_path = tmp_path / f"{key}.csv"
+        _write_filing(csv_path)
+        _ingest(client, csv_path, key=key)
+
+    approved = db.query(PermitRecord).filter(
+        PermitRecord.source.has(key="starbucks_approved")
+    ).one()
+    approved.approval_stage = "approved"
+    dismissed = db.query(PermitBrandMatch).join(PermitRecord).filter(
+        PermitRecord.source.has(key="starbucks_dismissed")
+    ).one()
+    dismissed.review_status = "dismissed"
+    db.commit()
+
+    response = client.get("/brand-expansion?days=365&limit=10")
+
+    assert response.status_code == 200, response.text
+    starbucks = next(row for row in response.json() if row["brand"]["key"] == "starbucks")
+    assert starbucks["signal_count"] == 2
+    assert starbucks["pre_approval_count"] == 1
+    assert starbucks["approved_count"] == 1
+    assert starbucks["market_count"] == 1
+    assert starbucks["parcel_candidate_count"] == 0
+    assert starbucks["markets"] == [
+        {
+            "city": "Austin",
+            "state": "TX",
+            "signal_count": 2,
+            "pre_approval_count": 1,
+            "approved_count": 1,
+            "latest_signal_at": starbucks["markets"][0]["latest_signal_at"],
+        }
+    ]
+
+    filtered = client.get(f"/permit-brand-matches?brand_id={starbucks['brand']['id']}")
+    assert filtered.status_code == 200, filtered.text
+    assert {row["brand"]["key"] for row in filtered.json()} == {"starbucks"}
+
+
 def test_applicant_company_alias_is_high_confidence_direct_evidence(client, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()

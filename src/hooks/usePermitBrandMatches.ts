@@ -52,6 +52,15 @@ export function usePermitBrandMatchQueue(params: PermitBrandMatchListParams) {
   return { ...query, review, createOpportunity };
 }
 
+export function useBrandExpansion(days: number) {
+  return useQuery({
+    queryKey: queryKeys.brands.expansion(days),
+    queryFn: () => brandsApi.expansion(days),
+    retry: 1,
+    staleTime: 60_000,
+  });
+}
+
 export function usePermitBrandMatches(dealId: string | undefined) {
   const query = useQuery({
     queryKey: queryKeys.brands.forDeal(dealId || ''),

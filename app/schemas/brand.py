@@ -40,6 +40,27 @@ class BrandProfileResponse(BaseModel):
     is_active: bool
 
 
+class BrandExpansionMarketResponse(BaseModel):
+    city: Optional[str] = None
+    state: Optional[str] = None
+    signal_count: int
+    pre_approval_count: int
+    approved_count: int
+    latest_signal_at: datetime
+
+
+class BrandExpansionSummaryResponse(BaseModel):
+    brand: BrandProfileResponse
+    signal_count: int
+    pre_approval_count: int
+    approved_count: int
+    market_count: int
+    parcel_candidate_count: int
+    average_confidence: float
+    latest_signal_at: datetime
+    markets: list[BrandExpansionMarketResponse] = Field(default_factory=list)
+
+
 class BrandPermitSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

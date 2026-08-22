@@ -8,6 +8,7 @@ from app.models.brand import BrandProfile
 from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.schemas.brand import (
+    BrandExpansionSummaryResponse,
     BrandProfileResponse,
     PermitBrandMatchEvidenceResponse,
     PermitBrandMatchResponse,
@@ -19,6 +20,7 @@ from app.services.audit_service import log_change
 from app.services.brand_intelligence import (
     create_or_get_opportunity_from_brand_match,
     get_brand_match_evidence,
+    list_brand_expansion_summaries,
     list_brand_matches,
     list_deal_brand_matches,
     review_brand_match,
@@ -37,8 +39,18 @@ def get_brands(db: Session = Depends(get_db)):
     ).all()
 
 
+@router.get("/brand-expansion", response_model=list[BrandExpansionSummaryResponse])
+def get_brand_expansion(
+    days: int = Query(default=180, ge=7, le=730),
+    limit: int = Query(default=25, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    return list_brand_expansion_summaries(db, days=days, limit=limit)
+
+
 @router.get("/permit-brand-matches", response_model=list[PermitBrandMatchResponse])
 def get_permit_brand_matches(
+    brand_id: str | None = Query(default=None, min_length=1, max_length=36),
     review_status: str | None = Query(
         default=None, pattern=r"^(candidate|confirmed|dismissed|retracted)$"
     ),
@@ -57,6 +69,7 @@ def get_permit_brand_matches(
 ):
     return list_brand_matches(
         db,
+        brand_id=brand_id,
         review_status=review_status,
         approval_stage=approval_stage,
         detection_method=detection_method,

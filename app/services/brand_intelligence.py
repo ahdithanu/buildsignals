@@ -22,9 +22,12 @@ from app.models.graph import (
     GraphRelationshipType,
 )
 from app.models.ingestion import PermitRecord, RawSourceRecord, SourceFieldMapping
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch
 from app.models.signal import Signal
 from app.schemas.brand import (
     BrandDefinition,
+    BrandExpansionMarketResponse,
+    BrandExpansionSummaryResponse,
     BrandMatchGraphContext,
     BrandMatchRawEvidence,
     BrandPartyFingerprintEvidence,
@@ -563,6 +566,7 @@ def _is_future_retailer_opening_signal(
 def list_brand_matches(
     db: Session,
     *,
+    brand_id: str | None = None,
     review_status: str | None = None,
     approval_stage: str | None = None,
     detection_method: str | None = None,
@@ -576,6 +580,8 @@ def list_brand_matches(
         joinedload(PermitBrandMatch.brand),
         joinedload(PermitBrandMatch.permit),
     )
+    if brand_id:
+        query = query.filter(PermitBrandMatch.brand_id == brand_id)
     if review_status:
         query = query.filter(PermitBrandMatch.review_status == review_status)
     if approval_stage:
@@ -631,6 +637,131 @@ def list_brand_matches(
     )
     matches = query.order_by(*ordering).limit(limit).all()
     return _serialize_brand_matches(db, matches)
+
+
+def list_brand_expansion_summaries(
+    db: Session,
+    *,
+    days: int = 180,
+    limit: int = 25,
+) -> list[BrandExpansionSummaryResponse]:
+    """Rank active brands by recent, evidence-backed permit activity."""
+    cutoff = utcnow() - timedelta(days=days)
+    activity_at = func.coalesce(
+        PermitRecord.status_updated_at,
+        PermitRecord.filed_at,
+        PermitBrandMatch.first_seen_at,
+    )
+    signal_rows = active_query(db.query(PermitBrandMatch), PermitBrandMatch).join(
+        BrandProfile, BrandProfile.id == PermitBrandMatch.brand_id
+    ).join(
+        PermitRecord, PermitRecord.id == PermitBrandMatch.permit_id
+    ).filter(
+        PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
+        PermitRecord.is_active.is_(True),
+        PermitRecord.approval_stage.in_(("pre_approval", "approved")),
+        activity_at >= cutoff,
+    ).with_entities(
+        BrandProfile,
+        PermitRecord.city,
+        PermitRecord.state,
+        PermitRecord.approval_stage,
+        func.count(PermitBrandMatch.id),
+        func.avg(PermitBrandMatch.confidence),
+        func.max(activity_at),
+    ).group_by(
+        BrandProfile.id,
+        PermitRecord.city,
+        PermitRecord.state,
+        PermitRecord.approval_stage,
+    ).all()
+
+    summaries: dict[str, dict] = {}
+    for brand, city, state, stage, count, average_confidence, latest_signal_at in signal_rows:
+        summary = summaries.setdefault(brand.id, {
+            "brand": brand,
+            "signal_count": 0,
+            "pre_approval_count": 0,
+            "approved_count": 0,
+            "confidence_total": 0.0,
+            "latest_signal_at": latest_signal_at,
+            "markets": {},
+        })
+        count = int(count)
+        summary["signal_count"] += count
+        summary[f"{stage}_count"] += count
+        summary["confidence_total"] += float(average_confidence) * count
+        summary["latest_signal_at"] = max(summary["latest_signal_at"], latest_signal_at)
+        market_key = (city or "", state or "")
+        market = summary["markets"].setdefault(market_key, {
+            "city": city,
+            "state": state,
+            "signal_count": 0,
+            "pre_approval_count": 0,
+            "approved_count": 0,
+            "latest_signal_at": latest_signal_at,
+        })
+        market["signal_count"] += count
+        market[f"{stage}_count"] += count
+        market["latest_signal_at"] = max(market["latest_signal_at"], latest_signal_at)
+
+    if not summaries:
+        return []
+
+    candidate_rows = active_query(db.query(PermitBrandMatch), PermitBrandMatch).join(
+        PermitRecord, PermitRecord.id == PermitBrandMatch.permit_id
+    ).join(
+        NearbyParcelSearch,
+        NearbyParcelSearch.anchor_brand_match_id == PermitBrandMatch.id,
+    ).join(
+        NearbyParcelCandidate,
+        NearbyParcelCandidate.search_id == NearbyParcelSearch.id,
+    ).filter(
+        PermitBrandMatch.brand_id.in_(tuple(summaries)),
+        PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
+        PermitRecord.is_active.is_(True),
+        activity_at >= cutoff,
+        NearbyParcelCandidate.review_status != "dismissed",
+    ).with_entities(
+        PermitBrandMatch.brand_id,
+        func.count(func.distinct(NearbyParcelCandidate.parcel_id)),
+    ).group_by(PermitBrandMatch.brand_id).all()
+    candidate_counts = {brand_id: int(count) for brand_id, count in candidate_rows}
+
+    ranked = sorted(
+        summaries.values(),
+        key=lambda item: (
+            item["signal_count"],
+            item["pre_approval_count"],
+            candidate_counts.get(item["brand"].id, 0),
+            item["brand"].priority,
+            item["latest_signal_at"],
+        ),
+        reverse=True,
+    )[:limit]
+    return [
+        BrandExpansionSummaryResponse(
+            brand=BrandProfileResponse.model_validate(item["brand"]),
+            signal_count=item["signal_count"],
+            pre_approval_count=item["pre_approval_count"],
+            approved_count=item["approved_count"],
+            market_count=len(item["markets"]),
+            parcel_candidate_count=candidate_counts.get(item["brand"].id, 0),
+            average_confidence=round(
+                item["confidence_total"] / item["signal_count"], 4
+            ),
+            latest_signal_at=item["latest_signal_at"],
+            markets=[
+                BrandExpansionMarketResponse(**market)
+                for market in sorted(
+                    item["markets"].values(),
+                    key=lambda value: (value["signal_count"], value["latest_signal_at"]),
+                    reverse=True,
+                )[:5]
+            ],
+        )
+        for item in ranked
+    ]
 
 
 def list_deal_brand_matches(
