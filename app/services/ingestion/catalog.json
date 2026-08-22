@@ -8183,5 +8183,767 @@
         }
       }
     ]
+  },
+  {
+    "key": "columbus_oh_site_engineering_applications",
+    "name": "Columbus Site Engineering Applications",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Columbus, OH",
+    "base_url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+    "settings": {
+      "official_landing_page": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=be5e75e4c59e467faf29b6cd99c39113",
+      "license": "Creative Commons CC0 1.0 Universal",
+      "rights_basis": "The City of Columbus Department of Building and Zoning Services publishes the Site Engineering application under CC0. Production retains application identity, project, site, parcel, organization, lifecycle, description, and official evidence-link fields for attributed derived intelligence; personal applicant names, contacts, attachments, raw geometry, and raw source-replacement exports are suppressed.",
+      "attribution_required": true,
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "B1_FILE_DD",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 48,
+      "reconciliation_mode": "daily_full_snapshot",
+      "signal_stage": "pre_approval_and_approved",
+      "canary_required_fields": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_FILE_DD",
+        "B1_APPL_STATUS",
+        "SITE_ADDRESS"
+      ],
+      "field_allowlist": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_PER_GROUP",
+        "B1_PER_TYPE",
+        "B1_PER_SUB_TYPE",
+        "B1_PER_CATEGORY",
+        "B1_PARCEL_NBR",
+        "SITE_ADDRESS",
+        "B1_SITUS_ZIP",
+        "B1_SHORT_NOTES",
+        "APPLICANT_BUS_NAME",
+        "FILED_YEAR",
+        "B1_FILE_DD",
+        "B1_APPL_STATUS",
+        "LAST_STATUS_DT",
+        "B1_WORK_DESC",
+        "ACA_URL"
+      ],
+      "suppressed_fields": [
+        "APPLICANT_FULL_NAME",
+        "applicant_email",
+        "applicant_phone",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_site_application_intelligence_only_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))",
+        "out_fields": "OBJECTID,B1_ALT_ID,B1_PER_GROUP,B1_PER_TYPE,B1_PER_SUB_TYPE,B1_PER_CATEGORY,B1_PARCEL_NBR,SITE_ADDRESS,B1_SITUS_ZIP,B1_SHORT_NOTES,APPLICANT_BUS_NAME,FILED_YEAR,B1_FILE_DD,B1_APPL_STATUS,LAST_STATUS_DT,B1_WORK_DESC,ACA_URL",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "canary_stage_probes": [
+        {
+          "name": "columbus_site_engineering_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 10,
+          "connector": {
+            "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_APPL_STATUS IN ('Active','Under Review','Corrections Required')"
+          }
+        },
+        {
+          "name": "columbus_site_engineering_approved",
+          "expected_stage": "approved",
+          "sample_size": 10,
+          "connector": {
+            "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_APPL_STATUS IN ('Complete','Completed','Closed')"
+          }
+        }
+      ],
+      "defaults": {
+        "city": "Columbus",
+        "state": "OH",
+        "jurisdiction": "Columbus Department of Building and Zoning Services",
+        "permit_type": "site_engineering_application",
+        "source_url": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=be5e75e4c59e467faf29b6cd99c39113"
+      }
+    },
+    "field_mappings": [
+      {
+        "source_field": "B1_ALT_ID",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "B1_APPL_STATUS",
+              "operator": "in",
+              "values": [
+                "Complete",
+                "Completed",
+                "Closed"
+              ],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "B1_FILE_DD",
+        "canonical_field": "filed_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "LAST_STATUS_DT",
+        "canonical_field": "status_updated_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "B1_APPL_STATUS",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "B1_PER_TYPE",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "B1_PER_SUB_TYPE",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "B1_SHORT_NOTES",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "B1_WORK_DESC",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "SITE_ADDRESS",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "B1_SITUS_ZIP",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "B1_PARCEL_NBR",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "APPLICANT_BUS_NAME",
+        "canonical_field": "applicant_name",
+        "value_semantics": "legal_entity"
+      },
+      {
+        "source_field": "ACA_URL",
+        "canonical_field": "source_url"
+      }
+    ]
+  },
+  {
+    "key": "columbus_oh_commercial_building_permits",
+    "name": "Columbus Commercial Building Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Columbus, OH",
+    "base_url": "https://services1.arcgis.com/9yy6msODkIBzkUXU/arcgis/rest/services/Building_Permits/FeatureServer/0/query",
+    "settings": {
+      "official_landing_page": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=3528275d90d74afa8c14c74d72b04e33",
+      "license": "Creative Commons CC0 1.0 Universal",
+      "rights_basis": "The City of Columbus Department of Building and Zoning Services publishes the Building Permits application under CC0. Production retains the recent commercial permit identity, site, parcel, lifecycle, organization, scale, valuation, and official evidence-link fields as confirmation context; personal applicant names, contacts, attachments, raw geometry, and raw source-replacement exports are suppressed.",
+      "attribution_required": true,
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "LAST_STATUS_DT",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 48,
+      "reconciliation_mode": "periodic_full",
+      "signal_stage": "approved_only",
+      "canary_required_fields": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "SITE_ADDRESS",
+        "PERMIT_STATUS",
+        "ISSUED_DT"
+      ],
+      "field_allowlist": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_PER_GROUP",
+        "B1_PER_TYPE",
+        "B1_PER_SUB_TYPE",
+        "B1_PER_CATEGORY",
+        "GENERAL_TYPE",
+        "B1_PARCEL_NBR",
+        "SITE_ADDRESS",
+        "B1_SITUS_ZIP",
+        "PERMIT_STATUS",
+        "APPLICANT_BUS_NAME",
+        "SQFT",
+        "G3_VALUE_TTL",
+        "ISSUED_YEAR",
+        "ISSUED_DT",
+        "LAST_STATUS_DT",
+        "VALUE_DESC",
+        "ACA_URL",
+        "UNITS",
+        "B1_APPL_STATUS"
+      ],
+      "suppressed_fields": [
+        "APPLICANT_FULL_NAME",
+        "applicant_email",
+        "applicant_phone",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_commercial_permit_confirmation_only_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_PER_TYPE = 'Commercial' AND ISSUED_YEAR >= 2025",
+        "out_fields": "OBJECTID,B1_ALT_ID,B1_PER_GROUP,B1_PER_TYPE,B1_PER_SUB_TYPE,B1_PER_CATEGORY,GENERAL_TYPE,B1_PARCEL_NBR,SITE_ADDRESS,B1_SITUS_ZIP,PERMIT_STATUS,APPLICANT_BUS_NAME,SQFT,G3_VALUE_TTL,ISSUED_YEAR,ISSUED_DT,LAST_STATUS_DT,VALUE_DESC,ACA_URL,UNITS,B1_APPL_STATUS",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "defaults": {
+        "city": "Columbus",
+        "state": "OH",
+        "jurisdiction": "Columbus Department of Building and Zoning Services",
+        "approval_stage": "approved",
+        "source_url": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=3528275d90d74afa8c14c74d72b04e33"
+      }
+    },
+    "field_mappings": [
+      {
+        "source_field": "B1_ALT_ID",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "PERMIT_STATUS",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "B1_PER_CATEGORY",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "B1_PER_SUB_TYPE",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "VALUE_DESC",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "SITE_ADDRESS",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "B1_SITUS_ZIP",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "B1_PARCEL_NBR",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "APPLICANT_BUS_NAME",
+        "canonical_field": "applicant_name",
+        "value_semantics": "legal_entity"
+      },
+      {
+        "source_field": "SQFT",
+        "canonical_field": "square_feet"
+      },
+      {
+        "source_field": "G3_VALUE_TTL",
+        "canonical_field": "valuation"
+      },
+      {
+        "source_field": "UNITS",
+        "canonical_field": "units"
+      },
+      {
+        "source_field": "ISSUED_DT",
+        "canonical_field": "issued_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "LAST_STATUS_DT",
+        "canonical_field": "status_updated_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "ACA_URL",
+        "canonical_field": "source_url"
+      }
+    ]
+  },
+  {
+    "key": "tacoma_wa_commercial_permit_lifecycle",
+    "name": "Tacoma Commercial Permit Lifecycle",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Tacoma, WA",
+    "base_url": "https://services3.arcgis.com/SCwJH1pD8WSn5T5y/arcgis/rest/services/accela_permit_data/FeatureServer/0/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=a12d6fbf58e4434b8ff5070c09646f19",
+      "license": "City of Tacoma Open Data Terms of Use",
+      "license_url": "https://geohub.cityoftacoma.org/pages/disclaimer",
+      "rights_basis": "The City of Tacoma publishes this public-authoritative Accela extract for application use and requires downstream applications to identify Tacoma as the original source and display the city disclaimer. Production stores attributed, derived permit intelligence and official record links, not a raw source replacement.",
+      "attribution_required": true,
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "pull_date",
+      "freshness_semantics": "dataset_refreshed_at",
+      "freshness_sla_hours": 48,
+      "reconciliation_mode": "daily_incremental_with_periodic_full",
+      "signal_stage": "pre_approval_and_approved",
+      "canary_required_fields": [
+        "objectid",
+        "permit_number",
+        "current_status",
+        "application_date",
+        "pull_date"
+      ],
+      "field_allowlist": [
+        "objectid",
+        "permit_number",
+        "last_action",
+        "permit_group",
+        "permit_type",
+        "permit_subtype",
+        "permit_category",
+        "current_status",
+        "application_date",
+        "issued_date",
+        "address_line_1",
+        "description",
+        "fees_paid",
+        "latitude",
+        "longitude",
+        "parcel_number",
+        "zip",
+        "valuation",
+        "housing_units",
+        "link",
+        "pull_date",
+        "globalid_1",
+        "council_district_number"
+      ],
+      "suppressed_fields": [
+        "applicant_name",
+        "applicant_email",
+        "applicant_phone",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_commercial_permit_intelligence_only_with_tacoma_disclaimer_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "permit_number IS NOT NULL AND application_date >= DATE '2025-01-01' AND ((permit_type = 'Building' AND permit_subtype IN ('Commercial','Building')) OR permit_type IN ('Pre-Application','Land Use','Historic','Sign') OR (permit_type = 'Site' AND permit_subtype = 'Development') OR (permit_type = 'Right-of-Way' AND permit_subtype IN ('Construction','Occupancy')))",
+        "out_fields": "objectid,permit_number,last_action,permit_group,permit_type,permit_subtype,permit_category,current_status,application_date,issued_date,address_line_1,description,fees_paid,latitude,longitude,parcel_number,zip,valuation,housing_units,link,pull_date,globalid_1,council_district_number",
+        "order_by_fields": "objectid ASC",
+        "keyset_field": "objectid",
+        "include_geometry": false
+      },
+      "canary_freshness_probe": {
+        "sample_size": 10,
+        "connector": {
+          "where": "permit_number IS NOT NULL AND pull_date IS NOT NULL AND ((permit_type = 'Building' AND permit_subtype IN ('Commercial','Building')) OR permit_type IN ('Pre-Application','Land Use','Historic','Sign') OR (permit_type = 'Site' AND permit_subtype = 'Development') OR (permit_type = 'Right-of-Way' AND permit_subtype IN ('Construction','Occupancy')))",
+          "order_by_fields": "pull_date DESC,objectid DESC",
+          "keyset_field": null
+        }
+      },
+      "canary_stage_probes": [
+        {
+          "name": "tacoma_commercial_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 10,
+          "connector": {
+            "where": "permit_number IS NOT NULL AND application_date >= DATE '2025-01-01' AND issued_date IS NULL AND current_status NOT IN ('Permit Issued','Finaled','Closed','Decision Issued','Approved - Draft in Process') AND ((permit_type = 'Building' AND permit_subtype IN ('Commercial','Building')) OR permit_type IN ('Pre-Application','Land Use','Historic','Sign') OR (permit_type = 'Site' AND permit_subtype = 'Development') OR (permit_type = 'Right-of-Way' AND permit_subtype IN ('Construction','Occupancy')))",
+            "order_by_fields": "objectid DESC",
+            "keyset_field": null
+          }
+        },
+        {
+          "name": "tacoma_commercial_approved",
+          "expected_stage": "approved",
+          "sample_size": 10,
+          "connector": {
+            "where": "permit_number IS NOT NULL AND application_date >= DATE '2025-01-01' AND (issued_date IS NOT NULL OR current_status IN ('Permit Issued','Finaled','Closed','Decision Issued','Approved - Draft in Process')) AND ((permit_type = 'Building' AND permit_subtype IN ('Commercial','Building')) OR permit_type IN ('Pre-Application','Land Use','Historic','Sign') OR (permit_type = 'Site' AND permit_subtype = 'Development') OR (permit_type = 'Right-of-Way' AND permit_subtype IN ('Construction','Occupancy')))",
+            "order_by_fields": "objectid DESC",
+            "keyset_field": null
+          }
+        }
+      ],
+      "defaults": {
+        "city": "Tacoma",
+        "state": "WA",
+        "jurisdiction": "Tacoma Planning and Development Services",
+        "source_url": "https://www.arcgis.com/home/item.html?id=a12d6fbf58e4434b8ff5070c09646f19"
+      }
+    },
+    "field_mappings": [
+      {
+        "source_field": "permit_number",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "permit_number"
+          ]
+        }
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "permit_number"
+          ]
+        }
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "issued_date",
+              "operator": "present",
+              "value": "approved"
+            },
+            {
+              "field": "current_status",
+              "operator": "in",
+              "values": [
+                "Permit Issued",
+                "Finaled",
+                "Closed",
+                "Decision Issued",
+                "Approved - Draft in Process"
+              ],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "application_date",
+        "canonical_field": "filed_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "issued_date",
+        "canonical_field": "issued_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "pull_date",
+        "canonical_field": "status_updated_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "current_status",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "permit_type",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "permit_subtype",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "permit_category",
+        "canonical_field": "work_class"
+      },
+      {
+        "source_field": "description",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "address_line_1",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "zip",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "parcel_number",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "valuation",
+        "canonical_field": "valuation"
+      },
+      {
+        "source_field": "housing_units",
+        "canonical_field": "units"
+      },
+      {
+        "source_field": "latitude",
+        "canonical_field": "latitude"
+      },
+      {
+        "source_field": "longitude",
+        "canonical_field": "longitude"
+      },
+      {
+        "source_field": "link",
+        "canonical_field": "source_url"
+      }
+    ]
+  },
+  {
+    "key": "arlington_tx_commercial_permit_applications",
+    "name": "Arlington Commercial Permit Applications",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Arlington, TX",
+    "base_url": "https://gis2.arlingtontx.gov/agsext2/rest/services/OpenData/OD_Property/MapServer/9/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=680c626067ad4c0ca5a8fadfd2f6e235",
+      "license": "Creative Commons Attribution 4.0 International",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "rights_basis": "The City of Arlington publishes the pre-issuance permit application layer under CC BY 4.0. Production retains attributed derived intelligence and suppresses raw geometry, attachments, contacts, and raw source-replacement exports.",
+      "attribution_required": true,
+      "refresh_frequency": "weekdays",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "ImportDate",
+      "freshness_semantics": "dataset_refreshed_at",
+      "freshness_sla_hours": 72,
+      "reconciliation_mode": "daily_full_snapshot_with_issued_transfer",
+      "signal_stage": "pre_approval_and_approved",
+      "canary_required_fields": ["OBJECTID", "FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE", "STATUSDESC", "InDate", "ImportDate"],
+      "field_allowlist": ["ImportDate", "OBJECTID", "FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE", "STATUSDESC", "InDate", "SUBDESC", "WORKDESC", "FOLDERNAME", "ConstructionValuationDeclared", "MainUse", "LandUseDescription", "Structure", "Census", "NameofBusiness", "SignConstructionValue", "FOLDERDESCRIPTION", "PROPGISID1", "PlanningSector", "ZoningUse"],
+      "suppressed_fields": ["applicant_name", "applicant_email", "applicant_phone", "mailing_address", "FOLDERCONDITION", "attachment", "document_body", "raw_geometry", "raw_source_export"],
+      "export_policy": "derived_preissuance_commercial_permit_intelligence_only_cc_by_attributed_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "FOLDERSEQUENCE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI')",
+        "out_fields": "ImportDate,OBJECTID,FOLDERYEAR,FOLDERSEQUENCE,FOLDERTYPE,STATUSDESC,InDate,SUBDESC,WORKDESC,FOLDERNAME,ConstructionValuationDeclared,MainUse,LandUseDescription,Structure,Census,NameofBusiness,SignConstructionValue,FOLDERDESCRIPTION,PROPGISID1,PlanningSector,ZoningUse",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "canary_freshness_probe": {
+        "sample_size": 10,
+        "connector": {
+          "where": "FOLDERSEQUENCE IS NOT NULL AND ImportDate IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI')",
+          "order_by_fields": "ImportDate DESC,OBJECTID DESC",
+          "keyset_field": null
+        }
+      },
+      "canary_stage_probes": [
+        {
+          "name": "arlington_commercial_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 10,
+          "connector": {
+            "where": "FOLDERSEQUENCE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI') AND STATUSDESC IN ('Pre-Application','Application Incomplete','Pending')",
+            "order_by_fields": "OBJECTID DESC",
+            "keyset_field": null
+          }
+        },
+        {
+          "name": "arlington_commercial_approved_for_issue",
+          "expected_stage": "approved",
+          "sample_size": 10,
+          "connector": {
+            "where": "FOLDERSEQUENCE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI') AND STATUSDESC = 'Approved for Issue'",
+            "order_by_fields": "OBJECTID DESC",
+            "keyset_field": null
+          }
+        }
+      ],
+      "defaults": {
+        "city": "Arlington",
+        "state": "TX",
+        "jurisdiction": "Arlington Planning and Development Services",
+        "source_url": "https://www.arcgis.com/home/item.html?id=680c626067ad4c0ca5a8fadfd2f6e235"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "__source_record_id", "canonical_field": "source_record_id", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}, "is_required": true},
+      {"source_field": "__permit_number", "canonical_field": "permit_number", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}},
+      {"source_field": "__application_number", "canonical_field": "application_number", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}},
+      {"source_field": "__approval_stage", "canonical_field": "approval_stage", "transform": "conditional_map", "transform_options": {"cases": [{"field": "STATUSDESC", "operator": "in", "values": ["Approved for Issue"], "value": "approved"}], "default": "pre_approval"}},
+      {"source_field": "InDate", "canonical_field": "filed_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "ImportDate", "canonical_field": "status_updated_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "STATUSDESC", "canonical_field": "status"},
+      {"source_field": "FOLDERTYPE", "canonical_field": "permit_type"},
+      {"source_field": "SUBDESC", "canonical_field": "permit_subtype"},
+      {"source_field": "WORKDESC", "canonical_field": "work_class"},
+      {"source_field": "NameofBusiness", "canonical_field": "project_name"},
+      {"source_field": "FOLDERDESCRIPTION", "canonical_field": "description"},
+      {"source_field": "FOLDERNAME", "canonical_field": "address"},
+      {"source_field": "PROPGISID1", "canonical_field": "parcel_id"},
+      {"source_field": "__valuation", "canonical_field": "valuation", "transform": "first_nonempty", "transform_options": {"fields": ["ConstructionValuationDeclared", "SignConstructionValue"]}},
+      {"source_field": "__proposed_use", "canonical_field": "proposed_use", "transform": "join_fields", "transform_options": {"fields": ["MainUse", "LandUseDescription", "Structure", "ZoningUse"], "separator": " | "}}
+    ]
+  },
+  {
+    "key": "arlington_tx_commercial_issued_permits",
+    "name": "Arlington Commercial Issued Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Arlington, TX",
+    "base_url": "https://gis2.arlingtontx.gov/agsext2/rest/services/OpenData/OD_Property/MapServer/1/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=c89c30011e1b4b2188dd54f3944d0218",
+      "license": "Creative Commons Attribution 4.0 International",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "rights_basis": "The City of Arlington publishes the issued-permit companion layer under CC BY 4.0. Production uses it to confirm permits that leave the pre-issuance application snapshot.",
+      "attribution_required": true,
+      "refresh_frequency": "weekdays",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "ImportDate",
+      "freshness_semantics": "dataset_refreshed_at",
+      "freshness_sla_hours": 72,
+      "reconciliation_mode": "daily_full_snapshot",
+      "signal_stage": "approved_only",
+      "canary_required_fields": ["OBJECTID", "FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE", "STATUSDESC", "ISSUEDATE", "ImportDate"],
+      "field_allowlist": ["ImportDate", "OBJECTID", "FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE", "STATUSDESC", "ISSUEDATE", "FINALDATE", "InDate", "SUBDESC", "WORKDESC", "FOLDERNAME", "ConstructionValuationDeclared", "MainUse", "LandUseDescription", "Structure", "Census", "NameofBusiness", "SignConstructionValue", "PROPGISID1", "PlanningSector", "ZoningUse"],
+      "suppressed_fields": ["applicant_name", "applicant_email", "applicant_phone", "mailing_address", "FOLDERCONDITION", "attachment", "document_body", "raw_geometry", "raw_source_export"],
+      "export_policy": "derived_issued_commercial_permit_confirmation_only_cc_by_attributed_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "FOLDERSEQUENCE IS NOT NULL AND ISSUEDATE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI') AND ISSUEDATE >= DATE '2025-01-01'",
+        "out_fields": "ImportDate,OBJECTID,FOLDERYEAR,FOLDERSEQUENCE,FOLDERTYPE,STATUSDESC,ISSUEDATE,FINALDATE,InDate,SUBDESC,WORKDESC,FOLDERNAME,ConstructionValuationDeclared,MainUse,LandUseDescription,Structure,Census,NameofBusiness,SignConstructionValue,PROPGISID1,PlanningSector,ZoningUse",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "canary_freshness_probe": {
+        "sample_size": 10,
+        "connector": {
+          "where": "FOLDERSEQUENCE IS NOT NULL AND ImportDate IS NOT NULL AND ISSUEDATE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI')",
+          "order_by_fields": "ImportDate DESC,OBJECTID DESC",
+          "keyset_field": null
+        }
+      },
+      "defaults": {
+        "city": "Arlington",
+        "state": "TX",
+        "jurisdiction": "Arlington Planning and Development Services",
+        "approval_stage": "approved",
+        "source_url": "https://www.arcgis.com/home/item.html?id=c89c30011e1b4b2188dd54f3944d0218"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "__source_record_id", "canonical_field": "source_record_id", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}, "is_required": true},
+      {"source_field": "__permit_number", "canonical_field": "permit_number", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}},
+      {"source_field": "STATUSDESC", "canonical_field": "status"},
+      {"source_field": "FOLDERTYPE", "canonical_field": "permit_type"},
+      {"source_field": "SUBDESC", "canonical_field": "permit_subtype"},
+      {"source_field": "WORKDESC", "canonical_field": "work_class"},
+      {"source_field": "NameofBusiness", "canonical_field": "project_name"},
+      {"source_field": "FOLDERNAME", "canonical_field": "address"},
+      {"source_field": "PROPGISID1", "canonical_field": "parcel_id"},
+      {"source_field": "__valuation", "canonical_field": "valuation", "transform": "first_nonempty", "transform_options": {"fields": ["ConstructionValuationDeclared", "SignConstructionValue"]}},
+      {"source_field": "__proposed_use", "canonical_field": "proposed_use", "transform": "join_fields", "transform_options": {"fields": ["MainUse", "LandUseDescription", "Structure", "ZoningUse"], "separator": " | "}},
+      {"source_field": "InDate", "canonical_field": "filed_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "ISSUEDATE", "canonical_field": "issued_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "FINALDATE", "canonical_field": "completed_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "ImportDate", "canonical_field": "status_updated_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}}
+    ]
   }
 ]

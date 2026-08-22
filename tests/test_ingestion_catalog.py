@@ -58,7 +58,7 @@ def test_applicant_mappings_declare_conservative_value_semantics():
         if mapping.canonical_field == "applicant_name"
     }
 
-    assert len(applicant_mappings) == 24
+    assert len(applicant_mappings) == 26
     assert set(applicant_mappings.values()) <= {
         "unknown", "business_dba", "legal_entity", "person"
     }
@@ -80,6 +80,12 @@ def test_applicant_mappings_declare_conservative_value_semantics():
     assert applicant_mappings[
         ("san_marcos_tx_planning_application_notices", "__applicant_name")
     ] == "unknown"
+    assert applicant_mappings[
+        ("columbus_oh_site_engineering_applications", "APPLICANT_BUS_NAME")
+    ] == "legal_entity"
+    assert applicant_mappings[
+        ("columbus_oh_commercial_building_permits", "APPLICANT_BUS_NAME")
+    ] == "legal_entity"
 
 
 def test_field_semantic_change_invalidates_normalization_hash():
@@ -235,6 +241,11 @@ def test_catalog_loads_first_live_source_cohort():
             "taylor_tx_development_notices",
             "san_marcos_tx_planning_application_notices",
             "savannah_ga_commercial_building_permits",
+            "columbus_oh_site_engineering_applications",
+            "columbus_oh_commercial_building_permits",
+            "tacoma_wa_commercial_permit_lifecycle",
+            "arlington_tx_commercial_permit_applications",
+            "arlington_tx_commercial_issued_permits",
         }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
@@ -8960,6 +8971,120 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "Description": "FOUNDATION PERMIT - HOTEL WITH BASEMENT",
             "Permit_Value": 450000,
         },
+        "columbus_oh_site_engineering_applications": {
+            "OBJECTID": 7721,
+            "B1_ALT_ID": "26345-00571",
+            "B1_PER_GROUP": "Engineering",
+            "B1_PER_TYPE": "Site Compliance Plan",
+            "B1_PER_SUB_TYPE": "Final",
+            "B1_PER_CATEGORY": "New Application",
+            "B1_PARCEL_NBR": "010034024",
+            "SITE_ADDRESS": "1339 E 5TH AVE",
+            "B1_SITUS_ZIP": "43219",
+            "B1_SHORT_NOTES": "Columbus Climate Controls CO Project",
+            "APPLICANT_BUS_NAME": "MARKROB PROPERTIES LLC",
+            "FILED_YEAR": 2026,
+            "B1_FILE_DD": 1787112000000,
+            "B1_APPL_STATUS": "Under Review",
+            "LAST_STATUS_DT": 1787162736000,
+            "B1_WORK_DESC": "Additional retail showroom and associated parking.",
+            "ACA_URL": "https://ca.columbus.gov/permits/example",
+        },
+        "columbus_oh_commercial_building_permits": {
+            "OBJECTID": 479976,
+            "B1_ALT_ID": "ALTC2603559",
+            "B1_PER_GROUP": "Building",
+            "B1_PER_TYPE": "Commercial",
+            "B1_PER_SUB_TYPE": "Structural",
+            "B1_PER_CATEGORY": "Alteration",
+            "GENERAL_TYPE": "Commercial - Other",
+            "B1_PARCEL_NBR": "31844202025015",
+            "SITE_ADDRESS": "2140 IKEA WAY",
+            "B1_SITUS_ZIP": "43240",
+            "PERMIT_STATUS": "Final Inspection Approved",
+            "APPLICANT_BUS_NAME": "GRA+D Architects",
+            "SQFT": 1855,
+            "G3_VALUE_TTL": 777294,
+            "ISSUED_YEAR": 2026,
+            "ISSUED_DT": 1771977600000,
+            "LAST_STATUS_DT": 1786924800000,
+            "VALUE_DESC": "Additions and alterations - non-residential",
+            "ACA_URL": "https://ca.columbus.gov/permits/example",
+            "UNITS": 0,
+            "B1_APPL_STATUS": "Active",
+        },
+        "tacoma_wa_commercial_permit_lifecycle": {
+            "objectid": 110780,
+            "permit_number": "BLDCA26-0252",
+            "last_action": "Create",
+            "permit_group": "Permits",
+            "permit_type": "Building",
+            "permit_subtype": "Commercial",
+            "permit_category": "Alteration",
+            "current_status": "Pending Intake Screening",
+            "application_date": 1787184000000,
+            "issued_date": None,
+            "address_line_1": "601 S 8TH ST",
+            "description": "Commercial tenant improvement and interior demolition.",
+            "fees_paid": 0,
+            "latitude": 47.255,
+            "longitude": -122.445,
+            "parcel_number": "2008010010",
+            "zip": "98402",
+            "valuation": 800000,
+            "housing_units": 0,
+            "link": "https://aca-prod.accela.com/TACOMA/record/example",
+            "pull_date": 1787216441000,
+            "globalid_1": "a1aac0f4-6b5f-4421-b6f8-4269011e19b1",
+            "council_district_number": 2,
+        },
+        "arlington_tx_commercial_permit_applications": {
+            "ImportDate": 1787258880996,
+            "OBJECTID": 438,
+            "FOLDERYEAR": "26",
+            "FOLDERSEQUENCE": "069196",
+            "FOLDERTYPE": "SI",
+            "STATUSDESC": "Pending",
+            "InDate": 1787184000000,
+            "SUBDESC": "Business",
+            "WORKDESC": "New",
+            "FOLDERNAME": "200 E FRONT STREET Suite 150",
+            "ConstructionValuationDeclared": None,
+            "MainUse": "Restaurant",
+            "LandUseDescription": "Food Services",
+            "Structure": "Commercial",
+            "Census": "327",
+            "NameofBusiness": "Game Theory Restaurant & Bar",
+            "SignConstructionValue": 25000,
+            "FOLDERDESCRIPTION": "New illuminated wall sign.",
+            "PROPGISID1": "1234567",
+            "PlanningSector": "Central",
+            "ZoningUse": "Commercial",
+        },
+        "arlington_tx_commercial_issued_permits": {
+            "ImportDate": 1787278661000,
+            "OBJECTID": 245788,
+            "FOLDERYEAR": "26",
+            "FOLDERSEQUENCE": "069196",
+            "FOLDERTYPE": "SI",
+            "STATUSDESC": "Issued",
+            "ISSUEDATE": 1787234055000,
+            "FINALDATE": None,
+            "InDate": 1787184000000,
+            "SUBDESC": "Business",
+            "WORKDESC": "New",
+            "FOLDERNAME": "200 E FRONT STREET Suite 150",
+            "ConstructionValuationDeclared": None,
+            "MainUse": "Restaurant",
+            "LandUseDescription": "Food Services",
+            "Structure": "Commercial",
+            "Census": "327",
+            "NameofBusiness": "Game Theory Restaurant & Bar",
+            "SignConstructionValue": 25000,
+            "PROPGISID1": 1234567,
+            "PlanningSector": "Central",
+            "ZoningUse": "Commercial",
+        },
         "detroit_mi_bseed_building_plan_reviews": {
             "ObjectId": 91382,
             "record_id": "BLD2026-01024",
@@ -9582,3 +9707,222 @@ def test_service_rejects_unbounded_page_counts(db):
         execute_source_run(db, source, max_pages=0)
     with pytest.raises(ValueError, match="between 1 and 100"):
         execute_source_run(db, source, max_pages=101)
+
+
+def test_columbus_site_engineering_preserves_pre_approval_project_context():
+    entry = next(
+        entry for entry in load_catalog()
+        if entry.key == "columbus_oh_site_engineering_applications"
+    )
+    out_fields = {
+        field.strip()
+        for field in entry.settings["connector"]["out_fields"].split(",")
+    }
+    suppressed = set(entry.settings["suppressed_fields"])
+
+    assert entry.adapter == "arcgis"
+    assert entry.settings["license"] == "Creative Commons CC0 1.0 Universal"
+    assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert "Site Compliance Plan" in entry.settings["connector"]["where"]
+    assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
+    assert "APPLICANT_FULL_NAME" not in out_fields
+    assert suppressed.isdisjoint(out_fields)
+
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings]
+    application = {
+        "OBJECTID": 7721,
+        "B1_ALT_ID": "26345-00571",
+        "B1_PER_GROUP": "Engineering",
+        "B1_PER_TYPE": "Site Compliance Plan",
+        "B1_PER_SUB_TYPE": "Final",
+        "B1_PER_CATEGORY": "New Application",
+        "B1_PARCEL_NBR": "010034024",
+        "SITE_ADDRESS": "1339 E 5TH AVE",
+        "B1_SITUS_ZIP": "43219",
+        "B1_SHORT_NOTES": "Columbus Climate Controls CO Project",
+        "APPLICANT_BUS_NAME": "MARKROB PROPERTIES LLC",
+        "FILED_YEAR": 2026,
+        "B1_FILE_DD": 1787112000000,
+        "B1_APPL_STATUS": "Under Review",
+        "LAST_STATUS_DT": 1787162736000,
+        "B1_WORK_DESC": "Additional retail showroom and associated parking.",
+        "ACA_URL": "https://ca.columbus.gov/permits/example",
+    }
+    prepared, field_mapping = prepare_mapped_record(application, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == "26345-00571"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["project_name"] == "Columbus Climate Controls CO Project"
+    assert normalized.values["parcel_id"] == "010034024"
+    assert normalized.values["applicant_name"] == "MARKROB PROPERTIES LLC"
+    assert normalized.values["filed_at"].year == 2026
+
+    completed = {**application, "B1_APPL_STATUS": "Completed"}
+    prepared, field_mapping = prepare_mapped_record(completed, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+    assert normalized.values["approval_stage"] == "approved"
+
+
+def test_columbus_commercial_permits_are_approved_confirmation():
+    entry = next(
+        entry for entry in load_catalog()
+        if entry.key == "columbus_oh_commercial_building_permits"
+    )
+    out_fields = {
+        field.strip()
+        for field in entry.settings["connector"]["out_fields"].split(",")
+    }
+
+    assert entry.settings["signal_stage"] == "approved_only"
+    assert "B1_PER_TYPE = 'Commercial'" in entry.settings["connector"]["where"]
+    assert "APPLICANT_FULL_NAME" not in out_fields
+
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings]
+    permit = {
+        "OBJECTID": 479976,
+        "B1_ALT_ID": "ALTC2603559",
+        "B1_PER_GROUP": "Building",
+        "B1_PER_TYPE": "Commercial",
+        "B1_PER_SUB_TYPE": "Structural",
+        "B1_PER_CATEGORY": "Alteration",
+        "GENERAL_TYPE": "Commercial - Other",
+        "B1_PARCEL_NBR": "31844202025015",
+        "SITE_ADDRESS": "2140 IKEA WAY",
+        "B1_SITUS_ZIP": "43240",
+        "PERMIT_STATUS": "Final Inspection Approved",
+        "APPLICANT_BUS_NAME": "GRA+D Architects",
+        "SQFT": 1855,
+        "G3_VALUE_TTL": 777294,
+        "ISSUED_YEAR": 2026,
+        "ISSUED_DT": 1771977600000,
+        "LAST_STATUS_DT": 1786924800000,
+        "VALUE_DESC": "Additions and alterations - non-residential",
+        "ACA_URL": "https://ca.columbus.gov/permits/example",
+        "UNITS": 0,
+        "B1_APPL_STATUS": "Active",
+    }
+    prepared, field_mapping = prepare_mapped_record(permit, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == "ALTC2603559"
+    assert normalized.values["approval_stage"] == "approved"
+    assert normalized.values["permit_number"] == "ALTC2603559"
+    assert normalized.values["valuation"] == Decimal("777294")
+    assert normalized.values["square_feet"] == 1855
+
+
+def test_tacoma_commercial_permits_preserve_pre_approval_context():
+    entry = next(
+        entry for entry in load_catalog()
+        if entry.key == "tacoma_wa_commercial_permit_lifecycle"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+    assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["connector"]["keyset_field"] == "objectid"
+    assert "applicant_name" not in out_fields
+
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings]
+    permit = {
+        "objectid": 110780,
+        "permit_number": "BLDCA26-0252",
+        "last_action": "Create",
+        "permit_group": "Permits",
+        "permit_type": "Building",
+        "permit_subtype": "Commercial",
+        "permit_category": "Alteration",
+        "current_status": "Pending Intake Screening",
+        "application_date": 1787184000000,
+        "issued_date": None,
+        "address_line_1": "601 S 8TH ST",
+        "description": "Commercial tenant improvement.",
+        "fees_paid": 0,
+        "latitude": 47.255,
+        "longitude": -122.445,
+        "parcel_number": "2008010010",
+        "zip": "98402",
+        "valuation": 800000,
+        "housing_units": 0,
+        "link": "https://aca-prod.accela.com/TACOMA/record/example",
+        "pull_date": 1787216441000,
+        "globalid_1": "a1aac0f4-6b5f-4421-b6f8-4269011e19b1",
+        "council_district_number": 2,
+    }
+    prepared, field_mapping = prepare_mapped_record(permit, mappings)
+    normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
+    assert normalized.source_record_id == "BLDCA26-0252"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["parcel_id"] == "2008010010"
+
+    prepared, field_mapping = prepare_mapped_record(
+        {**permit, "current_status": "Permit Issued"}, mappings
+    )
+    normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
+    assert normalized.values["approval_stage"] == "approved"
+
+
+def test_arlington_lifecycle_pair_preserves_retail_signal_and_identity():
+    entries = {
+        entry.key: entry
+        for entry in load_catalog()
+        if entry.key.startswith("arlington_tx_commercial_")
+    }
+    application = entries["arlington_tx_commercial_permit_applications"]
+    issued = entries["arlington_tx_commercial_issued_permits"]
+    assert application.settings["license"] == "Creative Commons Attribution 4.0 International"
+    assert application.settings["signal_stage"] == "pre_approval_and_approved"
+    assert issued.settings["signal_stage"] == "approved_only"
+    assert "applicant_name" not in application.settings["connector"]["out_fields"]
+
+    record = {
+        "ImportDate": 1787258880996,
+        "OBJECTID": 438,
+        "FOLDERYEAR": "26",
+        "FOLDERSEQUENCE": "069196",
+        "FOLDERTYPE": "SI",
+        "STATUSDESC": "Pending",
+        "InDate": 1787184000000,
+        "SUBDESC": "Business",
+        "WORKDESC": "New",
+        "FOLDERNAME": "200 E FRONT STREET Suite 150",
+        "ConstructionValuationDeclared": None,
+        "MainUse": "Restaurant",
+        "LandUseDescription": "Food Services",
+        "Structure": "Commercial",
+        "Census": "327",
+        "NameofBusiness": "Game Theory Restaurant & Bar",
+        "SignConstructionValue": 25000,
+        "FOLDERDESCRIPTION": "New illuminated wall sign.",
+        "PROPGISID1": "1234567",
+        "PlanningSector": "Central",
+        "ZoningUse": "Commercial",
+    }
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in application.field_mappings]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared, field_mapping, defaults=application.settings["defaults"]
+    )
+    assert normalized.source_record_id == "26-069196-SI"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["project_name"] == "Game Theory Restaurant & Bar"
+    assert normalized.values["valuation"] == Decimal("25000")
+
+    prepared, field_mapping = prepare_mapped_record(
+        {**record, "STATUSDESC": "Approved for Issue"}, mappings
+    )
+    normalized = normalize_permit(
+        prepared, field_mapping, defaults=application.settings["defaults"]
+    )
+    assert normalized.values["approval_stage"] == "approved"
