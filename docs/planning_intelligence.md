@@ -82,6 +82,31 @@ The next service boundary is a bounded document fetcher that:
 OCR should be asynchronous and separately metered. Low-quality OCR must lower
 confidence and never silently replace the official document.
 
+## San Jose Reference Pattern
+
+San Jose demonstrates the preferred multi-source city pattern:
+
+1. The Planning Director hearing archive discovers dated agenda and minutes
+   documents and records cancellations.
+2. Agenda PDFs create early planning events at the agenda-item grain, with the
+   official file number, hearing date, project scope, location, parties,
+   environmental review, and staff recommendation preserved as page-cited
+   evidence.
+3. Minutes update the same event with the public decision; they do not replace
+   the agenda evidence.
+4. The Data Center and Other Large Energy Use Projects page provides a monthly
+   priority watchlist for applications on file and links into permit and
+   environmental-review records.
+5. The existing San Jose Planning Permit Applications source supplies the
+   authoritative application lifecycle, address, APN, parties, status, and
+   geometry. Its `FOLDERRSN` maps to the `folderRSN` identifier in SJPermits.
+
+Records join by normalized planning file number first, followed by `FOLDERRSN`,
+APN, and normalized address. A meeting cancellation is not a project
+withdrawal, and disappearance from a current-project table is not a final
+decision without corroborating evidence. Once a joined record has reliable
+geometry or an APN, it can enter nearby-parcel discovery.
+
 ## Tradeoffs and Scaling
 
 - JSON categories are portable for the initial bounded queue; normalize them

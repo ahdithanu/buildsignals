@@ -9926,3 +9926,25 @@ def test_arlington_lifecycle_pair_preserves_retail_signal_and_identity():
         prepared, field_mapping, defaults=application.settings["defaults"]
     )
     assert normalized.values["approval_stage"] == "approved"
+
+
+def test_san_jose_planning_companion_sources_are_registered_for_document_ingestion():
+    candidates = {
+        entry.key: entry
+        for entry in load_candidate_catalog()
+        if entry.jurisdiction == "San Jose, CA"
+    }
+
+    hearings = candidates["san_jose_ca_planning_director_hearings"]
+    assert hearings.record_type == "planning"
+    assert hearings.adapter == "html_document_index"
+    assert hearings.status == "technical_hold"
+    assert "file_numbers" in hearings.candidate_source_fields
+    assert "staff_recommendation" in hearings.candidate_source_fields
+
+    energy = candidates["san_jose_ca_large_energy_projects"]
+    assert energy.record_type == "planning"
+    assert energy.adapter == "html_table"
+    assert energy.status == "technical_hold"
+    assert "file_number" in energy.candidate_source_fields
+    assert "environmental_review_status" in energy.candidate_source_fields
