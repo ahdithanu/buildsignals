@@ -3526,6 +3526,30 @@ Evidence URLs:
   source leases, snapshot checkpoints, health SLAs, and retirement guards stay
   active throughout reconciliation.
 
+### Columbus, Ohio Site Engineering And Commercial Building Permits
+
+- The City of Columbus Department of Building and Zoning Services publishes
+  both official applications under the Creative Commons CC0 1.0 Universal
+  dedication. The August 21, 2026 review resolved the previous Columbus bulk
+  access and rights hold.
+- Site Engineering is the early-warning source. It exposes stable application
+  IDs, filed and status dates, project names, parcels, addresses, business
+  applicants, detailed work descriptions, and official Accela evidence links.
+  `Active`, `Under Review`, and `Corrections Required` remain pre-approval;
+  `Complete`, `Completed`, and `Closed` map to approved confirmation.
+- Production includes site-compliance plans and commercial lot splits. Current
+  samples include retail showroom additions, multifamily developments, new
+  building programs, preliminary site plans, parking and infrastructure work,
+  and named engineering organizations before final action.
+- The companion Building Permits layer is approved-only confirmation. It is
+  limited to recent commercial permits and retains permit identity, category,
+  address, parcel, organization, square footage, valuation, units, lifecycle
+  dates, and the official Accela link.
+- Both feeds use deterministic `OBJECTID` keyset pagination and omit raw
+  geometry. Personal applicant names, contact fields, attachments, document
+  bodies, and raw source-replacement exports are suppressed. City attribution
+  and evidence links remain attached to derived records.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must

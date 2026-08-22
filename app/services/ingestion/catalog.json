@@ -8183,5 +8183,365 @@
         }
       }
     ]
+  },
+  {
+    "key": "columbus_oh_site_engineering_applications",
+    "name": "Columbus Site Engineering Applications",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Columbus, OH",
+    "base_url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+    "settings": {
+      "official_landing_page": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=be5e75e4c59e467faf29b6cd99c39113",
+      "license": "Creative Commons CC0 1.0 Universal",
+      "rights_basis": "The City of Columbus Department of Building and Zoning Services publishes the Site Engineering application under CC0. Production retains application identity, project, site, parcel, organization, lifecycle, description, and official evidence-link fields for attributed derived intelligence; personal applicant names, contacts, attachments, raw geometry, and raw source-replacement exports are suppressed.",
+      "attribution_required": true,
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "B1_FILE_DD",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 48,
+      "reconciliation_mode": "daily_full_snapshot",
+      "signal_stage": "pre_approval_and_approved",
+      "canary_required_fields": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_FILE_DD",
+        "B1_APPL_STATUS",
+        "SITE_ADDRESS"
+      ],
+      "field_allowlist": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_PER_GROUP",
+        "B1_PER_TYPE",
+        "B1_PER_SUB_TYPE",
+        "B1_PER_CATEGORY",
+        "B1_PARCEL_NBR",
+        "SITE_ADDRESS",
+        "B1_SITUS_ZIP",
+        "B1_SHORT_NOTES",
+        "APPLICANT_BUS_NAME",
+        "FILED_YEAR",
+        "B1_FILE_DD",
+        "B1_APPL_STATUS",
+        "LAST_STATUS_DT",
+        "B1_WORK_DESC",
+        "ACA_URL"
+      ],
+      "suppressed_fields": [
+        "APPLICANT_FULL_NAME",
+        "applicant_email",
+        "applicant_phone",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_site_application_intelligence_only_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))",
+        "out_fields": "OBJECTID,B1_ALT_ID,B1_PER_GROUP,B1_PER_TYPE,B1_PER_SUB_TYPE,B1_PER_CATEGORY,B1_PARCEL_NBR,SITE_ADDRESS,B1_SITUS_ZIP,B1_SHORT_NOTES,APPLICANT_BUS_NAME,FILED_YEAR,B1_FILE_DD,B1_APPL_STATUS,LAST_STATUS_DT,B1_WORK_DESC,ACA_URL",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "canary_stage_probes": [
+        {
+          "name": "columbus_site_engineering_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 10,
+          "connector": {
+            "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_APPL_STATUS IN ('Active','Under Review','Corrections Required')"
+          }
+        },
+        {
+          "name": "columbus_site_engineering_approved",
+          "expected_stage": "approved",
+          "sample_size": 10,
+          "connector": {
+            "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_APPL_STATUS IN ('Complete','Completed','Closed')"
+          }
+        }
+      ],
+      "defaults": {
+        "city": "Columbus",
+        "state": "OH",
+        "jurisdiction": "Columbus Department of Building and Zoning Services",
+        "permit_type": "site_engineering_application",
+        "source_url": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=be5e75e4c59e467faf29b6cd99c39113"
+      }
+    },
+    "field_mappings": [
+      {
+        "source_field": "B1_ALT_ID",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "B1_APPL_STATUS",
+              "operator": "in",
+              "values": [
+                "Complete",
+                "Completed",
+                "Closed"
+              ],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "B1_FILE_DD",
+        "canonical_field": "filed_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "LAST_STATUS_DT",
+        "canonical_field": "status_updated_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "B1_APPL_STATUS",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "B1_PER_TYPE",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "B1_PER_SUB_TYPE",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "B1_SHORT_NOTES",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "B1_WORK_DESC",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "SITE_ADDRESS",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "B1_SITUS_ZIP",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "B1_PARCEL_NBR",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "APPLICANT_BUS_NAME",
+        "canonical_field": "applicant_name",
+        "value_semantics": "legal_entity"
+      },
+      {
+        "source_field": "ACA_URL",
+        "canonical_field": "source_url"
+      }
+    ]
+  },
+  {
+    "key": "columbus_oh_commercial_building_permits",
+    "name": "Columbus Commercial Building Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Columbus, OH",
+    "base_url": "https://services1.arcgis.com/9yy6msODkIBzkUXU/arcgis/rest/services/Building_Permits/FeatureServer/0/query",
+    "settings": {
+      "official_landing_page": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=3528275d90d74afa8c14c74d72b04e33",
+      "license": "Creative Commons CC0 1.0 Universal",
+      "rights_basis": "The City of Columbus Department of Building and Zoning Services publishes the Building Permits application under CC0. Production retains the recent commercial permit identity, site, parcel, lifecycle, organization, scale, valuation, and official evidence-link fields as confirmation context; personal applicant names, contacts, attachments, raw geometry, and raw source-replacement exports are suppressed.",
+      "attribution_required": true,
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "LAST_STATUS_DT",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 48,
+      "reconciliation_mode": "periodic_full",
+      "signal_stage": "approved_only",
+      "canary_required_fields": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "SITE_ADDRESS",
+        "PERMIT_STATUS",
+        "ISSUED_DT"
+      ],
+      "field_allowlist": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_PER_GROUP",
+        "B1_PER_TYPE",
+        "B1_PER_SUB_TYPE",
+        "B1_PER_CATEGORY",
+        "GENERAL_TYPE",
+        "B1_PARCEL_NBR",
+        "SITE_ADDRESS",
+        "B1_SITUS_ZIP",
+        "PERMIT_STATUS",
+        "APPLICANT_BUS_NAME",
+        "SQFT",
+        "G3_VALUE_TTL",
+        "ISSUED_YEAR",
+        "ISSUED_DT",
+        "LAST_STATUS_DT",
+        "VALUE_DESC",
+        "ACA_URL",
+        "UNITS",
+        "B1_APPL_STATUS"
+      ],
+      "suppressed_fields": [
+        "APPLICANT_FULL_NAME",
+        "applicant_email",
+        "applicant_phone",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_commercial_permit_confirmation_only_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_PER_TYPE = 'Commercial' AND ISSUED_YEAR >= 2025",
+        "out_fields": "OBJECTID,B1_ALT_ID,B1_PER_GROUP,B1_PER_TYPE,B1_PER_SUB_TYPE,B1_PER_CATEGORY,GENERAL_TYPE,B1_PARCEL_NBR,SITE_ADDRESS,B1_SITUS_ZIP,PERMIT_STATUS,APPLICANT_BUS_NAME,SQFT,G3_VALUE_TTL,ISSUED_YEAR,ISSUED_DT,LAST_STATUS_DT,VALUE_DESC,ACA_URL,UNITS,B1_APPL_STATUS",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "defaults": {
+        "city": "Columbus",
+        "state": "OH",
+        "jurisdiction": "Columbus Department of Building and Zoning Services",
+        "approval_stage": "approved",
+        "source_url": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=3528275d90d74afa8c14c74d72b04e33"
+      }
+    },
+    "field_mappings": [
+      {
+        "source_field": "B1_ALT_ID",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "PERMIT_STATUS",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "B1_PER_CATEGORY",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "B1_PER_SUB_TYPE",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "VALUE_DESC",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "SITE_ADDRESS",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "B1_SITUS_ZIP",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "B1_PARCEL_NBR",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "APPLICANT_BUS_NAME",
+        "canonical_field": "applicant_name",
+        "value_semantics": "legal_entity"
+      },
+      {
+        "source_field": "SQFT",
+        "canonical_field": "square_feet"
+      },
+      {
+        "source_field": "G3_VALUE_TTL",
+        "canonical_field": "valuation"
+      },
+      {
+        "source_field": "UNITS",
+        "canonical_field": "units"
+      },
+      {
+        "source_field": "ISSUED_DT",
+        "canonical_field": "issued_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "LAST_STATUS_DT",
+        "canonical_field": "status_updated_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "ACA_URL",
+        "canonical_field": "source_url"
+      }
+    ]
   }
 ]
