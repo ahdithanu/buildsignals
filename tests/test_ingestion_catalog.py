@@ -243,6 +243,9 @@ def test_catalog_loads_first_live_source_cohort():
             "savannah_ga_commercial_building_permits",
             "columbus_oh_site_engineering_applications",
             "columbus_oh_commercial_building_permits",
+            "tacoma_wa_commercial_permit_lifecycle",
+            "arlington_tx_commercial_permit_applications",
+            "arlington_tx_commercial_issued_permits",
         }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
@@ -9010,6 +9013,78 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "UNITS": 0,
             "B1_APPL_STATUS": "Active",
         },
+        "tacoma_wa_commercial_permit_lifecycle": {
+            "objectid": 110780,
+            "permit_number": "BLDCA26-0252",
+            "last_action": "Create",
+            "permit_group": "Permits",
+            "permit_type": "Building",
+            "permit_subtype": "Commercial",
+            "permit_category": "Alteration",
+            "current_status": "Pending Intake Screening",
+            "application_date": 1787184000000,
+            "issued_date": None,
+            "address_line_1": "601 S 8TH ST",
+            "description": "Commercial tenant improvement and interior demolition.",
+            "fees_paid": 0,
+            "latitude": 47.255,
+            "longitude": -122.445,
+            "parcel_number": "2008010010",
+            "zip": "98402",
+            "valuation": 800000,
+            "housing_units": 0,
+            "link": "https://aca-prod.accela.com/TACOMA/record/example",
+            "pull_date": 1787216441000,
+            "globalid_1": "a1aac0f4-6b5f-4421-b6f8-4269011e19b1",
+            "council_district_number": 2,
+        },
+        "arlington_tx_commercial_permit_applications": {
+            "ImportDate": 1787258880996,
+            "OBJECTID": 438,
+            "FOLDERYEAR": "26",
+            "FOLDERSEQUENCE": "069196",
+            "FOLDERTYPE": "SI",
+            "STATUSDESC": "Pending",
+            "InDate": 1787184000000,
+            "SUBDESC": "Business",
+            "WORKDESC": "New",
+            "FOLDERNAME": "200 E FRONT STREET Suite 150",
+            "ConstructionValuationDeclared": None,
+            "MainUse": "Restaurant",
+            "LandUseDescription": "Food Services",
+            "Structure": "Commercial",
+            "Census": "327",
+            "NameofBusiness": "Game Theory Restaurant & Bar",
+            "SignConstructionValue": 25000,
+            "FOLDERDESCRIPTION": "New illuminated wall sign.",
+            "PROPGISID1": "1234567",
+            "PlanningSector": "Central",
+            "ZoningUse": "Commercial",
+        },
+        "arlington_tx_commercial_issued_permits": {
+            "ImportDate": 1787278661000,
+            "OBJECTID": 245788,
+            "FOLDERYEAR": "26",
+            "FOLDERSEQUENCE": "069196",
+            "FOLDERTYPE": "SI",
+            "STATUSDESC": "Issued",
+            "ISSUEDATE": 1787234055000,
+            "FINALDATE": None,
+            "InDate": 1787184000000,
+            "SUBDESC": "Business",
+            "WORKDESC": "New",
+            "FOLDERNAME": "200 E FRONT STREET Suite 150",
+            "ConstructionValuationDeclared": None,
+            "MainUse": "Restaurant",
+            "LandUseDescription": "Food Services",
+            "Structure": "Commercial",
+            "Census": "327",
+            "NameofBusiness": "Game Theory Restaurant & Bar",
+            "SignConstructionValue": 25000,
+            "PROPGISID1": 1234567,
+            "PlanningSector": "Central",
+            "ZoningUse": "Commercial",
+        },
         "detroit_mi_bseed_building_plan_reviews": {
             "ObjectId": 91382,
             "record_id": "BLD2026-01024",
@@ -9747,3 +9822,107 @@ def test_columbus_commercial_permits_are_approved_confirmation():
     assert normalized.values["permit_number"] == "ALTC2603559"
     assert normalized.values["valuation"] == Decimal("777294")
     assert normalized.values["square_feet"] == 1855
+
+
+def test_tacoma_commercial_permits_preserve_pre_approval_context():
+    entry = next(
+        entry for entry in load_catalog()
+        if entry.key == "tacoma_wa_commercial_permit_lifecycle"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+    assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["connector"]["keyset_field"] == "objectid"
+    assert "applicant_name" not in out_fields
+
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings]
+    permit = {
+        "objectid": 110780,
+        "permit_number": "BLDCA26-0252",
+        "last_action": "Create",
+        "permit_group": "Permits",
+        "permit_type": "Building",
+        "permit_subtype": "Commercial",
+        "permit_category": "Alteration",
+        "current_status": "Pending Intake Screening",
+        "application_date": 1787184000000,
+        "issued_date": None,
+        "address_line_1": "601 S 8TH ST",
+        "description": "Commercial tenant improvement.",
+        "fees_paid": 0,
+        "latitude": 47.255,
+        "longitude": -122.445,
+        "parcel_number": "2008010010",
+        "zip": "98402",
+        "valuation": 800000,
+        "housing_units": 0,
+        "link": "https://aca-prod.accela.com/TACOMA/record/example",
+        "pull_date": 1787216441000,
+        "globalid_1": "a1aac0f4-6b5f-4421-b6f8-4269011e19b1",
+        "council_district_number": 2,
+    }
+    prepared, field_mapping = prepare_mapped_record(permit, mappings)
+    normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
+    assert normalized.source_record_id == "BLDCA26-0252"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["parcel_id"] == "2008010010"
+
+    prepared, field_mapping = prepare_mapped_record(
+        {**permit, "current_status": "Permit Issued"}, mappings
+    )
+    normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
+    assert normalized.values["approval_stage"] == "approved"
+
+
+def test_arlington_lifecycle_pair_preserves_retail_signal_and_identity():
+    entries = {
+        entry.key: entry
+        for entry in load_catalog()
+        if entry.key.startswith("arlington_tx_commercial_")
+    }
+    application = entries["arlington_tx_commercial_permit_applications"]
+    issued = entries["arlington_tx_commercial_issued_permits"]
+    assert application.settings["license"] == "Creative Commons Attribution 4.0 International"
+    assert application.settings["signal_stage"] == "pre_approval_and_approved"
+    assert issued.settings["signal_stage"] == "approved_only"
+    assert "applicant_name" not in application.settings["connector"]["out_fields"]
+
+    record = {
+        "ImportDate": 1787258880996,
+        "OBJECTID": 438,
+        "FOLDERYEAR": "26",
+        "FOLDERSEQUENCE": "069196",
+        "FOLDERTYPE": "SI",
+        "STATUSDESC": "Pending",
+        "InDate": 1787184000000,
+        "SUBDESC": "Business",
+        "WORKDESC": "New",
+        "FOLDERNAME": "200 E FRONT STREET Suite 150",
+        "ConstructionValuationDeclared": None,
+        "MainUse": "Restaurant",
+        "LandUseDescription": "Food Services",
+        "Structure": "Commercial",
+        "Census": "327",
+        "NameofBusiness": "Game Theory Restaurant & Bar",
+        "SignConstructionValue": 25000,
+        "FOLDERDESCRIPTION": "New illuminated wall sign.",
+        "PROPGISID1": "1234567",
+        "PlanningSector": "Central",
+        "ZoningUse": "Commercial",
+    }
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in application.field_mappings]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared, field_mapping, defaults=application.settings["defaults"]
+    )
+    assert normalized.source_record_id == "26-069196-SI"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["project_name"] == "Game Theory Restaurant & Bar"
+    assert normalized.values["valuation"] == Decimal("25000")
+
+    prepared, field_mapping = prepare_mapped_record(
+        {**record, "STATUSDESC": "Approved for Issue"}, mappings
+    )
+    normalized = normalize_permit(
+        prepared, field_mapping, defaults=application.settings["defaults"]
+    )
+    assert normalized.values["approval_stage"] == "approved"

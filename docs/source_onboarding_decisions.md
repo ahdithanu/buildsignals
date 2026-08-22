@@ -3550,6 +3550,47 @@ Evidence URLs:
   bodies, and raw source-replacement exports are suppressed. City attribution
   and evidence links remain attached to derived records.
 
+### Tacoma, Washington Commercial Permit Lifecycle
+
+- Tacoma Planning and Development Services publishes a public-authoritative
+  Accela extract through the City of Tacoma Open Data catalog. The extract runs
+  daily and includes new records plus status updates to existing permits.
+- The city terms permit downstream applications using the data when Tacoma is
+  identified as the original source and the required disclaimer is displayed.
+  Production therefore retains attribution and official Accela evidence links,
+  exposes derived intelligence only, and does not offer raw source replacement.
+- The admitted slice starts with 2025 filings and includes commercial building
+  permits, site development, land use, pre-applications, historic review, signs,
+  and selected right-of-way construction and occupancy records. Residential-only
+  and utility records are excluded from this source.
+- Stable permit numbers are the canonical identity. Application, issuance, and
+  daily source-pull dates support lifecycle and freshness checks; status rules
+  retain pending intake, plan review, revisions, fees-due, and ready-to-issue as
+  pre-approval while issued, finaled, closed, and decision-issued records become
+  approved confirmation.
+- Personal applicant names, contacts, attachments, document bodies, raw geometry,
+  and raw exports are suppressed. Address, parcel, description, valuation, units,
+  coordinates, permit classification, and official evidence links remain for
+  opportunity matching and graph projection.
+
+### Arlington, Texas Commercial Applications And Issued Permits
+
+- Arlington publishes separate Permit Applications and Issued Permits layers
+  under Creative Commons Attribution 4.0. The application layer is explicitly a
+  one-year view of permits before issuance and updates each weekday.
+- Production narrows both layers to commercial permits, certificates of
+  occupancy, and signs. The application layer retains `Pre-Application`,
+  `Application Incomplete`, and `Pending` as pre-approval; `Approved for Issue`
+  is approved confirmation immediately before the record transfers to the
+  issued layer.
+- Folder year, sequence, and type form the shared canonical permit identity,
+  allowing application and issued evidence to resolve to the same graph permit.
+  Business names, use classifications, descriptions, valuation, address, and
+  property GIS ID support retailer and tenant-opening detection.
+- Personal applicants, contacts, folder conditions, attachments, raw geometry,
+  and raw source-replacement exports are suppressed. City attribution remains
+  attached to derived records under CC BY 4.0.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must
