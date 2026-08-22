@@ -57,9 +57,7 @@ def test_extracts_text_pdf_by_page_when_pdf_parser_is_installed():
     writer = pypdf.PdfWriter()
     page = writer.add_blank_page(width=612, height=792)
     contents = pypdf.generic.DecodedStreamObject()
-    contents.set_data(
-        b"BT /F1 12 Tf 72 720 Td (Planning item CP23-008) Tj ET"
-    )
+    contents.set_data(b"BT /F1 12 Tf 72 720 Td (Planning item CP23-008) Tj ET")
     page[pypdf.generic.NameObject("/Contents")] = contents
     page[pypdf.generic.NameObject("/Resources")] = pypdf.generic.DictionaryObject(
         {
@@ -103,4 +101,15 @@ def test_rejects_encrypted_pdf_when_pdf_parser_is_installed():
     writer.write(buffer)
 
     with pytest.raises(DocumentEncryptedError, match="encrypted PDFs"):
+        extract_document(buffer.getvalue(), "application/pdf")
+
+
+def test_rejects_pdf_with_no_extractable_text():
+    pypdf = pytest.importorskip("pypdf")
+    writer = pypdf.PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+
+    with pytest.raises(DocumentMalformedError, match="no extractable text"):
         extract_document(buffer.getvalue(), "application/pdf")

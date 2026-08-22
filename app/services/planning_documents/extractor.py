@@ -245,6 +245,8 @@ def _extract_pdf(content: bytes, source_url: str | None) -> tuple[DocumentSectio
                 page_number=index,
             )
         )
+    if not any(section.text for section in sections):
+        raise DocumentMalformedError("PDF document contains no extractable text")
     return tuple(sections)
 
 
