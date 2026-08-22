@@ -114,6 +114,21 @@ def test_strict_mode_allows_anon_to_auth_login(strict_client):
     assert r.status_code != 401
 
 
+def test_strict_mode_allows_cors_preflight_to_protected_path(strict_client):
+    r = strict_client.options(
+        "/dashboard/summary",
+        headers={
+            "Origin": "http://localhost:8080",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "Authorization",
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.headers["access-control-allow-origin"] == "http://localhost:8080"
+    assert r.headers["access-control-allow-credentials"] == "true"
+
+
 def test_strict_mode_rejects_invalid_bearer(strict_client):
     r = strict_client.get(
         "/dashboard/summary",

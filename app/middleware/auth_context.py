@@ -41,6 +41,11 @@ def _unauthorized(detail: str) -> JSONResponse:
 
 class AuthContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
+        # CORS preflight requests never carry application credentials. Let the
+        # configured CORSMiddleware validate the origin, method, and headers.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         token_obj = None
         has_valid_token = False
         auth_header = request.headers.get("authorization")
