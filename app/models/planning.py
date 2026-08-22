@@ -26,6 +26,13 @@ class PlanningRecord(OrgMixin, Base):
         Index("ix_planning_record_org_stage", "organization_id", "stage"),
         Index("ix_planning_record_org_meeting", "organization_id", "meeting_at"),
         Index("ix_planning_record_org_priority", "organization_id", "priority_score"),
+        Index(
+            "ix_planning_record_reference_scope",
+            "organization_id",
+            "reference_number",
+            "state",
+            "city",
+        ),
         Index("ix_planning_record_location", "organization_id", "state", "city", "postal_code"),
         Index("ix_planning_record_parcel", "organization_id", "parcel_id"),
     )
@@ -39,6 +46,7 @@ class PlanningRecord(OrgMixin, Base):
     )
     external_record_id: Mapped[str] = mapped_column(String(500), nullable=False)
     normalization_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    reference_number: Mapped[Optional[str]] = mapped_column(String(255))
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     stage: Mapped[Optional[str]] = mapped_column(String(50))
     title: Mapped[str] = mapped_column(String(1000), nullable=False)

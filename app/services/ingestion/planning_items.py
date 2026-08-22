@@ -47,6 +47,7 @@ class PlanningItem:
     meeting_date: date
     item_number: str
     file_numbers: tuple[str, ...]
+    reference_number: str
     text: str
     values: Mapping[str, str]
     source_pages: tuple[int, ...]
@@ -116,6 +117,7 @@ def segment_planning_items(
                 meeting_date=meeting_date,
                 item_number=item_number,
                 file_numbers=file_numbers,
+                reference_number=file_numbers[0],
                 text=item_text,
                 values=values,
                 source_pages=source_pages,
@@ -157,12 +159,17 @@ def _join_pages(pages: Sequence[PageText]) -> tuple[str, tuple[tuple[int, int, i
 
 
 def _official_file_numbers(pattern: Pattern[str], text: str) -> tuple[str, ...]:
-    numbers = {
-        _normalize_file_number(match.group("file_number"))
-        for match in pattern.finditer(text)
-        if match.group("file_number").strip()
-    }
-    return tuple(sorted(numbers))
+    numbers: list[str] = []
+    seen: set[str] = set()
+    for match in pattern.finditer(text):
+        raw_number = match.group("file_number")
+        if not raw_number.strip():
+            continue
+        number = _normalize_file_number(raw_number)
+        if number not in seen:
+            seen.add(number)
+            numbers.append(number)
+    return tuple(numbers)
 
 
 def _extract_values(patterns: Mapping[str, Pattern[str]], text: str) -> Mapping[str, str]:
@@ -179,7 +186,7 @@ def _stable_identity(meeting_date: date, item_number: str, file_numbers: tuple[s
         (
             meeting_date.isoformat(),
             item_number.casefold(),
-            *(number.casefold() for number in file_numbers),
+            *(number.casefold() for number in sorted(file_numbers)),
         )
     )
     return hashlib.sha256(identity_input.encode("utf-8")).hexdigest()

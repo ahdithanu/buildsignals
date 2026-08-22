@@ -247,6 +247,20 @@ class PermitRecord(OrgMixin, Base):
     __table_args__ = (
         UniqueConstraint("source_id", "external_record_id", name="uq_permit_record_source_external"),
         Index("ix_permit_record_org_number", "organization_id", "permit_number"),
+        Index(
+            "ix_permit_record_application_scope",
+            "organization_id",
+            "application_number",
+            "state",
+            "city",
+        ),
+        Index(
+            "ix_permit_record_number_scope",
+            "organization_id",
+            "permit_number",
+            "state",
+            "city",
+        ),
         Index("ix_permit_record_org_status", "organization_id", "status"),
         Index("ix_permit_record_org_approval_stage", "organization_id", "approval_stage"),
         Index("ix_permit_record_source_active", "source_id", "is_active"),

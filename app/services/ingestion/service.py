@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 from uuid import uuid4
 
-from sqlalchemy import func, update
+from sqlalchemy import func, or_, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -93,6 +93,7 @@ PERMIT_COLUMNS = {
     "source_url",
 }
 PLANNING_COLUMNS = {
+    "reference_number",
     "event_type",
     "stage",
     "title",
@@ -1332,6 +1333,7 @@ def _project_planning_to_graph(
             confidence=planning.confidence,
             attributes={
                 "planning_record_id": planning.id,
+                "reference_number": planning.reference_number,
                 "event_type": planning.event_type,
                 "stage": planning.stage,
                 "meeting_at": planning.meeting_at.isoformat() if planning.meeting_at else None,
@@ -1349,8 +1351,17 @@ def _project_planning_to_graph(
         excerpt=planning.evidence_excerpt or planning.summary or planning.title,
         observed_at=planning.published_at or planning.meeting_at or raw.received_at,
         confidence=planning.confidence,
-        payload={"raw_record_id": raw.id, "content_hash": raw.content_hash},
+        payload={
+            "raw_record_id": raw.id,
+            "content_hash": raw.content_hash,
+            "source_url": planning.source_url or source.base_url,
+            "source_updated_at": raw.source_updated_at.isoformat()
+            if raw.source_updated_at
+            else None,
+            "received_at": raw.received_at.isoformat(),
+        },
     )
+    _reconcile_planning_permit_links(db, planning=planning, planning_entity_id=event_entity.id)
 
     if planning.address or planning.project_name or planning.parcel_id:
         property_entity, _ = resolve_entity(
@@ -1428,6 +1439,158 @@ def _project_planning_to_graph(
         )
 
 
+def _reconcile_planning_permit_links(
+    db: Session,
+    *,
+    planning: PlanningRecord | None = None,
+    planning_entity_id: str | None = None,
+    permit: PermitRecord | None = None,
+    permit_entity_id: str | None = None,
+) -> None:
+    """Link exact official references in either ingestion order using bounded lookups."""
+    if planning is not None:
+        reference = planning.reference_number
+        if not reference or not planning_entity_id or not planning.city or not planning.state:
+            return
+        permits = (
+            active_query(db.query(PermitRecord), PermitRecord)
+            .filter(
+                PermitRecord.is_active.is_(True),
+                func.lower(func.trim(PermitRecord.city)) == planning.city.strip().casefold(),
+                func.lower(func.trim(PermitRecord.state)) == planning.state.strip().casefold(),
+                or_(
+                    PermitRecord.application_number == reference,
+                    PermitRecord.permit_number == reference,
+                ),
+            )
+            .all()
+        )
+        for candidate in permits:
+            if not _same_planning_scope(planning, candidate):
+                continue
+            candidate_entity_id = _record_entity_id(db, "permit", candidate.id)
+            if candidate_entity_id:
+                _create_planning_permit_link(
+                    db,
+                    planning,
+                    planning_entity_id,
+                    candidate,
+                    candidate_entity_id,
+                )
+        return
+
+    if permit is None or not permit_entity_id or not permit.city or not permit.state:
+        return
+    references = tuple(
+        dict.fromkeys(
+            reference
+            for reference in (permit.application_number, permit.permit_number)
+            if reference
+        )
+    )
+    if not references:
+        return
+    planning_records = (
+        active_query(db.query(PlanningRecord), PlanningRecord)
+        .filter(
+            PlanningRecord.reference_number.in_(references),
+            func.lower(func.trim(PlanningRecord.city)) == permit.city.strip().casefold(),
+            func.lower(func.trim(PlanningRecord.state)) == permit.state.strip().casefold(),
+        )
+        .all()
+    )
+    for candidate in planning_records:
+        if not _same_planning_scope(candidate, permit):
+            continue
+        candidate_entity_id = _record_entity_id(db, "planning", candidate.id)
+        if candidate_entity_id:
+            _create_planning_permit_link(
+                db,
+                candidate,
+                candidate_entity_id,
+                permit,
+                permit_entity_id,
+            )
+
+
+def _same_planning_scope(planning: PlanningRecord, permit: PermitRecord) -> bool:
+    return bool(
+        planning.city
+        and permit.city
+        and planning.state
+        and permit.state
+        and planning.city.strip().casefold() == permit.city.strip().casefold()
+        and planning.state.strip().casefold() == permit.state.strip().casefold()
+    )
+
+
+def _record_entity_id(db: Session, record_type: str, record_id: str) -> str | None:
+    link = active_query(db.query(GraphEntityLink), GraphEntityLink).filter(
+        GraphEntityLink.record_type == record_type,
+        GraphEntityLink.record_id == record_id,
+    ).first()
+    return link.entity_id if link else None
+
+
+def _create_planning_permit_link(
+    db: Session,
+    planning: PlanningRecord,
+    planning_entity_id: str,
+    permit: PermitRecord,
+    permit_entity_id: str,
+) -> None:
+    reference = planning.reference_number
+    if not reference:
+        return
+    source = planning.source
+    raw = planning.latest_raw_record
+    source_url = planning.source_url or source.base_url
+    create_relationship(
+        db,
+        GraphRelationshipCreate(
+            source_entity_id=planning_entity_id,
+            target_entity_id=permit_entity_id,
+            relationship_type=GraphRelationshipType.related_to,
+            confidence=planning.confidence,
+            source_system=source.key,
+            source_id=_bounded_source_id(
+                source.key,
+                planning.external_record_id,
+                "canonical_permit_reference",
+                permit.id,
+            ),
+            attributes={
+                "role": "canonical_permit_reference_match",
+                "matched_reference": reference,
+                "planning_record_id": planning.id,
+                "permit_record_id": permit.id,
+            },
+            evidence=[
+                GraphEvidenceCreate(
+                    source_system=source.key,
+                    source_id=raw.id,
+                    source_url=source_url,
+                    evidence_type="planning_permit_reference_match",
+                    excerpt=planning.evidence_excerpt or planning.summary or planning.title,
+                    observed_at=planning.published_at or planning.meeting_at or raw.received_at,
+                    confidence=planning.confidence,
+                    payload={
+                        "raw_record_id": raw.id,
+                        "content_hash": raw.content_hash,
+                        "source_url": source_url,
+                        "reference_number": reference,
+                        "source_updated_at": raw.source_updated_at.isoformat()
+                        if raw.source_updated_at
+                        else None,
+                        "received_at": raw.received_at.isoformat(),
+                    },
+                )
+            ],
+        ),
+        validate_entities=False,
+    )
+
+
 def _expire_parcel_relationships(
     db: Session,
     source: IngestionSource,
@@ -1481,6 +1644,11 @@ def _project_permit_to_graph(
         },
     ))
     link_entity_to_record(db, permit_entity.id, "permit", permit.id, source.key)
+    _reconcile_planning_permit_links(
+        db,
+        permit=permit,
+        permit_entity_id=permit_entity.id,
+    )
     _expire_permit_relationships(db, source, permit)
 
     if not (permit.address or permit.project_name):

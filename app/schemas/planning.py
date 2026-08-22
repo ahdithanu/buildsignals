@@ -40,6 +40,7 @@ class PlanningRecordResponse(BaseModel):
     id: str
     source_id: str
     external_record_id: str
+    reference_number: Optional[str]
     event_type: str
     stage: Optional[str]
     title: str

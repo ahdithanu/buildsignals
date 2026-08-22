@@ -230,6 +230,7 @@ class PlanningDocumentsConnector(BaseConnector):
             "document_hash": item.document_hash,
             "document_type": document_type,
             "content_type": content_type,
+            "reference_number": item.reference_number,
             "file_numbers": list(item.file_numbers),
             "extracted_values": dict(item.values),
         }

@@ -43,6 +43,7 @@ def upgrade() -> None:
         ),
         sa.Column("external_record_id", sa.String(length=500), nullable=False),
         sa.Column("normalization_hash", sa.String(length=64), nullable=False),
+        sa.Column("reference_number", sa.String(length=255)),
         sa.Column("event_type", sa.String(length=100), nullable=False),
         sa.Column("stage", sa.String(length=50)),
         sa.Column("title", sa.String(length=1000), nullable=False),
@@ -81,6 +82,11 @@ def upgrade() -> None:
         ),
     )
     op.create_index(
+        "ix_planning_record_reference_scope",
+        "planning_records",
+        ["organization_id", "reference_number", "state", "city"],
+    )
+    op.create_index(
         "ix_planning_record_org_stage", "planning_records", ["organization_id", "stage"]
     )
     op.create_index(
@@ -96,6 +102,16 @@ def upgrade() -> None:
     )
     op.create_index(
         "ix_planning_record_parcel", "planning_records", ["organization_id", "parcel_id"]
+    )
+    op.create_index(
+        "ix_permit_record_application_scope",
+        "permit_records",
+        ["organization_id", "application_number", "state", "city"],
+    )
+    op.create_index(
+        "ix_permit_record_number_scope",
+        "permit_records",
+        ["organization_id", "permit_number", "state", "city"],
     )
 
     op.create_table(
@@ -155,9 +171,12 @@ def downgrade() -> None:
     op.drop_index("ix_planning_company_match_org_confidence", table_name="planning_company_matches")
     op.drop_index("ix_planning_company_match_org_status", table_name="planning_company_matches")
     op.drop_table("planning_company_matches")
+    op.drop_index("ix_permit_record_number_scope", table_name="permit_records")
+    op.drop_index("ix_permit_record_application_scope", table_name="permit_records")
     op.drop_index("ix_planning_record_parcel", table_name="planning_records")
     op.drop_index("ix_planning_record_location", table_name="planning_records")
     op.drop_index("ix_planning_record_org_priority", table_name="planning_records")
     op.drop_index("ix_planning_record_org_meeting", table_name="planning_records")
     op.drop_index("ix_planning_record_org_stage", table_name="planning_records")
+    op.drop_index("ix_planning_record_reference_scope", table_name="planning_records")
     op.drop_table("planning_records")

@@ -88,6 +88,7 @@ PARCEL_CANONICAL_FIELDS = {
 
 PLANNING_CANONICAL_FIELDS = {
     "source_record_id",
+    "reference_number",
     "event_type",
     "stage",
     "title",

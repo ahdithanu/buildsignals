@@ -55,10 +55,12 @@ Recommendation: Approve""",
 
     assert len(items) == 2
     assert items[0].item_number == "3.1"
-    assert items[0].file_numbers == ("ER26-024", "SP26-005")
+    assert items[0].file_numbers == ("SP26-005", "ER26-024")
+    assert items[0].reference_number == "SP26-005"
     assert items[0].values["address"] == "6763 Crystal Springs Drive"
     assert items[0].source_pages == (3,)
-    assert items[1].file_numbers == ("ER23-138", "H23-014")
+    assert items[1].file_numbers == ("H23-014", "ER23-138")
+    assert items[1].reference_number == "H23-014"
     assert items[1].values["owner"] == "SYUFY Enterprises"
     assert items[1].source_pages == (4,)
     assert items[1].document_hash == "agenda-sha256"

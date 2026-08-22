@@ -90,7 +90,9 @@ def test_agenda_and_minutes_emit_shared_identity_with_document_provenance():
     assert agenda["stage"] == "hearing_scheduled"
     assert minutes["event_type"] == "planning_hearing_decision"
     assert minutes["stage"] == "decision_recorded"
-    assert agenda["file_numbers"] == ["ER23-138", "H23-014"]
+    assert agenda["file_numbers"] == ["H23-014", "ER23-138"]
+    assert agenda["reference_number"] == "H23-014"
+    assert minutes["reference_number"] == "ER23-138"
     assert agenda["address"] == "741 South Winchester Boulevard"
     assert agenda["owner_name"] == "SYUFY Enterprises"
     assert agenda["source_pages"] == [1, 2, 3, 4]
