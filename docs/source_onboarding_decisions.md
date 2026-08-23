@@ -679,6 +679,16 @@ Evidence URLs:
   checks found `ISSUEDATE IS NULL` returned zero records, and
   `PERMITAPPROVAL` values describe scope/completion labels rather than intake,
   plan-check, approved, or ready-to-issue states.
+- Planning Director hearings hold: keep
+  `san_jose_ca_planning_director_hearings` at `technical_hold`. The bounded
+  `planning_documents` candidate is completely specified for the official
+  agenda/minutes index and same-host documents, including stable agenda-item
+  identity, file-number preservation, page-cited evidence, project description,
+  address, owner, environmental review, staff recommendation, lifecycle stage,
+  and ingestion-observed freshness. A production-style HTTP client received
+  HTTP 403 from the official archive on 2026-08-22. Promotion requires a
+  City-supported access path or City confirmation of automated retrieval;
+  browser automation is prohibited as a workaround.
 
 ### Sacramento Building And Planning Records
 

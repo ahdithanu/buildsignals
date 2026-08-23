@@ -1,4 +1,5 @@
 """Shared contracts and HTTP utilities for permit source connectors."""
+
 from __future__ import annotations
 
 import ipaddress
@@ -90,9 +91,7 @@ class BaseConnector(ABC):
     def fetch_page(self, checkpoint: Checkpoint | None = None) -> FetchEnvelope:
         return self.fetch(checkpoint)
 
-    def iter_pages(
-        self, checkpoint: Checkpoint | None = None
-    ) -> Iterator[FetchEnvelope]:
+    def iter_pages(self, checkpoint: Checkpoint | None = None) -> Iterator[FetchEnvelope]:
         current = checkpoint
         while True:
             envelope = self.fetch(current)
@@ -103,16 +102,12 @@ class BaseConnector(ABC):
                 raise ConnectorResponseError("connector returned a repeated checkpoint")
             current = envelope.checkpoint
 
-    def iter_records(
-        self, checkpoint: Checkpoint | None = None
-    ) -> Iterator[Record]:
+    def iter_records(self, checkpoint: Checkpoint | None = None) -> Iterator[Record]:
         for envelope in self.iter_pages(checkpoint):
             yield from envelope.records
 
 
-def checkpoint_offset(
-    checkpoint: Checkpoint | None, *, key: str = "offset"
-) -> int:
+def checkpoint_offset(checkpoint: Checkpoint | None, *, key: str = "offset") -> int:
     """Read and validate a non-negative integer offset from a checkpoint."""
     if checkpoint is None:
         return 0
@@ -133,8 +128,7 @@ class HttpClient(Protocol):
         *,
         params: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     def get_text(
         self,
@@ -143,8 +137,16 @@ class HttpClient(Protocol):
         params: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
         encoding: str = "utf-8-sig",
-    ) -> str:
-        ...
+    ) -> str: ...
+
+    def get_bytes(
+        self,
+        url: str,
+        *,
+        max_bytes: int,
+        params: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> tuple[bytes, Message]: ...
 
 
 class RetryingHttpClient:
@@ -199,12 +201,31 @@ class RetryingHttpClient:
         except (LookupError, UnicodeDecodeError) as exc:
             raise ConnectorResponseError(f"invalid text response from {url}") from exc
 
+    def get_bytes(
+        self,
+        url: str,
+        *,
+        max_bytes: int,
+        params: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> tuple[bytes, Message]:
+        """Fetch bytes while refusing to read beyond the configured bound."""
+        if isinstance(max_bytes, bool) or max_bytes <= 0:
+            raise ValueError("max_bytes must be greater than zero")
+        return self._get(
+            url,
+            params=params,
+            headers=headers,
+            max_bytes=max_bytes,
+        )
+
     def _get(
         self,
         url: str,
         *,
         params: Mapping[str, Any] | None,
         headers: Mapping[str, str] | None,
+        max_bytes: int | None = None,
     ) -> tuple[bytes, Message]:
         query = urlencode(params or {}, doseq=True, quote_via=quote, safe="$")
         request_url = f"{url}{'&' if '?' in url else '?'}{query}" if query else url
@@ -222,15 +243,17 @@ class RetryingHttpClient:
         for attempt in range(self.max_retries + 1):
             try:
                 if self.allowed_hosts:
-                    return self._get_pinned(request_url, dict(request.header_items()))
+                    return self._get_pinned(
+                        request_url,
+                        dict(request.header_items()),
+                        max_bytes=max_bytes,
+                    )
                 response_context = urlopen(request, timeout=self.timeout)
                 with response_context as response:
-                    return response.read(), response.headers
+                    return self._read_response(response, max_bytes=max_bytes), response.headers
             except HTTPError as exc:
                 if exc.code not in self.RETRYABLE_STATUS_CODES or attempt >= self.max_retries:
-                    raise ConnectorRequestError(
-                        f"GET {url} failed with HTTP {exc.code}"
-                    ) from exc
+                    raise ConnectorRequestError(f"GET {url} failed with HTTP {exc.code}") from exc
                 self._sleep(self._retry_delay(attempt, exc.headers))
             except (URLError, TimeoutError) as exc:
                 if attempt >= self.max_retries:
@@ -243,6 +266,8 @@ class RetryingHttpClient:
         self,
         url: str,
         headers: Mapping[str, str],
+        *,
+        max_bytes: int | None = None,
     ) -> tuple[bytes, Message]:
         current_url = url
         for _redirect in range(6):
@@ -263,7 +288,6 @@ class RetryingHttpClient:
                 try:
                     connection.request("GET", target, headers=dict(headers))
                     response = connection.getresponse()
-                    body = response.read()
                     response_headers = response.headers
                     if response.status in {301, 302, 303, 307, 308}:
                         location = response_headers.get("Location")
@@ -272,9 +296,7 @@ class RetryingHttpClient:
                                 "connector redirect response is missing Location"
                             )
                         redirect_url = urljoin(current_url, location)
-                        redirect_host = safe_source_host(
-                            redirect_url, require_https=True
-                        )
+                        redirect_host = safe_source_host(redirect_url, require_https=True)
                         if redirect_host != host:
                             raise ConnectorRequestError(
                                 "connector cross-host redirects are not allowed"
@@ -289,6 +311,7 @@ class RetryingHttpClient:
                             response_headers,
                             None,
                         )
+                    body = self._read_response(response, max_bytes=max_bytes)
                     return body, response_headers
                 except HTTPError:
                     raise
@@ -299,6 +322,26 @@ class RetryingHttpClient:
             else:
                 raise URLError(last_error or f"could not connect to {host}")
         raise ConnectorRequestError("connector exceeded the redirect limit")
+
+    @staticmethod
+    def _read_response(response: Any, *, max_bytes: int | None) -> bytes:
+        if max_bytes is None:
+            return response.read()
+        content_length = response.headers.get("Content-Length")
+        if content_length:
+            try:
+                if int(content_length) > max_bytes:
+                    raise ConnectorResponseError(
+                        f"response exceeds maximum allowed size of {max_bytes} bytes"
+                    )
+            except ValueError:
+                pass
+        body = response.read(max_bytes + 1)
+        if len(body) > max_bytes:
+            raise ConnectorResponseError(
+                f"response exceeds maximum allowed size of {max_bytes} bytes"
+            )
+        return body
 
     def _retry_delay(self, attempt: int, headers: Message | None = None) -> float:
         if headers:
@@ -316,14 +359,11 @@ class RetryingHttpClient:
         except ValueError as exc:
             raise ConnectorRequestError(str(exc).replace("source URL", "connector URL")) from exc
         if self.allowed_hosts and not any(
-            host_is_allowed(host, allowed)
-            for allowed in self.allowed_hosts
+            host_is_allowed(host, allowed) for allowed in self.allowed_hosts
         ):
             raise ConnectorRequestError(f"connector host is not allowlisted: {host}")
         if self.allowed_hosts:
-            addresses = self._validate_public_dns(
-                host, parsed_port=urlparse(url).port or 443
-            )
+            addresses = self._validate_public_dns(host, parsed_port=urlparse(url).port or 443)
         else:
             addresses = ()
         return host, addresses
@@ -333,23 +373,17 @@ class RetryingHttpClient:
         try:
             addresses = {
                 address[4][0].split("%", 1)[0]
-                for address in socket.getaddrinfo(
-                    host, parsed_port, type=socket.SOCK_STREAM
-                )
+                for address in socket.getaddrinfo(host, parsed_port, type=socket.SOCK_STREAM)
             }
         except socket.gaierror as exc:
             raise ConnectorRequestError(f"connector host DNS lookup failed: {host}") from exc
         if not addresses:
             raise ConnectorRequestError(f"connector host DNS lookup returned no addresses: {host}")
         unsafe = sorted(
-            address
-            for address in addresses
-            if not ipaddress.ip_address(address).is_global
+            address for address in addresses if not ipaddress.ip_address(address).is_global
         )
         if unsafe:
-            raise ConnectorRequestError(
-                f"connector host resolves to a non-public address: {host}"
-            )
+            raise ConnectorRequestError(f"connector host resolves to a non-public address: {host}")
         return tuple(sorted(addresses))
 
 

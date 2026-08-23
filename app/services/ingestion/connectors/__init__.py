@@ -18,8 +18,10 @@ from .civicplus_newsflash import CivicPlusNewsFlashConnector
 from .ckan import CKANConnector, CKANDataStoreConnector
 from .csv import CSVConnector, CsvConnector
 from .factory import build_connector
+from .html_document_index import HTMLDocumentIndexConnector
 from .json_array import JSONArrayConnector
 from .opendatasoft import OpenDataSoftConnector, OpenDataSoftV2Connector
+from .planning_documents import PlanningDocumentsConnector
 from .rss import RSSConnector
 from .socrata import SocrataConnector
 
@@ -39,10 +41,12 @@ __all__ = [
     "CsvConnector",
     "FetchEnvelope",
     "HttpClient",
+    "HTMLDocumentIndexConnector",
     "InvalidCheckpointError",
     "JSONArrayConnector",
     "OpenDataSoftConnector",
     "OpenDataSoftV2Connector",
+    "PlanningDocumentsConnector",
     "Record",
     "RetryingHttpClient",
     "RSSConnector",

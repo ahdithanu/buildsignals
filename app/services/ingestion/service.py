@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 from uuid import uuid4
 
-from sqlalchemy import func, update
+from sqlalchemy import func, or_, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -30,6 +30,7 @@ from app.models.ingestion import (
     SourceFieldMapping,
 )
 from app.models.parcel import ParcelRecord
+from app.models.planning import PlanningCompanyMatch, PlanningRecord
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
 from app.schemas.ingestion import IngestionSourceCreate, IngestionSourceUpdate
 from app.services.brand_intelligence import detect_permit_brands, rebuild_brand_party_fingerprints
@@ -39,14 +40,17 @@ from app.services.ingestion.connectors import ConnectorResponseError, build_conn
 from app.services.ingestion.normalization import (
     NormalizedParcel,
     NormalizedPermit,
+    NormalizedPlanningRecord,
     missing_required_source_fields,
     normalize_parcel,
     normalize_permit,
+    normalize_planning_record,
     parse_source_datetime,
     prepare_mapped_record,
 )
 from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
 from app.services.parcel_lineage import upsert_lineage_from_snapshot
+from app.services.planning_intelligence import enrich_planning_record
 from app.utils.org_scope import active_query, get_org_id
 
 PERMIT_COLUMNS = {
@@ -87,6 +91,34 @@ PERMIT_COLUMNS = {
     "expires_at",
     "completed_at",
     "source_url",
+}
+PLANNING_COLUMNS = {
+    "reference_number",
+    "event_type",
+    "stage",
+    "title",
+    "summary",
+    "evidence_excerpt",
+    "agenda_item_number",
+    "meeting_name",
+    "governing_body",
+    "project_name",
+    "address",
+    "city",
+    "state",
+    "postal_code",
+    "parcel_id",
+    "jurisdiction",
+    "applicant_name",
+    "owner_name",
+    "developer_name",
+    "latitude",
+    "longitude",
+    "meeting_at",
+    "published_at",
+    "decision_at",
+    "source_url",
+    "confidence",
 }
 HEARTBEAT_INTERVAL_SECONDS = 30.0
 STALE_RUN_AFTER = timedelta(minutes=5)
@@ -234,7 +266,7 @@ def execute_source_run(
         raise ValueError("Ingestion source not found")
     if not source.is_active:
         raise ValueError("Ingestion source is inactive")
-    if source.record_type not in {"permit", "parcel"}:
+    if source.record_type not in {"permit", "parcel", "planning"}:
         raise ValueError(f"No normalizer registered for record type: {source.record_type}")
 
     settings = dict(source.settings or {})
@@ -301,6 +333,19 @@ def execute_source_run(
                             _parcel, action = _persist_parcel(
                                 db, source, run_id, normalized_parcel, record,
                                 envelope.fetched_at, normalization_hash, snapshot_id,
+                            )
+                        elif source.record_type == "planning":
+                            normalized_planning = normalize_planning_record(
+                                prepared_record, field_mapping, defaults=defaults
+                            )
+                            _planning, action = _persist_planning_record(
+                                db,
+                                source,
+                                run_id,
+                                normalized_planning,
+                                record,
+                                envelope.fetched_at,
+                                normalization_hash,
                             )
                         else:
                             normalized_permit = normalize_permit(
@@ -826,6 +871,74 @@ def _persist_parcel(
     return parcel, action
 
 
+def _persist_planning_record(
+    db: Session,
+    source: IngestionSource,
+    run_id: str,
+    normalized: NormalizedPlanningRecord,
+    source_record: Any,
+    fetched_at: datetime,
+    normalization_hash: str,
+) -> tuple[PlanningRecord, str]:
+    raw = active_query(db.query(RawSourceRecord), RawSourceRecord).filter(
+        RawSourceRecord.source_id == source.id,
+        RawSourceRecord.external_record_id == normalized.source_record_id,
+        RawSourceRecord.content_hash == normalized.fingerprint,
+    ).first()
+    planning = active_query(db.query(PlanningRecord), PlanningRecord).filter(
+        PlanningRecord.source_id == source.id,
+        PlanningRecord.external_record_id == normalized.source_record_id,
+    ).first()
+    raw_was_existing = raw is not None
+    if raw is None:
+        raw = RawSourceRecord(
+            organization_id=get_org_id(),
+            source_id=source.id,
+            run_id=run_id,
+            external_record_id=normalized.source_record_id,
+            record_type=source.record_type,
+            content_hash=normalized.fingerprint,
+            payload=_json_safe(source_record),
+            source_updated_at=_source_updated_at(source, source_record),
+            received_at=fetched_at,
+        )
+        db.add(raw)
+        db.flush()
+    _touch_raw_observation(db, raw, fetched_at)
+
+    if raw_was_existing and planning is not None and planning.normalization_hash == normalization_hash:
+        planning.last_seen_at = fetched_at
+        return planning, "unchanged"
+
+    values = {key: value for key, value in normalized.values.items() if key in PLANNING_COLUMNS}
+    if planning is None:
+        planning = PlanningRecord(
+            organization_id=get_org_id(),
+            source_id=source.id,
+            latest_raw_record_id=raw.id,
+            external_record_id=normalized.source_record_id,
+            normalization_hash=normalization_hash,
+            attributes=normalized.unmapped or None,
+            first_seen_at=fetched_at,
+            last_seen_at=fetched_at,
+            **values,
+        )
+        db.add(planning)
+        action = "created"
+    else:
+        for field in PLANNING_COLUMNS:
+            setattr(planning, field, values.get(field))
+        planning.latest_raw_record_id = raw.id
+        planning.normalization_hash = normalization_hash
+        planning.attributes = normalized.unmapped or None
+        planning.last_seen_at = fetched_at
+        action = "updated"
+    db.flush()
+    matches = enrich_planning_record(db, planning, raw)
+    _project_planning_to_graph(db, source, planning, raw, matches)
+    return planning, action
+
+
 def _touch_raw_observation(
     db: Session,
     raw: RawSourceRecord,
@@ -976,6 +1089,9 @@ def _retire_missing_snapshot_records(
     snapshot_id: str,
     settings: dict[str, Any],
 ) -> int:
+    if source.record_type == "planning":
+        # Rolling agenda feeds omit old items without rescinding the public record.
+        return 0
     if source.record_type == "parcel":
         return _retire_missing_parcels(db, source, snapshot_id, settings)
     now = utcnow()
@@ -1195,6 +1311,286 @@ def _project_parcel_to_graph(
     ), validate_entities=False)
 
 
+def _project_planning_to_graph(
+    db: Session,
+    source: IngestionSource,
+    planning: PlanningRecord,
+    raw: RawSourceRecord,
+    company_matches: list[PlanningCompanyMatch],
+) -> None:
+    stable_id = _bounded_source_id(source.key, planning.external_record_id)
+    event_entity, _ = resolve_entity(
+        db,
+        GraphEntityCreate(
+            entity_type=GraphEntityType.source_record,
+            display_name=planning.title,
+            source_system=source.key,
+            source_id=stable_id,
+            address=planning.address,
+            city=planning.city,
+            state=planning.state,
+            zip_code=planning.postal_code,
+            confidence=planning.confidence,
+            attributes={
+                "planning_record_id": planning.id,
+                "reference_number": planning.reference_number,
+                "event_type": planning.event_type,
+                "stage": planning.stage,
+                "meeting_at": planning.meeting_at.isoformat() if planning.meeting_at else None,
+                "signal_categories": planning.signal_categories,
+                "priority_score": planning.priority_score,
+            },
+        ),
+    )
+    link_entity_to_record(db, event_entity.id, "planning", planning.id, source.key)
+    evidence = GraphEvidenceCreate(
+        source_system=source.key,
+        source_id=raw.id,
+        source_url=planning.source_url or source.base_url,
+        evidence_type="public_planning_record",
+        excerpt=planning.evidence_excerpt or planning.summary or planning.title,
+        observed_at=planning.published_at or planning.meeting_at or raw.received_at,
+        confidence=planning.confidence,
+        payload={
+            "raw_record_id": raw.id,
+            "content_hash": raw.content_hash,
+            "source_url": planning.source_url or source.base_url,
+            "source_updated_at": raw.source_updated_at.isoformat()
+            if raw.source_updated_at
+            else None,
+            "received_at": raw.received_at.isoformat(),
+        },
+    )
+    _reconcile_planning_permit_links(db, planning=planning, planning_entity_id=event_entity.id)
+
+    if planning.address or planning.project_name or planning.parcel_id:
+        property_entity, _ = resolve_entity(
+            db,
+            GraphEntityCreate(
+                entity_type=GraphEntityType.property,
+                display_name=planning.project_name
+                or planning.address
+                or planning.parcel_id
+                or stable_id,
+                source_system=source.key if planning.parcel_id else None,
+                source_id=_bounded_source_id(source.key, planning.parcel_id)
+                if planning.parcel_id
+                else None,
+                address=planning.address,
+                city=planning.city,
+                state=planning.state,
+                zip_code=planning.postal_code,
+                attributes={
+                    "parcel_id": planning.parcel_id,
+                    "latitude": planning.latitude,
+                    "longitude": planning.longitude,
+                },
+            ),
+        )
+        create_relationship(
+            db,
+            GraphRelationshipCreate(
+                source_entity_id=event_entity.id,
+                target_entity_id=property_entity.id,
+                relationship_type=GraphRelationshipType.related_to,
+                confidence=planning.confidence,
+                source_system=source.key,
+                source_id=_bounded_source_id(stable_id, "property"),
+                attributes={"role": "planning_subject", "planning_record_id": planning.id},
+                evidence=[evidence],
+            ),
+            validate_entities=False,
+        )
+
+    named_companies = [
+        (match.brand.name, match.confidence, "tracked_company") for match in company_matches
+    ]
+    named_companies.extend(
+        (name, planning.confidence, role)
+        for role, name in (
+            ("applicant", planning.applicant_name),
+            ("owner", planning.owner_name),
+            ("developer", planning.developer_name),
+        )
+        if name
+    )
+    for index, (name, confidence, role) in enumerate(named_companies):
+        company_entity, _ = resolve_entity(
+            db,
+            GraphEntityCreate(
+                entity_type=GraphEntityType.company,
+                display_name=name,
+                confidence=confidence,
+            ),
+        )
+        create_relationship(
+            db,
+            GraphRelationshipCreate(
+                source_entity_id=event_entity.id,
+                target_entity_id=company_entity.id,
+                relationship_type=GraphRelationshipType.related_to,
+                confidence=confidence,
+                source_system=source.key,
+                source_id=_bounded_source_id(stable_id, role, str(index)),
+                attributes={"role": role, "planning_record_id": planning.id},
+                evidence=[evidence],
+            ),
+            validate_entities=False,
+        )
+
+
+def _reconcile_planning_permit_links(
+    db: Session,
+    *,
+    planning: PlanningRecord | None = None,
+    planning_entity_id: str | None = None,
+    permit: PermitRecord | None = None,
+    permit_entity_id: str | None = None,
+) -> None:
+    """Link exact official references in either ingestion order using bounded lookups."""
+    if planning is not None:
+        reference = planning.reference_number
+        if not reference or not planning_entity_id or not planning.city or not planning.state:
+            return
+        permits = (
+            active_query(db.query(PermitRecord), PermitRecord)
+            .filter(
+                PermitRecord.is_active.is_(True),
+                func.lower(func.trim(PermitRecord.city)) == planning.city.strip().casefold(),
+                func.lower(func.trim(PermitRecord.state)) == planning.state.strip().casefold(),
+                or_(
+                    PermitRecord.application_number == reference,
+                    PermitRecord.permit_number == reference,
+                ),
+            )
+            .all()
+        )
+        for candidate in permits:
+            if not _same_planning_scope(planning, candidate):
+                continue
+            candidate_entity_id = _record_entity_id(db, "permit", candidate.id)
+            if candidate_entity_id:
+                _create_planning_permit_link(
+                    db,
+                    planning,
+                    planning_entity_id,
+                    candidate,
+                    candidate_entity_id,
+                )
+        return
+
+    if permit is None or not permit_entity_id or not permit.city or not permit.state:
+        return
+    references = tuple(
+        dict.fromkeys(
+            reference
+            for reference in (permit.application_number, permit.permit_number)
+            if reference
+        )
+    )
+    if not references:
+        return
+    planning_records = (
+        active_query(db.query(PlanningRecord), PlanningRecord)
+        .filter(
+            PlanningRecord.reference_number.in_(references),
+            func.lower(func.trim(PlanningRecord.city)) == permit.city.strip().casefold(),
+            func.lower(func.trim(PlanningRecord.state)) == permit.state.strip().casefold(),
+        )
+        .all()
+    )
+    for candidate in planning_records:
+        if not _same_planning_scope(candidate, permit):
+            continue
+        candidate_entity_id = _record_entity_id(db, "planning", candidate.id)
+        if candidate_entity_id:
+            _create_planning_permit_link(
+                db,
+                candidate,
+                candidate_entity_id,
+                permit,
+                permit_entity_id,
+            )
+
+
+def _same_planning_scope(planning: PlanningRecord, permit: PermitRecord) -> bool:
+    return bool(
+        planning.city
+        and permit.city
+        and planning.state
+        and permit.state
+        and planning.city.strip().casefold() == permit.city.strip().casefold()
+        and planning.state.strip().casefold() == permit.state.strip().casefold()
+    )
+
+
+def _record_entity_id(db: Session, record_type: str, record_id: str) -> str | None:
+    link = active_query(db.query(GraphEntityLink), GraphEntityLink).filter(
+        GraphEntityLink.record_type == record_type,
+        GraphEntityLink.record_id == record_id,
+    ).first()
+    return link.entity_id if link else None
+
+
+def _create_planning_permit_link(
+    db: Session,
+    planning: PlanningRecord,
+    planning_entity_id: str,
+    permit: PermitRecord,
+    permit_entity_id: str,
+) -> None:
+    reference = planning.reference_number
+    if not reference:
+        return
+    source = planning.source
+    raw = planning.latest_raw_record
+    source_url = planning.source_url or source.base_url
+    create_relationship(
+        db,
+        GraphRelationshipCreate(
+            source_entity_id=planning_entity_id,
+            target_entity_id=permit_entity_id,
+            relationship_type=GraphRelationshipType.related_to,
+            confidence=planning.confidence,
+            source_system=source.key,
+            source_id=_bounded_source_id(
+                source.key,
+                planning.external_record_id,
+                "canonical_permit_reference",
+                permit.id,
+            ),
+            attributes={
+                "role": "canonical_permit_reference_match",
+                "matched_reference": reference,
+                "planning_record_id": planning.id,
+                "permit_record_id": permit.id,
+            },
+            evidence=[
+                GraphEvidenceCreate(
+                    source_system=source.key,
+                    source_id=raw.id,
+                    source_url=source_url,
+                    evidence_type="planning_permit_reference_match",
+                    excerpt=planning.evidence_excerpt or planning.summary or planning.title,
+                    observed_at=planning.published_at or planning.meeting_at or raw.received_at,
+                    confidence=planning.confidence,
+                    payload={
+                        "raw_record_id": raw.id,
+                        "content_hash": raw.content_hash,
+                        "source_url": source_url,
+                        "reference_number": reference,
+                        "source_updated_at": raw.source_updated_at.isoformat()
+                        if raw.source_updated_at
+                        else None,
+                        "received_at": raw.received_at.isoformat(),
+                    },
+                )
+            ],
+        ),
+        validate_entities=False,
+    )
+
+
 def _expire_parcel_relationships(
     db: Session,
     source: IngestionSource,
@@ -1248,6 +1644,11 @@ def _project_permit_to_graph(
         },
     ))
     link_entity_to_record(db, permit_entity.id, "permit", permit.id, source.key)
+    _reconcile_planning_permit_links(
+        db,
+        permit=permit,
+        permit_entity_id=permit_entity.id,
+    )
     _expire_permit_relationships(db, source, permit)
 
     if not (permit.address or permit.project_name):

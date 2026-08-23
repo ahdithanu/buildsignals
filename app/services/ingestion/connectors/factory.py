@@ -12,22 +12,26 @@ from .base import Connector, RetryingHttpClient
 from .civicplus_newsflash import CivicPlusNewsFlashConnector
 from .ckan import CKANConnector
 from .csv import CSVConnector
+from .html_document_index import HTMLDocumentIndexConnector
 from .json_array import JSONArrayConnector
 from .opendatasoft import OpenDataSoftConnector
+from .planning_documents import PlanningDocumentsConnector
 from .rss import RSSConnector
 from .socrata import SocrataConnector
 
-_FORBIDDEN_REQUEST_HEADERS = frozenset({
-    "connection",
-    "host",
-    "keep-alive",
-    "proxy-authorization",
-    "proxy-connection",
-    "te",
-    "trailer",
-    "transfer-encoding",
-    "upgrade",
-})
+_FORBIDDEN_REQUEST_HEADERS = frozenset(
+    {
+        "connection",
+        "host",
+        "keep-alive",
+        "proxy-authorization",
+        "proxy-connection",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+    }
+)
 
 
 def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector:
@@ -107,12 +111,52 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             query=_mapping(config.get("query")),
             **common,
         )
+    if connector_type == "html_document_index":
+        return HTMLDocumentIndexConnector(
+            _required(config, "endpoint"),
+            href_pattern=_required(config, "href_pattern"),
+            text_pattern=config.get("text_pattern"),
+            index_page_pattern=config.get("index_page_pattern"),
+            allowed_hosts=_string_set(config.get("allowed_hosts"), "allowed_hosts"),
+            document_type_patterns=_string_mapping(
+                config.get("document_type_patterns"), "document_type_patterns"
+            ),
+            max_records=int(config.get("max_records", 1000)),
+            max_pages=int(config.get("max_pages", 1)),
+            headers=_public_headers(config),
+            **common,
+        )
+    if connector_type == "planning_documents":
+        return PlanningDocumentsConnector(
+            _required(config, "endpoint"),
+            href_pattern=_required(config, "href_pattern"),
+            item_pattern=_required(config, "item_pattern"),
+            file_pattern=_required(config, "file_pattern"),
+            value_patterns=_string_mapping(config.get("value_patterns"), "value_patterns"),
+            text_pattern=config.get("text_pattern"),
+            index_page_pattern=config.get("index_page_pattern"),
+            document_type_patterns=_string_mapping(
+                config.get("document_type_patterns"), "document_type_patterns"
+            ),
+            event_types=_string_mapping(config.get("event_types"), "event_types"),
+            stages=_string_mapping(config.get("stages"), "stages"),
+            meeting_name=config.get("meeting_name"),
+            governing_body=config.get("governing_body"),
+            document_allowed_hosts=_string_set(
+                config.get("document_allowed_hosts"), "document_allowed_hosts"
+            ),
+            max_documents=int(config.get("max_documents", 100)),
+            max_index_pages=int(config.get("max_index_pages", 1)),
+            max_document_bytes=int(config.get("max_document_bytes", 10 * 1024 * 1024)),
+            max_items_per_document=int(config.get("max_items_per_document", 250)),
+            max_item_characters=int(config.get("max_item_characters", 100_000)),
+            max_records=int(config.get("max_records", 1000)),
+            headers=_public_headers(config),
+            **common,
+        )
     if connector_type == "csv":
         source = _required(config, "source")
-        if (
-            _is_deployed_environment()
-            and urlparse(source).scheme.lower() not in {"http", "https"}
-        ):
+        if _is_deployed_environment() and urlparse(source).scheme.lower() not in {"http", "https"}:
             raise ValueError("Deployed CSV sources must use HTTPS or HTTP")
         return CSVConnector(
             source,
@@ -142,11 +186,36 @@ def _mapping(value: Any) -> Mapping[str, Any] | None:
 def _string_list(value: Any, key: str) -> list[str] | None:
     if value is None:
         return None
-    if not isinstance(value, list) or not value or any(
-        not isinstance(item, str) or not item.strip() for item in value
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(not isinstance(item, str) or not item.strip() for item in value)
     ):
         raise ValueError(f"Connector '{key}' must be a non-empty list of strings")
     return [item.strip() for item in value]
+
+
+def _string_set(value: Any, key: str) -> frozenset[str] | None:
+    values = _string_list(value, key)
+    return frozenset(values) if values is not None else None
+
+
+def _string_mapping(value: Any, key: str) -> dict[str, str] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping) or not value:
+        raise ValueError(f"Connector '{key}' must be a non-empty string mapping")
+    result: dict[str, str] = {}
+    for field, pattern in value.items():
+        if (
+            not isinstance(field, str)
+            or not field.strip()
+            or not isinstance(pattern, str)
+            or not pattern.strip()
+        ):
+            raise ValueError(f"Connector '{key}' must be a non-empty string mapping")
+        result[field.strip()] = pattern.strip()
+    return result
 
 
 def _secret_from_env(config: Mapping[str, Any], key: str) -> str | None:
@@ -173,7 +242,9 @@ def _secret_headers(config: Mapping[str, Any]) -> dict[str, str]:
             raise ValueError("'header_env' keys and values must be strings")
         value = os.environ.get(env_name)
         if value is None:
-            raise ValueError(f"Required connector secret environment variable is not set: {env_name}")
+            raise ValueError(
+                f"Required connector secret environment variable is not set: {env_name}"
+            )
         _validate_request_header(header, value)
         headers[header] = value
     return headers
@@ -213,9 +284,7 @@ def _production_allowed_hosts() -> frozenset[str] | None:
         return None
     hosts = configured_ingestion_hosts()
     if not hosts:
-        raise ValueError(
-            "INGESTION_ALLOWED_HOSTS must be configured in staging and production"
-        )
+        raise ValueError("INGESTION_ALLOWED_HOSTS must be configured in staging and production")
     return hosts
 
 

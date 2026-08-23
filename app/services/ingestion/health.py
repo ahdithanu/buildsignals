@@ -21,6 +21,7 @@ from app.services.ingestion.normalization import (
     missing_required_source_fields,
     normalize_parcel,
     normalize_permit,
+    normalize_planning_record,
     parse_source_datetime,
     prepare_mapped_record,
 )
@@ -708,22 +709,26 @@ def _validate_canary_records(
                 **dict(settings.get("defaults") or {}),
                 **({"jurisdiction": source.jurisdiction} if source.jurisdiction else {}),
             }
-            normalized = (
-                normalize_parcel(prepared, field_mapping, defaults=defaults)
-                if source.record_type == "parcel"
-                else normalize_permit(prepared, field_mapping, defaults=defaults)
-            )
+            if source.record_type == "parcel":
+                normalized = normalize_parcel(prepared, field_mapping, defaults=defaults)
+            elif source.record_type == "planning":
+                normalized = normalize_planning_record(
+                    prepared, field_mapping, defaults=defaults
+                )
+            else:
+                normalized = normalize_permit(prepared, field_mapping, defaults=defaults)
             valid += 1
             source_record_id = normalized.source_record_id
             if source_record_id in observed_record_ids:
                 duplicate_record_ids.add(source_record_id)
             observed_record_ids.add(source_record_id)
             sample_record_ids.append(source_record_id)
-            stage = (
-                "parcel_snapshot"
-                if source.record_type == "parcel"
-                else normalized.values.get("approval_stage") or "unclassified"
-            )
+            if source.record_type == "parcel":
+                stage = "parcel_snapshot"
+            elif source.record_type == "planning":
+                stage = normalized.values.get("stage") or "planning_unclassified"
+            else:
+                stage = normalized.values.get("approval_stage") or "unclassified"
             stages[stage] = stages.get(stage, 0) + 1
         except Exception as exc:
             if len(errors) < 10:
