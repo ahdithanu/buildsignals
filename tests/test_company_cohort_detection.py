@@ -80,6 +80,7 @@ def _ingest(
     applicant: str = "",
     developer: str = "",
     owner: str = "",
+    stage: str = "pre_approval",
 ) -> dict:
     csv_path = tmp_path / f"{key}.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
@@ -107,7 +108,7 @@ def _ingest(
             {
                 "id": "1",
                 "application_no": "APP-1",
-                "stage": "pre_approval",
+                "stage": stage,
                 "type": "Development application",
                 "status": "Under Review",
                 "project": project,
@@ -165,6 +166,37 @@ def test_major_builder_matches_description_with_residential_context(client, db, 
     match = db.query(PermitBrandMatch).one()
     assert match.matched_field == "description"
     assert match.confidence == 0.92
+
+
+def test_major_builder_keeps_approved_development_signals(client, db, tmp_path):
+    _add_company(db, key="toll_brothers", name="Toll Brothers", cohort="major_builder")
+    _ingest(
+        client,
+        tmp_path,
+        key="approved_builder",
+        project="Toll Brothers at Cedar Ridge",
+        description="Approved single-family residential subdivision",
+        developer="Toll Brothers",
+        stage="approved",
+    )
+
+    match = db.query(PermitBrandMatch).one()
+    assert match.brand.key == "toll_brothers"
+    assert match.permit.approval_stage == "approved"
+
+
+def test_major_builder_rejects_generic_grading_context(client, db, tmp_path):
+    _add_company(db, key="toll_brothers", name="Toll Brothers", cohort="major_builder")
+    _ingest(
+        client,
+        tmp_path,
+        key="builder_generic_grading",
+        project="Commercial grading permit",
+        description="Site development and grading for utility access",
+        owner="Toll Brothers",
+    )
+
+    assert db.query(PermitBrandMatch).count() == 0
 
 
 def test_major_builder_rejects_alias_without_development_context(client, db, tmp_path):

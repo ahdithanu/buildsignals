@@ -1750,6 +1750,10 @@
               }
             ],
             "title": "Scale"
+          },
+          "signal_cohort": {
+            "title": "Signal Cohort",
+            "type": "string"
           }
         },
         "required": [
@@ -1759,7 +1763,8 @@
           "category",
           "scale",
           "priority",
-          "is_active"
+          "is_active",
+          "signal_cohort"
         ],
         "title": "BrandProfileResponse",
         "type": "object"
@@ -10992,13 +10997,6 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -12160,6 +12158,17 @@
               "minimum": 7,
               "title": "Days",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cohort",
+            "required": false,
+            "schema": {
+              "default": "national_retail",
+              "pattern": "^(national_retail|major_builder)$",
+              "title": "Cohort",
+              "type": "string"
             }
           },
           {
@@ -17606,6 +17615,23 @@
                 }
               ],
               "title": "Brand Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cohort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(national_retail|major_builder)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cohort"
             }
           },
           {

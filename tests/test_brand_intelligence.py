@@ -237,6 +237,15 @@ def test_brand_expansion_ranks_active_signals_by_stage_and_market(client, db, tm
         _write_filing(csv_path)
         _ingest(client, csv_path, key=key)
 
+    builder_path = tmp_path / "toll_brothers.csv"
+    _write_filing(
+        builder_path,
+        project="Toll Brothers residential subdivision",
+        description="Site development for a new single-family subdivision",
+        applicant="Toll Brothers",
+    )
+    _ingest(client, builder_path, key="toll_brothers_builder")
+
     approved = db.query(PermitRecord).filter(
         PermitRecord.source.has(key="starbucks_approved")
     ).one()
@@ -256,6 +265,7 @@ def test_brand_expansion_ranks_active_signals_by_stage_and_market(client, db, tm
     assert starbucks["approved_count"] == 1
     assert starbucks["market_count"] == 1
     assert starbucks["parcel_candidate_count"] == 0
+    assert starbucks["brand"]["signal_cohort"] == "national_retail"
     assert starbucks["markets"] == [
         {
             "city": "Austin",
@@ -270,6 +280,24 @@ def test_brand_expansion_ranks_active_signals_by_stage_and_market(client, db, tm
     filtered = client.get(f"/permit-brand-matches?brand_id={starbucks['brand']['id']}")
     assert filtered.status_code == 200, filtered.text
     assert {row["brand"]["key"] for row in filtered.json()} == {"starbucks"}
+
+    builder_response = client.get(
+        "/brand-expansion?days=365&limit=10&cohort=major_builder"
+    )
+    assert builder_response.status_code == 200, builder_response.text
+    assert [row["brand"]["key"] for row in builder_response.json()] == [
+        "toll_brothers"
+    ]
+    assert builder_response.json()[0]["pre_approval_count"] == 1
+
+    builder_matches = client.get("/permit-brand-matches?cohort=major_builder")
+    assert builder_matches.status_code == 200, builder_matches.text
+    assert [row["brand"]["key"] for row in builder_matches.json()] == [
+        "toll_brothers"
+    ]
+
+    invalid_response = client.get("/brand-expansion?cohort=technology")
+    assert invalid_response.status_code == 422
 
 
 def test_applicant_company_alias_is_high_confidence_direct_evidence(client, db, tmp_path):

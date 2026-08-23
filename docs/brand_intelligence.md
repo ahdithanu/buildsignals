@@ -19,8 +19,8 @@ The cohort adds:
 - `national_retail`, `retail_expansion`, and the existing category in
   `attributes.watchlist_tags`
 
-Technology and data-center entries remain in their existing cohorts and are not
-reclassified as retail.
+Technology and data-center entries are explicitly tagged `data_center` and are not
+mixed into the retail or builder views.
 
 ## Major builders
 

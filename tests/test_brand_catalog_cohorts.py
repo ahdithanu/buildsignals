@@ -69,6 +69,17 @@ def test_commercial_cohorts_are_bounded_and_tagged():
     )
 
 
+def test_every_catalog_entry_has_an_explicit_signal_cohort():
+    catalog = load_brand_catalog()
+
+    assert all(entry.attributes.get("signal_cohort") for entry in catalog)
+    assert {entry.attributes["signal_cohort"] for entry in catalog} == {
+        "national_retail",
+        "major_builder",
+        "data_center",
+    }
+
+
 def test_catalog_aliases_are_unique_after_normalization():
     aliases = [
         _normalize_alias(alias.alias) for entry in load_brand_catalog() for alias in entry.aliases

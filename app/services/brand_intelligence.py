@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dateutil import parser as date_parser
 from pydantic import TypeAdapter
-from sqlalchemy import case, func
+from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.brand import BrandAlias, BrandPartyFingerprint, BrandProfile, PermitBrandMatch
@@ -108,15 +108,13 @@ MAJOR_BUILDER_CONTEXT_TERMS = (
     "single family",
     "townhome",
     "townhomes",
-    "multifamily",
-    "multi-family",
     "model home",
     "master-planned",
     "master planned",
     "residential lots",
     "residential lot",
-    "grading",
-    "site development",
+    "residential development",
+    "residential subdivision",
     "homebuilder",
     "home builder",
 )
@@ -264,10 +262,13 @@ def detect_permit_brands(
     raw: RawSourceRecord,
 ) -> list[PermitBrandMatch]:
     opening_signal = _is_future_retailer_opening_signal(permit, raw)
-    if permit.approval_stage != "pre_approval" and not opening_signal:
+    if permit.approval_stage not in {"pre_approval", "approved"}:
         return []
     normalized_status = _normalize_text(permit.status or "")
-    if any(_contains(normalized_status, term) for term in TERMINAL_PREAPPROVAL_STATUS_TERMS):
+    if permit.approval_stage == "pre_approval" and any(
+        _contains(normalized_status, term)
+        for term in TERMINAL_PREAPPROVAL_STATUS_TERMS
+    ):
         return []
     if not permit.address and not (
         permit.parcel_id and permit.city and permit.state
@@ -315,10 +316,12 @@ def detect_permit_brands(
     for alias in aliases:
         cohort = _signal_cohort(alias.brand)
         if cohort == NATIONAL_RETAIL_COHORT:
-            if not has_retail_context:
+            if not has_retail_context or (
+                permit.approval_stage == "approved" and not opening_signal
+            ):
                 continue
         elif cohort == MAJOR_BUILDER_COHORT:
-            if permit.approval_stage != "pre_approval" or not has_builder_context:
+            if not has_builder_context:
                 continue
         else:
             continue
@@ -467,6 +470,17 @@ def _signal_cohort(brand: BrandProfile) -> str:
     attributes = brand.attributes if isinstance(brand.attributes, dict) else {}
     cohort = attributes.get("signal_cohort", NATIONAL_RETAIL_COHORT)
     return cohort if isinstance(cohort, str) else NATIONAL_RETAIL_COHORT
+
+
+def _brand_cohort_filter(signal_cohort: str):
+    cohort_value = BrandProfile.attributes["signal_cohort"].as_string()
+    if signal_cohort == NATIONAL_RETAIL_COHORT:
+        return or_(
+            BrandProfile.attributes.is_(None),
+            cohort_value.is_(None),
+            cohort_value == NATIONAL_RETAIL_COHORT,
+        )
+    return cohort_value == signal_cohort
 
 
 def _historical_party_detections(
@@ -658,6 +672,7 @@ def list_brand_matches(
     db: Session,
     *,
     brand_id: str | None = None,
+    signal_cohort: str | None = None,
     review_status: str | None = None,
     approval_stage: str | None = None,
     detection_method: str | None = None,
@@ -673,6 +688,10 @@ def list_brand_matches(
     )
     if brand_id:
         query = query.filter(PermitBrandMatch.brand_id == brand_id)
+    if signal_cohort:
+        query = query.join(
+            BrandProfile, BrandProfile.id == PermitBrandMatch.brand_id
+        ).filter(_brand_cohort_filter(signal_cohort))
     if review_status:
         query = query.filter(PermitBrandMatch.review_status == review_status)
     if approval_stage:
@@ -734,6 +753,7 @@ def list_brand_expansion_summaries(
     db: Session,
     *,
     days: int = 180,
+    signal_cohort: str = NATIONAL_RETAIL_COHORT,
     limit: int = 25,
 ) -> list[BrandExpansionSummaryResponse]:
     """Rank active brands by recent, evidence-backed permit activity."""
@@ -751,6 +771,7 @@ def list_brand_expansion_summaries(
         PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
         PermitRecord.is_active.is_(True),
         PermitRecord.approval_stage.in_(("pre_approval", "approved")),
+        _brand_cohort_filter(signal_cohort),
         activity_at >= cutoff,
     ).with_entities(
         BrandProfile,

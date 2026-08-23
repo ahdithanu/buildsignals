@@ -171,7 +171,7 @@ export default function BrandExpansion() {
                   </div>
 
                   <div className="flex gap-2 lg:flex-col">
-                    <Link to={`/permit-review?status=all&brand_id=${row.brand.id}`} className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 border border-foreground px-2 text-[10px] font-semibold hover:bg-secondary">
+                    <Link to={`/permit-review?status=all&cohort=${cohort}&brand_id=${row.brand.id}`} className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 border border-foreground px-2 text-[10px] font-semibold hover:bg-secondary">
                       <Radar className="h-3.5 w-3.5" /> Signals <ArrowRight className="h-3 w-3" />
                     </Link>
                     <Link to="/map" className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 bg-foreground px-2 text-[10px] font-semibold text-background">

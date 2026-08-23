@@ -21,6 +21,7 @@ import type {
   BrandMatchFreshness,
   BrandMatchApprovalStage,
   BrandMatchReviewStatus,
+  BrandSignalCohort,
   PermitBrandMatchListParams,
 } from '@/types/brand';
 
@@ -70,6 +71,10 @@ function parseFreshnessFilter(value: string | null): FreshnessFilter {
     : 'all';
 }
 
+function parseCohortFilter(value: string | null): BrandSignalCohort | undefined {
+  return value === 'national_retail' || value === 'major_builder' ? value : undefined;
+}
+
 function LinkCard({ href, label, value }: { href: string; label: string; value: number }) {
   return (
     <Link
@@ -93,6 +98,7 @@ export default function PermitBrandReview() {
   const { toast } = useToast();
   const { role } = useAuth();
   const canReview = role === 'admin' || role === 'editor';
+  const cohort = parseCohortFilter(searchParams.get('cohort'));
 
   useEffect(() => {
     setStatus(parseStatusFilter(searchParams.get('status')));
@@ -104,13 +110,14 @@ export default function PermitBrandReview() {
 
   const params = useMemo<PermitBrandMatchListParams>(() => ({
     brand_id: searchParams.get('brand_id') || undefined,
+    cohort,
     review_status: status === 'all' ? undefined : status,
     approval_stage: stage === 'all' ? undefined : stage,
     detection_method: method === 'all' ? undefined : method,
     freshness: freshness === 'all' ? undefined : freshness,
     sort_by: 'freshness',
     limit,
-  }), [searchParams, status, stage, method, freshness, limit]);
+  }), [searchParams, cohort, status, stage, method, freshness, limit]);
 
   const { data, isLoading, isFetching, error, refetch, review, createOpportunity } = usePermitBrandMatchQueue(params);
   const matches = data ?? [];
@@ -121,13 +128,15 @@ export default function PermitBrandReview() {
   const highConfidenceCount = matches.filter((match) => match.confidence >= 0.9).length;
   const stealthCount = matches.filter((match) => match.detection_method === 'historical_party').length;
 
-  const queueHref = (nextStage: StageFilter) => {
+  const queueHref = (nextStage: StageFilter, nextMethod: MethodFilter = method) => {
     const params = new URLSearchParams();
     const brandId = searchParams.get('brand_id');
     if (brandId) params.set('brand_id', brandId);
+    const cohort = parseCohortFilter(searchParams.get('cohort'));
+    if (cohort) params.set('cohort', cohort);
     params.set('status', status === 'all' ? 'candidate' : status);
     params.set('stage', nextStage);
-    if (method !== 'all') params.set('detection_method', method);
+    if (nextMethod !== 'all') params.set('detection_method', nextMethod);
     if (freshness !== 'all') params.set('freshness', freshness);
     params.set('limit', String(limit));
     return `/permit-review?${params.toString()}`;
@@ -142,6 +151,8 @@ export default function PermitBrandReview() {
     const params = new URLSearchParams();
     const brandId = searchParams.get('brand_id');
     if (brandId) params.set('brand_id', brandId);
+    const cohort = parseCohortFilter(searchParams.get('cohort'));
+    if (cohort) params.set('cohort', cohort);
     if (nextStatus !== 'candidate') params.set('status', nextStatus);
     if (nextStage !== 'all') params.set('stage', nextStage);
     if (nextMethod !== 'all') params.set('detection_method', nextMethod);
@@ -206,11 +217,13 @@ export default function PermitBrandReview() {
             <div className="flex items-center gap-2">
               <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold font-display text-foreground md:text-xl">
-                Permit Brand Review
+                {cohort === 'major_builder' ? 'Major Builder Review' : 'Permit Brand Review'}
               </h2>
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Validate retailer matches and approved-opening signals detected in municipal permit filings
+              {cohort === 'major_builder'
+                ? 'Validate major-builder development signals detected in municipal permit filings'
+                : 'Validate retailer matches and approved-opening signals detected in municipal permit filings'}
             </p>
           </div>
           <Button
@@ -332,7 +345,7 @@ export default function PermitBrandReview() {
             <LinkCard href={queueHref('pre_approval')} label="Matches shown" value={matches.length} />
             <LinkCard href={queueHref('pre_approval')} label="Pre-approval" value={preApprovalCount} />
             <LinkCard href={queueHref('approved')} label="Approved" value={approvedCount} />
-            <LinkCard href="/permit-review?detection_method=historical_party" label="Stealth inferred" value={stealthCount} />
+            <LinkCard href={queueHref(stage, 'historical_party')} label="Stealth inferred" value={stealthCount} />
             <LinkCard href={queueHref(stage === 'all' ? 'pre_approval' : stage)} label="90%+ confidence" value={highConfidenceCount} />
           </div>
         )}

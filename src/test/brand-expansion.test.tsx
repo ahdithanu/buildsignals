@@ -63,7 +63,7 @@ describe('<BrandExpansion>', () => {
     expect(screen.getByText('Tampa, FL · 3')).toBeInTheDocument();
     expect(screen.getByText('Parcel candidates are not verified listings')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /signals/i })).toHaveAttribute(
-      'href', '/permit-review?status=all&brand_id=brand-1',
+      'href', '/permit-review?status=all&cohort=national_retail&brand_id=brand-1',
     );
     expect(screen.getByRole('link', { name: /parcel map/i })).toHaveAttribute('href', '/map');
   });

@@ -9,6 +9,7 @@ import type { NearbyParcelSearchSummary } from './parcel';
 
 export interface PermitBrandMatchListParams {
   brand_id?: string;
+  cohort?: BrandSignalCohort;
   review_status?: BrandMatchReviewStatus;
   approval_stage?: BrandMatchApprovalStage;
   detection_method?: BrandDetectionMethod;
