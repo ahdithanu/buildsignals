@@ -2,6 +2,7 @@ export type BrandMatchReviewStatus = 'candidate' | 'confirmed' | 'dismissed' | '
 export type BrandMatchApprovalStage = 'pre_approval' | 'approved';
 export type BrandDetectionMethod = 'direct_alias' | 'historical_party';
 export type BrandMatchFreshness = 'fresh' | 'active' | 'aging' | 'stale';
+export type BrandSignalCohort = 'national_retail' | 'major_builder';
 
 import type { Deal } from './deal';
 import type { NearbyParcelSearchSummary } from './parcel';
@@ -24,6 +25,7 @@ export interface BrandProfile {
   scale?: string | null;
   priority: number;
   is_active: boolean;
+  signal_cohort?: BrandSignalCohort;
 }
 
 export interface BrandExpansionMarket {
