@@ -704,6 +704,10 @@ and issued stages. Canonical identity uses the layer's source UUID while
 python -m app.services.ingestion.cli catalog sync --organization <id-or-slug> --dry-run
 python -m app.services.ingestion.cli catalog sync --organization <id-or-slug>
 python -m app.services.ingestion.cli brands sync --organization <id-or-slug>
+python -m app.services.ingestion.cli brands backfill --organization <id-or-slug> \
+  --dry-run --max-records 1000
+python -m app.services.ingestion.cli brands backfill --organization <id-or-slug> \
+  --batch-size 500
 python -m app.services.ingestion.cli canary --organization <id-or-slug> \
   --source-key austin_tx_site_plan_cases --sample-size 10
 python -m app.services.ingestion.cli canary --organization <id-or-slug> \

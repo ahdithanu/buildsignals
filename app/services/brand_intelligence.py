@@ -172,6 +172,16 @@ class BrandCatalogSyncResult:
 
 
 @dataclass(frozen=True)
+class BrandMatchBackfillBatchResult:
+    scanned: int
+    matches_created: int
+    matches_refreshed: int
+    matches_retracted: int
+    next_cursor: str | None
+    has_more: bool
+
+
+@dataclass(frozen=True)
 class Detection:
     brand: BrandProfile
     alias: BrandAlias | None
@@ -260,6 +270,9 @@ def detect_permit_brands(
     db: Session,
     permit: PermitRecord,
     raw: RawSourceRecord,
+    *,
+    aliases: list[BrandAlias] | None = None,
+    applicant_semantics: str | None = None,
 ) -> list[PermitBrandMatch]:
     opening_signal = _is_future_retailer_opening_signal(permit, raw)
     if permit.approval_stage not in {"pre_approval", "approved"}:
@@ -275,13 +288,12 @@ def detect_permit_brands(
     ):
         return []
 
-    aliases = active_query(db.query(BrandAlias), BrandAlias).options(
-        joinedload(BrandAlias.brand)
-    ).join(BrandProfile).filter(
-        BrandAlias.is_active.is_(True),
-        BrandProfile.is_active.is_(True),
-    ).all()
-    applicant_semantics = _applicant_value_semantics(db, permit)
+    aliases = aliases if aliases is not None else _active_brand_aliases(db)
+    applicant_semantics = (
+        applicant_semantics
+        if applicant_semantics is not None
+        else _applicant_value_semantics(db, permit)
+    )
     retail_field_confidence = dict(FIELD_CONFIDENCE)
     retail_field_confidence["applicant_name"] = APPLICANT_SEMANTIC_CONFIDENCE[
         applicant_semantics
@@ -434,6 +446,105 @@ def detect_permit_brands(
         match.last_seen_at = now
     db.flush()
     return matches
+
+
+def backfill_brand_matches_batch(
+    db: Session,
+    *,
+    after_id: str | None = None,
+    batch_size: int = 500,
+) -> BrandMatchBackfillBatchResult:
+    """Replay current permit records through company detection in a resumable batch."""
+    if batch_size < 1 or batch_size > 5_000:
+        raise ValueError("batch_size must be between 1 and 5000")
+
+    query = active_query(db.query(PermitRecord), PermitRecord).options(
+        joinedload(PermitRecord.latest_raw_record),
+        joinedload(PermitRecord.source),
+    ).filter(
+        PermitRecord.is_active.is_(True),
+        PermitRecord.approval_stage.in_(("pre_approval", "approved")),
+    )
+    if after_id:
+        query = query.filter(PermitRecord.id > after_id)
+    rows = query.order_by(PermitRecord.id).limit(batch_size + 1).all()
+    permits = rows[:batch_size]
+    if not permits:
+        return BrandMatchBackfillBatchResult(0, 0, 0, 0, after_id, False)
+
+    aliases = _active_brand_aliases(db)
+    semantics_by_source = _applicant_semantics_by_source(
+        db, {permit.source_id for permit in permits}
+    )
+    created = refreshed = retracted = 0
+    for permit in permits:
+        existing = active_query(db.query(PermitBrandMatch), PermitBrandMatch).filter(
+            PermitBrandMatch.permit_id == permit.id
+        ).all()
+        previous_status = {match.id: match.review_status for match in existing}
+        detected = detect_permit_brands(
+            db,
+            permit,
+            permit.latest_raw_record,
+            aliases=aliases,
+            applicant_semantics=semantics_by_source.get(permit.source_id, "unknown"),
+        )
+        detected_ids = {match.id for match in detected}
+        created += sum(match_id not in previous_status for match_id in detected_ids)
+        refreshed += sum(match_id in previous_status for match_id in detected_ids)
+        retracted += sum(
+            previous_status.get(match.id) == "candidate"
+            and match.review_status == "retracted"
+            for match in existing
+        )
+        if detected or any(
+            previous_status.get(match.id) == "candidate"
+            and match.review_status == "retracted"
+            for match in existing
+        ):
+            from app.services.ingestion.service import project_permit_to_graph
+
+            project_permit_to_graph(db, permit)
+
+    db.flush()
+    return BrandMatchBackfillBatchResult(
+        scanned=len(permits),
+        matches_created=created,
+        matches_refreshed=refreshed,
+        matches_retracted=retracted,
+        next_cursor=permits[-1].id,
+        has_more=len(rows) > batch_size,
+    )
+
+
+def _active_brand_aliases(db: Session) -> list[BrandAlias]:
+    return active_query(db.query(BrandAlias), BrandAlias).options(
+        joinedload(BrandAlias.brand)
+    ).join(BrandProfile).filter(
+        BrandAlias.is_active.is_(True),
+        BrandProfile.is_active.is_(True),
+    ).all()
+
+
+def _applicant_semantics_by_source(
+    db: Session, source_ids: set[str]
+) -> dict[str, str]:
+    if not source_ids:
+        return {}
+    grouped: dict[str, set[str]] = {}
+    rows = active_query(
+        db.query(SourceFieldMapping), SourceFieldMapping
+    ).filter(
+        SourceFieldMapping.source_id.in_(source_ids),
+        SourceFieldMapping.canonical_field == "applicant_name",
+        SourceFieldMapping.is_active.is_(True),
+    ).all()
+    for mapping in rows:
+        grouped.setdefault(mapping.source_id, set()).add(mapping.value_semantics)
+    return {
+        source_id: next(iter(values)) if len(values) == 1 else "unknown"
+        for source_id, values in grouped.items()
+    }
 
 
 def _applicant_value_semantics(db: Session, permit: PermitRecord) -> str:

@@ -114,6 +114,64 @@ def test_source_request_parser_defaults_to_markdown():
     assert args.output is None
 
 
+def test_brand_backfill_parser_defaults_to_resumable_batch():
+    args = build_parser().parse_args([
+        "brands",
+        "backfill",
+        "--organization",
+        "default-org",
+    ])
+
+    assert args.command == "brands"
+    assert args.brand_command == "backfill"
+    assert args.organization == "default-org"
+    assert args.batch_size == 500
+    assert args.max_records is None
+    assert args.after_id is None
+    assert args.dry_run is False
+
+
+def test_brand_backfill_parser_accepts_resume_and_run_bounds():
+    args = build_parser().parse_args([
+        "brands",
+        "backfill",
+        "--organization",
+        "default-org",
+        "--batch-size",
+        "250",
+        "--max-records",
+        "1000",
+        "--after-id",
+        "permit-cursor",
+        "--dry-run",
+    ])
+
+    assert args.batch_size == 250
+    assert args.max_records == 1000
+    assert args.after_id == "permit-cursor"
+    assert args.dry_run is True
+
+
+@pytest.mark.parametrize(
+    ("flag", "value"),
+    [
+        ("--batch-size", "0"),
+        ("--batch-size", "5001"),
+        ("--max-records", "0"),
+    ],
+)
+def test_brand_backfill_parser_rejects_invalid_bounds(flag, value):
+    with pytest.raises(SystemExit):
+        build_parser().parse_args([
+            "brands",
+            "backfill",
+            "--organization",
+            "default-org",
+            flag,
+            value,
+        ])
+
+
 def test_source_request_writes_json_without_database(monkeypatch, tmp_path):
     candidate = _retry_candidate().model_copy(
         update={"status": "technical_hold", "probe_settings": None}

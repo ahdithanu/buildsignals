@@ -1706,6 +1706,7 @@ def _project_permit_to_graph(
     ).all()
     for match in brand_matches:
         brand = match.brand
+        signal_cohort = brand.signal_cohort
         company, _ = resolve_entity(db, GraphEntityCreate(
             entity_type=GraphEntityType.company,
             display_name=brand.name,
@@ -1713,7 +1714,11 @@ def _project_permit_to_graph(
             source_id=brand.key,
             confidence=match.confidence,
             aliases=[alias.alias for alias in brand.aliases if alias.is_active],
-            attributes={"category": brand.category, "scale": brand.scale},
+            attributes={
+                "category": brand.category,
+                "scale": brand.scale,
+                "signal_cohort": signal_cohort,
+            },
         ))
         _relate(
             db,
@@ -1723,14 +1728,20 @@ def _project_permit_to_graph(
             property_entity.id,
             company.id,
             GraphRelationshipType.related_to,
-            f"prospective_retailer:{brand.key}",
+            f"prospective_company:{brand.key}",
             confidence=match.confidence,
             excerpt=match.excerpt,
             attributes={
                 "brand_match_id": match.id,
                 "review_status": match.review_status,
+                "signal_cohort": signal_cohort,
             },
         )
+
+
+def project_permit_to_graph(db: Session, permit: PermitRecord) -> None:
+    """Reconcile one canonical permit and its active company matches into the graph."""
+    _project_permit_to_graph(db, permit.source, permit, permit.latest_raw_record)
 
 
 def _relate(
@@ -1836,9 +1847,13 @@ def _expire_permit_relationships(
         _bounded_source_id(
             source.key,
             permit.external_record_id,
-            f"prospective_retailer:{match.brand.key}",
+            role,
         )
         for match in brand_matches
+        for role in (
+            f"prospective_retailer:{match.brand.key}",
+            f"prospective_company:{match.brand.key}",
+        )
     )
     now = utcnow()
     relationships = active_query(db.query(GraphRelationship), GraphRelationship).filter(
