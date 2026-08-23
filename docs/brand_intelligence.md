@@ -57,3 +57,23 @@ add candidates, replay them against historical records, measure false positives,
 then promote only aliases that meet the review threshold. Cohort metadata enables
 ranking and filtering without hardcoding company-specific behavior into ingestion,
 detection, APIs, or the frontend.
+
+## Historical backfill
+
+New source runs apply company detection automatically. After deploying catalog or
+detection changes, replay existing active permits in bounded batches:
+
+```bash
+python -m app.services.ingestion.cli brands backfill \
+  --organization <id-or-slug> \
+  --batch-size 500
+```
+
+Use `--dry-run --max-records 1000` for a production sample before writing. The
+summary prints a `next_cursor`; pass it back with `--after-id` to resume a capped or
+interrupted run. Each completed batch commits independently, and detection remains
+idempotent for permits that already have matches.
+
+Scheduled ingestion synchronizes the company catalog before collecting records, so
+new filings always use the deployed cohort definitions. Historical replay remains an
+explicit operator action because its scope and write volume should be reviewed.

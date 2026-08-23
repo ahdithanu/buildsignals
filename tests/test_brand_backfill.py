@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.models.brand import BrandProfile, PermitBrandMatch
+from app.models.graph import GraphRelationship
 from app.models.ingestion import IngestionRun, IngestionSource, PermitRecord, RawSourceRecord
 from app.services.brand_intelligence import (
     backfill_brand_matches_batch,
@@ -89,6 +90,11 @@ def test_backfill_detects_brands_in_existing_permits(db):
     assert result.has_more is False
     assert match.brand.key == "starbucks"
     assert match.permit_id == permits[0].id
+    relationship = db.query(GraphRelationship).filter(
+        GraphRelationship.attributes["brand_match_id"].as_string() == match.id
+    ).one()
+    assert relationship.is_current is True
+    assert relationship.attributes["signal_cohort"] == "national_retail"
 
 
 def test_backfill_is_idempotent_and_refreshes_existing_match(db):

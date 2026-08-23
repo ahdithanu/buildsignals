@@ -14,7 +14,11 @@ from app.config import ENVIRONMENT
 from app.db import SessionLocal
 from app.models.ingestion import IngestionSource
 from app.models.organization import Organization
-from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
+from app.services.brand_intelligence import (
+    backfill_brand_matches_batch,
+    load_brand_catalog,
+    sync_brand_catalog,
+)
 from app.services.ingestion.catalog import (
     load_candidate_catalog,
     load_catalog,
@@ -56,6 +60,20 @@ from app.utils.org_scope import (
     reset_current_context,
     set_current_context,
 )
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("value must be greater than zero")
+    return parsed
+
+
+def _brand_batch_size(value: str) -> int:
+    parsed = _positive_int(value)
+    if parsed > 5_000:
+        raise argparse.ArgumentTypeError("batch size cannot exceed 5000")
+    return parsed
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -153,12 +171,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     source_request.add_argument("--output", type=Path)
 
-    brands = subcommands.add_parser("brands", help="Manage the retailer brand catalog")
+    brands = subcommands.add_parser("brands", help="Manage company intelligence")
     brand_commands = brands.add_subparsers(dest="brand_command", required=True)
     brand_sync = brand_commands.add_parser("sync", help="Synchronize retailer brands")
     brand_sync.add_argument("--organization", required=True, help="Organization ID or slug")
     brand_sync.add_argument("--path", type=Path, help="Alternative brand catalog JSON file")
     brand_sync.add_argument("--dry-run", action="store_true")
+    brand_backfill = brand_commands.add_parser(
+        "backfill", help="Replay existing permits through company detection"
+    )
+    brand_backfill.add_argument("--organization", required=True, help="Organization ID or slug")
+    brand_backfill.add_argument(
+        "--batch-size", type=_brand_batch_size, default=500, metavar="1..5000"
+    )
+    brand_backfill.add_argument("--max-records", type=_positive_int)
+    brand_backfill.add_argument("--after-id", help="Resume after this permit ID")
+    brand_backfill.add_argument("--dry-run", action="store_true")
 
     run = subcommands.add_parser("run", help="Run one catalog source")
     run.add_argument("--organization", required=True, help="Organization ID or slug")
@@ -729,7 +757,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 0
 
-        if args.command == "brands":
+        if args.command == "brands" and args.brand_command == "sync":
             result = sync_brand_catalog(
                 db, load_brand_catalog(args.path), dry_run=args.dry_run
             )
@@ -740,6 +768,50 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"brand sync: created={result.created} updated={result.updated} "
                 f"unchanged={result.unchanged} dry_run={args.dry_run}"
+            )
+            return 0
+
+        if args.command == "brands" and args.brand_command == "backfill":
+            catalog_result = sync_brand_catalog(db, load_brand_catalog())
+            if not args.dry_run:
+                db.commit()
+
+            cursor = args.after_id
+            scanned = created = refreshed = retracted = 0
+            while args.max_records is None or scanned < args.max_records:
+                remaining = (
+                    args.batch_size
+                    if args.max_records is None
+                    else min(args.batch_size, args.max_records - scanned)
+                )
+                savepoint = db.begin_nested() if args.dry_run else None
+                batch = backfill_brand_matches_batch(
+                    db, after_id=cursor, batch_size=remaining
+                )
+                scanned += batch.scanned
+                created += batch.matches_created
+                refreshed += batch.matches_refreshed
+                retracted += batch.matches_retracted
+                cursor = batch.next_cursor
+                if savepoint is not None:
+                    savepoint.rollback()
+                else:
+                    db.commit()
+                print(
+                    f"brand backfill batch: scanned={batch.scanned} "
+                    f"created={batch.matches_created} refreshed={batch.matches_refreshed} "
+                    f"retracted={batch.matches_retracted} cursor={cursor}"
+                )
+                if batch.scanned == 0 or not batch.has_more:
+                    break
+
+            if args.dry_run:
+                db.rollback()
+            print(
+                f"brand backfill complete: catalog_created={catalog_result.created} "
+                f"catalog_updated={catalog_result.updated} scanned={scanned} "
+                f"created={created} refreshed={refreshed} retracted={retracted} "
+                f"next_cursor={cursor} dry_run={args.dry_run}"
             )
             return 0
 
@@ -813,10 +885,16 @@ def main(argv: list[str] | None = None) -> int:
             ]
             _enforce_catalog_host_policy(scoped_catalog_entries)
             sync_result = sync_catalog(db, scoped_catalog_entries)
+            brand_sync_result = sync_brand_catalog(db, load_brand_catalog())
             db.commit()
             print(
                 f"catalog sync: created={sync_result.created} updated={sync_result.updated} "
                 f"unchanged={sync_result.unchanged}"
+            )
+            print(
+                f"brand sync: created={brand_sync_result.created} "
+                f"updated={brand_sync_result.updated} "
+                f"unchanged={brand_sync_result.unchanged}"
             )
             selected = _select_sources(db, source_keys=args.source_keys)
             run_failed = _run_sources(
@@ -875,6 +953,9 @@ def main(argv: list[str] | None = None) -> int:
             sync_result = sync_catalog(
                 db, scoped_catalog_entries, dry_run=args.plan_only
             )
+            brand_sync_result = sync_brand_catalog(
+                db, load_brand_catalog(), dry_run=args.plan_only
+            )
             if args.plan_only:
                 db.rollback()
             else:
@@ -882,6 +963,11 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"catalog sync: created={sync_result.created} updated={sync_result.updated} "
                 f"unchanged={sync_result.unchanged} dry_run={args.plan_only}"
+            )
+            print(
+                f"brand sync: created={brand_sync_result.created} "
+                f"updated={brand_sync_result.updated} "
+                f"unchanged={brand_sync_result.unchanged} dry_run={args.plan_only}"
             )
             policies_by_key = {
                 entry.key: source_schedule_policy(entry) for entry in catalog_entries
