@@ -38,6 +38,7 @@ class BrandProfileResponse(BaseModel):
     scale: Optional[str]
     priority: int
     is_active: bool
+    signal_cohort: str
 
 
 class BrandExpansionMarketResponse(BaseModel):

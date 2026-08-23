@@ -94,7 +94,7 @@ describe("<PermitBrandReview>", () => {
     expect(screen.getAllByText("1")).toHaveLength(3);
     expect(screen.getByRole("link", { name: /Stealth inferred 1/i })).toHaveAttribute(
       "href",
-      "/permit-review?detection_method=historical_party",
+      "/permit-review?status=candidate&stage=all&detection_method=historical_party&limit=100",
     );
     expect(screen.getByRole("link", { name: /Pre-approval 1/i })).toHaveAttribute(
       "href",
@@ -131,6 +131,28 @@ describe("<PermitBrandReview>", () => {
       sort_by: "freshness",
       limit: 100,
     });
+  });
+
+  it("honors the major builder cohort when opening its review queue", () => {
+    (usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      isFetching: false,
+      refetch: vi.fn(),
+      review: { isPending: false, mutate: vi.fn(), variables: undefined },
+      createOpportunity: { isPending: false, mutate: vi.fn(), variables: undefined },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/permit-review?cohort=major_builder"]}>
+        <PermitBrandReview />
+      </MemoryRouter>,
+    );
+
+    const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
+    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({ cohort: "major_builder" });
+    expect(screen.getByRole("heading", { name: "Major Builder Review" })).toBeInTheDocument();
   });
 
   it("honors the freshness filter and requests freshness ranking", () => {

@@ -59,6 +59,12 @@ class BrandProfile(OrgMixin, Base):
         "BrandPartyFingerprint", back_populates="brand", cascade="all, delete-orphan"
     )
 
+    @property
+    def signal_cohort(self) -> str:
+        attributes = self.attributes or {}
+        value = attributes.get("signal_cohort")
+        return value if isinstance(value, str) else "national_retail"
+
 
 class BrandAlias(OrgMixin, Base):
     """A matchable brand spelling with optional anti-ambiguity context."""

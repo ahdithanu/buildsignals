@@ -42,15 +42,23 @@ def get_brands(db: Session = Depends(get_db)):
 @router.get("/brand-expansion", response_model=list[BrandExpansionSummaryResponse])
 def get_brand_expansion(
     days: int = Query(default=180, ge=7, le=730),
+    cohort: str = Query(
+        default="national_retail", pattern=r"^(national_retail|major_builder)$"
+    ),
     limit: int = Query(default=25, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    return list_brand_expansion_summaries(db, days=days, limit=limit)
+    return list_brand_expansion_summaries(
+        db, days=days, signal_cohort=cohort, limit=limit
+    )
 
 
 @router.get("/permit-brand-matches", response_model=list[PermitBrandMatchResponse])
 def get_permit_brand_matches(
     brand_id: str | None = Query(default=None, min_length=1, max_length=36),
+    cohort: str | None = Query(
+        default=None, pattern=r"^(national_retail|major_builder)$"
+    ),
     review_status: str | None = Query(
         default=None, pattern=r"^(candidate|confirmed|dismissed|retracted)$"
     ),
@@ -70,6 +78,7 @@ def get_permit_brand_matches(
     return list_brand_matches(
         db,
         brand_id=brand_id,
+        signal_cohort=cohort,
         review_status=review_status,
         approval_stage=approval_stage,
         detection_method=detection_method,

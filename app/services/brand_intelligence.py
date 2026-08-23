@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dateutil import parser as date_parser
 from pydantic import TypeAdapter
-from sqlalchemy import case, func
+from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.brand import BrandAlias, BrandPartyFingerprint, BrandProfile, PermitBrandMatch
@@ -57,6 +57,13 @@ FIELD_CONFIDENCE = {
     "proposed_use": 0.85,
     "occupancy_type": 0.80,
 }
+MAJOR_BUILDER_FIELD_CONFIDENCE = {
+    "project_name": 0.98,
+    "applicant_name": 0.96,
+    "developer_name": 0.96,
+    "owner_name": 0.94,
+    "description": 0.92,
+}
 APPLICANT_SEMANTIC_CONFIDENCE = {
     "business_dba": 0.97,
     "legal_entity": 0.92,
@@ -95,9 +102,28 @@ RETAIL_CONTEXT_TERMS = (
     "sign",
     "sales tax permit",
 )
+MAJOR_BUILDER_CONTEXT_TERMS = (
+    "subdivision",
+    "single-family",
+    "single family",
+    "townhome",
+    "townhomes",
+    "model home",
+    "master-planned",
+    "master planned",
+    "residential lots",
+    "residential lot",
+    "residential development",
+    "residential subdivision",
+    "homebuilder",
+    "home builder",
+)
+NATIONAL_RETAIL_COHORT = "national_retail"
+MAJOR_BUILDER_COHORT = "major_builder"
 NEGATIVE_CONTEXTS = (
     "adjacent to",
     "near",
+    "nearby",
     "former",
     "formerly",
     "across from",
@@ -236,10 +262,13 @@ def detect_permit_brands(
     raw: RawSourceRecord,
 ) -> list[PermitBrandMatch]:
     opening_signal = _is_future_retailer_opening_signal(permit, raw)
-    if permit.approval_stage != "pre_approval" and not opening_signal:
+    if permit.approval_stage not in {"pre_approval", "approved"}:
         return []
     normalized_status = _normalize_text(permit.status or "")
-    if any(_contains(normalized_status, term) for term in TERMINAL_PREAPPROVAL_STATUS_TERMS):
+    if permit.approval_stage == "pre_approval" and any(
+        _contains(normalized_status, term)
+        for term in TERMINAL_PREAPPROVAL_STATUS_TERMS
+    ):
         return []
     if not permit.address and not (
         permit.parcel_id and permit.city and permit.state
@@ -253,15 +282,22 @@ def detect_permit_brands(
         BrandProfile.is_active.is_(True),
     ).all()
     applicant_semantics = _applicant_value_semantics(db, permit)
-    field_confidence = dict(FIELD_CONFIDENCE)
-    field_confidence["applicant_name"] = APPLICANT_SEMANTIC_CONFIDENCE[applicant_semantics]
-    fields = {
-        field: value
-        for field, confidence in field_confidence.items()
-        if confidence >= MINIMUM_CONFIDENCE
-        if (value := getattr(permit, field, None)) and isinstance(value, str)
+    retail_field_confidence = dict(FIELD_CONFIDENCE)
+    retail_field_confidence["applicant_name"] = APPLICANT_SEMANTIC_CONFIDENCE[
+        applicant_semantics
+    ]
+    builder_field_confidence = dict(MAJOR_BUILDER_FIELD_CONFIDENCE)
+    builder_field_confidence["applicant_name"] = APPLICANT_SEMANTIC_CONFIDENCE[
+        applicant_semantics
+    ]
+    fields_by_cohort = {
+        NATIONAL_RETAIL_COHORT: _eligible_match_fields(permit, retail_field_confidence),
+        MAJOR_BUILDER_COHORT: _eligible_match_fields(permit, builder_field_confidence),
     }
-    combined = _normalize_text(" ".join(fields.values()))
+    confidence_by_cohort = {
+        NATIONAL_RETAIL_COHORT: retail_field_confidence,
+        MAJOR_BUILDER_COHORT: builder_field_confidence,
+    }
     retail_context = _normalize_text(
         " ".join(
             str(value)
@@ -269,10 +305,29 @@ def detect_permit_brands(
             if (value := getattr(permit, field, None))
         )
     )
-    if not any(_contains(retail_context, term) for term in RETAIL_CONTEXT_TERMS):
-        return []
+    has_retail_context = any(
+        _contains(retail_context, term) for term in RETAIL_CONTEXT_TERMS
+    )
+    has_builder_context = any(
+        _contains(retail_context, _normalize_text(term))
+        for term in MAJOR_BUILDER_CONTEXT_TERMS
+    )
     best_by_brand: dict[str, Detection] = {}
     for alias in aliases:
+        cohort = _signal_cohort(alias.brand)
+        if cohort == NATIONAL_RETAIL_COHORT:
+            if not has_retail_context or (
+                permit.approval_stage == "approved" and not opening_signal
+            ):
+                continue
+        elif cohort == MAJOR_BUILDER_COHORT:
+            if not has_builder_context:
+                continue
+        else:
+            continue
+        fields = fields_by_cohort[cohort]
+        field_confidence = confidence_by_cohort[cohort]
+        combined = _normalize_text(" ".join(fields.values()))
         normalized_alias = alias.normalized_alias
         if alias.requires_context and not any(
             _contains(combined, _normalize_text(term)) for term in (alias.context_terms or [])
@@ -303,7 +358,7 @@ def detect_permit_brands(
                 confidence=confidence,
                 matched_fields=matched_fields,
                 rule_ids=tuple(
-                    _rule_ids(opening_signal)
+                    _rule_ids(opening_signal, cohort)
                     + (["exact_applicant_alias"] if field == "applicant_name" else [])
                     + (
                         [f"applicant_{applicant_semantics}_source"]
@@ -316,11 +371,12 @@ def detect_permit_brands(
             if current is None or detection.confidence > current.confidence:
                 best_by_brand[alias.brand_id] = detection
 
-    for detection in _historical_party_detections(db, permit, opening_signal):
-        current = best_by_brand.get(detection.brand.id)
-        # Direct name evidence always outranks an inferred historical pattern.
-        if current is None:
-            best_by_brand[detection.brand.id] = detection
+    if has_retail_context:
+        for detection in _historical_party_detections(db, permit, opening_signal):
+            current = best_by_brand.get(detection.brand.id)
+            # Direct name evidence always outranks an inferred historical pattern.
+            if current is None:
+                best_by_brand[detection.brand.id] = detection
 
     matches: list[PermitBrandMatch] = []
     now = utcnow()
@@ -398,6 +454,35 @@ def _applicant_value_semantics(db: Session, permit: PermitRecord) -> str:
     return "unknown"
 
 
+def _eligible_match_fields(
+    permit: PermitRecord,
+    field_confidence: dict[str, float],
+) -> dict[str, str]:
+    return {
+        field: value
+        for field, confidence in field_confidence.items()
+        if confidence >= MINIMUM_CONFIDENCE
+        if (value := getattr(permit, field, None)) and isinstance(value, str)
+    }
+
+
+def _signal_cohort(brand: BrandProfile) -> str:
+    attributes = brand.attributes if isinstance(brand.attributes, dict) else {}
+    cohort = attributes.get("signal_cohort", NATIONAL_RETAIL_COHORT)
+    return cohort if isinstance(cohort, str) else NATIONAL_RETAIL_COHORT
+
+
+def _brand_cohort_filter(signal_cohort: str):
+    cohort_value = BrandProfile.attributes["signal_cohort"].as_string()
+    if signal_cohort == NATIONAL_RETAIL_COHORT:
+        return or_(
+            BrandProfile.attributes.is_(None),
+            cohort_value.is_(None),
+            cohort_value == NATIONAL_RETAIL_COHORT,
+        )
+    return cohort_value == signal_cohort
+
+
 def _historical_party_detections(
     db: Session,
     permit: PermitRecord,
@@ -442,11 +527,17 @@ def _historical_party_detections(
             0.68 + (0.04 * len(distinct_fields)) + (0.01 * min(total_evidence, 6)),
         )
         brand = evidence[0][2].brand
+        if _signal_cohort(brand) != NATIONAL_RETAIL_COHORT:
+            continue
         labels = ", ".join(
             f"{field.removesuffix('_name').replace('_', ' ')} {value}"
             for field, value, _ in evidence
         )
-        base_rules = _rule_ids(opening_signal)[:-1]
+        base_rules = [
+            rule_id
+            for rule_id in _rule_ids(opening_signal)
+            if rule_id not in {"exact_alias", "national_retail_cohort"}
+        ]
         rules = tuple(
             base_rules + [
                 "historical_party_signature",
@@ -527,7 +618,14 @@ def rebuild_brand_party_fingerprints(db: Session, brand_id: str) -> None:
     db.flush()
 
 
-def _rule_ids(opening_signal: bool) -> list[str]:
+def _rule_ids(opening_signal: bool, cohort: str = NATIONAL_RETAIL_COHORT) -> list[str]:
+    if cohort == MAJOR_BUILDER_COHORT:
+        return [
+            "pre_approval",
+            "stable_location",
+            "major_builder_development_context",
+            "major_builder_exact_alias",
+        ]
     if opening_signal:
         return [
             "approved_retailer_opening",
@@ -535,8 +633,15 @@ def _rule_ids(opening_signal: bool) -> list[str]:
             "stable_location",
             "retail_context",
             "exact_alias",
+            "national_retail_cohort",
         ]
-    return ["pre_approval", "stable_location", "retail_context", "exact_alias"]
+    return [
+        "pre_approval",
+        "stable_location",
+        "retail_context",
+        "exact_alias",
+        "national_retail_cohort",
+    ]
 
 
 def _is_future_retailer_opening_signal(
@@ -567,6 +672,7 @@ def list_brand_matches(
     db: Session,
     *,
     brand_id: str | None = None,
+    signal_cohort: str | None = None,
     review_status: str | None = None,
     approval_stage: str | None = None,
     detection_method: str | None = None,
@@ -582,6 +688,10 @@ def list_brand_matches(
     )
     if brand_id:
         query = query.filter(PermitBrandMatch.brand_id == brand_id)
+    if signal_cohort:
+        query = query.join(
+            BrandProfile, BrandProfile.id == PermitBrandMatch.brand_id
+        ).filter(_brand_cohort_filter(signal_cohort))
     if review_status:
         query = query.filter(PermitBrandMatch.review_status == review_status)
     if approval_stage:
@@ -643,6 +753,7 @@ def list_brand_expansion_summaries(
     db: Session,
     *,
     days: int = 180,
+    signal_cohort: str = NATIONAL_RETAIL_COHORT,
     limit: int = 25,
 ) -> list[BrandExpansionSummaryResponse]:
     """Rank active brands by recent, evidence-backed permit activity."""
@@ -660,6 +771,7 @@ def list_brand_expansion_summaries(
         PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
         PermitRecord.is_active.is_(True),
         PermitRecord.approval_stage.in_(("pre_approval", "approved")),
+        _brand_cohort_filter(signal_cohort),
         activity_at >= cutoff,
     ).with_entities(
         BrandProfile,
