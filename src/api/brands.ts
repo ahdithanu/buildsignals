@@ -7,17 +7,12 @@ import type {
   PermitBrandMatch,
   PermitBrandMatchListParams,
   BrandExpansionSummary,
-  BrandSignalCohort,
 } from '@/types/brand';
 import type { NearbyParcelSearchSummary } from '@/types/parcel';
 
 export const brandsApi = {
-  expansion: (
-    days = 180,
-    cohort: BrandSignalCohort = 'national_retail',
-    limit = 25,
-  ): Promise<BrandExpansionSummary[]> =>
-    apiClient.get<BrandExpansionSummary[]>('/brand-expansion', { days, cohort, limit }),
+  expansion: (days = 180, limit = 25): Promise<BrandExpansionSummary[]> =>
+    apiClient.get<BrandExpansionSummary[]>('/brand-expansion', { days, limit }),
   list: (params?: PermitBrandMatchListParams): Promise<PermitBrandMatch[]> =>
     apiClient.get<PermitBrandMatch[]>('/permit-brand-matches', params as Record<string, string | number | boolean | undefined>),
   forDeal: (dealId: string): Promise<PermitBrandMatch[]> =>

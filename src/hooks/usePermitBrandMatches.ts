@@ -3,7 +3,6 @@ import { brandsApi } from '@/api/brands';
 import { queryKeys } from '@/lib/queryKeys';
 import type {
   BrandMatchReviewStatus,
-  BrandSignalCohort,
   PermitBrandMatchListParams,
 } from '@/types/brand';
 
@@ -53,10 +52,10 @@ export function usePermitBrandMatchQueue(params: PermitBrandMatchListParams) {
   return { ...query, review, createOpportunity };
 }
 
-export function useBrandExpansion(days: number, cohort: BrandSignalCohort = 'national_retail') {
+export function useBrandExpansion(days: number) {
   return useQuery({
-    queryKey: queryKeys.brands.expansion(days, cohort),
-    queryFn: () => brandsApi.expansion(days, cohort),
+    queryKey: queryKeys.brands.expansion(days),
+    queryFn: () => brandsApi.expansion(days),
     retry: 1,
     staleTime: 60_000,
   });
