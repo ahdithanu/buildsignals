@@ -271,6 +271,7 @@ def test_brand_expansion_ranks_active_signals_by_stage_and_market(client, db, tm
             "city": "Austin",
             "state": "TX",
             "signal_count": 2,
+            "planning_count": 0,
             "pre_approval_count": 1,
             "approved_count": 1,
             "latest_signal_at": starbucks["markets"][0]["latest_signal_at"],

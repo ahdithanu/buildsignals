@@ -22,6 +22,7 @@ const expansionResult = {
         scale: 'national', priority: 5, is_active: true, signal_cohort: 'national_retail',
       },
       signal_count: 8,
+      planning_count: 2,
       pre_approval_count: 5,
       approved_count: 3,
       market_count: 2,
@@ -31,11 +32,13 @@ const expansionResult = {
       markets: [
         {
           city: 'Austin', state: 'TX', signal_count: 5,
+          planning_count: 2,
           pre_approval_count: 3, approved_count: 2,
           latest_signal_at: '2026-08-20T12:00:00Z',
         },
         {
           city: 'Tampa', state: 'FL', signal_count: 3,
+          planning_count: 0,
           pre_approval_count: 2, approved_count: 1,
           latest_signal_at: '2026-08-18T12:00:00Z',
         },
@@ -59,10 +62,14 @@ describe('<BrandExpansion>', () => {
     expect(screen.getByRole('heading', { name: 'Retail Expansion' })).toBeInTheDocument();
     expect(useBrandExpansionMock).toHaveBeenCalledWith(180, 'national_retail');
     expect(screen.getByRole('heading', { name: 'Starbucks' })).toBeInTheDocument();
-    expect(screen.getByText('Austin, TX · 5')).toBeInTheDocument();
-    expect(screen.getByText('Tampa, FL · 3')).toBeInTheDocument();
+    expect(screen.getByText('Planning · earlier stage')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '2 planning signals, earlier stage' })).toHaveAttribute(
+      'href', '/planning?brand_id=brand-1',
+    );
+    expect(screen.getByText('Austin, TX · 5 signals · 2 planning')).toBeInTheDocument();
+    expect(screen.getByText('Tampa, FL · 3 signals · 0 planning')).toBeInTheDocument();
     expect(screen.getByText('Parcel candidates are not verified listings')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /signals/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^signals$/i })).toHaveAttribute(
       'href', '/permit-review?status=all&cohort=national_retail&brand_id=brand-1',
     );
     expect(screen.getByRole('link', { name: /parcel map/i })).toHaveAttribute('href', '/map');

@@ -20,6 +20,7 @@ interface LayoutProps {
 
 const primaryNavigation = [
   { label: "Signals", href: "/signals" },
+  { label: "Planning", href: "/planning" },
   { label: "Brands", href: "/brand-expansion" },
   { label: "Map", href: "/map" },
   { label: "Watchlist", href: "/inbox" },

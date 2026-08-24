@@ -55,10 +55,11 @@ export default function BrandExpansion() {
   const rows = useMemo(() => data ?? [], [data]);
   const totals = useMemo(() => rows.reduce((result, row) => ({
     signals: result.signals + row.signal_count,
+    planning: result.planning + row.planning_count,
     early: result.early + row.pre_approval_count,
     approved: result.approved + row.approved_count,
     parcels: result.parcels + row.parcel_candidate_count,
-  }), { signals: 0, early: 0, approved: 0, parcels: 0 }), [rows]);
+  }), { signals: 0, planning: 0, early: 0, approved: 0, parcels: 0 }), [rows]);
 
   return (
     <Layout>
@@ -70,7 +71,7 @@ export default function BrandExpansion() {
               <h1 className="font-display text-xl font-semibold">{cohortConfig.heading}</h1>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Permit activity ranked with nearby acquisition candidates
+              Planning and permit activity ranked with nearby acquisition candidates
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -128,15 +129,16 @@ export default function BrandExpansion() {
 
         {!isLoading && !error && rows.length > 0 && (
           <>
-            <section className="grid grid-cols-2 border-b-2 border-foreground sm:grid-cols-4" aria-label="Expansion totals">
+            <section className="grid grid-cols-2 border-b-2 border-foreground sm:grid-cols-5" aria-label="Expansion totals">
               <Metric label={cohortConfig.signalLabel} value={totals.signals} />
+              <Metric label="Planning · earlier stage" value={totals.planning} tone="text-amber-700" />
               <Metric label="Pre-approval" value={totals.early} tone="text-destructive" />
               <Metric label="Approved" value={totals.approved} />
               <Metric label="Parcel candidates" value={totals.parcels} />
             </section>
 
             <div className="flex items-center justify-between border-b px-1 py-2 text-[10px] text-muted-foreground">
-              <span>Ranked by active filings, early-stage activity, parcel coverage and recency</span>
+              <span>Ranked by planning activity, active filings, parcel coverage and recency</span>
               <span>Parcel candidates are not verified listings</span>
             </div>
 
@@ -152,7 +154,20 @@ export default function BrandExpansion() {
                     <p className="mt-1 text-[10px] text-muted-foreground">
                       {row.market_count} market{row.market_count === 1 ? '' : 's'} · {Math.round(row.average_confidence * 100)}% mean confidence · latest {new Date(row.latest_signal_at).toLocaleDateString()}
                     </p>
-                    <div className="mt-2 flex gap-3 text-xs">
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                      {row.planning_count > 0 ? (
+                        <Link
+                          to={`/planning?brand_id=${row.brand.id}`}
+                          aria-label={`${row.planning_count} planning signals, earlier stage`}
+                          className="hover:underline"
+                        >
+                          <strong className="text-amber-700">{row.planning_count}</strong> planning · earlier stage
+                        </Link>
+                      ) : (
+                        <span aria-label="0 planning signals, earlier stage">
+                          <strong className="text-amber-700">0</strong> planning · earlier stage
+                        </span>
+                      )}
                       <span><strong className="text-destructive">{row.pre_approval_count}</strong> early</span>
                       <span><strong>{row.approved_count}</strong> approved</span>
                       <span><strong>{row.parcel_candidate_count}</strong> parcels</span>
@@ -164,7 +179,7 @@ export default function BrandExpansion() {
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {row.markets.map((market) => (
                         <span key={`${market.city}-${market.state}`} className="border border-border bg-background px-2 py-1 text-[10px]">
-                          {marketLabel(market.city, market.state)} · {market.signal_count}
+                          {marketLabel(market.city, market.state)} · {market.signal_count} signals · {market.planning_count} planning
                         </span>
                       ))}
                     </div>
@@ -190,7 +205,7 @@ export default function BrandExpansion() {
 
 function Metric({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
-    <div className="border-b border-r border-foreground px-3 py-4 even:border-r-0 sm:border-b-0 sm:even:border-r sm:last:border-r-0">
+    <div className="border-b border-r border-foreground px-3 py-4 even:border-r-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
       <p className="text-[10px] text-muted-foreground">{label}</p>
       <p className={cn('mt-1 text-2xl font-semibold tabular-nums', tone)}>{value.toLocaleString()}</p>
     </div>

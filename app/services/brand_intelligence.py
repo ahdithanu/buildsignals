@@ -23,6 +23,7 @@ from app.models.graph import (
 )
 from app.models.ingestion import PermitRecord, RawSourceRecord, SourceFieldMapping
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch
+from app.models.planning import PlanningCompanyMatch, PlanningRecord
 from app.models.signal import Signal
 from app.schemas.brand import (
     BrandDefinition,
@@ -867,7 +868,7 @@ def list_brand_expansion_summaries(
     signal_cohort: str = NATIONAL_RETAIL_COHORT,
     limit: int = 25,
 ) -> list[BrandExpansionSummaryResponse]:
-    """Rank active brands by recent, evidence-backed permit activity."""
+    """Rank active companies across planning and permit evidence."""
     cutoff = utcnow() - timedelta(days=days)
     activity_at = func.coalesce(
         PermitRecord.status_updated_at,
@@ -904,6 +905,7 @@ def list_brand_expansion_summaries(
         summary = summaries.setdefault(brand.id, {
             "brand": brand,
             "signal_count": 0,
+            "planning_count": 0,
             "pre_approval_count": 0,
             "approved_count": 0,
             "confidence_total": 0.0,
@@ -920,12 +922,71 @@ def list_brand_expansion_summaries(
             "city": city,
             "state": state,
             "signal_count": 0,
+            "planning_count": 0,
             "pre_approval_count": 0,
             "approved_count": 0,
             "latest_signal_at": latest_signal_at,
         })
         market["signal_count"] += count
         market[f"{stage}_count"] += count
+        market["latest_signal_at"] = max(market["latest_signal_at"], latest_signal_at)
+
+    planning_activity_at = func.coalesce(
+        PlanningRecord.published_at,
+        PlanningRecord.first_seen_at,
+        PlanningRecord.meeting_at,
+    )
+    planning_rows = active_query(
+        db.query(PlanningCompanyMatch), PlanningCompanyMatch
+    ).join(
+        BrandProfile, BrandProfile.id == PlanningCompanyMatch.brand_id
+    ).join(
+        PlanningRecord, PlanningRecord.id == PlanningCompanyMatch.planning_record_id
+    ).filter(
+        PlanningCompanyMatch.review_status.in_(("candidate", "confirmed")),
+        _brand_cohort_filter(signal_cohort),
+        planning_activity_at >= cutoff,
+    ).with_entities(
+        BrandProfile,
+        PlanningRecord.city,
+        PlanningRecord.state,
+        func.count(PlanningCompanyMatch.id),
+        func.avg(PlanningCompanyMatch.confidence),
+        func.max(planning_activity_at),
+    ).group_by(
+        BrandProfile.id,
+        PlanningRecord.city,
+        PlanningRecord.state,
+    ).all()
+
+    for brand, city, state, count, average_confidence, latest_signal_at in planning_rows:
+        summary = summaries.setdefault(brand.id, {
+            "brand": brand,
+            "signal_count": 0,
+            "planning_count": 0,
+            "pre_approval_count": 0,
+            "approved_count": 0,
+            "confidence_total": 0.0,
+            "latest_signal_at": latest_signal_at,
+            "markets": {},
+        })
+        count = int(count)
+        summary["signal_count"] += count
+        summary["planning_count"] += count
+        summary["confidence_total"] += float(average_confidence) * count
+        summary["latest_signal_at"] = max(summary["latest_signal_at"], latest_signal_at)
+        market_key = (city or "", state or "")
+        market = summary["markets"].setdefault(market_key, {
+            "city": city,
+            "state": state,
+            "signal_count": 0,
+            "planning_count": 0,
+            "pre_approval_count": 0,
+            "approved_count": 0,
+            "latest_signal_at": latest_signal_at,
+        })
+        market["signal_count"] += count
+        market["planning_count"] += count
         market["latest_signal_at"] = max(market["latest_signal_at"], latest_signal_at)
 
     if not summaries:
@@ -955,6 +1016,7 @@ def list_brand_expansion_summaries(
         summaries.values(),
         key=lambda item: (
             item["signal_count"],
+            item["planning_count"],
             item["pre_approval_count"],
             candidate_counts.get(item["brand"].id, 0),
             item["brand"].priority,
@@ -966,6 +1028,7 @@ def list_brand_expansion_summaries(
         BrandExpansionSummaryResponse(
             brand=BrandProfileResponse.model_validate(item["brand"]),
             signal_count=item["signal_count"],
+            planning_count=item["planning_count"],
             pre_approval_count=item["pre_approval_count"],
             approved_count=item["approved_count"],
             market_count=len(item["markets"]),

@@ -33,6 +33,7 @@ export interface BrandExpansionMarket {
   city?: string | null;
   state?: string | null;
   signal_count: number;
+  planning_count: number;
   pre_approval_count: number;
   approved_count: number;
   latest_signal_at: string;
@@ -41,6 +42,7 @@ export interface BrandExpansionMarket {
 export interface BrandExpansionSummary {
   brand: BrandProfile;
   signal_count: number;
+  planning_count: number;
   pre_approval_count: number;
   approved_count: number;
   market_count: number;

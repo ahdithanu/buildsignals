@@ -45,6 +45,7 @@ class BrandExpansionMarketResponse(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     signal_count: int
+    planning_count: int
     pre_approval_count: int
     approved_count: int
     latest_signal_at: datetime
@@ -53,6 +54,7 @@ class BrandExpansionMarketResponse(BaseModel):
 class BrandExpansionSummaryResponse(BaseModel):
     brand: BrandProfileResponse
     signal_count: int
+    planning_count: int
     pre_approval_count: int
     approved_count: int
     market_count: int

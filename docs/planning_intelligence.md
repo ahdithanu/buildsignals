@@ -134,3 +134,16 @@ not an activation strategy.
   watchlist with effective dates rather than an unversioned scraped list.
 - Meeting records can change after publication. Immutable raw versions and
   first/last-seen timestamps make corrections and removals auditable.
+
+## Unified Expansion Ranking
+
+The brand expansion API combines reviewable company matches from planning
+records and permits without collapsing their lifecycle stages. Each company and
+market reports planning, pre-approval permit, and approved permit counts, plus a
+combined evidence-weighted confidence score. Planning events can be filtered by
+company so the UI can move from a ranked expansion signal to the official
+agenda excerpt and source document.
+
+Nearby-parcel counts remain anchored to permit matches until a separately
+reviewable planning-to-parcel search workflow is available. This avoids
+presenting a loosely located agenda mention as a parcel acquisition lead.
