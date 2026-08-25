@@ -199,7 +199,7 @@ services:
       - key: INGESTION_HOST_POLICY_DIGEST
         value: a3e282659996966df47ab7297eb3c0c3fc4072066ceb34931584c965bf0fe5cd
       - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
-        value: 0aff6af027323564592d7263cf5d37abe8706c3fc6b69abbe4838075fd39417f
+        value: 06eb7f18c5229fcd77f36c3d3800970ed07cd6c771cd9b8f0e451a6e82de1e63
       - key: INGESTION_ORGANIZATION
         sync: false
 

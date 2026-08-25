@@ -122,6 +122,34 @@ on 2026-08-22. The candidate must not be promoted until San Jose provides or
 confirms a supported automated access path. Browser automation is explicitly
 not an activation strategy.
 
+## Legistar Source Family
+
+`LegistarPlanningConnector` provides a reusable boundary for cities that expose
+current public meetings through the Granicus Legistar Web API. It discovers a
+bounded date window of events, filters to allowlisted governing bodies, and
+requests item-level agenda and minutes notes without downloading attachments.
+Each emitted record has a stable identity composed from the Legistar client,
+event ID, and event-item ID.
+
+Agenda evidence emits a `hearing_scheduled` pre-approval signal. Minutes or an
+official action emit a `decision_recorded` lifecycle state while retaining the
+same source identity and immutable raw versions. Items without a positive
+matter ID or official file/reference number are rejected; this keeps procedural
+and accessibility text out of the intelligence layer. Per-run event, item,
+record, and evidence-size limits protect the ingestion worker.
+
+Dallas is the first configured candidate because its `cityofdallas` API and
+City Plan Commission body were current during validation on 2026-08-24. It
+remains `legal_hold` until the narrow commercial SaaS storage and derived-display
+scope is explicitly approved and a bounded lifecycle canary passes. Atlanta is
+not configured because its public Legistar event feed was stale at July 2022
+during the same validation. Other cities must pass current-feed, body-name,
+rights, and lifecycle checks before reusing the connector.
+
+The initial connector uses ordered offset paging inside a narrow date window.
+If a client approaches the Legistar response cap or exhibits concurrent event
+churn, migrate that source to EventId keyset paging before widening history.
+
 ## Tradeoffs and Scaling
 
 - JSON categories are portable for the initial bounded queue; normalize them

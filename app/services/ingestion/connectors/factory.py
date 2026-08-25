@@ -14,6 +14,7 @@ from .ckan import CKANConnector
 from .csv import CSVConnector
 from .html_document_index import HTMLDocumentIndexConnector
 from .json_array import JSONArrayConnector
+from .legistar import LegistarPlanningConnector
 from .opendatasoft import OpenDataSoftConnector
 from .planning_documents import PlanningDocumentsConnector
 from .rss import RSSConnector
@@ -84,6 +85,23 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             _required(config, "endpoint"),
             max_records=int(config.get("max_records", 10000)),
             query=_mapping(config.get("query")),
+            **common,
+        )
+    if connector_type in {"legistar", "legistar_planning"}:
+        return LegistarPlanningConnector(
+            _required(config, "endpoint"),
+            event_page_size=int(config.get("event_page_size", 50)),
+            max_events=int(config.get("max_events", 250)),
+            max_items_per_event=int(config.get("max_items_per_event", 250)),
+            max_records=int(config.get("max_records", 2500)),
+            body_names=_string_list(config.get("body_names"), "body_names"),
+            matter_types=_string_list(config.get("matter_types"), "matter_types"),
+            lookback_days=int(config.get("lookback_days", 45)),
+            future_days=int(config.get("future_days", 180)),
+            api_token=_secret_from_env(config, "token_env"),
+            max_evidence_characters=int(
+                config.get("max_evidence_characters", 10_000)
+            ),
             **common,
         )
     if connector_type in {"rss", "rss2", "atom"}:
