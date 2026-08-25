@@ -152,6 +152,47 @@ def test_brand_backfill_parser_accepts_resume_and_run_bounds():
     assert args.dry_run is True
 
 
+def test_reference_backfill_parser_requires_type_and_supports_bounds():
+    args = build_parser().parse_args([
+        "references",
+        "backfill",
+        "--organization",
+        "default-org",
+        "--record-type",
+        "planning",
+        "--source-key",
+        "city_planning_agendas",
+        "--batch-size",
+        "250",
+        "--max-records",
+        "1000",
+        "--after-id",
+        "planning-cursor",
+        "--dry-run",
+    ])
+
+    assert args.command == "references"
+    assert args.reference_command == "backfill"
+    assert args.record_type == "planning"
+    assert args.source_key == "city_planning_agendas"
+    assert args.batch_size == 250
+    assert args.max_records == 1000
+    assert args.after_id == "planning-cursor"
+    assert args.dry_run is True
+
+
+def test_reference_backfill_parser_rejects_unsupported_record_type():
+    with pytest.raises(SystemExit):
+        build_parser().parse_args([
+            "references",
+            "backfill",
+            "--organization",
+            "default-org",
+            "--record-type",
+            "parcel",
+        ])
+
+
 @pytest.mark.parametrize(
     ("flag", "value"),
     [
