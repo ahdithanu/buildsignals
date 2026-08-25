@@ -3601,6 +3601,30 @@ Evidence URLs:
   and raw source-replacement exports are suppressed. City attribution remains
   attached to derived records under CC BY 4.0.
 
+### Arapahoe County, Colorado Planning Hearings
+
+- Arapahoe County's official Planning and Land Development page links the
+  Active Planning Cases map, Planning Commission, and Board of Adjustment. The
+  County GIS page describes the cases map as land-development cases under
+  review in unincorporated Arapahoe County.
+- The County's official Legistar system is current and exposes stable meeting,
+  event-item, file, and matter identities plus agendas, minutes, actions, and
+  source links. The candidate uses the shared bounded Legistar connector and
+  never downloads attachments.
+- An August 25, 2026 live probe processed 13 relevant meetings and emitted 25
+  substantive records: eight scheduled hearings and 17 recorded decisions.
+  Twenty-three records came from Planning Commission and two from Board of
+  Adjustment; all had a file or matter identity and the latest source
+  modification was August 21, 2026.
+- The candidate also includes East Arapahoe County Advisory Planning Commission
+  for rural growth coverage. Personal contacts, attachments, raw document
+  redistribution, and source-replacement exports are outside the proposed
+  scope.
+- Decision: `legal_hold`. Public availability and CORA status do not by
+  themselves establish permission for BuildSignal's commercial storage and
+  customer-facing derived display. Promotion requires explicit approval of the
+  bounded retention, attribution, and suppression scope.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must

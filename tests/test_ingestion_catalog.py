@@ -315,6 +315,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "charleston_wv_energov_permits",
         "cheyenne_wy_opengov_permits",
         "madison_wi_legistar_plan_commission",
+        "arapahoe_county_co_legistar_planning",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -10177,3 +10178,42 @@ def test_madison_legistar_candidate_preserves_full_planning_lifecycle():
     assert mappings["decision_at"] == "decision_at"
     assert mappings["source_url"] == "source_url"
     assert "bounded commercial storage" in madison.blocker_summary
+
+
+def test_arapahoe_legistar_candidate_is_current_bounded_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    arapahoe = candidates["arapahoe_county_co_legistar_planning"]
+    assert arapahoe.record_type == "planning"
+    assert arapahoe.adapter == "legistar"
+    assert arapahoe.status == "legal_hold"
+    assert arapahoe.can_run_canary is False
+    assert "8 hearing_scheduled and 17 decision_recorded" in arapahoe.notes
+    assert "no record lacked a file or matter identity" in arapahoe.notes
+
+    settings = arapahoe.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/arapahoe"
+    assert connector["body_names"] == [
+        "Planning Commission",
+        "Board of Adjustment",
+        "East Arapahoe County Advisory Planning Commission",
+    ]
+    assert connector["event_page_size"] == 10
+    assert connector["max_events"] == 20
+    assert connector["max_items_per_event"] == 200
+    assert connector["max_records"] == 250
+    assert connector["lookback_days"] == 120
+    assert connector["future_days"] == 120
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["freshness_sla_hours"] == 168
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "legistar_matter_id",
+            "namespace": "legistar:arapahoe:legislation",
+            "transform": "scalar",
+        }
+    ]
+    assert "explicit approval" in arapahoe.blocker_summary
