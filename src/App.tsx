@@ -17,6 +17,7 @@ import Pipeline from "./pages/Pipeline";
 import MarketSignals from "./pages/MarketSignals";
 import PermitBrandReview from "./pages/PermitBrandReview";
 import BrandExpansion from "./pages/BrandExpansion";
+import PlanningSignals from "./pages/PlanningSignals";
 import PermitDetail from "./pages/PermitDetail";
 import IngestionOperations from "./pages/IngestionOperations";
 import IngestionCandidateDetail from "./pages/IngestionCandidateDetail";
@@ -154,6 +155,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <BrandExpansion />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/planning"
+              element={
+                <RequireAuth>
+                  <PlanningSignals />
                 </RequireAuth>
               }
             />

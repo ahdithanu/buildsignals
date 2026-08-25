@@ -127,6 +127,63 @@ def test_planning_ingestion_detects_company_data_center_and_graph_evidence(clien
     assert body[0]["company_matches"][0]["brand"]["name"] == "Microsoft"
 
 
+def test_planning_company_appears_in_expansion_before_permit(client, db, tmp_path):
+    brand = BrandProfile(
+        organization_id="default-org",
+        key="early_retailer",
+        name="Early Retailer",
+        normalized_name="early retailer",
+        category="retail",
+        scale="national",
+        priority=5,
+        attributes={"signal_cohort": "national_retail"},
+    )
+    db.add(brand)
+    db.flush()
+    db.add(
+        BrandAlias(
+            organization_id="default-org",
+            brand_id=brand.id,
+            alias="Early Retailer",
+            normalized_alias="early retailer",
+            confidence=1.0,
+        )
+    )
+    db.commit()
+
+    csv_path = tmp_path / "early-retailer-planning.csv"
+    csv_path.write_text(
+        "id,reference,type,stage,title,summary,excerpt,item,meeting,body,project,address,city,state,parcel,applicant,meeting_at,published_at,url\n"
+        'A-20,,agenda_item,scheduled,"Early Retailer site plan hearing",'
+        '"Conditional use review for a new location","Staff review is pending",'
+        '20,"Planning Commission",Planning Commission,"Early Retailer",'
+        '"100 Market Street",Austin,TX,TX-100,"Early Retailer",'
+        "2026-09-15T18:00:00Z,2026-08-22T12:00:00Z,https://example.test/agendas/A-20\n"
+    )
+    source = client.post("/ingestion/sources", json=_planning_source(str(csv_path))).json()
+    run = client.post(f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1})
+    assert run.status_code == 201, run.text
+
+    response = client.get("/brand-expansion?days=365&cohort=national_retail")
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert len(result) == 1
+    assert result[0]["brand"]["key"] == "early_retailer"
+    assert result[0]["signal_count"] == 1
+    assert result[0]["planning_count"] == 1
+    assert result[0]["pre_approval_count"] == 0
+    assert result[0]["approved_count"] == 0
+    assert result[0]["markets"][0]["planning_count"] == 1
+
+    filtered = client.get(f"/planning/events?brand_id={brand.id}")
+    assert filtered.status_code == 200, filtered.text
+    assert [record["external_record_id"] for record in filtered.json()] == ["A-20"]
+
+    unrelated = client.get("/planning/events?brand_id=00000000-0000-0000-0000-000000000000")
+    assert unrelated.status_code == 200, unrelated.text
+    assert unrelated.json() == []
+
+
 def test_planning_ingestion_requires_title(client, db, tmp_path):
     csv_path = tmp_path / "planning.csv"
     csv_path.write_text(

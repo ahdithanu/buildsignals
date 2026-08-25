@@ -197,6 +197,7 @@ def enrich_planning_record(
 def list_planning_records(
     db: Session,
     *,
+    brand_id: str | None = None,
     state: str | None = None,
     city: str | None = None,
     category: str | None = None,
@@ -207,6 +208,14 @@ def list_planning_records(
         joinedload(PlanningRecord.latest_raw_record),
         joinedload(PlanningRecord.company_matches).joinedload(PlanningCompanyMatch.brand)
     )
+    if brand_id:
+        query = query.join(
+            PlanningCompanyMatch,
+            PlanningCompanyMatch.planning_record_id == PlanningRecord.id,
+        ).filter(
+            PlanningCompanyMatch.brand_id == brand_id,
+            PlanningCompanyMatch.review_status.in_(("candidate", "confirmed")),
+        )
     if state:
         query = query.filter(PlanningRecord.state == state.upper())
     if city:

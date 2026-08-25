@@ -1,8 +1,9 @@
-import { Map, Radio, Star, Store } from "lucide-react";
+import { FileSearch, Map, Radio, Star, Store } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
 const items = [
   { label: "Signals", url: "/signals", icon: Radio },
+  { label: "Planning", url: "/planning", icon: FileSearch },
   { label: "Brands", url: "/brand-expansion", icon: Store },
   { label: "Map", url: "/map", icon: Map },
   { label: "Watch", url: "/inbox", icon: Star },
@@ -11,7 +12,7 @@ const items = [
 export function MobileBottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-foreground bg-card md:hidden" aria-label="Mobile navigation">
-      <div className="grid h-11 grid-cols-4">
+      <div className="grid h-11 grid-cols-5">
         {items.map((item) => (
           <NavLink
             key={item.url}

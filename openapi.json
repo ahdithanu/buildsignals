@@ -1049,6 +1049,10 @@
             "title": "Latest Signal At",
             "type": "string"
           },
+          "planning_count": {
+            "title": "Planning Count",
+            "type": "integer"
+          },
           "pre_approval_count": {
             "title": "Pre Approval Count",
             "type": "integer"
@@ -1071,6 +1075,7 @@
         },
         "required": [
           "signal_count",
+          "planning_count",
           "pre_approval_count",
           "approved_count",
           "latest_signal_at"
@@ -1111,6 +1116,10 @@
             "title": "Parcel Candidate Count",
             "type": "integer"
           },
+          "planning_count": {
+            "title": "Planning Count",
+            "type": "integer"
+          },
           "pre_approval_count": {
             "title": "Pre Approval Count",
             "type": "integer"
@@ -1123,6 +1132,7 @@
         "required": [
           "brand",
           "signal_count",
+          "planning_count",
           "pre_approval_count",
           "approved_count",
           "market_count",
@@ -18015,6 +18025,24 @@
       "get": {
         "operationId": "list_events_v1_planning_events_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Brand Id"
+            }
+          },
           {
             "in": "query",
             "name": "state",

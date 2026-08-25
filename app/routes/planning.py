@@ -20,6 +20,7 @@ router = APIRouter(prefix="/planning", tags=["planning intelligence"])
 
 @router.get("/events", response_model=list[PlanningRecordResponse])
 def list_events(
+    brand_id: str | None = Query(default=None, min_length=1, max_length=36),
     state: str | None = Query(default=None, min_length=2, max_length=2),
     city: str | None = Query(default=None, max_length=100),
     category: str | None = Query(default=None, max_length=100),
@@ -29,6 +30,7 @@ def list_events(
 ):
     return list_planning_records(
         db,
+        brand_id=brand_id,
         state=state,
         city=city,
         category=category,
