@@ -156,6 +156,16 @@ as a pre-approval agenda source. Existing permit feeds remain the approval and
 issuance confirmation layer; Dallas needs a separately validated official
 minutes source before planning decisions can be claimed.
 
+Madison is the second validated Legistar pattern and demonstrates the fuller
+lifecycle. A bounded 2026-08-25 probe processed seven Plan Commission events
+and emitted 67 matter-backed records: three scheduled hearings and 64 recorded
+decisions, with no missing matter/file identities. The candidate joins official
+Legistar references to `madison_wi_current_planning_projects`, whose project
+records already carry Land Use, Rezoning, and Urban Design Commission
+legislative URLs, project IDs, addresses, parcels, organizations, and owners.
+It remains `legal_hold` until its narrow commercial storage, derived-display,
+attribution, and suppression scope is explicitly approved.
+
 The initial connector uses newest-first EventId ordering with offset paging
 inside a narrow date window so bounded canaries exercise current publication
 activity.

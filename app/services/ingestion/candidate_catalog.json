@@ -1667,6 +1667,73 @@
     "notes": "Approved scope stores bounded public agenda fields plus derived intelligence with official attribution; it suppresses attachments and raw-document redistribution. The 14-day publisher freshness SLA reflects Dallas planning-meeting publication cadence while daily collection detects changes promptly. A bounded one-year probe on 2026-08-24 found no City Plan Commission minutes/action payloads across 21 events, so this candidate is explicitly pre-approval only; existing permit feeds remain the approval/issuance confirmation layer and a separate official minutes source must be evaluated. Emit only items with a positive Legistar matter ID or an official file/reference number so procedural and accessibility boilerplate does not become a planning signal. Preserve each immutable raw version and treat cancellations or disappearance as lifecycle evidence, not project withdrawal. Atlanta was not added because its public Legistar endpoint was stale at July 2022 during the 2026-08-24 validation."
   },
   {
+    "key": "madison_wi_legistar_plan_commission",
+    "name": "Madison Legistar Plan Commission",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Madison, WI",
+    "base_url": "https://webapi.legistar.com/v1/madison",
+    "official_landing_page": "https://www.cityofmadison.com/city-hall/committees/plan-commission",
+    "license": "Official City of Madison public meeting records; narrow commercial SaaS storage and derived-display scope requires explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official Plan Commission schedule, public Legistar API, agenda items, and decision records were technically validated on 2026-08-25. Production activation requires explicit approval for bounded commercial storage, derived display, attribution, and the documented field-suppression scope.",
+    "early_warning_value": "Plan Commission agendas and minutes expose conditional uses, rezonings, subdivisions, annexations, demolitions, land transactions, project sponsors, locations, public decisions, and official Legistar file identities before or alongside permit issuance.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "legistar_matter_id", "meeting_date", "meeting_at", "governing_body",
+      "published_at", "decision_at", "modified_at", "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/madison",
+        "body_names": ["PLAN COMMISSION"],
+        "page_size": 25,
+        "event_page_size": 10,
+        "max_events": 20,
+        "max_items_per_event": 200,
+        "max_records": 250,
+        "lookback_days": 90,
+        "future_days": 120,
+        "max_evidence_characters": 10000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Madison, WI",
+        "city": "Madison",
+        "state": "WI",
+        "confidence": 0.95
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "decision_at", "canonical_field": "decision_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 25,
+    "last_checked_on": "2026-08-25",
+    "next_audit_on": "2026-09-08",
+    "notes": "A bounded live probe on 2026-08-25 processed seven Plan Commission events and emitted 67 substantive matter-backed records: 3 hearing_scheduled and 64 decision_recorded, with a current 2026-08-24 modification timestamp and zero missing matter/file identities. Join reference_number and matter links to madison_wi_current_planning_projects through ASI_LU_PInf_LndUseLegURL, ASI_LU_PInf_ReZonLegURL, ASI_LU_PInf_UDCLegURL, project record ID, and normalized address. Never fetch attachments; preserve immutable versions and official links."
+  },
+  {
     "key": "san_jose_ca_large_energy_projects",
     "name": "San Jose Data Center and Large Energy Use Applications",
     "adapter": "html_table",

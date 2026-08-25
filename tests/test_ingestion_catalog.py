@@ -314,6 +314,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "tulsa_ok_development_plans",
         "charleston_wv_energov_permits",
         "cheyenne_wy_opengov_permits",
+        "madison_wi_legistar_plan_commission",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -10140,3 +10141,39 @@ def test_dallas_legistar_planning_candidate_is_bounded_and_rights_gated():
     assert production.settings["export_policy"] == (
         "derived_planning_intelligence_only_no_raw_source_or_document_export"
     )
+
+
+def test_madison_legistar_candidate_preserves_full_planning_lifecycle():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    madison = candidates["madison_wi_legistar_plan_commission"]
+    assert madison.record_type == "planning"
+    assert madison.adapter == "legistar"
+    assert madison.status == "legal_hold"
+    assert madison.can_run_canary is False
+    assert "3 hearing_scheduled and 64 decision_recorded" in madison.notes
+
+    settings = madison.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/madison"
+    assert connector["body_names"] == ["PLAN COMMISSION"]
+    assert connector["max_events"] == 20
+    assert connector["max_items_per_event"] == 200
+    assert connector["max_records"] == 250
+    assert connector["lookback_days"] == 90
+    assert connector["future_days"] == 120
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["freshness_sla_hours"] == 168
+
+    mappings = {
+        mapping.source_field: mapping.canonical_field
+        for mapping in madison.probe_field_mappings
+    }
+    assert mappings["source_record_id"] == "source_record_id"
+    assert mappings["reference_number"] == "reference_number"
+    assert mappings["stage"] == "stage"
+    assert mappings["decision_at"] == "decision_at"
+    assert mappings["source_url"] == "source_url"
+    assert "bounded commercial storage" in madison.blocker_summary
