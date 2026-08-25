@@ -311,6 +311,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "tulsa_ok_development_plans",
         "charleston_wv_energov_permits",
         "cheyenne_wy_opengov_permits",
+        "dallas_tx_legistar_planning_agendas",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -10028,3 +10029,41 @@ ADJOURNMENT
     assert energy.status == "technical_hold"
     assert "file_number" in energy.candidate_source_fields
     assert "environmental_review_status" in energy.candidate_source_fields
+
+
+def test_dallas_legistar_planning_candidate_is_bounded_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    dallas = candidates["dallas_tx_legistar_planning_agendas"]
+    assert dallas.record_type == "planning"
+    assert dallas.adapter == "legistar"
+    assert dallas.status == "legal_hold"
+    assert dallas.can_run_canary is False
+
+    settings = dallas.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/cityofdallas"
+    assert "City Plan Commission" in connector["body_names"]
+    assert connector["event_page_size"] == 20
+    assert connector["max_events"] == 40
+    assert connector["max_items_per_event"] == 150
+    assert connector["max_records"] == 250
+    assert connector["lookback_days"] == 45
+    assert connector["future_days"] == 120
+    assert connector["max_evidence_characters"] == 10_000
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+
+    mappings = {
+        mapping.source_field: mapping.canonical_field
+        for mapping in dallas.probe_field_mappings
+    }
+    assert mappings["source_record_id"] == "source_record_id"
+    assert mappings["reference_number"] == "reference_number"
+    assert mappings["governing_body"] == "governing_body"
+    assert mappings["decision_at"] == "decision_at"
+    assert mappings["source_url"] == "source_url"
+    assert "commercial SaaS" in dallas.blocker_summary
+
+    assert "atlanta_ga_legistar_planning_agendas" not in candidates

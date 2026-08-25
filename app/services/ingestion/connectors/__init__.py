@@ -20,6 +20,7 @@ from .csv import CSVConnector, CsvConnector
 from .factory import build_connector
 from .html_document_index import HTMLDocumentIndexConnector
 from .json_array import JSONArrayConnector
+from .legistar import LegistarPlanningConnector
 from .opendatasoft import OpenDataSoftConnector, OpenDataSoftV2Connector
 from .planning_documents import PlanningDocumentsConnector
 from .rss import RSSConnector
@@ -44,6 +45,7 @@ __all__ = [
     "HTMLDocumentIndexConnector",
     "InvalidCheckpointError",
     "JSONArrayConnector",
+    "LegistarPlanningConnector",
     "OpenDataSoftConnector",
     "OpenDataSoftV2Connector",
     "PlanningDocumentsConnector",

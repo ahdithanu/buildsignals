@@ -918,6 +918,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "tulsa_ok_development_plans",
         "charleston_wv_energov_permits",
         "cheyenne_wy_opengov_permits",
+        "dallas_tx_legistar_planning_agendas",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
