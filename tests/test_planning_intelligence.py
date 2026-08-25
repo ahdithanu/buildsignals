@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.models.brand import BrandAlias, BrandProfile
 from app.models.graph import GraphEntityLink, GraphRelationship, GraphRelationshipEvidence
-from app.models.ingestion import PermitRecord
+from app.models.ingestion import PermitRecord, RecordExternalReference
 from app.models.planning import PlanningCompanyMatch, PlanningRecord
 
 
@@ -346,3 +346,126 @@ def test_exact_reference_does_not_link_across_cities(client, db, tmp_path):
     )
 
     assert _reference_relationships(db) == []
+
+
+def _ingest_external_reference_pair(client, tmp_path, *, order: str):
+    planning_path = tmp_path / "planning-external-reference.csv"
+    planning_path.write_text(
+        "id,reference,matter_id,type,stage,title,summary,excerpt,item,meeting,body,project,address,city,state,parcel,applicant,meeting_at,published_at,url\n"
+        'ITEM-EXT,AGENDA-99,155772,agenda_item,scheduled,"Project hearing",'
+        '"Official legislative matter","Staff report",9,"Plan Commission",'
+        '"Plan Commission","Project North","100 Main Street",Madison,WI,,,'
+        "2026-09-01T18:00:00Z,2026-08-25T12:00:00Z,"
+        "https://madison.legistar.com/LegislationDetail.aspx?ID=155772\n"
+    )
+    permit_path = tmp_path / "permit-external-reference.csv"
+    permit_path.write_text(
+        "id,application,permit,description,address,city,state,url,legislative_url\n"
+        'PROJECT-EXT,LNDUSE-2026-1,,"Current planning project",'
+        '"100 Main Street",Madison,WI,https://city.example.gov/projects/PROJECT-EXT,'
+        "https://madison.legistar.com/LegislationDetail.aspx?ID=155772\n"
+    )
+    planning_source = _planning_source(str(planning_path))
+    planning_source["settings"]["external_reference_extractors"] = [
+        {
+            "source_field": "matter_id",
+            "namespace": "legistar:madison:legislation",
+            "transform": "scalar",
+        }
+    ]
+    permit_source = _permit_source(str(permit_path))
+    permit_source["settings"]["external_reference_extractors"] = [
+        {
+            "source_field": "legislative_url",
+            "namespace": "legistar:madison:legislation",
+            "transform": "url_query_parameter",
+            "parameter": "ID",
+            "allowed_hosts": ["madison.legistar.com"],
+        }
+    ]
+    payloads = {"planning": planning_source, "permit": permit_source}
+    source_ids = {}
+    for record_type in order.split("-"):
+        source = client.post("/ingestion/sources", json=payloads[record_type])
+        assert source.status_code == 201, source.text
+        source_ids[record_type] = source.json()["id"]
+        run = client.post(
+            f"/ingestion/sources/{source_ids[record_type]}/runs",
+            json={"max_pages": 1},
+        )
+        assert run.status_code == 201, run.text
+        assert run.json()["records_failed"] == 0
+    return source_ids
+
+
+def _external_reference_relationships(db):
+    return [
+        relationship
+        for relationship in db.query(GraphRelationship).all()
+        if (relationship.attributes or {}).get("role") == "official_external_reference_match"
+    ]
+
+
+def test_planning_first_links_project_by_configured_official_reference(client, db, tmp_path):
+    _ingest_external_reference_pair(client, tmp_path, order="planning-permit")
+
+    references = db.query(RecordExternalReference).all()
+    assert {(row.record_type, row.namespace, row.normalized_value) for row in references} == {
+        ("planning", "legistar:madison:legislation", "155772"),
+        ("permit", "legistar:madison:legislation", "155772"),
+    }
+    relationships = _external_reference_relationships(db)
+    assert len(relationships) == 1
+    relationship = relationships[0]
+    assert relationship.attributes["matched_reference"] == "155772"
+    assert relationship.attributes["reference_namespace"] == "legistar:madison:legislation"
+    assert relationship.created_at is not None
+    assert relationship.last_verified_at is not None
+    evidence = relationship.evidence[0]
+    assert evidence.evidence_type == "official_external_reference_match"
+    assert evidence.payload["planning_reference_field"] == "matter_id"
+    assert evidence.payload["permit_reference_field"] == "legislative_url"
+    assert evidence.payload["permit_reference_raw_record_id"]
+
+
+def test_permit_first_external_reference_join_is_idempotent(client, db, tmp_path):
+    source_ids = _ingest_external_reference_pair(client, tmp_path, order="permit-planning")
+    first = _external_reference_relationships(db)
+    assert len(first) == 1
+    relationship_id = first[0].id
+    evidence_id = first[0].evidence[0].id
+
+    rerun = client.post(
+        f"/ingestion/sources/{source_ids['permit']}/runs",
+        json={"max_pages": 1},
+    )
+    assert rerun.status_code == 201, rerun.text
+    db.expire_all()
+    repeated = _external_reference_relationships(db)
+    assert [(row.id, row.evidence[0].id) for row in repeated] == [(relationship_id, evidence_id)]
+
+
+def test_corrected_external_reference_retires_stale_graph_link(client, db, tmp_path):
+    source_ids = _ingest_external_reference_pair(client, tmp_path, order="planning-permit")
+    relationship = _external_reference_relationships(db)[0]
+    assert relationship.is_current is True
+
+    permit_path = tmp_path / "permit-external-reference.csv"
+    permit_path.write_text(
+        "id,application,permit,description,address,city,state,url,legislative_url\n"
+        'PROJECT-EXT,LNDUSE-2026-1,,"Current planning project",'
+        '"100 Main Street",Madison,WI,https://city.example.gov/projects/PROJECT-EXT,'
+        "https://madison.legistar.com/LegislationDetail.aspx?ID=999999\n"
+    )
+    rerun = client.post(
+        f"/ingestion/sources/{source_ids['permit']}/runs",
+        json={"max_pages": 1},
+    )
+    assert rerun.status_code == 201, rerun.text
+    db.expire_all()
+
+    corrected = db.query(RecordExternalReference).filter_by(record_type="permit").one()
+    assert corrected.normalized_value == "999999"
+    stale = db.query(GraphRelationship).filter_by(id=relationship.id).one()
+    assert stale.is_current is False
+    assert stale.valid_to is not None

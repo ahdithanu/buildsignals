@@ -1705,6 +1705,13 @@
         "state": "WI",
         "confidence": 0.95
       },
+      "external_reference_extractors": [
+        {
+          "source_field": "legistar_matter_id",
+          "namespace": "legistar:madison:legislation",
+          "transform": "scalar"
+        }
+      ],
       "signal_stage": "pre_approval_and_approved",
       "freshness_semantics": "source_modified_at",
       "freshness_field": "modified_at",
