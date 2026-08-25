@@ -171,6 +171,42 @@ def test_build_promotion_entry_rejects_unknown_canonical_field():
         build_promotion_entry(_candidate(), _review(field_mappings=mappings))
 
 
+def test_build_promotion_entry_validates_planning_fields_against_planning_schema():
+    candidate = _candidate().model_copy(update={"record_type": "planning"})
+    review = _review(
+        field_mappings=[
+            {
+                "source_field": "id",
+                "canonical_field": "source_record_id",
+                "is_required": True,
+            },
+            {"source_field": "event", "canonical_field": "event_type"},
+            {"source_field": "title", "canonical_field": "title"},
+            {"source_field": "meeting", "canonical_field": "meeting_at"},
+        ]
+    )
+
+    entry = build_promotion_entry(candidate, review)
+
+    assert entry.record_type == "planning"
+    assert {mapping.canonical_field for mapping in entry.field_mappings} == {
+        "source_record_id",
+        "event_type",
+        "title",
+        "meeting_at",
+    }
+
+    invalid = [
+        mapping.model_dump(mode="json") for mapping in review.field_mappings
+    ]
+    invalid.append({"source_field": "valuation", "canonical_field": "valuation"})
+    with pytest.raises(ValueError, match="unknown planning canonical fields"):
+        build_promotion_entry(
+            candidate,
+            _review(field_mappings=invalid),
+        )
+
+
 def test_prepare_promotion_manifest_writes_valid_deterministic_catalog(
     tmp_path, monkeypatch
 ):

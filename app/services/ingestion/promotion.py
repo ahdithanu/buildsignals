@@ -24,6 +24,7 @@ from app.services.ingestion.catalog import (
 from app.services.ingestion.normalization import (
     CANONICAL_FIELDS,
     PARCEL_CANONICAL_FIELDS,
+    PLANNING_CANONICAL_FIELDS,
 )
 from app.services.ingestion.scheduling import source_schedule_policy
 
@@ -109,11 +110,11 @@ def build_promotion_entry(
     )
     if duplicates:
         raise ValueError(f"Promotion review contains duplicate source fields: {duplicates}")
-    canonical_fields = (
-        CANONICAL_FIELDS
-        if candidate.record_type == "permit"
-        else PARCEL_CANONICAL_FIELDS
-    )
+    canonical_fields = {
+        "permit": CANONICAL_FIELDS,
+        "parcel": PARCEL_CANONICAL_FIELDS,
+        "planning": PLANNING_CANONICAL_FIELDS,
+    }[candidate.record_type]
     invalid_canonical_fields = sorted(
         {
             mapping.canonical_field

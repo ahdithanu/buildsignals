@@ -43,7 +43,7 @@ def test_rollout_manifest_assigns_every_source_to_one_wave_and_shard():
     manifest = _manifest()
     all_wave_keys = [key for wave in manifest.waves for key in wave.source_keys]
 
-    assert manifest.source_count == len(entries) == 130
+    assert manifest.source_count == len(entries) == 131
     assert manifest.state_count == 41
     assert len(all_wave_keys) == len(set(all_wave_keys)) == len(entries)
     assert set(all_wave_keys) == {entry.key for entry in entries}
@@ -64,7 +64,7 @@ def test_rollout_manifest_matches_catalog_wave_classification():
 
     assert wave_by_key == {entry.key: source_rollout_wave(entry) for entry in entries}
     assert [(wave.wave, wave.source_count) for wave in manifest.waves] == [
-        (1, 26),
+        (1, 27),
         (2, 26),
         (3, 11),
         (4, 67),
@@ -101,6 +101,34 @@ def test_render_savannah_worker_is_pinned_to_reviewed_scope():
     assert "--source-key savannah_ga_commercial_building_permits" in worker
     assert "--rollout-wave 4" in worker
     assert "value: pub.sagis.org" in worker
+    assert f"value: {host_policy.policy_digest}" in worker
+    assert f"value: {manifest.manifest_digest}" in worker
+
+
+def test_render_dallas_worker_is_pinned_to_reviewed_production_scope():
+    source = next(
+        entry for entry in load_catalog()
+        if entry.key == "dallas_tx_legistar_planning_agendas"
+    )
+    manifest = _manifest()
+    host_policy = audit_ingestion_hosts(
+        [source], allowed_hosts="webapi.legistar.com"
+    )
+    blueprint = Path("render.yaml").read_text(encoding="utf-8")
+    match = re.search(
+        r"(?ms)^  - type: cron\n"
+        r"    name: dealsignal-dallas-planning-ingestion\n"
+        r"(?P<body>.*?)(?=^  - type:|\Z)",
+        blueprint,
+    )
+
+    assert match is not None
+    worker = match.group("body")
+    assert "scheduled-due" in worker
+    assert "--source-key dallas_tx_legistar_planning_agendas" in worker
+    assert "--rollout-wave 1" in worker
+    assert "--max-pages-per-source 10" in worker
+    assert "value: webapi.legistar.com" in worker
     assert f"value: {host_policy.policy_digest}" in worker
     assert f"value: {manifest.manifest_digest}" in worker
 
