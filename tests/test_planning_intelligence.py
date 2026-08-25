@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from app.models.brand import BrandAlias, BrandProfile
 from app.models.graph import GraphEntityLink, GraphRelationship, GraphRelationshipEvidence
-from app.models.ingestion import PermitRecord, RecordExternalReference
+from app.models.ingestion import IngestionSource, PermitRecord, RecordExternalReference
 from app.models.planning import PlanningCompanyMatch, PlanningRecord
+from app.services.ingestion.service import backfill_external_references_batch
 
 
 def _planning_source(csv_path: str) -> dict:
@@ -348,7 +349,9 @@ def test_exact_reference_does_not_link_across_cities(client, db, tmp_path):
     assert _reference_relationships(db) == []
 
 
-def _ingest_external_reference_pair(client, tmp_path, *, order: str):
+def _ingest_external_reference_pair(
+    client, tmp_path, *, order: str, configure_references: bool = True
+):
     planning_path = tmp_path / "planning-external-reference.csv"
     planning_path.write_text(
         "id,reference,matter_id,type,stage,title,summary,excerpt,item,meeting,body,project,address,city,state,parcel,applicant,meeting_at,published_at,url\n"
@@ -366,7 +369,7 @@ def _ingest_external_reference_pair(client, tmp_path, *, order: str):
         "https://madison.legistar.com/LegislationDetail.aspx?ID=155772\n"
     )
     planning_source = _planning_source(str(planning_path))
-    planning_source["settings"]["external_reference_extractors"] = [
+    planning_extractors = [
         {
             "source_field": "matter_id",
             "namespace": "legistar:madison:legislation",
@@ -374,7 +377,7 @@ def _ingest_external_reference_pair(client, tmp_path, *, order: str):
         }
     ]
     permit_source = _permit_source(str(permit_path))
-    permit_source["settings"]["external_reference_extractors"] = [
+    permit_extractors = [
         {
             "source_field": "legislative_url",
             "namespace": "legistar:madison:legislation",
@@ -383,6 +386,9 @@ def _ingest_external_reference_pair(client, tmp_path, *, order: str):
             "allowed_hosts": ["madison.legistar.com"],
         }
     ]
+    if configure_references:
+        planning_source["settings"]["external_reference_extractors"] = planning_extractors
+        permit_source["settings"]["external_reference_extractors"] = permit_extractors
     payloads = {"planning": planning_source, "permit": permit_source}
     source_ids = {}
     for record_type in order.split("-"):
@@ -469,3 +475,73 @@ def test_corrected_external_reference_retires_stale_graph_link(client, db, tmp_p
     stale = db.query(GraphRelationship).filter_by(id=relationship.id).one()
     assert stale.is_current is False
     assert stale.valid_to is not None
+
+
+def test_bounded_backfill_indexes_existing_records_without_refetching(client, db, tmp_path):
+    source_ids = _ingest_external_reference_pair(
+        client,
+        tmp_path,
+        order="permit-planning",
+        configure_references=False,
+    )
+    assert db.query(RecordExternalReference).count() == 0
+    assert _external_reference_relationships(db) == []
+
+    planning_source = db.query(IngestionSource).filter_by(id=source_ids["planning"]).one()
+    planning_source.settings = {
+        **(planning_source.settings or {}),
+        "external_reference_extractors": [
+            {
+                "source_field": "matter_id",
+                "namespace": "legistar:madison:legislation",
+                "transform": "scalar",
+            }
+        ],
+    }
+    permit_source = db.query(IngestionSource).filter_by(id=source_ids["permit"]).one()
+    permit_source.settings = {
+        **(permit_source.settings or {}),
+        "external_reference_extractors": [
+            {
+                "source_field": "legislative_url",
+                "namespace": "legistar:madison:legislation",
+                "transform": "url_query_parameter",
+                "parameter": "ID",
+                "allowed_hosts": ["madison.legistar.com"],
+            }
+        ],
+    }
+    db.commit()
+
+    permit_result = backfill_external_references_batch(
+        db,
+        record_type="permit",
+        source_key=permit_source.key,
+        batch_size=1,
+    )
+    planning_result = backfill_external_references_batch(
+        db,
+        record_type="planning",
+        source_key=planning_source.key,
+        batch_size=1,
+    )
+    db.commit()
+
+    assert permit_result.scanned == permit_result.references_created == 1
+    assert permit_result.references_removed == 0
+    assert permit_result.records_linked == 0
+    assert planning_result.scanned == planning_result.references_created == 1
+    assert planning_result.records_linked == 1
+    assert len(_external_reference_relationships(db)) == 1
+
+    repeated = backfill_external_references_batch(
+        db,
+        record_type="planning",
+        source_key=planning_source.key,
+        batch_size=1,
+    )
+    assert repeated.references_created == 0
+    assert repeated.references_refreshed == 1
+    assert repeated.references_removed == 0
+    assert repeated.records_linked == 1
+    assert len(_external_reference_relationships(db)) == 1

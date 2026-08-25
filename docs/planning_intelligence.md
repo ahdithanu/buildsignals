@@ -95,6 +95,25 @@ both reference-row IDs and raw evidence pointers. If a source corrects or
 removes an identifier, the current index is updated and the former graph edge
 is closed with `valid_to` rather than deleted.
 
+Existing records can be indexed without refetching an external system. Run a
+dry pass first, then execute bounded resumable batches:
+
+```bash
+python -m app.services.ingestion.cli references backfill \
+  --organization ORGANIZATION_ID \
+  --record-type permit \
+  --source-key madison_wi_current_planning_projects \
+  --batch-size 500 \
+  --dry-run
+```
+
+Remove `--dry-run` after reviewing the counts. Use the reported `next_cursor`
+with `--after-id` to resume a capped run, or set `--max-records` for a deployment
+window. The command reads only existing canonical and immutable raw rows; it
+does not open network connections. Run each record type separately. Backfilling
+a production project source does not authorize or activate a held planning
+source, which must complete its own approval and promotion process first.
+
 ## Source Rollout
 
 Prioritize source families in this order:

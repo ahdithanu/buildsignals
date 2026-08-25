@@ -5,6 +5,7 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 from uuid import uuid4
@@ -122,6 +123,19 @@ PLANNING_COLUMNS = {
     "source_url",
     "confidence",
 }
+
+
+@dataclass(frozen=True)
+class ExternalReferenceBackfillBatchResult:
+    scanned: int
+    references_created: int
+    references_refreshed: int
+    references_removed: int
+    records_linked: int
+    next_cursor: str | None
+    has_more: bool
+
+
 HEARTBEAT_INTERVAL_SECONDS = 30.0
 STALE_RUN_AFTER = timedelta(minutes=5)
 SNAPSHOT_CHECKPOINT_KEY = "_build_signals_snapshot"
@@ -1075,6 +1089,133 @@ def _sync_record_external_references(
         if identity not in keep:
             db.delete(row)
     db.flush()
+
+
+def backfill_external_references_batch(
+    db: Session,
+    *,
+    record_type: str,
+    source_key: str | None = None,
+    after_id: str | None = None,
+    batch_size: int = 500,
+) -> ExternalReferenceBackfillBatchResult:
+    """Index configured official references without refetching source records."""
+    if record_type not in {"permit", "planning"}:
+        raise ValueError("record_type must be permit or planning")
+    if batch_size < 1 or batch_size > 5_000:
+        raise ValueError("batch_size must be between 1 and 5000")
+
+    source_query = active_query(db.query(IngestionSource), IngestionSource).filter(
+        IngestionSource.is_active.is_(True),
+        IngestionSource.record_type == record_type,
+    )
+    if source_key:
+        source_query = source_query.filter(IngestionSource.key == source_key)
+    sources = source_query.all()
+    if source_key and not sources:
+        raise ValueError(f"active {record_type} source not found: {source_key}")
+    eligible_source_ids = {
+        source.id
+        for source in sources
+        if (source.settings or {}).get("external_reference_extractors")
+    }
+    if source_key and not eligible_source_ids:
+        raise ValueError(f"source has no external reference extractors: {source_key}")
+    if not eligible_source_ids:
+        return ExternalReferenceBackfillBatchResult(0, 0, 0, 0, 0, after_id, False)
+
+    model = PermitRecord if record_type == "permit" else PlanningRecord
+    query = active_query(db.query(model), model).options(
+        joinedload(model.source),
+        joinedload(model.latest_raw_record),
+    ).filter(model.source_id.in_(eligible_source_ids))
+    if record_type == "permit":
+        query = query.filter(PermitRecord.is_active.is_(True))
+    if after_id:
+        query = query.filter(model.id > after_id)
+    rows = query.order_by(model.id).limit(batch_size + 1).all()
+    records = rows[:batch_size]
+    if not records:
+        return ExternalReferenceBackfillBatchResult(0, 0, 0, 0, 0, after_id, False)
+
+    created = refreshed = removed = linked = 0
+    for record in records:
+        before = {
+            (reference.namespace, reference.normalized_value)
+            for reference in _record_external_references(db, record_type, record.id)
+        }
+        _sync_record_external_references(
+            db,
+            record.source,
+            record_type,
+            record.id,
+            record.latest_raw_record,
+            utcnow(),
+        )
+        after = {
+            (reference.namespace, reference.normalized_value)
+            for reference in _record_external_references(db, record_type, record.id)
+        }
+        created += len(after - before)
+        refreshed += len(after & before)
+        removed += len(before - after)
+
+        entity_id = _record_entity_id(db, record_type, record.id)
+        if entity_id is None:
+            if record_type == "permit":
+                _project_permit_to_graph(
+                    db, record.source, record, record.latest_raw_record
+                )
+            else:
+                _project_planning_to_graph(
+                    db,
+                    record.source,
+                    record,
+                    record.latest_raw_record,
+                    list(record.company_matches),
+                )
+            entity_id = _record_entity_id(db, record_type, record.id)
+        elif record_type == "permit":
+            _reconcile_planning_permit_links(
+                db, permit=record, permit_entity_id=entity_id
+            )
+        else:
+            _reconcile_planning_permit_links(
+                db, planning=record, planning_entity_id=entity_id
+            )
+        if entity_id and _has_current_external_reference_link(
+            db, record_type=record_type, entity_id=entity_id
+        ):
+            linked += 1
+
+    db.flush()
+    return ExternalReferenceBackfillBatchResult(
+        scanned=len(records),
+        references_created=created,
+        references_refreshed=refreshed,
+        references_removed=removed,
+        records_linked=linked,
+        next_cursor=records[-1].id,
+        has_more=len(rows) > batch_size,
+    )
+
+
+def _has_current_external_reference_link(
+    db: Session, *, record_type: str, entity_id: str
+) -> bool:
+    query = active_query(db.query(GraphRelationship), GraphRelationship).filter(
+        GraphRelationship.relationship_type == GraphRelationshipType.related_to,
+        GraphRelationship.is_current.is_(True),
+    )
+    if record_type == "planning":
+        query = query.filter(GraphRelationship.source_entity_id == entity_id)
+    else:
+        query = query.filter(GraphRelationship.target_entity_id == entity_id)
+    return any(
+        (relationship.attributes or {}).get("role")
+        == "official_external_reference_match"
+        for relationship in query.all()
+    )
 
 
 def _parcel_facts(

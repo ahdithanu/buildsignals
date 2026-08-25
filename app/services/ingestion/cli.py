@@ -47,7 +47,12 @@ from app.services.ingestion.scheduling import (
     source_schedule_policy,
     source_shard,
 )
-from app.services.ingestion.service import ActiveRunConflict, execute_source_run, list_sources
+from app.services.ingestion.service import (
+    ActiveRunConflict,
+    backfill_external_references_batch,
+    execute_source_run,
+    list_sources,
+)
 from app.services.ingestion.source_access import (
     build_source_access_contract,
     source_access_contract_json,
@@ -187,6 +192,29 @@ def build_parser() -> argparse.ArgumentParser:
     brand_backfill.add_argument("--max-records", type=_positive_int)
     brand_backfill.add_argument("--after-id", help="Resume after this permit ID")
     brand_backfill.add_argument("--dry-run", action="store_true")
+
+    references = subcommands.add_parser(
+        "references", help="Manage exact cross-source record references"
+    )
+    reference_commands = references.add_subparsers(
+        dest="reference_command", required=True
+    )
+    reference_backfill = reference_commands.add_parser(
+        "backfill", help="Index references from existing immutable source records"
+    )
+    reference_backfill.add_argument(
+        "--organization", required=True, help="Organization ID or slug"
+    )
+    reference_backfill.add_argument(
+        "--record-type", required=True, choices=("permit", "planning")
+    )
+    reference_backfill.add_argument("--source-key")
+    reference_backfill.add_argument(
+        "--batch-size", type=_brand_batch_size, default=500, metavar="1..5000"
+    )
+    reference_backfill.add_argument("--max-records", type=_positive_int)
+    reference_backfill.add_argument("--after-id", help="Resume after this record ID")
+    reference_backfill.add_argument("--dry-run", action="store_true")
 
     run = subcommands.add_parser("run", help="Run one catalog source")
     run.add_argument("--organization", required=True, help="Organization ID or slug")
@@ -811,6 +839,54 @@ def main(argv: list[str] | None = None) -> int:
                 f"brand backfill complete: catalog_created={catalog_result.created} "
                 f"catalog_updated={catalog_result.updated} scanned={scanned} "
                 f"created={created} refreshed={refreshed} retracted={retracted} "
+                f"next_cursor={cursor} dry_run={args.dry_run}"
+            )
+            return 0
+
+        if args.command == "references" and args.reference_command == "backfill":
+            cursor = args.after_id
+            scanned = created = refreshed = removed = linked = 0
+            while args.max_records is None or scanned < args.max_records:
+                remaining = (
+                    args.batch_size
+                    if args.max_records is None
+                    else min(args.batch_size, args.max_records - scanned)
+                )
+                savepoint = db.begin_nested() if args.dry_run else None
+                batch = backfill_external_references_batch(
+                    db,
+                    record_type=args.record_type,
+                    source_key=args.source_key,
+                    after_id=cursor,
+                    batch_size=remaining,
+                )
+                scanned += batch.scanned
+                created += batch.references_created
+                refreshed += batch.references_refreshed
+                removed += batch.references_removed
+                linked += batch.records_linked
+                cursor = batch.next_cursor
+                if savepoint is not None:
+                    savepoint.rollback()
+                else:
+                    db.commit()
+                print(
+                    f"reference backfill batch: type={args.record_type} "
+                    f"scanned={batch.scanned} created={batch.references_created} "
+                    f"refreshed={batch.references_refreshed} "
+                    f"removed={batch.references_removed} linked={batch.records_linked} "
+                    f"cursor={cursor}"
+                )
+                if batch.scanned == 0 or not batch.has_more:
+                    break
+
+            if args.dry_run:
+                db.rollback()
+            print(
+                f"reference backfill complete: type={args.record_type} "
+                f"source={args.source_key or 'all-configured'} scanned={scanned} "
+                f"created={created} refreshed={refreshed} removed={removed} "
+                f"linked={linked} "
                 f"next_cursor={cursor} dry_run={args.dry_run}"
             )
             return 0
