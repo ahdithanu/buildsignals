@@ -231,7 +231,7 @@ def test_event_discovery_uses_bounded_odata_paging_and_body_filter():
     assert all("EventDate" in call[1]["$filter"] for call in event_calls)
     assert all("City Plan Commission" in call[1]["$filter"] for call in event_calls)
     assert all("City Council" in call[1]["$filter"] for call in event_calls)
-    assert all("EventId" in call[1]["$orderby"] for call in event_calls)
+    assert all(call[1]["$orderby"] == "EventId desc" for call in event_calls)
 
 
 def test_filters_unrequested_bodies_even_if_api_returns_them():
@@ -253,6 +253,32 @@ def test_filters_unrequested_bodies_even_if_api_returns_them():
 
     assert [row["legistar_event_id"] for row in rows] == [42]
     assert all(call[0] != f"{ENDPOINT}/Events/43" for call in http.calls)
+
+
+def test_filters_records_to_requested_lifecycle_stage():
+    event = _event(42)
+    scheduled = _item(4201, title="Scheduled", agenda_note="Agenda evidence")
+    decided = _item(
+        4202,
+        title="Decided",
+        minutes_note="Commission recommended approval.",
+        action="Recommended for Approval",
+    )
+    connector = LegistarPlanningConnector(
+        ENDPOINT,
+        record_stages=["decision_recorded"],
+        http_client=FakeHttpClient([[event], _detail(event, [scheduled, decided])]),
+    )
+
+    rows = connector.fetch().records
+
+    assert [row["legistar_event_item_id"] for row in rows] == [4202]
+    assert {row["stage"] for row in rows} == {"decision_recorded"}
+
+
+def test_rejects_unsupported_record_stage():
+    with pytest.raises(ValueError, match="unsupported record_stages"):
+        LegistarPlanningConnector(ENDPOINT, record_stages=["permit_issued"])
 
 
 @pytest.mark.parametrize(

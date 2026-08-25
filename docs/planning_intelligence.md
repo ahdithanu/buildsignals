@@ -140,13 +140,25 @@ record, and evidence-size limits protect the ingestion worker.
 
 Dallas is the first configured candidate because its `cityofdallas` API and
 City Plan Commission body were current during validation on 2026-08-24. It
-remains `legal_hold` until the narrow commercial SaaS storage and derived-display
-scope is explicitly approved and a bounded lifecycle canary passes. Atlanta is
-not configured because its public Legistar event feed was stale at July 2022
-during the same validation. Other cities must pass current-feed, body-name,
-rights, and lifecycle checks before reusing the connector.
+entered `operational_retry` after the narrow commercial SaaS storage and
+derived-display scope was approved on 2026-08-24. Its bounded canary and
+promotion review passed the same day, and it now runs as a daily pre-approval
+production source with an exact-host deployment policy.
+Atlanta is not configured because its public Legistar event feed was stale at
+July 2022 during the same validation. Other cities must pass current-feed,
+body-name, rights, and lifecycle checks before reusing the connector.
 
-The initial connector uses ordered offset paging inside a narrow date window.
+The Dallas canary measures publisher freshness against a 14-day SLA that
+matches the planning-meeting publication cadence while retaining daily change
+collection. A bounded one-year probe on 2026-08-24 found no minutes or action
+payloads in 21 City Plan Commission events, so Dallas Legistar is admitted only
+as a pre-approval agenda source. Existing permit feeds remain the approval and
+issuance confirmation layer; Dallas needs a separately validated official
+minutes source before planning decisions can be claimed.
+
+The initial connector uses newest-first EventId ordering with offset paging
+inside a narrow date window so bounded canaries exercise current publication
+activity.
 If a client approaches the Legistar response cap or exhibits concurrent event
 churn, migrate that source to EventId keyset paging before widening history.
 

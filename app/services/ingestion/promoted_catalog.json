@@ -788,6 +788,199 @@
     }
   },
   {
+    "adapter": "legistar",
+    "base_url": "https://webapi.legistar.com/v1/cityofdallas",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "source_record_id",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "event_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "event_type",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "stage",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "stage",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "title",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "title",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "summary",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "summary",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "evidence_excerpt",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "evidence_excerpt",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "agenda_item_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "agenda_item_number",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "reference_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "reference_number",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "meeting_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "meeting_name",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "governing_body",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "governing_body",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "meeting_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "meeting_at",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "published_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "published_at",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "source_url",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "source_url",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Dallas, TX",
+    "key": "dallas_tx_legistar_planning_agendas",
+    "name": "Dallas Legistar Planning Agendas",
+    "record_type": "planning",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "source_record_id",
+        "reference_number",
+        "evidence_excerpt",
+        "modified_at",
+        "source_url"
+      ],
+      "candidate_canary_completed_on": "2026-08-24",
+      "candidate_key": "dallas_tx_legistar_planning_agendas",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_priority": 80,
+      "collection_sla_hours": 48,
+      "connector": {
+        "body_names": [
+          "City Plan Commission",
+          "Board of Adjustment",
+          "Board of Adjustment, Panel A",
+          "Board of Adjustment, Panel B",
+          "Board of Adjustment, Panel C",
+          "Landmark Commission",
+          "Economic Development Committee"
+        ],
+        "endpoint": "https://webapi.legistar.com/v1/cityofdallas",
+        "event_page_size": 20,
+        "future_days": 120,
+        "lookback_days": 45,
+        "max_events": 40,
+        "max_evidence_characters": 10000,
+        "max_items_per_event": 150,
+        "max_records": 250,
+        "max_retries": 2,
+        "page_size": 25,
+        "timeout": 30
+      },
+      "defaults": {
+        "city": "Dallas",
+        "confidence": 0.9,
+        "jurisdiction": "Dallas, TX",
+        "state": "TX"
+      },
+      "export_policy": "derived_planning_intelligence_only_no_raw_source_or_document_export",
+      "field_allowlist": [
+        "source_record_id",
+        "event_type",
+        "stage",
+        "title",
+        "summary",
+        "evidence_excerpt",
+        "agenda_item_number",
+        "reference_number",
+        "meeting_name",
+        "governing_body",
+        "meeting_date",
+        "meeting_at",
+        "published_at",
+        "modified_at",
+        "source_url",
+        "legistar_event_id",
+        "legistar_event_item_id",
+        "legistar_matter_id",
+        "matter_type",
+        "matter_status",
+        "meeting_location",
+        "event_time"
+      ],
+      "freshness_field": "modified_at",
+      "freshness_semantics": "source_modified_at",
+      "freshness_sla_hours": 336,
+      "license": "Official City of Dallas public meeting records; narrow commercial SaaS storage and derived display approved on 2026-08-24 with source attribution and no raw-document redistribution",
+      "max_pages_per_run": 10,
+      "official_landing_page": "https://dallascityhall.com/government/Boards-and-Commissions/City-Plan-and-Zoning-Commission/Pages/Meetings.aspx",
+      "promotion_data_minimization_approved": true,
+      "promotion_reviewed_by": "Build Signals Owner",
+      "promotion_reviewed_on": "2026-08-24",
+      "promotion_rights_approved": true,
+      "reconciliation_mode": "bounded_legistar_event_window",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by the Build Signals owner on 2026-08-24 for bounded commercial storage and customer-facing derived intelligence from intentionally public City of Dallas meeting records exposed through the public Granicus Legistar API. Preserve City attribution and official links; do not redistribute attachments or offer a raw meeting-record replacement export.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval",
+      "suppressed_fields": [
+        "EventItemAttachments",
+        "attachment_content",
+        "raw_agenda_document",
+        "raw_minutes_document",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
     "adapter": "arcgis",
     "base_url": "https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/bseed_building_permit_plan_reviews/FeatureServer/0/query",
     "field_mappings": [

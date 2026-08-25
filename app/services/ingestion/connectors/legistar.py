@@ -32,6 +32,7 @@ class LegistarPlanningConnector(BaseConnector):
         max_records: int = 2500,
         body_names: Sequence[str] | None = None,
         matter_types: Sequence[str] | None = None,
+        record_stages: Sequence[str] | None = None,
         lookback_days: int = 45,
         future_days: int = 180,
         api_token: str | None = None,
@@ -72,6 +73,16 @@ class LegistarPlanningConnector(BaseConnector):
         self._body_names = {value.casefold() for value in self.body_names}
         self.matter_types = tuple(_clean_values(matter_types))
         self._matter_types = {value.casefold() for value in self.matter_types}
+        self.record_stages = tuple(_clean_values(record_stages))
+        unsupported_stages = set(self.record_stages) - {
+            "hearing_scheduled",
+            "decision_recorded",
+        }
+        if unsupported_stages:
+            raise ValueError(
+                f"unsupported record_stages: {sorted(unsupported_stages)}"
+            )
+        self._record_stages = set(self.record_stages)
         self.lookback_days = lookback_days
         self.future_days = future_days
         self.api_token = api_token
@@ -160,7 +171,10 @@ class LegistarPlanningConnector(BaseConnector):
                     ).casefold() not in self._matter_types:
                         continue
                     record = self._record(detail, item)
-                    if record is not None:
+                    if record is not None and (
+                        not self._record_stages
+                        or record["stage"] in self._record_stages
+                    ):
                         records.append(record)
                     if len(records) >= self.max_records:
                         break
@@ -187,7 +201,7 @@ class LegistarPlanningConnector(BaseConnector):
             filters.append(f"({body_filter})")
         return {
             "$filter": " and ".join(filters),
-            "$orderby": "EventId asc",
+            "$orderby": "EventId desc",
             "$top": top,
             "$skip": skip,
             **self._token_query(),

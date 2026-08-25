@@ -199,7 +199,43 @@ services:
       - key: INGESTION_HOST_POLICY_DIGEST
         value: a3e282659996966df47ab7297eb3c0c3fc4072066ceb34931584c965bf0fe5cd
       - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
-        value: 06eb7f18c5229fcd77f36c3d3800970ed07cd6c771cd9b8f0e451a6e82de1e63
+        value: b34711a6b097b82bcffa31249d7178972a5c5aed355803bbda173d51a90bbca2
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
+  # Dallas planning agendas are a pre-approval source. This worker is pinned
+  # to the reviewed Legistar host and Texas rollout wave.
+  - type: cron
+    name: dealsignal-dallas-planning-ingestion
+    runtime: python
+    plan: starter
+    schedule: "45 11 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli scheduled-due
+      --organization "$INGESTION_ORGANIZATION"
+      --source-key dallas_tx_legistar_planning_agendas
+      --rollout-wave 1
+      --max-pages-per-source 10
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        value: webapi.legistar.com
+      - key: INGESTION_HOST_POLICY_DIGEST
+        value: f69e8ec6e3bf9d6795e24bb734886df9d0251026a46e18fadcbb23493815043c
+      - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
+        value: b34711a6b097b82bcffa31249d7178972a5c5aed355803bbda173d51a90bbca2
       - key: INGESTION_ORGANIZATION
         sync: false
 
@@ -230,8 +266,6 @@ services:
         sync: false
       - key: INGESTION_ALLOWED_HOSTS
         value: services5.arcgis.com
-      # Set from the candidate rollout manifest before any candidate becomes
-      # runnable. It remains unset while the effective runnable set is empty.
       - key: INGESTION_HOST_POLICY_DIGEST
         sync: false
       - key: INGESTION_ROLLOUT_MANIFEST_DIGEST

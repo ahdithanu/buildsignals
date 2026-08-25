@@ -22,6 +22,7 @@ from app.services.ingestion.normalization import (
     missing_required_source_fields,
     normalize_parcel,
     normalize_permit,
+    normalize_planning_record,
     prepare_mapped_record,
 )
 from app.services.ingestion.service import _normalization_hash, execute_source_run
@@ -247,6 +248,7 @@ def test_catalog_loads_first_live_source_cohort():
             "tacoma_wa_commercial_permit_lifecycle",
             "arlington_tx_commercial_permit_applications",
             "arlington_tx_commercial_issued_permits",
+            "dallas_tx_legistar_planning_agendas",
         }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
@@ -257,6 +259,7 @@ def test_catalog_loads_first_live_source_cohort():
         )
         assert entry.settings["signal_stage"] in {
             "pre_approval_and_approved",
+            "pre_approval",
             "approved_only",
             "parcel_context",
         }
@@ -311,7 +314,6 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "tulsa_ok_development_plans",
         "charleston_wv_energov_permits",
         "cheyenne_wy_opengov_permits",
-        "dallas_tx_legistar_planning_agendas",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -9102,6 +9104,23 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "longitude": -83.0458,
             "latitude": 42.3314,
         },
+        "dallas_tx_legistar_planning_agendas": {
+            "source_record_id": "legistar:cityofdallas:4543:115220",
+            "event_type": "planning_hearing_agenda_item",
+            "stage": "hearing_scheduled",
+            "title": "Zoning case Z234-001",
+            "summary": "Public hearing for a commercial zoning application.",
+            "evidence_excerpt": "Public hearing for a commercial zoning application.",
+            "agenda_item_number": "5",
+            "reference_number": "Z234-001",
+            "meeting_name": "City Plan Commission",
+            "governing_body": "City Plan Commission",
+            "meeting_at": "2026-09-03T00:00:00",
+            "published_at": "2026-08-12T15:10:00Z",
+            "decision_at": None,
+            "modified_at": "2026-08-12T19:00:00Z",
+            "source_url": "https://cityofdallas.legistar.com/LegislationDetail.aspx?ID=1",
+        },
     }
 
     for entry in load_catalog():
@@ -9131,6 +9150,15 @@ def test_each_catalog_mapping_normalizes_representative_record():
             assert normalized.values.get("parcel_group_id") or entry.key != (
                 "miami_dade_fl_property_appraiser_parcels"
             )
+            continue
+        if entry.record_type == "planning":
+            normalized = normalize_planning_record(
+                prepared, field_mapping, defaults=entry.settings.get("defaults")
+            )
+            assert normalized.source_record_id
+            assert normalized.values.get("title")
+            assert normalized.values.get("stage") == "hearing_scheduled"
+            assert normalized.values.get("source_url")
             continue
         normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings.get("defaults"))
         assert normalized.source_record_id
@@ -10032,13 +10060,15 @@ ADJOURNMENT
 
 
 def test_dallas_legistar_planning_candidate_is_bounded_and_rights_gated():
-    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+    candidates = {
+        entry.key: entry for entry in load_candidate_catalog(include_promoted=True)
+    }
 
     dallas = candidates["dallas_tx_legistar_planning_agendas"]
     assert dallas.record_type == "planning"
     assert dallas.adapter == "legistar"
-    assert dallas.status == "legal_hold"
-    assert dallas.can_run_canary is False
+    assert dallas.status == "operational_retry"
+    assert dallas.can_run_canary is True
 
     settings = dallas.probe_settings
     assert settings is not None
@@ -10052,8 +10082,10 @@ def test_dallas_legistar_planning_candidate_is_bounded_and_rights_gated():
     assert connector["lookback_days"] == 45
     assert connector["future_days"] == 120
     assert connector["max_evidence_characters"] == 10_000
-    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["signal_stage"] == "pre_approval"
     assert settings["freshness_field"] == "modified_at"
+    assert settings["freshness_sla_hours"] == 336
+    assert "canary_stage_probes" not in settings
 
     mappings = {
         mapping.source_field: mapping.canonical_field
@@ -10062,8 +10094,49 @@ def test_dallas_legistar_planning_candidate_is_bounded_and_rights_gated():
     assert mappings["source_record_id"] == "source_record_id"
     assert mappings["reference_number"] == "reference_number"
     assert mappings["governing_body"] == "governing_body"
-    assert mappings["decision_at"] == "decision_at"
+    assert "decision_at" not in mappings
     assert mappings["source_url"] == "source_url"
-    assert "commercial SaaS" in dallas.blocker_summary
+    assert "Rights and data-minimization scope were approved" in dallas.blocker_summary
+    assert "pre-approval only" in dallas.notes
+    assert {mapping.canonical_field for mapping in dallas.probe_field_mappings} <= {
+        "source_record_id",
+        "reference_number",
+        "event_type",
+        "stage",
+        "title",
+        "summary",
+        "evidence_excerpt",
+        "agenda_item_number",
+        "meeting_name",
+        "governing_body",
+        "project_name",
+        "address",
+        "city",
+        "state",
+        "postal_code",
+        "parcel_id",
+        "jurisdiction",
+        "applicant_name",
+        "owner_name",
+        "developer_name",
+        "latitude",
+        "longitude",
+        "meeting_at",
+        "published_at",
+        "decision_at",
+        "source_url",
+        "confidence",
+    }
 
     assert "atlanta_ga_legistar_planning_agendas" not in candidates
+
+    production = {
+        entry.key: entry for entry in load_catalog()
+    }["dallas_tx_legistar_planning_agendas"]
+    assert production.record_type == "planning"
+    assert production.is_active is True
+    assert production.settings["signal_stage"] == "pre_approval"
+    assert production.settings["promotion_rights_approved"] is True
+    assert production.settings["export_policy"] == (
+        "derived_planning_intelligence_only_no_raw_source_or_document_export"
+    )

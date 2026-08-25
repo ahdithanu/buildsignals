@@ -1584,15 +1584,15 @@
   },
   {
     "key": "dallas_tx_legistar_planning_agendas",
-    "name": "Dallas Legistar Planning Agendas and Decisions",
+    "name": "Dallas Legistar Planning Agendas",
     "adapter": "legistar",
     "record_type": "planning",
     "jurisdiction": "Dallas, TX",
     "base_url": "https://webapi.legistar.com/v1/cityofdallas",
     "official_landing_page": "https://dallascityhall.com/government/Boards-and-Commissions/City-Plan-and-Zoning-Commission/Pages/Meetings.aspx",
-    "license": "Official City of Dallas public meeting records; production use requires confirmation for commercial SaaS storage and derived display",
-    "status": "legal_hold",
-    "blocker_summary": "The public Legistar API and Dallas planning bodies were technically validated on 2026-08-24. Production activation requires explicit approval for the narrow commercial SaaS scope, followed by a bounded lifecycle canary that confirms agenda revisions, decisions, cancellations, and removals remain auditable.",
+    "license": "Official City of Dallas public meeting records; narrow commercial SaaS storage and derived display approved on 2026-08-24 with source attribution and no raw-document redistribution",
+    "status": "operational_retry",
+    "blocker_summary": "Rights and data-minimization scope were approved on 2026-08-24. Promotion remains blocked until a bounded production-style canary validates canonical planning normalization, agenda and decision lifecycle handling, stable identities, and source attribution.",
     "early_warning_value": "Planning commission, adjustment board, landmark, and economic-development agendas can expose rezonings, site plans, variances, incentives, developers, owners, brands, and project locations before permit approval.",
     "candidate_source_fields": [
       "source_record_id",
@@ -1608,7 +1608,6 @@
       "meeting_at",
       "governing_body",
       "published_at",
-      "decision_at",
       "modified_at",
       "source_url"
     ],
@@ -1641,10 +1640,10 @@
         "state": "TX",
         "confidence": 0.9
       },
-      "signal_stage": "pre_approval_and_approved",
+      "signal_stage": "pre_approval",
       "freshness_semantics": "source_modified_at",
       "freshness_field": "modified_at",
-      "freshness_sla_hours": 168,
+      "freshness_sla_hours": 336,
       "collection_interval_minutes": 1440,
       "collection_sla_hours": 48
     },
@@ -1657,18 +1656,15 @@
       {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
       {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
       {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "meeting_date", "canonical_field": "meeting_date"},
       {"source_field": "meeting_at", "canonical_field": "meeting_at"},
       {"source_field": "governing_body", "canonical_field": "governing_body"},
       {"source_field": "published_at", "canonical_field": "published_at"},
-      {"source_field": "decision_at", "canonical_field": "decision_at"},
-      {"source_field": "modified_at", "canonical_field": "modified_at"},
       {"source_field": "source_url", "canonical_field": "source_url"}
     ],
     "production_page_size": 25,
     "last_checked_on": "2026-08-24",
-    "next_audit_on": "2026-09-07",
-    "notes": "Request event items with agenda and minutes notes but never attachments. Emit only items with a positive Legistar matter ID or an official file/reference number so procedural and accessibility boilerplate does not become a planning signal. Preserve each immutable raw version and treat cancellations or disappearance as lifecycle evidence, not project withdrawal. Atlanta was not added because its public Legistar endpoint was stale at July 2022 during the 2026-08-24 validation."
+    "next_audit_on": "2026-08-24",
+    "notes": "Approved scope stores bounded public agenda fields plus derived intelligence with official attribution; it suppresses attachments and raw-document redistribution. The 14-day publisher freshness SLA reflects Dallas planning-meeting publication cadence while daily collection detects changes promptly. A bounded one-year probe on 2026-08-24 found no City Plan Commission minutes/action payloads across 21 events, so this candidate is explicitly pre-approval only; existing permit feeds remain the approval/issuance confirmation layer and a separate official minutes source must be evaluated. Emit only items with a positive Legistar matter ID or an official file/reference number so procedural and accessibility boilerplate does not become a planning signal. Preserve each immutable raw version and treat cancellations or disappearance as lifecycle evidence, not project withdrawal. Atlanta was not added because its public Legistar endpoint was stale at July 2022 during the 2026-08-24 validation."
   },
   {
     "key": "san_jose_ca_large_energy_projects",

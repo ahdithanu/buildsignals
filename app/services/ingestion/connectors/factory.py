@@ -96,6 +96,7 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             max_records=int(config.get("max_records", 2500)),
             body_names=_string_list(config.get("body_names"), "body_names"),
             matter_types=_string_list(config.get("matter_types"), "matter_types"),
+            record_stages=_string_list(config.get("record_stages"), "record_stages"),
             lookback_days=int(config.get("lookback_days", 45)),
             future_days=int(config.get("future_days", 180)),
             api_token=_secret_from_env(config, "token_env"),
