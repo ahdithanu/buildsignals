@@ -240,6 +240,54 @@ class RawSourceRecordObservation(OrgMixin, Base):
     )
 
 
+class RecordExternalReference(OrgMixin, Base):
+    """Configured, exact external identity projected from a canonical record."""
+
+    __tablename__ = "record_external_references"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "record_type",
+            "record_id",
+            "namespace",
+            "normalized_value",
+            name="uq_record_external_reference_identity",
+        ),
+        Index(
+            "ix_record_external_reference_lookup",
+            "organization_id",
+            "namespace",
+            "normalized_value",
+            "record_type",
+        ),
+        Index(
+            "ix_record_external_reference_record",
+            "organization_id",
+            "record_type",
+            "record_id",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    record_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    record_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    raw_source_record_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("raw_source_records.id", ondelete="RESTRICT"), nullable=False
+    )
+    namespace: Mapped[str] = mapped_column(String(255), nullable=False)
+    normalized_value: Mapped[str] = mapped_column(String(500), nullable=False)
+    source_field: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_url: Mapped[Optional[str]] = mapped_column(String(2000))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+    last_verified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    raw_source_record: Mapped["RawSourceRecord"] = relationship("RawSourceRecord")
+
+
 class PermitRecord(OrgMixin, Base):
     """Current canonical representation of a permit, independent of provider schema."""
 

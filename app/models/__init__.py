@@ -31,6 +31,7 @@ from app.models.ingestion import (  # noqa
     PermitRecord,
     RawSourceRecord,
     RawSourceRecordObservation,
+    RecordExternalReference,
     SourceFieldMapping,
 )
 from app.models.brand import (  # noqa

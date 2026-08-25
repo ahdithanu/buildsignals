@@ -53,6 +53,48 @@ tracked companies, applicants, owners, and developers. Property links preserve
 address, parcel identifier, and coordinates so nearby-parcel discovery can run
 once the event has a reliable location.
 
+### Official Cross-Source References
+
+`record_external_references` is the indexed bridge between distinct canonical
+records that cite the same official identifier. A row stores the canonical
+record type and ID, an explicit namespace, normalized value, source field,
+optional source URL, immutable raw-record pointer, creation time, and last
+verification time. It does not merge the records: an agenda item remains a
+planning event and a current-project row remains a permit/project record.
+
+Sources opt in through `settings.external_reference_extractors`. Extractors
+support direct scalar IDs and URL query parameters with an optional exact-host
+allowlist. For example, a meeting source can publish a scalar Legistar matter
+ID while a project source extracts the same ID from an official legislation
+URL:
+
+```json
+{
+  "external_reference_extractors": [
+    {
+      "source_field": "legistar_matter_id",
+      "namespace": "legistar:example-city:legislation",
+      "transform": "scalar"
+    },
+    {
+      "source_field": "legislative_url",
+      "namespace": "legistar:example-city:legislation",
+      "transform": "url_query_parameter",
+      "parameter": "ID",
+      "allowed_hosts": ["example-city.legistar.com"]
+    }
+  ]
+}
+```
+
+Namespaces must identify both the issuing system and jurisdiction so unrelated
+systems cannot collide. Matching also requires the same normalized city and
+state. Exact canonical permit/file numbers remain the first join path; an
+external reference is used when those numbers differ. Created graph edges keep
+both reference-row IDs and raw evidence pointers. If a source corrects or
+removes an identifier, the current index is updated and the former graph edge
+is closed with `valid_to` rather than deleted.
+
 ## Source Rollout
 
 Prioritize source families in this order:
@@ -184,6 +226,10 @@ churn, migrate that source to EventId keyset paging before widening history.
   watchlist with effective dates rather than an unversioned scraped list.
 - Meeting records can change after publication. Immutable raw versions and
   first/last-seen timestamps make corrections and removals auditable.
+- The external-reference index adds one write per declared identifier and keeps
+  lookups relational and bounded. If a provider emits very high-cardinality
+  identifier sets, move synchronization to a bulk upsert worker rather than
+  replacing exact joins with fuzzy database scans.
 
 ## Unified Expansion Ranking
 

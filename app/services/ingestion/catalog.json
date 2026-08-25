@@ -6523,6 +6523,29 @@
       "reconciliation_mode": "daily_recent_snapshot",
       "signal_stage": "pre_approval_and_approved",
       "export_policy": "derived_project_context_only_no_raw_geometry_export",
+      "external_reference_extractors": [
+        {
+          "source_field": "ASI_LU_PInf_LndUseLegURL",
+          "namespace": "legistar:madison:legislation",
+          "transform": "url_query_parameter",
+          "parameter": "ID",
+          "allowed_hosts": ["madison.legistar.com"]
+        },
+        {
+          "source_field": "ASI_LU_PInf_ReZonLegURL",
+          "namespace": "legistar:madison:legislation",
+          "transform": "url_query_parameter",
+          "parameter": "ID",
+          "allowed_hosts": ["madison.legistar.com"]
+        },
+        {
+          "source_field": "ASI_LU_PInf_UDCLegURL",
+          "namespace": "legistar:madison:legislation",
+          "transform": "url_query_parameter",
+          "parameter": "ID",
+          "allowed_hosts": ["madison.legistar.com"]
+        }
+      ],
       "field_allowlist": [
         "ESRI_OID", "ID", "RECORD_RecordID", "PROJECT_ProjectAlias",
         "RECORD_Status", "DATES_SubmittedDate", "DATES_Circulated",
