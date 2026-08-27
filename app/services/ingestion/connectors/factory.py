@@ -159,6 +159,9 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             ),
             event_types=_string_mapping(config.get("event_types"), "event_types"),
             stages=_string_mapping(config.get("stages"), "stages"),
+            suppression_patterns=_string_list(
+                config.get("suppression_patterns"), "suppression_patterns"
+            ),
             meeting_name=config.get("meeting_name"),
             governing_body=config.get("governing_body"),
             document_allowed_hosts=_string_set(

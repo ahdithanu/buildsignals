@@ -3647,6 +3647,29 @@ Evidence URLs:
   commercial-purpose request and County approval for bounded storage, analysis,
   attribution, derived customer display, and the documented suppression scope.
 
+### Jacksonville, Florida Planning Commission Agendas And Results
+
+- The official Planning Commission page publishes a current meeting agenda and
+  results agenda. Both contain project-level exceptions, variances, waivers,
+  administrative deviations, land-use amendments, companion rezonings,
+  conventional rezonings, and PUD changes with addresses and case numbers.
+- An August 26, 2026 bounded no-write canary read the two current PDFs and
+  emitted 38 project records: 19 scheduled hearings and 19 recorded decisions.
+  Every record had an exact case identity, and the agenda/results evidence
+  reconciles through the `jacksonville:planning_case` namespace.
+- The candidate reads one index page, at most two same-host PDFs, 1 MB per
+  document, 100 items per document, and 200 records per run. Project requests,
+  addresses, staff recommendations, commission outcomes, document hashes, cited
+  pages, and official links remain; general ordinances without project
+  addresses are excluded.
+- Source-configured suppression removes complete owner/agent lines before item
+  segmentation, summaries, excerpts, or evidence records are created. Packets,
+  staff reports, final orders, transcripts, contacts, media, and raw document
+  redistribution remain outside the scope.
+- Decision: `legal_hold`. Jacksonville states that website material is owned by
+  the City. Production requires explicit approval for bounded commercial
+  storage, analysis, attribution, and customer-facing derived display.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must

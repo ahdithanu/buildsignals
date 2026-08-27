@@ -112,6 +112,31 @@ def test_custom_document_types_and_url_canonicalization_deduplicate_links():
     assert records[0]["url"] == "https://cdn.example.gov/showpublisheddocument?a=1&b=2"
 
 
+def test_parses_two_digit_years_used_by_current_government_document_links():
+    endpoint = "https://city.example.gov/planning-commission"
+    connector = HTMLDocumentIndexConnector(
+        endpoint,
+        href_pattern=r"\.pdf(?:$|[?])",
+        http_client=FakeHttpClient(
+            {
+                endpoint: """
+                    <a href="/documents/08-20-26-Agenda.pdf?language=en">
+                      08-20-26 Meeting Agenda
+                    </a>
+                    <a href="/documents/12-31-99-Minutes.pdf">12-31-99 Minutes</a>
+                """
+            }
+        ),
+    )
+
+    records = list(connector.iter_records())
+
+    assert [record["meeting_date"] for record in records] == [
+        "2026-08-20",
+        "1999-12-31",
+    ]
+
+
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [

@@ -205,6 +205,25 @@ and obtain County approval before production storage, analysis, or customer
 display. The configured source therefore cannot run a canary, promote, schedule,
 or enter the production host allowlist until that approval is recorded.
 
+Jacksonville demonstrates the same document boundary against current PDF
+agendas. Its official Planning Commission page publishes a meeting agenda and a
+results agenda for the same hearing date. The source definition classifies the
+first as `hearing_scheduled` and the second as `decision_recorded`, then joins
+both through exact zoning, variance, waiver, land-use, or ordinance case IDs.
+
+Jacksonville also drives two reusable safety improvements. The document index
+accepts official two-digit years such as `08-20-26` using Python's bounded `%y`
+century rule, and `planning_documents` can apply source-configured suppression
+patterns before segmentation and evidence creation. The Jacksonville scope
+uses that boundary to remove complete owner/agent lines before they can enter a
+summary, evidence excerpt, or raw planning item.
+
+The August 26, 2026 canary emitted 38 addressed project records from the current
+agenda/results pair: 19 scheduled hearings and 19 recorded decisions, with no
+missing case identities and no retained owner or agent lines. City website
+copyright leaves the source on `legal_hold` pending explicit commercial reuse,
+storage, attribution, and derived-display approval.
+
 ## Legistar Source Family
 
 `LegistarPlanningConnector` provides a reusable boundary for cities that expose
