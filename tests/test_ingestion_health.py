@@ -920,6 +920,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "cheyenne_wy_opengov_permits",
         "dallas_tx_legistar_planning_agendas",
         "madison_wi_legistar_plan_commission",
+        "arapahoe_county_co_legistar_planning",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }

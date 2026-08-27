@@ -227,6 +227,18 @@ legislative URLs, project IDs, addresses, parcels, organizations, and owners.
 It remains `legal_hold` until its narrow commercial storage, derived-display,
 attribution, and suppression scope is explicitly approved.
 
+Arapahoe County is the third validated Legistar pattern and extends the meeting
+moat into the Denver metro. The County's official planning page links its Active
+Planning Cases map and states that the map covers land-development cases under
+review. A bounded August 25, 2026 API probe processed 13 relevant meetings and
+emitted 25 substantive records: eight scheduled hearings and 17 recorded
+decisions, with 23 Planning Commission items, two Board of Adjustment items,
+zero missing matter/file identities, and source modification through August 21.
+The configured scope also includes the East Arapahoe County Advisory Planning
+Commission. This candidate remains `legal_hold`; technical validation of public
+records does not itself authorize commercial storage or customer-facing derived
+display.
+
 The initial connector uses newest-first EventId ordering with offset paging
 inside a narrow date window so bounded canaries exercise current publication
 activity.
