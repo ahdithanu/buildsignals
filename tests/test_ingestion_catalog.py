@@ -316,6 +316,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "cheyenne_wy_opengov_permits",
         "madison_wi_legistar_plan_commission",
         "arapahoe_county_co_legistar_planning",
+        "maricopa_county_az_planning_zoning_agendas",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -10217,3 +10218,48 @@ def test_arapahoe_legistar_candidate_is_current_bounded_and_rights_gated():
         }
     ]
     assert "explicit approval" in arapahoe.blocker_summary
+
+
+def test_maricopa_planning_agenda_candidate_is_bounded_and_commercially_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    maricopa = candidates["maricopa_county_az_planning_zoning_agendas"]
+    assert maricopa.record_type == "planning"
+    assert maricopa.adapter == "planning_documents"
+    assert maricopa.status == "legal_hold"
+    assert maricopa.can_run_canary is False
+    assert "18 project-level hearing records" in maricopa.notes
+    assert "zero missing case identities" in maricopa.notes
+
+    settings = maricopa.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == (
+        "https://www.maricopa.gov/AgendaCenter/Planning-Zoning-Commission-9"
+    )
+    assert connector["document_allowed_hosts"] == ["www.maricopa.gov"]
+    assert connector["max_index_pages"] == 1
+    assert connector["max_documents"] == 12
+    assert connector["max_document_bytes"] == 1024 * 1024
+    assert connector["max_items_per_document"] == 50
+    assert connector["max_item_characters"] == 10_000
+    assert connector["max_records"] == 250
+    assert connector["stages"] == {"agenda": "hearing_scheduled"}
+    assert settings["signal_stage"] == "pre_approval"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "reference_number",
+            "namespace": "maricopa:planning_case",
+            "transform": "scalar",
+        }
+    ]
+
+    item_pattern = re.compile(connector["item_pattern"], re.IGNORECASE | re.MULTILINE)
+    file_pattern = re.compile(connector["file_pattern"], re.IGNORECASE | re.MULTILINE)
+    sample = "4.\nCPA260007 and Z260018 Staff Report"
+    assert item_pattern.search(sample).group("item_number") == "4."
+    assert [match.group("file_number") for match in file_pattern.finditer(sample)] == [
+        "CPA260007",
+        "Z260018",
+    ]
+    assert "commercial-purpose" in maricopa.blocker_summary

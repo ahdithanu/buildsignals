@@ -183,6 +183,28 @@ on 2026-08-22. The candidate must not be promoted until San Jose provides or
 confirms a supported automated access path. Browser automation is explicitly
 not an activation strategy.
 
+## CivicEngage Agenda Pattern
+
+The existing `planning_documents` boundary also supports CivicEngage agenda
+centers when a publisher provides same-host HTML agenda views. The connector
+reads the bounded meeting index, follows only allowlisted HTML agenda links,
+segments numbered project items, and emits stable hearing evidence from official
+case numbers. Packets, staff-report attachments, media, contacts, and raw
+document redistribution remain outside this boundary.
+
+Maricopa County is the first validated example. A three-meeting no-write canary
+on August 26, 2026 emitted 18 project-level records with no missing case
+identities. The sample included zoning (`Z`), comprehensive-plan (`CPA`), and
+military-compatibility (`MCP`) cases from June 25, July 23, and August 6. Repeated
+cases reconcile through the `maricopa:planning_case` external-reference
+namespace instead of being treated as unrelated projects.
+
+The Maricopa candidate remains `legal_hold`. Arizona's commercial-purpose
+public-record rules require BuildSignal to disclose the intended commercial use
+and obtain County approval before production storage, analysis, or customer
+display. The configured source therefore cannot run a canary, promote, schedule,
+or enter the production host allowlist until that approval is recorded.
+
 ## Legistar Source Family
 
 `LegistarPlanningConnector` provides a reusable boundary for cities that expose
