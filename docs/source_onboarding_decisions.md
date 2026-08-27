@@ -3625,6 +3625,28 @@ Evidence URLs:
   customer-facing derived display. Promotion requires explicit approval of the
   bounded retention, attribution, and suppression scope.
 
+### Maricopa County, Arizona Planning And Zoning Agendas
+
+- The official Planning and Zoning Commission page links a current CivicEngage
+  agenda center with agendas published before meetings and minutes after
+  approval. The HTML agenda views expose stable meeting IDs, numbered items,
+  and planning case numbers without requiring packet or attachment downloads.
+- An August 26, 2026 bounded no-write canary read three current HTML agendas and
+  emitted 18 project-level hearing records with zero missing case identities.
+  The sample covered the June 25, July 23, and August 6 meetings and included
+  `CPA`, `Z`, and `MCP` case families.
+- The candidate uses the reusable `planning_documents` connector with one index
+  page, 12 same-host HTML agendas, 1 MB per document, 50 items per document,
+  and 250 records per run. Repeated cases reconcile through the
+  `maricopa:planning_case` namespace.
+- Staff reports, packets, attachments, media, personal contacts, and raw
+  document redistribution are excluded. A cancelled meeting is excluded from
+  project extraction and must not be interpreted as project withdrawal.
+- Decision: `legal_hold`. Maricopa County explicitly distinguishes commercial
+  public-record use under Arizona law. Production requires a declared
+  commercial-purpose request and County approval for bounded storage, analysis,
+  attribution, derived customer display, and the documented suppression scope.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must
