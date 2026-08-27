@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from email.message import Message
 from typing import Any, Mapping
@@ -54,6 +55,7 @@ class PlanningDocumentsConnector(BaseConnector):
         document_type_patterns: Mapping[str, str] | None = None,
         event_types: Mapping[str, str] | None = None,
         stages: Mapping[str, str] | None = None,
+        suppression_patterns: list[str] | None = None,
         meeting_name: str | None = None,
         governing_body: str | None = None,
         document_allowed_hosts: frozenset[str] | None = None,
@@ -120,6 +122,7 @@ class PlanningDocumentsConnector(BaseConnector):
         )
         self.event_types = {**_DEFAULT_EVENT_TYPES, **dict(event_types or {})}
         self.stages = {**_DEFAULT_STAGES, **dict(stages or {})}
+        self.suppression_patterns = _compile_suppression_patterns(suppression_patterns)
         self.meeting_name = meeting_name
         self.governing_body = governing_body
         self.max_document_bytes = max_document_bytes
@@ -182,7 +185,7 @@ class PlanningDocumentsConnector(BaseConnector):
             pages = tuple(
                 PageText(
                     page_number=section.page_number or section.section_number or index,
-                    text=section.text,
+                    text=self._suppress(section.text),
                 )
                 for index, section in enumerate(extracted.sections, start=1)
             )
@@ -202,6 +205,11 @@ class PlanningDocumentsConnector(BaseConnector):
                     break
             documents_processed += 1
         return records, documents_processed
+
+    def _suppress(self, value: str) -> str:
+        for pattern in self.suppression_patterns:
+            value = pattern.sub("[suppressed]", value)
+        return value
 
     def _record(
         self,
@@ -254,3 +262,13 @@ def _meeting_date(value: Any, source_url: str) -> date:
         raise ConnectorResponseError(
             f"planning document link has an invalid meeting date: {source_url}"
         ) from exc
+
+
+def _compile_suppression_patterns(values: list[str] | None) -> tuple[re.Pattern[str], ...]:
+    patterns: list[re.Pattern[str]] = []
+    for value in values or []:
+        try:
+            patterns.append(re.compile(value, re.IGNORECASE | re.MULTILINE))
+        except re.error as exc:
+            raise ValueError("suppression_patterns contains an invalid regular expression") from exc
+    return tuple(patterns)

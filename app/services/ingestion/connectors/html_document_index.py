@@ -28,6 +28,9 @@ _DATE_PATTERNS = (
     ),
     re.compile(r"\b(?P<month>\d{1,2})[/-](?P<day>\d{1,2})[/-](?P<year>20\d{2})\b"),
     re.compile(r"\b(?P<year>20\d{2})[-_/](?P<month>\d{1,2})[-_/](?P<day>\d{1,2})\b"),
+    re.compile(
+        r"(?<!\d)(?P<month>\d{1,2})[/-](?P<day>\d{1,2})[/-](?P<year>\d{2})(?!\d)"
+    ),
 )
 _DEFAULT_DOCUMENT_TYPES = {
     "agenda": re.compile(r"\bagenda\b", re.IGNORECASE),
@@ -257,7 +260,10 @@ def _parse_meeting_date(value: str) -> str | None:
         try:
             if not month.isdigit():
                 month = str(datetime.strptime(month[:3], "%b").month)
-            return date(int(parts["year"]), int(month), int(parts["day"])).isoformat()
+            year = int(parts["year"])
+            if year < 100:
+                year = datetime.strptime(parts["year"], "%y").year
+            return date(year, int(month), int(parts["day"])).isoformat()
         except ValueError:
             continue
     return None

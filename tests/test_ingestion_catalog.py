@@ -317,6 +317,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "madison_wi_legistar_plan_commission",
         "arapahoe_county_co_legistar_planning",
         "maricopa_county_az_planning_zoning_agendas",
+        "jacksonville_fl_planning_commission_agendas",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -10263,3 +10264,53 @@ def test_maricopa_planning_agenda_candidate_is_bounded_and_commercially_gated():
         "Z260018",
     ]
     assert "commercial-purpose" in maricopa.blocker_summary
+
+
+def test_jacksonville_planning_candidate_is_bounded_suppressed_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    jacksonville = candidates["jacksonville_fl_planning_commission_agendas"]
+    assert jacksonville.record_type == "planning"
+    assert jacksonville.adapter == "planning_documents"
+    assert jacksonville.status == "legal_hold"
+    assert jacksonville.can_run_canary is False
+    assert "19 hearing_scheduled and 19 decision_recorded" in jacksonville.notes
+    assert "zero retained owner or agent lines" in jacksonville.notes
+
+    settings = jacksonville.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["document_allowed_hosts"] == ["www.jacksonville.gov"]
+    assert connector["document_type_patterns"] == {
+        "minutes": "Results Agenda",
+        "agenda": "Meeting Agenda",
+    }
+    assert connector["suppression_patterns"] == ["^Owner[(]s[)]:.*$"]
+    assert connector["max_index_pages"] == 1
+    assert connector["max_documents"] == 2
+    assert connector["max_document_bytes"] == 1024 * 1024
+    assert connector["max_items_per_document"] == 100
+    assert connector["max_item_characters"] == 20_000
+    assert connector["max_records"] == 200
+    assert connector["stages"] == {
+        "agenda": "hearing_scheduled",
+        "minutes": "decision_recorded",
+    }
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "reference_number",
+            "namespace": "jacksonville:planning_case",
+            "transform": "scalar",
+        }
+    ]
+
+    item_pattern = re.compile(connector["item_pattern"], re.IGNORECASE | re.MULTILINE)
+    file_pattern = re.compile(connector["file_pattern"], re.IGNORECASE | re.MULTILINE)
+    sample = "Ex-Parte 2. 2026-0554 (Companion 2026-0553)\nCouncil District-2"
+    assert item_pattern.search(sample).group("item_number") == "2"
+    assert [match.group("file_number") for match in file_pattern.finditer(sample)] == [
+        "2026-0554",
+        "2026-0553",
+    ]
+    assert "explicit approval" in jacksonville.blocker_summary

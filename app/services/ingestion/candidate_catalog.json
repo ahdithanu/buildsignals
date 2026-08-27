@@ -1909,6 +1909,110 @@
     "notes": "A bounded no-write canary on 2026-08-26 read three current HTML agendas and emitted 18 project-level hearing records with zero missing case identities. The sample contained CPA, Z, and MCP cases across the June 25, July 23, and August 6 meetings. Only the official index and HTML agenda views are read; staff reports, packets, attachments, media, contacts, and raw-document redistribution are excluded. Repeated case numbers across meetings reconcile through the maricopa:planning_case external-reference namespace. Production remains blocked until Maricopa County approves the declared commercial purpose and bounded derived-display scope."
   },
   {
+    "key": "jacksonville_fl_planning_commission_agendas",
+    "name": "Jacksonville Planning Commission Agendas and Results",
+    "adapter": "planning_documents",
+    "record_type": "planning",
+    "jurisdiction": "Jacksonville, FL",
+    "base_url": "https://www.jacksonville.gov/departments/planning-department/current-planning-division/planning-commission",
+    "official_landing_page": "https://www.jacksonville.gov/departments/planning-department/current-planning-division/planning-commission",
+    "license": "Official City of Jacksonville public meeting records; City website copyright requires explicit commercial reuse approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official current Planning Commission agenda and results PDFs were technically validated on 2026-08-26. Jacksonville states that website material is City-owned copyright; production activation requires explicit approval for bounded commercial storage, analysis, attribution, and derived customer display.",
+    "early_warning_value": "Planning Commission agendas expose exceptions, variances, liquor-location waivers, administrative deviations, land-use amendments, companion rezonings, conventional rezonings, and PUD changes with addresses, requests, staff recommendations, and later commission outcomes.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "file_numbers", "address", "project_description", "staff_recommendation",
+      "decision", "meeting_date", "meeting_at", "meeting_name",
+      "governing_body", "source_url", "source_pages", "document_hash"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://www.jacksonville.gov/departments/planning-department/current-planning-division/planning-commission",
+        "href_pattern": "/getContentAsset/.+[.]pdf[?]language=en$",
+        "text_pattern": "(?:Meeting|Results) Agenda",
+        "document_type_patterns": {
+          "minutes": "Results Agenda",
+          "agenda": "Meeting Agenda"
+        },
+        "item_pattern": "(?m)^(?:Ex-Parte[ ]+)?(?P<item_number>[0-9]+)[.][ ]+(?=(?:(?:E|V|WLD|WAAR|AD|MM)-[0-9]{2}-[0-9]{2,3}|L-[0-9]{4}-[0-9]{2}[A-Z]?|[0-9]{4}-[0-9]{4})[^\\n]*\\nCouncil District-)",
+        "file_pattern": "(?P<file_number>(?:(?:E|V|WLD|WAAR|AD|MM)-[0-9]{2}-[0-9]{2,3}|L-[0-9]{4}-[0-9]{2}[A-Z]?|[0-9]{4}-[0-9]{4}))",
+        "value_patterns": {
+          "address": "Planning District-[0-9]+[ ]+(?P<value>.+?)[ ]+Signs Posted:",
+          "project_description": "^Request:[ ]*(?P<value>.+)$",
+          "staff_recommendation": "^Staff Recommendation:[ ]*(?P<value>.+)$",
+          "decision": "^Planning Commission Recommendation:[ ]*(?P<value>.+)$"
+        },
+        "event_types": {
+          "agenda": "planning_hearing_agenda_item",
+          "minutes": "planning_hearing_decision"
+        },
+        "stages": {
+          "agenda": "hearing_scheduled",
+          "minutes": "decision_recorded"
+        },
+        "suppression_patterns": [
+          "^Owner[(]s[)]:.*$"
+        ],
+        "meeting_name": "Planning Commission",
+        "governing_body": "City of Jacksonville",
+        "document_allowed_hosts": [
+          "www.jacksonville.gov"
+        ],
+        "page_size": 50,
+        "max_documents": 2,
+        "max_index_pages": 1,
+        "max_document_bytes": 1048576,
+        "max_items_per_document": 100,
+        "max_item_characters": 20000,
+        "max_records": 200,
+        "timeout": 30,
+        "max_retries": 2,
+        "headers": {
+          "User-Agent": "BuildSignals/1.0 (+https://buildsignals.io; public-records-ingestion)"
+        }
+      },
+      "defaults": {
+        "jurisdiction": "Jacksonville, FL",
+        "city": "Jacksonville",
+        "state": "FL",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "reference_number",
+          "namespace": "jacksonville:planning_case",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "address", "canonical_field": "address"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 50,
+    "last_checked_on": "2026-08-26",
+    "next_audit_on": "2026-09-09",
+    "notes": "A bounded no-write canary on 2026-08-26 read the current agenda and results PDFs and emitted 38 project records: 19 hearing_scheduled and 19 decision_recorded, with zero missing case identities and zero retained owner or agent lines. The source includes project addresses, land-use requests, staff recommendations, commission outcomes, document hashes, page provenance, and official evidence links. General ordinances without a project address are excluded. Repeated cases reconcile through the jacksonville:planning_case external-reference namespace. Production remains blocked until the City approves the bounded commercial reuse and derived-display scope."
+  },
+  {
     "key": "san_jose_ca_large_energy_projects",
     "name": "San Jose Data Center and Large Energy Use Applications",
     "adapter": "html_table",

@@ -176,6 +176,45 @@ def test_documents_are_same_host_by_default():
     assert http.byte_calls == []
 
 
+def test_configured_suppression_patterns_remove_contact_lines_before_evidence():
+    index = "https://city.example.gov/hearings/"
+    document_url = "https://city.example.gov/docs/agenda-2026-08-19.html"
+    http = FakeHttpClient(
+        {index: f'<a href="{document_url}">August 19, 2026 Agenda</a>'},
+        {
+            document_url: (
+                b"<p>Item 1</p><p>File SP26-005</p>"
+                b"<p>Owner(s): Jane Doe Agent: John Smith</p>"
+                b"<p>Request: Retail tenant improvement</p>",
+                "text/html",
+            )
+        },
+    )
+    connector = PlanningDocumentsConnector(
+        index,
+        href_pattern=r"agenda.*\.html$",
+        suppression_patterns=[r"^Owner\(s\):.*$"],
+        http_client=http,
+        **RULES,
+    )
+
+    record = list(connector.iter_records())[0]
+
+    assert "Jane Doe" not in record["summary"]
+    assert "John Smith" not in record["evidence_excerpt"]
+    assert "[suppressed]" in record["summary"]
+
+
+def test_invalid_suppression_pattern_is_rejected():
+    with pytest.raises(ValueError, match="suppression_patterns contains an invalid"):
+        PlanningDocumentsConnector(
+            "https://city.example.gov/hearings/",
+            href_pattern=r"\.pdf$",
+            suppression_patterns=["["],
+            **RULES,
+        )
+
+
 def test_http_byte_reader_reads_only_one_byte_beyond_limit():
     class Response:
         def __init__(self) -> None:
