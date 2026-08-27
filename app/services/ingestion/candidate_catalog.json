@@ -2013,6 +2013,96 @@
     "notes": "A bounded no-write canary on 2026-08-26 read the current agenda and results PDFs and emitted 38 project records: 19 hearing_scheduled and 19 decision_recorded, with zero missing case identities and zero retained owner or agent lines. The source includes project addresses, land-use requests, staff recommendations, commission outcomes, document hashes, page provenance, and official evidence links. General ordinances without a project address are excluded. Repeated cases reconcile through the jacksonville:planning_case external-reference namespace. Production remains blocked until the City approves the bounded commercial reuse and derived-display scope."
   },
   {
+    "key": "hillsborough_county_fl_legistar_land_use",
+    "name": "Hillsborough County Land Use Hearings",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Hillsborough County, FL",
+    "base_url": "https://webapi.legistar.com/v1/hillsboroughcounty",
+    "official_landing_page": "https://hcfl.gov/government/meeting-information/agendas-recaps-and-minutes",
+    "license": "Official Hillsborough County public meeting records; commercial SaaS storage and derived-display scope requires explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The County's official Legistar land-use bodies, current matter records, actions, and evidence links were technically validated on 2026-08-27. Production activation requires explicit approval for bounded commercial storage, derived display, attribution, public applicant/entity retention, and contact suppression.",
+    "early_warning_value": "BOCC Land Use, Zoning Hearing Master, and Land Use Hearing Officer records expose rezonings, planned developments, minor modifications, special uses, folios, acreage, locations, continuances, withdrawals, and decisions before building-permit issuance, including national retail expansion signals.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "legistar_matter_id", "meeting_date", "meeting_at", "governing_body",
+      "published_at", "decision_at", "modified_at", "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/hillsboroughcounty",
+        "body_names": [
+          "BOCC Land Use",
+          "Zoning Hearing Master",
+          "Land Use Hearing Officer"
+        ],
+        "record_stages": [
+          "decision_recorded"
+        ],
+        "suppression_patterns": [
+          "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+          "(?<![0-9])(?:[+]1[ .-]?)?(?:[(][0-9]{3}[)]|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}(?![0-9])"
+        ],
+        "page_size": 50,
+        "event_page_size": 10,
+        "max_events": 30,
+        "max_items_per_event": 250,
+        "max_records": 500,
+        "lookback_days": 120,
+        "future_days": 120,
+        "max_evidence_characters": 10000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Hillsborough County, FL",
+        "city": "Hillsborough County",
+        "state": "FL",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "legistar_matter_id",
+          "namespace": "legistar:hillsboroughcounty:legislation",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "reference_number",
+          "namespace": "hillsborough:land_use_case",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "decision_at", "canonical_field": "decision_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 50,
+    "last_checked_on": "2026-08-27",
+    "next_audit_on": "2026-09-10",
+    "notes": "A bounded no-write canary on 2026-08-27 processed 30 current land-use meetings and emitted 330 decision-backed planning records across BOCC Land Use, Zoning Hearing Master, and Land Use Hearing Officer. All 330 had a matter or case identity, source modification was current through 2026-08-25, and configured suppression left zero email or phone contacts in titles or evidence. Current evidence included Ashley Global Retail, McDonald's, ACG BBQ, large planned developments, applicants, folios, acreage, locations, continuances, withdrawals, and official actions before downstream construction permits. Public applicant and organization names are retained for graph resolution; attachments, direct contact details, raw document redistribution, and source-replacement exports are outside the proposed scope."
+  },
+  {
     "key": "san_jose_ca_large_energy_projects",
     "name": "San Jose Data Center and Large Energy Use Applications",
     "adapter": "html_table",

@@ -923,6 +923,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "arapahoe_county_co_legistar_planning",
         "maricopa_county_az_planning_zoning_agendas",
         "jacksonville_fl_planning_commission_agendas",
+        "hillsborough_county_fl_legistar_land_use",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }

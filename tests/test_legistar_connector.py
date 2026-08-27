@@ -165,6 +165,31 @@ def test_stable_identity_does_not_change_when_item_text_changes():
     assert first.records[0]["source_record_id"] == second.records[0]["source_record_id"]
 
 
+def test_configured_suppression_runs_before_title_and_evidence_creation():
+    event = _event(42)
+    item = _item(4201, title="Fallback title", agenda_note="Applicant: Jane Doe Location: Main St")
+    item["EventItemMatterName"] = (
+        "Application Number: MM 26-0063 Applicant: Jane Doe Location: Main St"
+    )
+    connector = LegistarPlanningConnector(
+        ENDPOINT,
+        suppression_patterns=[r"Applicant:\s*.*?(?=\s+Location:|$)"],
+        http_client=FakeHttpClient([[event], _detail(event, [item])]),
+    )
+
+    record = connector.fetch().records[0]
+
+    assert "Jane Doe" not in record["title"]
+    assert "Jane Doe" not in record["summary"]
+    assert "[suppressed] Location: Main St" in record["title"]
+    assert "[suppressed] Location: Main St" in record["evidence_excerpt"]
+
+
+def test_invalid_suppression_pattern_is_rejected():
+    with pytest.raises(ValueError, match="suppression_patterns contains an invalid"):
+        LegistarPlanningConnector(ENDPOINT, suppression_patterns=["["])
+
+
 def test_output_checkpoint_pages_cached_records_without_refetching():
     event = _event(42)
     items = [
@@ -384,6 +409,7 @@ def test_factory_registers_legistar_adapter_and_package_export(monkeypatch):
             "body_names": ["City Plan Commission", "City Council"],
             "lookback_days": 45,
             "future_days": 180,
+            "suppression_patterns": [r"Applicant:\s*.*?(?=\s+Location:|$)"],
         },
     )
 
@@ -397,4 +423,5 @@ def test_factory_registers_legistar_adapter_and_package_export(monkeypatch):
     assert connector.body_names == ("City Plan Commission", "City Council")
     assert connector.lookback_days == 45
     assert connector.future_days == 180
+    assert len(connector.suppression_patterns) == 1
     assert connector.http_client is fake_http

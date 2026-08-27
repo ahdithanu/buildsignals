@@ -318,6 +318,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "arapahoe_county_co_legistar_planning",
         "maricopa_county_az_planning_zoning_agendas",
         "jacksonville_fl_planning_commission_agendas",
+        "hillsborough_county_fl_legistar_land_use",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -10314,3 +10315,49 @@ def test_jacksonville_planning_candidate_is_bounded_suppressed_and_rights_gated(
         "2026-0553",
     ]
     assert "explicit approval" in jacksonville.blocker_summary
+
+
+def test_hillsborough_legistar_candidate_is_current_bounded_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    hillsborough = candidates["hillsborough_county_fl_legistar_land_use"]
+    assert hillsborough.record_type == "planning"
+    assert hillsborough.adapter == "legistar"
+    assert hillsborough.status == "legal_hold"
+    assert hillsborough.can_run_canary is False
+    assert "330 decision-backed planning records" in hillsborough.notes
+    assert "zero email or phone contacts" in hillsborough.notes
+    assert "McDonald's" in hillsborough.notes
+
+    settings = hillsborough.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/hillsboroughcounty"
+    assert connector["body_names"] == [
+        "BOCC Land Use",
+        "Zoning Hearing Master",
+        "Land Use Hearing Officer",
+    ]
+    assert connector["record_stages"] == ["decision_recorded"]
+    assert len(connector["suppression_patterns"]) == 2
+    assert connector["event_page_size"] == 10
+    assert connector["max_events"] == 30
+    assert connector["max_items_per_event"] == 250
+    assert connector["max_records"] == 500
+    assert connector["lookback_days"] == 120
+    assert connector["future_days"] == 120
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "legistar_matter_id",
+            "namespace": "legistar:hillsboroughcounty:legislation",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "reference_number",
+            "namespace": "hillsborough:land_use_case",
+            "transform": "scalar",
+        },
+    ]
+    assert "public applicant/entity retention" in hillsborough.blocker_summary

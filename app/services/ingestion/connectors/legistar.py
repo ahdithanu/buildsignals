@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Mapping, Sequence
 
@@ -33,6 +34,7 @@ class LegistarPlanningConnector(BaseConnector):
         body_names: Sequence[str] | None = None,
         matter_types: Sequence[str] | None = None,
         record_stages: Sequence[str] | None = None,
+        suppression_patterns: Sequence[str] | None = None,
         lookback_days: int = 45,
         future_days: int = 180,
         api_token: str | None = None,
@@ -83,6 +85,7 @@ class LegistarPlanningConnector(BaseConnector):
                 f"unsupported record_stages: {sorted(unsupported_stages)}"
             )
         self._record_stages = set(self.record_stages)
+        self.suppression_patterns = _compile_suppression_patterns(suppression_patterns)
         self.lookback_days = lookback_days
         self.future_days = future_days
         self.api_token = api_token
@@ -217,19 +220,23 @@ class LegistarPlanningConnector(BaseConnector):
     ) -> dict[str, Any] | None:
         event_id = _required_id(event, "EventId", "Legistar event detail")
         item_id = _required_id(item, "EventItemId", "Legistar event item")
-        title = _first_text(
-            item.get("EventItemMatterName"),
-            item.get("EventItemTitle"),
-            item.get("EventItemMatterFile"),
+        title = self._suppress(
+            _first_text(
+                item.get("EventItemMatterName"),
+                item.get("EventItemTitle"),
+                item.get("EventItemMatterFile"),
+            )
         )
         evidence_parts = _unique_text(
-            item.get("EventItemMatterName"),
-            item.get("EventItemTitle"),
-            item.get("EventItemAgendaNote"),
-            item.get("EventItemMinutesNote"),
-            item.get("EventItemActionName"),
-            item.get("EventItemActionText"),
-            item.get("EventItemMatterStatus"),
+            *(self._suppress(_text(value)) for value in (
+                item.get("EventItemMatterName"),
+                item.get("EventItemTitle"),
+                item.get("EventItemAgendaNote"),
+                item.get("EventItemMinutesNote"),
+                item.get("EventItemActionName"),
+                item.get("EventItemActionText"),
+                item.get("EventItemMatterStatus"),
+            ))
         )
         if not title or not evidence_parts:
             return None
@@ -297,6 +304,11 @@ class LegistarPlanningConnector(BaseConnector):
             "event_time": _text(event.get("EventTime")) or None,
         }
 
+    def _suppress(self, value: str) -> str:
+        for pattern in self.suppression_patterns:
+            value = pattern.sub("[suppressed]", value)
+        return _text(value)
+
 
 def _require_object_list(value: Any, label: str) -> None:
     if not isinstance(value, list) or any(not isinstance(row, Mapping) for row in value):
@@ -318,6 +330,18 @@ def _clean_values(values: Sequence[str] | None) -> list[str]:
     ):
         raise ValueError("filter values must be a sequence of non-empty strings")
     return list(dict.fromkeys(value.strip() for value in values))
+
+
+def _compile_suppression_patterns(
+    values: Sequence[str] | None,
+) -> tuple[re.Pattern[str], ...]:
+    patterns: list[re.Pattern[str]] = []
+    for value in _clean_values(values):
+        try:
+            patterns.append(re.compile(value, re.IGNORECASE | re.MULTILINE))
+        except re.error as exc:
+            raise ValueError("suppression_patterns contains an invalid regular expression") from exc
+    return tuple(patterns)
 
 
 def _text(value: Any) -> str:

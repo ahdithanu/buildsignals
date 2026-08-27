@@ -3670,6 +3670,30 @@ Evidence URLs:
   the City. Production requires explicit approval for bounded commercial
   storage, analysis, attribution, and customer-facing derived display.
 
+### Hillsborough County, Florida Land Use Hearings
+
+- Hillsborough County's official Legistar service publishes current BOCC Land
+  Use, Zoning Hearing Master, and Land Use Hearing Officer meetings with stable
+  event, item, matter, file, action, and source-link fields.
+- An August 27, 2026 bounded no-write probe processed 30 current meetings and
+  emitted 330 decision-backed land-use records. Every record had a matter or
+  case identity, and the latest source modification was August 25, 2026.
+- The records cover rezonings, PUDs, minor modifications, special uses, folios,
+  acreage, locations, continuances, withdrawals, and official decisions. The
+  sample included Ashley Global Retail, McDonald's, ACG BBQ, and large planned
+  developments, demonstrating retailer and developer intelligence before
+  downstream building permits.
+- Public applicant and organization names remain in derived evidence for graph
+  resolution. Configured suppression removes email addresses and phone numbers
+  before titles, summaries, and evidence are created. Attachments, direct
+  contacts, raw document redistribution, and source-replacement exports are
+  excluded.
+- Decision: `legal_hold`. Florida public-record access establishes public
+  availability but does not by itself confirm this bounded commercial SaaS
+  storage and customer-facing derived-display scope. Production requires
+  explicit County approval for retention, attribution, public entity display,
+  and the documented suppression policy.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must

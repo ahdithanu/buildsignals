@@ -280,6 +280,23 @@ Commission. This candidate remains `legal_hold`; technical validation of public
 records does not itself authorize commercial storage or customer-facing derived
 display.
 
+Hillsborough County is the fourth validated Legistar pattern and adds a dense
+Florida land-use layer before downstream construction permits. A bounded August
+27, 2026 probe processed 30 current meetings across BOCC Land Use, Zoning
+Hearing Master, and Land Use Hearing Officer and emitted 330 decision-backed
+records. Every record had a matter or case identity, and source changes were
+current through August 25. The evidence includes rezonings, planned
+developments, special uses, folios, acreage, locations, continuances,
+withdrawals, and named applicants such as national retailers and developers.
+
+This candidate also establishes a privacy-aware Legistar boundary. Public
+applicant and organization names remain in derived evidence so entity
+resolution can connect brands and developers to projects. Source-configured
+patterns remove email addresses and phone numbers before titles, summaries, or
+evidence are created; attachments, direct contacts, and raw redistribution are
+excluded. The source remains `legal_hold` until Hillsborough County approves
+the bounded commercial storage, attribution, and derived-display scope.
+
 The initial connector uses newest-first EventId ordering with offset paging
 inside a narrow date window so bounded canaries exercise current publication
 activity.
