@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Mapping
 from urllib.parse import parse_qs, urlparse
@@ -46,6 +47,8 @@ def extract_external_references(
             parameter = _required_text(extractor, "parameter")
             source_url = str(source_value).strip()
             value = _url_query_value(source_url, parameter, extractor.get("allowed_hosts"))
+        elif transform == "regex_extract":
+            value = _regex_value(source_value, extractor)
         else:
             raise ValueError(f"unsupported external reference transform: {transform}")
 
@@ -88,6 +91,24 @@ def _allowed_hosts(value: Any) -> set[str]:
     ):
         raise ValueError("external reference allowed_hosts must be a non-empty string list")
     return {host.strip().casefold() for host in value}
+
+
+def _regex_value(value: Any, extractor: Mapping[str, Any]) -> str | None:
+    pattern_text = _required_text(extractor, "pattern")
+    try:
+        pattern = re.compile(pattern_text, re.IGNORECASE)
+    except re.error as exc:
+        raise ValueError("external reference regex pattern is invalid") from exc
+    group = extractor.get("group", 0)
+    if isinstance(group, bool) or not isinstance(group, (int, str)):
+        raise ValueError("external reference regex group must be an integer or string")
+    match = pattern.search(str(value)[:10_000])
+    if not match:
+        return None
+    try:
+        return _normalize_value(match.group(group))
+    except (IndexError, KeyError) as exc:
+        raise ValueError("external reference regex group does not exist") from exc
 
 
 def _required_text(value: Mapping[str, Any], field: str) -> str:
