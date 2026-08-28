@@ -94,25 +94,17 @@ services:
       # NOTE: ALLOW_ANONYMOUS is intentionally NOT set here. Production forces
       # it false; the app refuses to start if you set it true.
 
-  # ── Washington permit ingestion (UTC) ─────────────────────────────────────
-  # Render marks a cron execution failed when this command exits nonzero. The
-  # scheduled command syncs the production catalog, resumes both source cursors,
-  # ingests a bounded batch, and validates freshness before it exits.
+  # ── Nationwide rollout Wave 1 (UTC) ────────────────────────────────────────
+  # One paid cron rotates through the four reviewed Texas, Washington, and New
+  # York shards over each UTC day. The first Blueprint deployment is plan-only;
+  # switch INGESTION_PLAN_ONLY to false only after reviewing all four plans.
   - type: cron
     name: dealsignal-permit-ingestion-cohort-1
     runtime: python
     plan: starter
     schedule: "15 */6 * * *"
     buildCommand: pip install -r requirements.txt
-    startCommand: >-
-      python -m app.services.ingestion.cli scheduled
-      --organization "$INGESTION_ORGANIZATION"
-      --source-key washington_state_lcb_local_authority_letters
-      --source-key everett_wa_planning_application_notices
-      --source-key bend_or_planning_applications
-      --source-key bend_or_permit_applications_point
-      --source-key bend_or_permit_applications_line
-      --max-pages-per-source 10
+    startCommand: ./scripts/daily-ingestion.sh
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
@@ -129,9 +121,19 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: INGESTION_ALLOWED_HOSTS
-        value: data.wa.gov,www.everettwa.gov,services5.arcgis.com
+        value: data.austintexas.gov,data.buffalony.gov,data.cityofnewyork.us,data.ny.gov,data.seattle.gov,data.texas.gov,data.wa.gov,gis2.arlingtontx.gov,mapit.fortworthtexas.gov,maps.cob.org,services2.arcgis.com,services3.arcgis.com,webapi.legistar.com,www.everettwa.gov,www.sanmarcostx.gov,www.taylortx.gov
       - key: INGESTION_HOST_POLICY_DIGEST
-        sync: false
+        value: ac5e6fd26bdab13c493e3ff27d0680958951eace448119b66377dd14de15ba2c
+      - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
+        value: 4358e16de00346083c5db71654895b3a8f929ea73c98ce30e50b328bb6eb4d77
+      - key: INGESTION_ROLLOUT_WAVE
+        value: "1"
+      - key: INGESTION_SHARD_COUNT
+        value: "4"
+      - key: INGESTION_ROTATE_SHARDS
+        value: "true"
+      - key: INGESTION_PLAN_ONLY
+        value: "true"
       - key: INGESTION_ORGANIZATION
         sync: false
 

@@ -629,7 +629,10 @@ def main(argv: list[str] | None = None) -> int:
             elif args.json:
                 print(json.dumps(asdict(report), sort_keys=True))
             else:
-                status = "ready" if report.ready else "blocked"
+                audit_ready = (
+                    report.coverage_ready if args.allow_unused_hosts else report.ready
+                )
+                status = "ready" if audit_ready else "blocked"
                 print(
                     f"host policy: {status} sources={report.source_count} "
                     f"required={report.required_host_count} "
@@ -1026,15 +1029,12 @@ def main(argv: list[str] | None = None) -> int:
                     )
             if not args.plan_only:
                 _enforce_catalog_host_policy(scoped_catalog_entries)
-            sync_result = sync_catalog(
-                db, scoped_catalog_entries, dry_run=args.plan_only
-            )
-            brand_sync_result = sync_brand_catalog(
-                db, load_brand_catalog(), dry_run=args.plan_only
-            )
-            if args.plan_only:
-                db.rollback()
-            else:
+            # Plan-only runs stage catalog changes in the current transaction so
+            # newly reviewed sources participate in the due plan. The transaction
+            # is rolled back after planning, before the command returns.
+            sync_result = sync_catalog(db, scoped_catalog_entries)
+            brand_sync_result = sync_brand_catalog(db, load_brand_catalog())
+            if not args.plan_only:
                 db.commit()
             print(
                 f"catalog sync: created={sync_result.created} updated={sync_result.updated} "
@@ -1069,7 +1069,10 @@ def main(argv: list[str] | None = None) -> int:
                 unsynced_source_keys=scoped_catalog_keys - runtime_keys,
             )
             print(json.dumps(asdict(plan), default=str, sort_keys=True))
-            if args.plan_only or not plan.due_source_count:
+            if args.plan_only:
+                db.rollback()
+                return 0
+            if not plan.due_source_count:
                 return 0
             run_failed, attempted = _run_due_sources(
                 db,

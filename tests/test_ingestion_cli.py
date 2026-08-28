@@ -638,8 +638,34 @@ def test_scheduled_due_plan_only_syncs_and_does_not_execute(db, monkeypatch, cap
     ])
 
     assert result == 0
-    assert calls == [("sync", [catalog_entry], {"dry_run": True})]
+    assert calls == [("sync", [catalog_entry], {})]
     assert '"due_reason": "never_run"' in capsys.readouterr().out
+
+
+def test_scheduled_due_plan_only_includes_unsynced_catalog_sources_then_rolls_back(
+    db, monkeypatch, capsys,
+):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.commit()
+    catalog_entry = _typed_catalog_source("new_source", "Austin, TX")
+
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "load_catalog", lambda: [catalog_entry])
+
+    result = cli.main([
+        "scheduled-due", "--organization", "default-org", "--plan-only",
+        "--as-of", "2026-08-11T12:00:00+00:00",
+    ])
+
+    assert result == 0
+    output = capsys.readouterr().out
+    assert '"catalog_synced": true' in output
+    assert '"due_source_count": 1' in output
+    assert '"source_key": "new_source"' in output
+    assert db.query(IngestionSource).filter_by(key="new_source").first() is None
 
 
 def test_scheduled_due_rejects_historical_execution(db, monkeypatch):

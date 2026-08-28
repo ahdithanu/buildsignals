@@ -44,11 +44,13 @@ Manual run: Actions → **ingestion-cron** → Run workflow.
 ## Render (alternative hosting)
 
 If you deploy via `render.yaml` instead of AWS, the cron service
-`dealsignal-permit-ingestion-cohort-1` runs the current explicit cohort. Staging
-uses the catalog-driven due planner. The current production Blueprint retains
-its explicit cohort until the production outbound-host allowlist is expanded
-and a plan-only parity window is reviewed. See
-[first-deploy.md](first-deploy.md). Skip this section if you are on AWS.
+`dealsignal-permit-ingestion-cohort-1` is the manifest-pinned Wave 1 worker. It
+runs every six hours and rotates through four deterministic shards, covering
+the 27 reviewed Texas, Washington, and New York sources once per UTC day with a
+single paid cron service. The checked-in Blueprint sets
+`INGESTION_PLAN_ONLY=true`; review a complete four-run parity window before
+changing it to `false` in Render. See [first-deploy.md](first-deploy.md). Skip
+this section if you are on AWS.
 
 Savannah runs separately as `dealsignal-savannah-permit-ingestion` every Monday
 at 10:30 UTC. It uses `scheduled-due`, is pinned to rollout wave 4 and the exact
@@ -167,6 +169,24 @@ Production activation order:
 3. Update the API and exactly one worker with the same static allowlist and digest.
 4. Run `scheduled-due --rollout-wave N --plan-only` for a parity window.
 5. Enable that wave only after its plan, evidence, and worker capacity are approved.
+
+For the Render Wave 1 worker, a complete plan-only parity window must report
+shard source counts `11`, `6`, `6`, and `4`, totaling 27, with
+`catalog_synced=true`, `unsynced_source_count=0`, and no host-policy or manifest
+failure. Plan-only catalog rows are staged inside the transaction so new
+sources appear in the due plan, then rolled back before the command exits.
+
+To activate collection after that review:
+
+1. Keep the checked-in 16-host allowlist, host-policy digest, and rollout
+   manifest digest unchanged.
+2. Set `INGESTION_PLAN_ONLY=false` on
+   `dealsignal-permit-ingestion-cohort-1` in Render.
+3. For a controlled first pass, temporarily set `INGESTION_SHARD_INDEX` to
+   `0`, run the cron manually, and review run/evidence/health counts. Repeat for
+   shards `1` through `3` before removing the override.
+4. Confirm the worker returns to UTC rotation and enable Render failure
+   notifications.
 
 Candidate retries use an independent preflight and never inherit production
 source authorization implicitly. Runtime verifies that the checked-in manifest
