@@ -2297,6 +2297,109 @@
     "notes": "A bounded no-write canary on 2026-08-27 processed 20 current meeting slots and emitted 31 project hearing records: 7 hearing_scheduled and 24 decision_recorded. Public Hearing and Public Hearing - Quasi Judicial filters excluded minutes and administrative business. Every record had a Legistar matter ID, legislative file, and exact P-number project identity; source modification was current through 2026-08-25 and configured suppression left zero email or phone contacts. Current evidence included Pollo Tropical, Dollar Tree, Verano South, Riverland, Legacy Park, Tradition, Wilson Groves, Founders Crossing, applicants, locations, legal descriptions, requests, and actions. The Site Plan Review Committee API currently returns no consistent project-item payloads and is excluded pending a separately validated document path. Public applicant and organization names remain for graph resolution; attachments, packets, direct contacts, raw document redistribution, and source-replacement exports are outside the proposed scope."
   },
   {
+    "key": "ocala_fl_legistar_planning_zoning",
+    "name": "Ocala Planning and Zoning Hearings",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Ocala, FL",
+    "base_url": "https://webapi.legistar.com/v1/ocala",
+    "official_landing_page": "https://ocala.legistar.com/Calendar.aspx",
+    "license": "Official City of Ocala public meeting records; bounded commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official Planning and Zoning Commission Legistar feed was technically validated on 2026-08-27. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public applicant and organization display, and contact suppression.",
+    "early_warning_value": "Planning and Zoning Commission records expose subdivisions, rezonings, planned developments, future-land-use changes, annexations, abrogations, parcel IDs, acreage, addresses, local cases, and commission decisions before downstream construction permits.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "legistar_matter_id", "matter_type", "matter_status", "action_name",
+      "meeting_date", "meeting_at", "governing_body", "published_at",
+      "decision_at", "modified_at", "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/ocala",
+        "body_names": [
+          "Planning & Zoning Commission"
+        ],
+        "matter_types": [
+          "P&Z Subdivision",
+          "P&Z Rezoning",
+          "P&Z Land Use Change",
+          "P&Z Abrogation",
+          "P&Z Annexation"
+        ],
+        "suppression_patterns": [
+          "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+          "(?<![0-9])(?:[+]1[ .-]?)?(?:[(][0-9]{3}[)]|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}(?![0-9])"
+        ],
+        "page_size": 100,
+        "event_page_size": 10,
+        "max_events": 20,
+        "max_items_per_event": 250,
+        "max_records": 300,
+        "lookback_days": 120,
+        "future_days": 120,
+        "max_evidence_characters": 6000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Ocala, FL",
+        "city": "Ocala",
+        "state": "FL",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "legistar_matter_id",
+          "namespace": "legistar:ocala:legislation",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "reference_number",
+          "namespace": "legistar:ocala:file",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "title",
+          "namespace": "ocala:planning_case",
+          "transform": "regex_extract",
+          "pattern": "\\b([A-Z]{2,6}[0-9]{2}-[0-9]{4})\\b",
+          "group": 1
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 336,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "matter_type", "canonical_field": "matter_type"},
+      {"source_field": "matter_status", "canonical_field": "matter_status"},
+      {"source_field": "action_name", "canonical_field": "action_name"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "decision_at", "canonical_field": "decision_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 100,
+    "last_checked_on": "2026-08-27",
+    "next_audit_on": "2026-09-10",
+    "notes": "A bounded no-write canary on 2026-08-27 processed 20 current meeting slots and emitted 23 project-level Planning and Zoning Commission decision records. Every record had a Legistar matter ID, legislative file, and exact local case number; source modification was current through 2026-08-17. The matter-type allowlist excludes minutes, advertising proofs, generic ordinances, and administrative business. Current evidence included Kinward at Heathbrook, TBMI Commercial Outparcel Development, New Ocala MOB, Ocala 52 Partners, Mockingbird Ridge, subdivisions, planned developments, commercial and industrial rezonings, parcels, acreage, addresses, land-use changes, annexations, and abrogations. Public applicant and organization names remain for graph resolution; configured suppression removes emails and phone numbers, and attachments, packets, direct contacts, raw document redistribution, and source-replacement exports are outside the proposed scope."
+  },
+  {
     "key": "san_jose_ca_large_energy_projects",
     "name": "San Jose Data Center and Large Energy Use Applications",
     "adapter": "html_table",

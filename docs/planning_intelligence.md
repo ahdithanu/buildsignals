@@ -332,6 +332,21 @@ Committee is excluded because its API does not consistently publish project
 items. The candidate remains `legal_hold` pending explicit commercial storage,
 attribution, and derived-display approval.
 
+Ocala is the sixth validated Legistar pattern and narrows a mixed public meeting
+feed through project-specific matter types. A bounded August 27, 2026 probe
+emitted 23 Planning and Zoning Commission decisions covering subdivisions,
+rezonings, future-land-use changes, abrogations, and annexations. Every record
+had a Legistar matter ID, legislative file, and exact local case number, with
+source changes current through August 17. Minutes, advertising proofs, generic
+ordinances, and administrative business are excluded.
+
+The sample includes Kinward at Heathbrook, TBMI Commercial Outparcel
+Development, New Ocala MOB, Ocala 52 Partners, Mockingbird Ridge, parcel IDs,
+acreage, addresses, planned developments, and commercial and industrial
+rezonings. The same bounded regex reference transform reconciles `SUB`, `PD`,
+`ZON`, `LUC`, `ANX`, and `ABR` cases. The candidate remains `legal_hold`
+pending explicit commercial storage, attribution, and derived-display approval.
+
 The initial connector uses newest-first EventId ordering with offset paging
 inside a narrow date window so bounded canaries exercise current publication
 activity.

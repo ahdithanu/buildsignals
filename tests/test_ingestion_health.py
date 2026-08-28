@@ -926,6 +926,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "jacksonville_fl_planning_commission_agendas",
         "hillsborough_county_fl_legistar_land_use",
         "port_st_lucie_fl_legistar_planning",
+        "ocala_fl_legistar_planning_zoning",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }

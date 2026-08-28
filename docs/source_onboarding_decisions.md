@@ -3746,6 +3746,32 @@ Evidence URLs:
   scope. Production requires explicit City approval for bounded storage,
   analysis, attribution, public entity display, and contact suppression.
 
+### Ocala, Florida Planning And Zoning Hearings
+
+- Ocala's official Legistar API publishes a current Planning and Zoning
+  Commission feed with stable meetings, event items, matters, files, minutes,
+  actions, and source links.
+- An August 27, 2026 bounded no-write canary processed 20 meeting slots and
+  emitted 23 project decisions. Every record had a Legistar matter ID,
+  legislative file, and exact local case number, and source modification was
+  current through August 17.
+- The source allowlists subdivision, rezoning, land-use-change, abrogation, and
+  annexation matter types. Minutes, advertising proofs, generic ordinances,
+  resolutions without a consistent project type, and administrative business
+  are excluded.
+- Current evidence includes Kinward at Heathbrook, TBMI Commercial Outparcel
+  Development, New Ocala MOB, Ocala 52 Partners, Mockingbird Ridge, planned
+  developments, parcels, acreage, addresses, commercial and industrial
+  rezonings, annexations, and future-land-use changes.
+- A bounded exact-reference pattern extracts `SUB`, `PD`, `ZON`, `LUC`, `ANX`,
+  and `ABR` case numbers for graph reconciliation. Public applicants and
+  organizations remain; email addresses, phone numbers, attachments, packets,
+  raw redistribution, and source-replacement exports are excluded.
+- Decision: `legal_hold`. Public availability does not independently establish
+  the proposed commercial SaaS retention and customer-facing derived-display
+  scope. Production requires explicit City approval for bounded storage,
+  analysis, attribution, public entity display, and contact suppression.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must

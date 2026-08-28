@@ -321,6 +321,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "jacksonville_fl_planning_commission_agendas",
         "hillsborough_county_fl_legistar_land_use",
         "port_st_lucie_fl_legistar_planning",
+        "ocala_fl_legistar_planning_zoning",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -10457,3 +10458,41 @@ def test_port_st_lucie_legistar_candidate_has_exact_project_identity_and_rights_
         },
     ]
     assert "explicit City approval" in psl.blocker_summary
+
+
+def test_ocala_legistar_candidate_is_project_filtered_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    ocala = candidates["ocala_fl_legistar_planning_zoning"]
+    assert ocala.record_type == "planning"
+    assert ocala.adapter == "legistar"
+    assert ocala.status == "legal_hold"
+    assert ocala.can_run_canary is False
+    assert "23 project-level" in ocala.notes
+    assert "exact local case number" in ocala.notes
+    assert "TBMI Commercial Outparcel" in ocala.notes
+
+    settings = ocala.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/ocala"
+    assert connector["body_names"] == ["Planning & Zoning Commission"]
+    assert connector["matter_types"] == [
+        "P&Z Subdivision",
+        "P&Z Rezoning",
+        "P&Z Land Use Change",
+        "P&Z Abrogation",
+        "P&Z Annexation",
+    ]
+    assert len(connector["suppression_patterns"]) == 2
+    assert connector["max_events"] == 20
+    assert connector["max_records"] == 300
+    assert settings["freshness_sla_hours"] == 336
+    assert settings["external_reference_extractors"][-1] == {
+        "source_field": "title",
+        "namespace": "ocala:planning_case",
+        "transform": "regex_extract",
+        "pattern": r"\b([A-Z]{2,6}[0-9]{2}-[0-9]{4})\b",
+        "group": 1,
+    }
+    assert "explicit City approval" in ocala.blocker_summary
