@@ -199,7 +199,7 @@ services:
       - key: INGESTION_HOST_POLICY_DIGEST
         value: a3e282659996966df47ab7297eb3c0c3fc4072066ceb34931584c965bf0fe5cd
       - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
-        value: f68b951906f9bbeb968ac3e562865bf44915f542522cda767dabd6140331bd33
+        value: 4358e16de00346083c5db71654895b3a8f929ea73c98ce30e50b328bb6eb4d77
       - key: INGESTION_ORGANIZATION
         sync: false
 
@@ -235,7 +235,7 @@ services:
       - key: INGESTION_HOST_POLICY_DIGEST
         value: f69e8ec6e3bf9d6795e24bb734886df9d0251026a46e18fadcbb23493815043c
       - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
-        value: f68b951906f9bbeb968ac3e562865bf44915f542522cda767dabd6140331bd33
+        value: 4358e16de00346083c5db71654895b3a8f929ea73c98ce30e50b328bb6eb4d77
       - key: INGESTION_ORGANIZATION
         sync: false
 
