@@ -316,6 +316,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "cheyenne_wy_opengov_permits",
         "madison_wi_legistar_plan_commission",
         "arapahoe_county_co_legistar_planning",
+        "mesquite_tx_planning_zoning_agendas",
         "maricopa_county_az_planning_zoning_agendas",
         "jacksonville_fl_planning_commission_agendas",
         "hillsborough_county_fl_legistar_land_use",
@@ -10361,3 +10362,46 @@ def test_hillsborough_legistar_candidate_is_current_bounded_and_rights_gated():
         },
     ]
     assert "public applicant/entity retention" in hillsborough.blocker_summary
+
+
+def test_mesquite_planning_candidate_is_current_bounded_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    mesquite = candidates["mesquite_tx_planning_zoning_agendas"]
+    assert mesquite.record_type == "planning"
+    assert mesquite.adapter == "planning_documents"
+    assert mesquite.status == "legal_hold"
+    assert mesquite.can_run_canary is False
+    assert "21 pre-approval zoning-hearing records" in mesquite.notes
+    assert "zero missing case identities" in mesquite.notes
+    assert "Chick-fil-A" in mesquite.notes
+    assert "BJ's Wholesale" in mesquite.notes
+
+    settings = mesquite.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"].endswith("/Planning-Zoning-Commission-18/")
+    assert connector["document_allowed_hosts"] == ["www.cityofmesquite.com"]
+    assert connector["max_index_pages"] == 1
+    assert connector["max_documents"] == 12
+    assert connector["max_document_bytes"] == 1024 * 1024
+    assert connector["max_items_per_document"] == 50
+    assert connector["max_records"] == 250
+    assert len(connector["suppression_patterns"]) == 2
+    assert connector["stages"] == {"agenda": "hearing_scheduled"}
+    assert settings["signal_stage"] == "pre_approval"
+    assert settings["freshness_sla_hours"] == 504
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "reference_number",
+            "namespace": "mesquite:planning_case",
+            "transform": "scalar",
+        }
+    ]
+
+    item_pattern = re.compile(connector["item_pattern"], re.IGNORECASE | re.MULTILINE)
+    file_pattern = re.compile(connector["file_pattern"], re.IGNORECASE | re.MULTILINE)
+    sample = "4. ZONING APPLICATION NO. Z0626-0458"
+    assert item_pattern.search(sample).group("item_number") == "4"
+    assert file_pattern.search(sample).group("file_number") == "Z0626-0458"
+    assert "explicit City approval" in mesquite.blocker_summary

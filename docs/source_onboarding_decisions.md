@@ -3694,6 +3694,31 @@ Evidence URLs:
   explicit County approval for retention, attribution, public entity display,
   and the documented suppression policy.
 
+### Mesquite, Texas Planning And Zoning Agendas
+
+- Mesquite's official CivicEngage agenda center publishes current Planning and
+  Zoning Commission agendas with stable meeting documents, dates, numbered
+  hearing items, and exact zoning application numbers.
+- An August 27, 2026 bounded no-write canary read 12 current agenda PDFs and
+  emitted 21 pre-approval hearing records. Every record had an exact zoning case
+  identity, and source-configured suppression left no email addresses or phone
+  numbers in stored evidence.
+- The sample included Chick-fil-A, BJ's Wholesale and Fueling, Zipline,
+  Dominium, JPI, multifamily, commercial, industrial, and data-center-related
+  development activity. Repeated hearings reconcile through the
+  `mesquite:planning_case` namespace.
+- The shared document index now prefers accessible link labels and parses the
+  bounded `_MMDDYYYY` format used by CivicEngage URLs. Agenda PDFs are text
+  extractable; scanned minutes require OCR and are excluded rather than
+  overstating decision coverage.
+- Public applicants and organization names remain for graph resolution.
+  Packets, attachments, staff contacts, email addresses, phone numbers, raw
+  document redistribution, and source-replacement exports are excluded.
+- Decision: `legal_hold`. Texas public-record access and official publication
+  do not independently confirm the proposed commercial SaaS retention and
+  customer-facing derived display. Production requires explicit City approval
+  for bounded storage, analysis, attribution, and public entity display.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must

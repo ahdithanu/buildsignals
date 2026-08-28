@@ -46,6 +46,37 @@ def test_discovers_filtered_allowlisted_documents_with_stable_metadata():
     assert repeated[0]["source_record_id"] == records[0]["source_record_id"]
 
 
+def test_uses_accessible_label_for_icon_only_document_links():
+    endpoint = "https://city.example.gov/AgendaCenter/Planning-Zoning-18/"
+    connector = HTMLDocumentIndexConnector(
+        endpoint,
+        href_pattern=r"/AgendaCenter/ViewFile/(?:Agenda|Minutes)/_[^?]+$",
+        text_pattern=r"Planning and Zoning Commission.*(?:Agenda|Minutes)",
+        http_client=FakeHttpClient(
+            {
+                endpoint: """
+                    <a href="/AgendaCenter/ViewFile/Agenda/_08102026-2249"
+                       aria-label="August 10, 2026, Planning and Zoning Commission Meeting Agenda">
+                      Planning and Zoning Commission Meeting Agenda
+                    </a>
+                    <a href="/AgendaCenter/ViewFile/Minutes/_08102026-2249"
+                       aria-label="August 10, 2026, Planning and Zoning Commission Meeting Agenda. Minutes">
+                      <img src="minutes.png" alt="Minutes">
+                    </a>
+                """
+            }
+        ),
+    )
+
+    records = list(connector.iter_records())
+
+    assert [(record["document_type"], record["meeting_date"]) for record in records] == [
+        ("agenda", "2026-08-10"),
+        ("minutes", "2026-08-10"),
+    ]
+    assert records[1]["title"].endswith("Meeting Agenda. Minutes")
+
+
 def test_crawl_and_output_pagination_are_independently_bounded():
     first = "https://city.example.gov/hearings/"
     second = "https://city.example.gov/hearings/?page=2"
@@ -135,6 +166,27 @@ def test_parses_two_digit_years_used_by_current_government_document_links():
         "2026-08-20",
         "1999-12-31",
     ]
+
+
+def test_parses_compact_dates_used_by_civicengage_document_links():
+    endpoint = "https://city.example.gov/AgendaCenter/Planning-Zoning-18/"
+    connector = HTMLDocumentIndexConnector(
+        endpoint,
+        href_pattern=r"/AgendaCenter/ViewFile/Agenda/_[^?]+$",
+        http_client=FakeHttpClient(
+            {
+                endpoint: """
+                    <a href="/AgendaCenter/ViewFile/Agenda/_08102026-2249">
+                      Planning and Zoning Commission Meeting Agenda
+                    </a>
+                """
+            }
+        ),
+    )
+
+    record = list(connector.iter_records())[0]
+
+    assert record["meeting_date"] == "2026-08-10"
 
 
 @pytest.mark.parametrize(

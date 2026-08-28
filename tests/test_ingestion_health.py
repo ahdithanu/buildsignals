@@ -921,6 +921,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "dallas_tx_legistar_planning_agendas",
         "madison_wi_legistar_plan_commission",
         "arapahoe_county_co_legistar_planning",
+        "mesquite_tx_planning_zoning_agendas",
         "maricopa_county_az_planning_zoning_agendas",
         "jacksonville_fl_planning_commission_agendas",
         "hillsborough_county_fl_legistar_land_use",

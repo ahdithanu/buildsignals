@@ -29,12 +29,15 @@ _DATE_PATTERNS = (
     re.compile(r"\b(?P<month>\d{1,2})[/-](?P<day>\d{1,2})[/-](?P<year>20\d{2})\b"),
     re.compile(r"\b(?P<year>20\d{2})[-_/](?P<month>\d{1,2})[-_/](?P<day>\d{1,2})\b"),
     re.compile(
+        r"(?<!\d)(?P<month>\d{2})(?P<day>\d{2})(?P<year>20\d{2})(?!\d)"
+    ),
+    re.compile(
         r"(?<!\d)(?P<month>\d{1,2})[/-](?P<day>\d{1,2})[/-](?P<year>\d{2})(?!\d)"
     ),
 )
 _DEFAULT_DOCUMENT_TYPES = {
-    "agenda": re.compile(r"\bagenda\b", re.IGNORECASE),
     "minutes": re.compile(r"\bminutes?\b", re.IGNORECASE),
+    "agenda": re.compile(r"\bagenda\b", re.IGNORECASE),
     "packet": re.compile(r"\bpacket\b", re.IGNORECASE),
     "notice": re.compile(r"\bnotice\b", re.IGNORECASE),
 }
@@ -186,14 +189,17 @@ class _AnchorParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.links: list[tuple[str, str]] = []
         self._href: str | None = None
+        self._label: str = ""
         self._text: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag.casefold() != "a" or self._href is not None:
             return
-        href = dict(attrs).get("href")
+        attributes = dict(attrs)
+        href = attributes.get("href")
         if href:
             self._href = href.strip()
+            self._label = (attributes.get("aria-label") or "").strip()
             self._text = []
 
     def handle_data(self, data: str) -> None:
@@ -202,8 +208,10 @@ class _AnchorParser(HTMLParser):
 
     def handle_endtag(self, tag: str) -> None:
         if tag.casefold() == "a" and self._href is not None:
-            self.links.append((self._href, " ".join("".join(self._text).split())))
+            text = self._label or " ".join("".join(self._text).split())
+            self.links.append((self._href, text))
             self._href = None
+            self._label = ""
             self._text = []
 
 
