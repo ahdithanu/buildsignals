@@ -317,6 +317,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "madison_wi_legistar_plan_commission",
         "arapahoe_county_co_legistar_planning",
         "mesquite_tx_planning_zoning_agendas",
+        "rockwall_tx_planning_development_cases",
         "maricopa_county_az_planning_zoning_agendas",
         "jacksonville_fl_planning_commission_agendas",
         "hillsborough_county_fl_legistar_land_use",
@@ -10407,6 +10408,59 @@ def test_mesquite_planning_candidate_is_current_bounded_and_rights_gated():
     assert item_pattern.search(sample).group("item_number") == "4"
     assert file_pattern.search(sample).group("file_number") == "Z0626-0458"
     assert "explicit City approval" in mesquite.blocker_summary
+
+
+def test_rockwall_planning_candidate_has_exact_cases_derived_points_and_rights_gate():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    rockwall = candidates["rockwall_tx_planning_development_cases"]
+    assert rockwall.record_type == "planning"
+    assert rockwall.adapter == "arcgis"
+    assert rockwall.status == "legal_hold"
+    assert rockwall.can_run_canary is False
+    assert "120 current-year" in rockwall.notes
+    assert "119 had valid derived WGS84 centroids" in rockwall.notes
+    assert "Culver's" in rockwall.notes
+    assert "Raising Cane's" in rockwall.notes
+
+    settings = rockwall.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["keyset_field"] == "OBJECTID"
+    assert connector["order_by_fields"] == "OBJECTID ASC"
+    assert connector["include_geometry"] is True
+    assert connector["query"] == {"outSR": 4326}
+    assert connector["page_size"] == 200
+    assert "Case_No NOT LIKE '%XXX%'" in connector["where"]
+    assert "Case_No LIKE 'Z2026-%'" in connector["where"]
+    assert "Case_No LIKE 'SP2026-%'" in connector["where"]
+    assert "Case_No LIKE 'P2026-%'" in connector["where"]
+    assert settings["signal_stage"] == "pre_approval"
+    assert settings["freshness_field"] == "last_edited_date"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "Case_No",
+            "namespace": "rockwall:planning_case",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "CROSS_REF",
+            "namespace": "rockwall:parcel_cross_reference",
+            "transform": "scalar",
+        },
+    ]
+
+    mappings = {mapping.source_field: mapping for mapping in rockwall.probe_field_mappings}
+    assert mappings["geometry"].canonical_field == "latitude"
+    assert mappings["geometry"].transform == "arcgis_polygon_centroid"
+    assert mappings["geometry"].transform_options == {"axis": "y"}
+    assert mappings["__longitude"].canonical_field == "longitude"
+    assert mappings["__longitude"].transform == "arcgis_polygon_centroid"
+    assert mappings["__longitude"].transform_options == {
+        "source_field": "geometry",
+        "axis": "x",
+    }
+    assert "explicit City approval" in rockwall.blocker_summary
 
 
 def test_port_st_lucie_legistar_candidate_has_exact_project_identity_and_rights_gate():

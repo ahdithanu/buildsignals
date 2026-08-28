@@ -1913,6 +1913,93 @@
     "notes": "A bounded no-write canary on 2026-08-27 read 12 current agenda PDFs and emitted 21 pre-approval zoning-hearing records with zero missing case identities and zero retained email or phone contacts. Exact cases reconcile through the mesquite:planning_case namespace. Current evidence included Chick-fil-A, BJ's Wholesale and Fueling, Zipline, Dominium, JPI, commercial and industrial requests, and development activity related to data-center standards. Public applicant and organization names remain for graph resolution; minutes require OCR and are excluded, as are packets, attachments, staff contacts, raw document redistribution, and source-replacement exports."
   },
   {
+    "key": "rockwall_tx_planning_development_cases",
+    "name": "Rockwall Planning Development Cases",
+    "adapter": "arcgis",
+    "record_type": "planning",
+    "jurisdiction": "Rockwall, TX",
+    "base_url": "https://gis.rockwall.com/arcgis/rest/services/Cityworks/CityworksMap_PLL/MapServer/2",
+    "official_landing_page": "https://www.rockwall.com/planning.asp",
+    "license": "Official City of Rockwall public GIS layer; bounded commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official current-year planning development case layer was technically validated on 2026-08-28. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public project display, derived point geometry, and parcel joins.",
+    "early_warning_value": "Current zoning and specific-use cases, site plans, plats, development types, case status, acreage, parcel cross-references, project comments, and geometry expose active development before downstream building permits.",
+    "candidate_source_fields": [
+      "OBJECTID", "ASSETID", "STATUS", "CROSS_REF", "Case_No",
+      "Case_Type", "Dev_Type", "Comments", "Acreage", "YEAR",
+      "created_date", "last_edited_date", "geometry"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 200,
+        "where": "YEAR = '2026' AND ASSETID IS NOT NULL AND Case_No IS NOT NULL AND Case_No NOT LIKE '%XXX%' AND (Case_No LIKE 'Z2026-%' OR Case_No LIKE 'SP2026-%' OR Case_No LIKE 'P2026-%')",
+        "out_fields": "OBJECTID,ASSETID,STATUS,CROSS_REF,Case_No,Case_Type,Dev_Type,Comments,Acreage,YEAR,created_date,last_edited_date",
+        "keyset_field": "OBJECTID",
+        "order_by_fields": "OBJECTID ASC",
+        "include_geometry": true,
+        "query": {
+          "outSR": 4326
+        },
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Rockwall, TX",
+        "city": "Rockwall",
+        "state": "TX",
+        "permit_type": "planning_case",
+        "approval_stage": "pre_approval",
+        "source_url": "https://gis.rockwall.com/arcgis/rest/services/Cityworks/CityworksMap_PLL/MapServer/2"
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "Case_No",
+          "namespace": "rockwall:planning_case",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "CROSS_REF",
+          "namespace": "rockwall:parcel_cross_reference",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "last_edited_date",
+      "freshness_sla_hours": 72,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "ASSETID", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "Case_No", "canonical_field": "application_number", "is_required": true},
+      {"source_field": "Case_Type", "canonical_field": "permit_type"},
+      {"source_field": "Dev_Type", "canonical_field": "work_class"},
+      {"source_field": "STATUS", "canonical_field": "status"},
+      {"source_field": "Comments", "canonical_field": "description"},
+      {"source_field": "CROSS_REF", "canonical_field": "external_parcel_id"},
+      {"source_field": "Acreage", "canonical_field": "acreage"},
+      {"source_field": "created_date", "canonical_field": "filed_at", "transform": "date"},
+      {"source_field": "last_edited_date", "canonical_field": "status_updated_at", "transform": "date"},
+      {
+        "source_field": "geometry",
+        "canonical_field": "latitude",
+        "transform": "arcgis_polygon_centroid",
+        "transform_options": {"axis": "y"}
+      },
+      {
+        "source_field": "__longitude",
+        "canonical_field": "longitude",
+        "transform": "arcgis_polygon_centroid",
+        "transform_options": {"source_field": "geometry", "axis": "x"}
+      }
+    ],
+    "production_page_size": 200,
+    "last_checked_on": "2026-08-28",
+    "next_audit_on": "2026-09-11",
+    "notes": "A bounded no-write canary on 2026-08-28 emitted 120 current-year zoning/SUP, site-plan, and plat cases after excluding placeholder IDs, historic grants, and miscellaneous records. All 120 had durable ASSETID and public case identities; 119 had valid derived WGS84 centroids, 49 carried acreage, and 12 exposed parcel cross-references or location comments. Source modification was current through 2026-08-27. Current comments surfaced Culver's, Raising Cane's, Erwin Farms, Crosspoint Community Church, and large 95.944-acre site-plan/plat activity. Polygon geometry is used transiently to derive a point and is excluded from normalized records and customer output. Detailed packets, attachments, personal contacts, raw polygons, raw layer exports, and source-replacement products are outside the proposed scope."
+  },
+  {
     "key": "maricopa_county_az_planning_zoning_agendas",
     "name": "Maricopa County Planning and Zoning Agendas",
     "adapter": "planning_documents",
