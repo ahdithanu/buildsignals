@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AcquisitionMap from '@/pages/AcquisitionMap';
 import Login from '@/pages/Login';
+import Register from '@/pages/Register';
 import { signalStageFor } from '@/lib/signalStage';
 
 const login = vi.fn();
+const register = vi.fn();
 const exportSearch = { mutate: vi.fn(), isPending: false };
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
@@ -63,6 +65,7 @@ vi.mock('@/contexts/AuthContext', () => ({
     isAuthenticated: false,
     isLoading: false,
     login,
+    register,
     logout: vi.fn(),
   }),
 }));
@@ -106,6 +109,15 @@ describe('Build Signals wireframe screens', () => {
       });
     });
     expect(screen.getByRole('checkbox', { name: /keep me signed in/i })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('renders BuildSignals registration with the production password policy', () => {
+    render(<MemoryRouter initialEntries={['/register']}><Register /></MemoryRouter>);
+
+    expect(screen.getByRole('heading', { name: 'Create your BuildSignals account' })).toBeInTheDocument();
+    expect(screen.queryByText(/DealSignal account/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toHaveAttribute('minlength', '12');
+    expect(screen.getByPlaceholderText('At least 12 characters')).toBeInTheDocument();
   });
 
   it('normalizes filing stages from nationwide source labels', () => {

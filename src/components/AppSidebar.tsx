@@ -71,7 +71,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div>
               <h1 className="text-sm font-semibold text-sidebar-accent-foreground font-display tracking-tight">
-                DealSignal
+                BuildSignals
               </h1>
               <p className="text-[11px] text-sidebar-muted">Acquisition intelligence</p>
             </div>

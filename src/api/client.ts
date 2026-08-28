@@ -74,6 +74,24 @@ export class ApiError extends Error {
   }
 }
 
+function errorMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object' && 'msg' in item) {
+          const message = (item as { msg?: unknown }).msg;
+          return typeof message === 'string' ? message : null;
+        }
+        return null;
+      })
+      .filter((message): message is string => Boolean(message));
+    if (messages.length > 0) return messages.join(' ');
+  }
+  return fallback;
+}
+
 export interface DownloadResponse {
   blob: Blob;
   filename: string | null;
@@ -200,7 +218,7 @@ export class ApiClient {
         .json()
         .catch(() => ({ detail: 'Unknown error' }));
       throw new ApiError(
-        error.detail || `Request failed: ${response.status}`,
+        errorMessage(error.detail, `Request failed: ${response.status}`),
         response.status,
       );
     }

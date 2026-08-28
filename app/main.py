@@ -55,7 +55,7 @@ from app.routes.signals import router as signals_router
 from app.routes.twofa import router as twofa_router
 
 app = FastAPI(
-    title="DealSignal — Real Estate Acquisition Engine",
+    title="BuildSignals - Permit and Development Intelligence",
     version="1.0.0",
 )
 

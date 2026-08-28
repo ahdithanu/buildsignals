@@ -163,6 +163,28 @@ describe("ApiClient — auth integration", () => {
     }
   });
 
+  it("turns structured validation details into a readable message", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          detail: [
+            { loc: ["body", "email"], msg: "value is not a valid email address" },
+            { loc: ["body", "password"], msg: "String should have at least 12 characters" },
+          ],
+        }),
+        { status: 422 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new ApiClient("http://api.test");
+    await expect(client.post("/auth/register", {})).rejects.toMatchObject({
+      status: 422,
+      message:
+        "value is not a valid email address String should have at least 12 characters",
+    });
+  });
+
   it("downloads authenticated files with server export metadata", async () => {
     setAccessToken("test.jwt.token");
     const fetchMock = vi.fn().mockResolvedValue(

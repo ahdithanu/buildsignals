@@ -8,6 +8,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
 import { OpportunityGraphPanel } from "@/components/OpportunityGraphPanel";
 import { RetailPermitSignalsPanel } from "@/components/RetailPermitSignalsPanel";
 import { NearbyParcelsPanel } from "@/components/NearbyParcelsPanel";
+import { OpportunityLocationPanel } from "@/components/OpportunityLocationPanel";
 import { ArrowLeft, MapPin, Building2, Calendar, Ruler, User, FileText, Lightbulb, AlertTriangle, CheckCircle, MessageSquare, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -91,9 +92,10 @@ export default function DealDetail() {
                   <span className="text-lg font-semibold font-display text-foreground">{formatCurrency(deal.askingPrice)}</span>
                 </div>
               </div>
-              <div className="mt-4 h-36 rounded-lg bg-secondary flex items-center justify-center text-xs text-muted-foreground">
-                <MapPin className="h-4 w-4 mr-1" /> Map view
-              </div>
+            </motion.div>
+
+            <motion.div {...fadeIn} transition={{ delay: 0.12 }}>
+              <OpportunityLocationPanel dealId={id} />
             </motion.div>
 
             {/* Deal Score */}

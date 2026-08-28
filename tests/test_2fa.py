@@ -67,7 +67,7 @@ def test_setup_returns_secret_and_otpauth_uri(client):
     data = r.json()
     assert data["secret"]
     assert data["otpauth_uri"].startswith("otpauth://totp/")
-    assert "DealSignal" in data["otpauth_uri"]
+    assert "BuildSignals" in data["otpauth_uri"]
     assert data["secret"] in data["otpauth_uri"]
 
 
