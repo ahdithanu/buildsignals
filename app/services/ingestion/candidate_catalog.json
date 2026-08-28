@@ -1819,6 +1819,100 @@
     "notes": "A bounded live probe on 2026-08-25 processed 13 relevant meetings and emitted 25 substantive matter-backed records: 8 hearing_scheduled and 17 decision_recorded, including 23 Planning Commission and 2 Board of Adjustment items. Source modification was current through 2026-08-21 and no record lacked a file or matter identity. The official County planning page states that the active cases map covers land-development cases under review, and County Legistar exposes agendas, minutes, action outcomes, and official evidence links. Never fetch attachments; suppress personal contacts and raw-document redistribution. Preserve immutable versions and treat cancellations as meeting lifecycle evidence, not project withdrawal."
   },
   {
+    "key": "mesquite_tx_planning_zoning_agendas",
+    "name": "Mesquite Planning and Zoning Agendas",
+    "adapter": "planning_documents",
+    "record_type": "planning",
+    "jurisdiction": "Mesquite, TX",
+    "base_url": "https://www.cityofmesquite.com/AgendaCenter/Planning-Zoning-Commission-18/",
+    "official_landing_page": "https://www.cityofmesquite.com/3627/Active-Zoning-Cases",
+    "license": "Official City of Mesquite public meeting records; bounded commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official CivicEngage Planning and Zoning agenda feed was technically validated on 2026-08-27. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public applicant and organization display, and contact suppression.",
+    "early_warning_value": "Current public-hearing agendas expose exact zoning cases, applicants, companies, development requests, and locations before City Council action or downstream permit issuance, including national retailer, fueling, drone-delivery, multifamily, industrial, and data-center-related activity.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "file_numbers", "meeting_date", "meeting_at", "meeting_name",
+      "governing_body", "source_url", "source_pages", "document_hash"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://www.cityofmesquite.com/AgendaCenter/Planning-Zoning-Commission-18/",
+        "href_pattern": "/AgendaCenter/ViewFile/Agenda/_[^?]+$",
+        "text_pattern": "Planning and Zoning Commission Meeting Agenda(?: - Revised)?$",
+        "document_type_patterns": {
+          "agenda": "/AgendaCenter/ViewFile/Agenda/"
+        },
+        "item_pattern": "(?m)^(?P<item_number>[0-9]+)[.] ",
+        "file_pattern": "(?P<file_number>Z[0-9]{4}-[0-9]{4})",
+        "event_types": {
+          "agenda": "planning_hearing_agenda_item"
+        },
+        "stages": {
+          "agenda": "hearing_scheduled"
+        },
+        "suppression_patterns": [
+          "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+          "(?<![0-9])(?:[+]1[ .-]?)?(?:[(][0-9]{3}[)]|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}(?![0-9])"
+        ],
+        "meeting_name": "Planning and Zoning Commission",
+        "governing_body": "City of Mesquite",
+        "document_allowed_hosts": [
+          "www.cityofmesquite.com"
+        ],
+        "page_size": 50,
+        "max_documents": 12,
+        "max_index_pages": 1,
+        "max_document_bytes": 1048576,
+        "max_items_per_document": 50,
+        "max_item_characters": 10000,
+        "max_records": 250,
+        "timeout": 30,
+        "max_retries": 2,
+        "headers": {
+          "User-Agent": "BuildSignals/1.0 (+https://buildsignals.io; public-records-ingestion)"
+        }
+      },
+      "defaults": {
+        "jurisdiction": "Mesquite, TX",
+        "city": "Mesquite",
+        "state": "TX",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "reference_number",
+          "namespace": "mesquite:planning_case",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 504,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 50,
+    "last_checked_on": "2026-08-27",
+    "next_audit_on": "2026-09-10",
+    "notes": "A bounded no-write canary on 2026-08-27 read 12 current agenda PDFs and emitted 21 pre-approval zoning-hearing records with zero missing case identities and zero retained email or phone contacts. Exact cases reconcile through the mesquite:planning_case namespace. Current evidence included Chick-fil-A, BJ's Wholesale and Fueling, Zipline, Dominium, JPI, commercial and industrial requests, and development activity related to data-center standards. Public applicant and organization names remain for graph resolution; minutes require OCR and are excluded, as are packets, attachments, staff contacts, raw document redistribution, and source-replacement exports."
+  },
+  {
     "key": "maricopa_county_az_planning_zoning_agendas",
     "name": "Maricopa County Planning and Zoning Agendas",
     "adapter": "planning_documents",

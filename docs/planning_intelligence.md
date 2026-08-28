@@ -224,6 +224,22 @@ missing case identities and no retained owner or agent lines. City website
 copyright leaves the source on `legal_hold` pending explicit commercial reuse,
 storage, attribution, and derived-display approval.
 
+Mesquite extends the document pattern to CivicEngage agenda centers. The shared
+HTML index reader prefers complete accessible link labels and understands the
+bounded `_MMDDYYYY` dates used in CivicEngage document URLs. This preserves
+meeting dates for icon-only or context-light links without scraping packets or
+depending on presentation markup.
+
+The August 27, 2026 no-write canary read 12 current Planning and Zoning agenda
+PDFs and emitted 21 `hearing_scheduled` records with exact zoning case IDs and
+no retained email addresses or phone numbers. Evidence included Chick-fil-A,
+BJ's Wholesale and Fueling, Zipline, Dominium, JPI, and commercial and
+industrial requests. Scanned minutes are excluded because they require OCR;
+permit and council sources remain the later confirmation layer. Public
+applicant and organization names remain available for graph resolution. The
+candidate stays on `legal_hold` pending explicit commercial storage,
+attribution, and derived-display approval.
+
 ## Legistar Source Family
 
 `LegistarPlanningConnector` provides a reusable boundary for cities that expose
