@@ -313,6 +313,25 @@ evidence are created; attachments, direct contacts, and raw redistribution are
 excluded. The source remains `legal_hold` until Hillsborough County approves
 the bounded commercial storage, attribution, and derived-display scope.
 
+Port St. Lucie is the fifth validated Legistar pattern and demonstrates exact
+project reconciliation inside verbose legislative titles. A bounded August 27,
+2026 probe emitted 31 Planning and Zoning Board project records: seven upcoming
+hearings and 24 recorded decisions, with source changes current through August
+25. Matter-type allowlists exclude minutes and administrative business. The
+evidence includes Pollo Tropical, Dollar Tree, Verano South, Riverland, Legacy
+Park, Tradition, Wilson Groves, Founders Crossing, locations, legal
+descriptions, requests, and official actions.
+
+The external-reference service supports source-configured regular-expression
+extraction for exact public identifiers. Port St. Lucie stores the Legistar
+matter ID and legislative file while also extracting the City's `P` project
+number, allowing repeated hearings and later permit evidence to resolve to one
+project. Patterns and capture groups fail closed when invalid, and extraction
+is bounded to the first 10,000 source characters. The Site Plan Review
+Committee is excluded because its API does not consistently publish project
+items. The candidate remains `legal_hold` pending explicit commercial storage,
+attribution, and derived-display approval.
+
 The initial connector uses newest-first EventId ordering with offset paging
 inside a narrow date window so bounded canaries exercise current publication
 activity.

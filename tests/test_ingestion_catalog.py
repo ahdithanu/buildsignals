@@ -320,6 +320,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "maricopa_county_az_planning_zoning_agendas",
         "jacksonville_fl_planning_commission_agendas",
         "hillsborough_county_fl_legistar_land_use",
+        "port_st_lucie_fl_legistar_planning",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
     }
@@ -10405,3 +10406,54 @@ def test_mesquite_planning_candidate_is_current_bounded_and_rights_gated():
     assert item_pattern.search(sample).group("item_number") == "4"
     assert file_pattern.search(sample).group("file_number") == "Z0626-0458"
     assert "explicit City approval" in mesquite.blocker_summary
+
+
+def test_port_st_lucie_legistar_candidate_has_exact_project_identity_and_rights_gate():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    psl = candidates["port_st_lucie_fl_legistar_planning"]
+    assert psl.record_type == "planning"
+    assert psl.adapter == "legistar"
+    assert psl.status == "legal_hold"
+    assert psl.can_run_canary is False
+    assert "31 project hearing records" in psl.notes
+    assert "7 hearing_scheduled and 24 decision_recorded" in psl.notes
+    assert "Pollo Tropical" in psl.notes
+    assert "Dollar Tree" in psl.notes
+
+    settings = psl.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/psl"
+    assert connector["body_names"] == ["Planning and Zoning Board"]
+    assert connector["matter_types"] == [
+        "Public Hearing",
+        "Public Hearing - Quasi Judicial",
+    ]
+    assert len(connector["suppression_patterns"]) == 2
+    assert connector["max_events"] == 20
+    assert connector["max_records"] == 300
+    assert connector["lookback_days"] == 120
+    assert connector["future_days"] == 120
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "legistar_matter_id",
+            "namespace": "legistar:psl:legislation",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "reference_number",
+            "namespace": "legistar:psl:file",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "title",
+            "namespace": "psl:planning_project",
+            "transform": "regex_extract",
+            "pattern": r"\b(P[0-9]{2}-[0-9]{3}(?:-A[0-9]+)?)\b",
+            "group": 1,
+        },
+    ]
+    assert "explicit City approval" in psl.blocker_summary

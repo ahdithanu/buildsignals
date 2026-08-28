@@ -3719,6 +3719,33 @@ Evidence URLs:
   customer-facing derived display. Production requires explicit City approval
   for bounded storage, analysis, attribution, and public entity display.
 
+### Port St. Lucie, Florida Planning And Zoning Hearings
+
+- Port St. Lucie's official Legistar API publishes a current Planning and
+  Zoning Board feed with stable meetings, event items, legislative matters,
+  files, agendas, minutes, actions, and source links.
+- An August 27, 2026 bounded no-write canary processed 20 meeting slots and
+  emitted 31 project hearings: seven scheduled and 24 decision-backed records.
+  `Public Hearing` and `Public Hearing - Quasi Judicial` allowlists excluded
+  minutes and administrative business, and source modification was current
+  through August 25.
+- Every record had a Legistar matter ID, legislative file, and exact City
+  `P`-number. A bounded regular-expression external-reference transform extracts
+  the project number from the official title so repeat hearings and downstream
+  evidence can reconcile through `psl:planning_project`.
+- The sample included Pollo Tropical, Dollar Tree, Verano South, Riverland,
+  Legacy Park, Tradition, Wilson Groves, Founders Crossing, locations, legal
+  descriptions, development requests, and official actions.
+- Public applicant and organization names remain for graph resolution.
+  Configured suppression removes emails and phone numbers; attachments,
+  packets, direct contacts, raw redistribution, and source-replacement exports
+  are excluded. The Site Plan Review Committee remains outside scope because
+  its API does not consistently return project items.
+- Decision: `legal_hold`. Public availability does not independently establish
+  the proposed commercial SaaS retention and customer-facing derived-display
+  scope. Production requires explicit City approval for bounded storage,
+  analysis, attribution, public entity display, and contact suppression.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must
