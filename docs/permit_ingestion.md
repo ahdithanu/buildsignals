@@ -764,11 +764,13 @@ failure or degraded health and `2` for critical or unknown health, allowing the
 job platform to alert without parsing logs. Source keys are required so a new
 catalog entry cannot silently expand an existing job's workload.
 
-The production Render Blueprint runs the explicit Washington/Bend cohort every
-six hours and checks its health hourly. Savannah runs in a separate weekly
-`scheduled-due` worker pinned to its reviewed host policy and rollout manifest.
-Staging and generic AWS/GitHub workers use `scheduled-due` hourly. Promote any
-additional production Render worker only
+The production Render Blueprint runs the 27-source Texas, Washington, and New
+York Wave 1 catalog every six hours, rotating through four reviewed shards with
+one paid cron service. Its checked-in configuration remains plan-only until a
+complete four-shard parity window is reviewed. Savannah runs in a separate
+weekly `scheduled-due` worker pinned to its reviewed host policy and rollout
+manifest. Staging and generic AWS/GitHub workers use `scheduled-due` hourly.
+Promote any additional production Render worker only
 after a plan-only parity window and an explicit expansion of
 `INGESTION_ALLOWED_HOSTS`; the scheduler does not weaken the connector host
 allowlist. Set

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 from dataclasses import asdict
 from pathlib import Path
 
@@ -131,6 +133,87 @@ def test_render_dallas_worker_is_pinned_to_reviewed_production_scope():
     assert "value: webapi.legistar.com" in worker
     assert f"value: {host_policy.policy_digest}" in worker
     assert f"value: {manifest.manifest_digest}" in worker
+
+
+def test_render_wave_one_worker_rotates_reviewed_shards_in_plan_only_mode():
+    entries = load_catalog()
+    manifest = _manifest()
+    wave = manifest.waves[0]
+    host_policy = audit_ingestion_hosts(
+        [entry for entry in entries if source_rollout_wave(entry) == 1],
+        allowed_hosts=wave.required_hosts,
+    )
+    blueprint = Path("render.yaml").read_text(encoding="utf-8")
+    match = re.search(
+        r"(?ms)^  - type: cron\n"
+        r"    name: dealsignal-permit-ingestion-cohort-1\n"
+        r"(?P<body>.*?)(?=^  - type:|\Z)",
+        blueprint,
+    )
+
+    assert match is not None
+    worker = match.group("body")
+    assert 'schedule: "15 */6 * * *"' in worker
+    assert "startCommand: ./scripts/daily-ingestion.sh" in worker
+    assert f"value: {','.join(wave.required_hosts)}" in worker
+    assert f"value: {host_policy.policy_digest}" in worker
+    assert f"value: {manifest.manifest_digest}" in worker
+    assert 'key: INGESTION_ROLLOUT_WAVE\n        value: "1"' in worker
+    assert 'key: INGESTION_SHARD_COUNT\n        value: "4"' in worker
+    assert 'key: INGESTION_ROTATE_SHARDS\n        value: "true"' in worker
+    assert 'key: INGESTION_PLAN_ONLY\n        value: "true"' in worker
+
+
+def test_daily_ingestion_runner_preflights_reviewed_rollout_scope():
+    runner = Path("scripts/daily-ingestion.sh").read_text(encoding="utf-8")
+
+    assert "catalog rollout-manifest --check" in runner
+    assert "catalog host-audit" in runner
+    assert 'HOST_AUDIT_ARGS+=(--rollout-wave "$ROLLOUT_WAVE")' in runner
+    assert 'ARGS+=(--rollout-wave "$ROLLOUT_WAVE")' in runner
+    assert "UTC_HOUR * SHARD_COUNT / 24" in runner
+
+
+def test_daily_ingestion_runner_rotates_to_the_current_utc_shard(tmp_path):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    command_log = tmp_path / "python-commands.log"
+    fake_date = fake_bin / "date"
+    fake_python = fake_bin / "python"
+    fake_date.write_text("#!/bin/sh\nprintf '18\\n'\n", encoding="utf-8")
+    fake_python.write_text(
+        f"#!/bin/sh\nprintf '%s\\n' \"$*\" >> {command_log}\n",
+        encoding="utf-8",
+    )
+    fake_date.chmod(0o755)
+    fake_python.chmod(0o755)
+    env = {
+        **os.environ,
+        "PATH": f"{fake_bin}:{os.environ['PATH']}",
+        "ENVIRONMENT": "development",
+        "INGESTION_ORGANIZATION": "default-org",
+        "INGESTION_PLAN_ONLY": "true",
+        "INGESTION_ROLLOUT_WAVE": "1",
+        "INGESTION_SHARD_COUNT": "4",
+        "INGESTION_ROTATE_SHARDS": "true",
+    }
+
+    result = subprocess.run(
+        ["bash", "scripts/daily-ingestion.sh"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "shard=3/4" in result.stdout
+    command = command_log.read_text(encoding="utf-8")
+    assert "scheduled-due" in command
+    assert "--rollout-wave 1" in command
+    assert "--shard-count 4" in command
+    assert "--shard-index 3" in command
+    assert "--plan-only" in command
 
 
 def test_rollout_classification_uses_settings_state_and_rejects_unknown_state():
