@@ -2000,6 +2000,99 @@
     "notes": "A bounded no-write canary on 2026-08-28 emitted 120 current-year zoning/SUP, site-plan, and plat cases after excluding placeholder IDs, historic grants, and miscellaneous records. All 120 had durable ASSETID and public case identities; 119 had valid derived WGS84 centroids, 49 carried acreage, and 12 exposed parcel cross-references or location comments. Source modification was current through 2026-08-27. Current comments surfaced Culver's, Raising Cane's, Erwin Farms, Crosspoint Community Church, and large 95.944-acre site-plan/plat activity. Polygon geometry is used transiently to derive a point and is excluded from normalized records and customer output. Detailed packets, attachments, personal contacts, raw polygons, raw layer exports, and source-replacement products are outside the proposed scope."
   },
   {
+    "key": "grand_prairie_tx_planning_cases",
+    "name": "Grand Prairie Planning Cases",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Grand Prairie, TX",
+    "base_url": "https://gis.gptx.org/srv105/rest/services/EnerGov/EnergovProj/MapServer/1",
+    "official_landing_page": "https://www.gptx.org/Departments/Planning-and-Development/Planning-Division/Development-Cases",
+    "license": "Official City of Grand Prairie public planning dashboard; commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official EnerGov planning-case layer was technically validated on 2026-08-28. Its ArcGIS items have blank license metadata and disable dashboard downloads, so production activation requires explicit City approval for bounded commercial storage, analysis, attribution, derived display, and parcel joins.",
+    "early_warning_value": "Submitted and in-review zoning, specific-use, site-plan, platting, variance, and comprehensive-plan cases expose named retailers, data centers, logistics projects, builders, addresses, parcels, acreage, and status before downstream building permits.",
+    "candidate_source_fields": [
+      "OBJECTID", "APPLY_DATE", "PLAN_NUMBER", "PLAN_TYPE", "WORK_CLASS",
+      "PROJECT", "PLAN_STATUS", "MAIN_ADDRESS_LINE1", "MAIN_PARCEL_NUMBER",
+      "RequestDescription", "CaseName", "geometry"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 500,
+        "where": "PLAN_NUMBER IS NOT NULL AND PLAN_TYPE IN ('Platting ','Specific Use Permit','Site Plan','Zoning ','Comprehensive Plan Amendment','Variances')",
+        "out_fields": "OBJECTID,APPLY_DATE,PLAN_NUMBER,PLAN_TYPE,WORK_CLASS,PROJECT,PLAN_STATUS,MAIN_ADDRESS_LINE1,MAIN_PARCEL_NUMBER,RequestDescription,CaseName",
+        "keyset_field": "OBJECTID",
+        "order_by_fields": "OBJECTID ASC",
+        "include_geometry": true,
+        "query": {
+          "outSR": 4326,
+          "geometryPrecision": 6
+        },
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Grand Prairie, TX",
+        "city": "Grand Prairie",
+        "state": "TX",
+        "permit_type": "planning_case",
+        "source_url": "https://gis.gptx.org/srv105/rest/services/EnerGov/EnergovProj/MapServer/1"
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "PLAN_NUMBER",
+          "namespace": "grand_prairie:planning_case",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "PROJECT",
+          "namespace": "grand_prairie:master_project",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 72,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "PLAN_NUMBER", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "__permit_number", "canonical_field": "permit_number", "transform": "first_nonempty", "transform_options": {"fields": ["PLAN_NUMBER"]}},
+      {"source_field": "__application_number", "canonical_field": "application_number", "transform": "first_nonempty", "transform_options": {"fields": ["PLAN_NUMBER"]}},
+      {"source_field": "CaseName", "canonical_field": "project_name"},
+      {"source_field": "RequestDescription", "canonical_field": "description"},
+      {"source_field": "MAIN_ADDRESS_LINE1", "canonical_field": "address"},
+      {"source_field": "MAIN_PARCEL_NUMBER", "canonical_field": "parcel_id"},
+      {"source_field": "PLAN_TYPE", "canonical_field": "permit_type"},
+      {"source_field": "WORK_CLASS", "canonical_field": "work_class"},
+      {"source_field": "PLAN_STATUS", "canonical_field": "status"},
+      {"source_field": "APPLY_DATE", "canonical_field": "filed_at", "transform": "date"},
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "PLAN_STATUS",
+              "operator": "in",
+              "values": ["Approved", "Approved (awaiting final case close out)", "Approved with Conditions", "Complete"],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}}
+    ],
+    "production_page_size": 500,
+    "last_checked_on": "2026-08-28",
+    "next_audit_on": "2026-09-11",
+    "notes": "A bounded no-write canary on 2026-08-28 read 167 meaningful planning rows representing 165 unique plan numbers; two exact duplicate source rows collapse through the durable plan identity. The sample contained 47 submitted, in-review, or on-hold signals and 102 approved or complete records. All rows had addresses and valid WGS84 points, 158 carried parcel IDs, and source applications were current through 2026-08-26. Current evidence included Dutch Bros, Kohl's, IKEA, Prologis, Bubba's 33, a large retailer with gas sales and a drive-through pharmacy, drone-delivery staging, and multi-building data-center campuses. Staff assignments, raw source exports, and source-replacement products are excluded."
+  },
+  {
     "key": "maricopa_county_az_planning_zoning_agendas",
     "name": "Maricopa County Planning and Zoning Agendas",
     "adapter": "planning_documents",

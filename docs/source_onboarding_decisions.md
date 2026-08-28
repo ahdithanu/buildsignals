@@ -3798,6 +3798,31 @@ Evidence URLs:
   bounded storage, analysis, attribution, public project display, derived point
   geometry, and parcel joins.
 
+### Grand Prairie, Texas Planning Cases
+
+- Grand Prairie's official development-case dashboard resolves to the City
+  EnerGov `PlanningCases` ArcGIS layer. It publishes application dates, exact
+  plan numbers, type, work class, status, case and master-project names,
+  request descriptions, addresses, parcel numbers, and point geometry.
+- The narrow scope keeps zoning, specific-use, site-plan, platting, variance,
+  and comprehensive-plan cases. Administrative verification letters, civil
+  plans, traffic-control plans, right-of-way cases, stormwater cases, generic
+  ZBA rows, staff assignments, and raw exports are excluded.
+- An August 28, 2026 bounded no-write canary read 167 source rows representing
+  165 unique cases. Two exact duplicate source rows collapse through the plan
+  number. The sample had 47 submitted, in-review, or on-hold signals and 102
+  approved or complete records; all had addresses and valid WGS84 points, and
+  158 carried parcel IDs. Applications were current through August 26.
+- Current evidence included Dutch Bros, Kohl's, IKEA, Prologis, Bubba's 33, a
+  large retailer with gas and a drive-through pharmacy, drone-delivery staging,
+  and data-center campuses with up to nine planned buildings. Cases reconcile
+  through `grand_prairie:planning_case`, with optional master-project and parcel
+  joins for related development and nearby-property context.
+- Decision: `legal_hold`. The official Web Map and Experience have blank
+  license metadata, and the dashboard explicitly disables source downloads.
+  Production requires explicit City approval for bounded commercial storage,
+  analysis, attribution, derived display, and parcel joins.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must

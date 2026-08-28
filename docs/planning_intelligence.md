@@ -257,6 +257,24 @@ Church, and a 95.944-acre development. The candidate remains on `legal_hold`
 until Rockwall approves the bounded commercial storage, attribution, derived
 point display, and parcel-join scope.
 
+Grand Prairie adds a point-based EnerGov planning-case pattern from the City's
+official development-case dashboard. The narrow filter keeps zoning,
+specific-use, site-plan, platting, variance, and comprehensive-plan cases while
+excluding administrative verification, civil-plan, traffic-control,
+right-of-way, stormwater, and generic ZBA rows. Exact plan numbers are the
+durable identity, with optional master-project and parcel references available
+for graph reconciliation.
+
+The August 28, 2026 canary read 167 source rows representing 165 unique cases;
+two duplicate rows collapse by exact plan number. It contained 47 submitted,
+in-review, or on-hold signals and 102 approved or complete cases. Every row had
+an address and WGS84 point, and 158 had parcel IDs. Evidence included Dutch
+Bros, Kohl's, IKEA, Prologis, Bubba's 33, large-format retail with gas and a
+drive-through pharmacy, drone-delivery staging, and multi-building data-center
+campuses. Staff assignments and raw exports are excluded. Blank ArcGIS license
+metadata and disabled dashboard downloads keep the candidate on `legal_hold`
+pending explicit City approval.
+
 ## Legistar Source Family
 
 `LegistarPlanningConnector` provides a reusable boundary for cities that expose

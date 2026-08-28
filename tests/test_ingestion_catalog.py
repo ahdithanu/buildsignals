@@ -318,6 +318,7 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "arapahoe_county_co_legistar_planning",
         "mesquite_tx_planning_zoning_agendas",
         "rockwall_tx_planning_development_cases",
+        "grand_prairie_tx_planning_cases",
         "maricopa_county_az_planning_zoning_agendas",
         "jacksonville_fl_planning_commission_agendas",
         "hillsborough_county_fl_legistar_land_use",
@@ -10461,6 +10462,61 @@ def test_rockwall_planning_candidate_has_exact_cases_derived_points_and_rights_g
         "axis": "x",
     }
     assert "explicit City approval" in rockwall.blocker_summary
+
+
+def test_grand_prairie_planning_candidate_is_lifecycle_complete_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    grand_prairie = candidates["grand_prairie_tx_planning_cases"]
+    assert grand_prairie.record_type == "permit"
+    assert grand_prairie.adapter == "arcgis"
+    assert grand_prairie.status == "legal_hold"
+    assert grand_prairie.can_run_canary is False
+    assert "167 meaningful planning rows" in grand_prairie.notes
+    assert "165 unique plan numbers" in grand_prairie.notes
+    assert "47 submitted, in-review, or on-hold" in grand_prairie.notes
+    assert "102 approved or complete" in grand_prairie.notes
+    assert "Dutch Bros" in grand_prairie.notes
+    assert "Prologis" in grand_prairie.notes
+
+    settings = grand_prairie.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["keyset_field"] == "OBJECTID"
+    assert connector["order_by_fields"] == "OBJECTID ASC"
+    assert connector["include_geometry"] is True
+    assert connector["query"] == {"outSR": 4326, "geometryPrecision": 6}
+    assert connector["page_size"] == 500
+    assert "PLAN_NUMBER IS NOT NULL" in connector["where"]
+    assert "Specific Use Permit" in connector["where"]
+    assert "Site Plan" in connector["where"]
+    assert "ZBA" not in connector["where"]
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "PLAN_NUMBER",
+            "namespace": "grand_prairie:planning_case",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "PROJECT",
+            "namespace": "grand_prairie:master_project",
+            "transform": "scalar",
+        },
+    ]
+
+    mappings = {
+        mapping.source_field: mapping
+        for mapping in grand_prairie.probe_field_mappings
+    }
+    assert mappings["PLAN_NUMBER"].canonical_field == "source_record_id"
+    assert mappings["__approval_stage"].transform == "conditional_map"
+    assert mappings["geometry"].transform_options == {"path": ["y"]}
+    assert mappings["__longitude"].transform_options == {
+        "source_field": "geometry",
+        "path": ["x"],
+    }
+    assert "explicit City approval" in grand_prairie.blocker_summary
 
 
 def test_port_st_lucie_legistar_candidate_has_exact_project_identity_and_rights_gate():
