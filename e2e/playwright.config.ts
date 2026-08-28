@@ -54,7 +54,7 @@ export default defineConfig({
     },
     {
       // Frontend dev server.
-      command: "cd .. && VITE_API_BASE_URL=http://localhost:8080 npm run dev",
+      command: "cd .. && VITE_API_BASE_URL=http://localhost:8000 npm run dev",
       url: "http://localhost:8080",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

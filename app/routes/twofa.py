@@ -74,7 +74,7 @@ def setup(
     db.add(user)
     db.commit()
     otpauth_uri = pyotp.TOTP(secret).provisioning_uri(
-        name=user.email, issuer_name="DealSignal",
+        name=user.email, issuer_name="BuildSignals",
     )
     return SetupResponse(secret=secret, otpauth_uri=otpauth_uri)
 

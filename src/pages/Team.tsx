@@ -222,7 +222,7 @@ export default function Team() {
                 </div>
               </form>
               <p className="text-xs text-muted-foreground mt-3">
-                The teammate must already have a DealSignal account with this
+                The teammate must already have a BuildSignals account with this
                 email. Ask them to register first if they haven't yet.
               </p>
             </CardContent>
