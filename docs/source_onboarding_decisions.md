@@ -3772,6 +3772,32 @@ Evidence URLs:
   scope. Production requires explicit City approval for bounded storage,
   analysis, attribution, public entity display, and contact suppression.
 
+### Rockwall, Texas Planning Development Cases
+
+- Rockwall's official Cityworks ArcGIS planning layer publishes current zoning
+  and specific-use cases, site plans, and plats with durable `ASSETID` values,
+  exact City case numbers, status, development type, comments, acreage, parcel
+  cross-references, edit timestamps, and polygon geometry.
+- An August 28, 2026 bounded no-write canary emitted 120 current-year project
+  records after excluding placeholder case numbers and historic or
+  miscellaneous rows. All 120 had durable source and case identities; 119
+  produced valid derived WGS84 centroids, 49 carried acreage, and 12 included
+  parcel cross-references or location comments. The source was current through
+  August 27.
+- Current evidence included Culver's, Raising Cane's, Erwin Farms, Crosspoint
+  Community Church, and site-plan or plat activity as large as 95.944 acres.
+  Exact cases reconcile through `rockwall:planning_case`, while available
+  parcel references reconcile through `rockwall:parcel_cross_reference`.
+- Polygon geometry is processed transiently to derive a customer-safe point.
+  Raw polygons, complete layer exports, detailed packets, attachments, personal
+  contacts, and source-replacement products are excluded from retention and
+  display.
+- Decision: `legal_hold`. Official publication establishes technical access but
+  does not independently grant the proposed commercial SaaS storage and
+  derived-display rights. Production requires explicit City approval for
+  bounded storage, analysis, attribution, public project display, derived point
+  geometry, and parcel joins.
+
 ## Operating Rule
 
 Held sources may have draft mappings outside the production catalog, but must

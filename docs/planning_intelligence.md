@@ -240,6 +240,23 @@ applicant and organization names remain available for graph resolution. The
 candidate stays on `legal_hold` pending explicit commercial storage,
 attribution, and derived-display approval.
 
+Rockwall adds a structured ArcGIS planning-case pattern alongside document and
+meeting ingestion. Its official current-year layer exposes zoning and
+specific-use cases, site plans, plats, stable City case numbers, durable asset
+IDs, status, development type, acreage, parcel cross-references, comments, and
+polygon geometry. A bounded August 28, 2026 canary emitted 120 records after
+excluding placeholders and miscellaneous or historic rows; all had exact case
+identity, and 119 produced valid WGS84 centroids.
+
+The connector uses raw polygon geometry only transiently to calculate a map
+point. Raw polygons, complete layer exports, packets, attachments, and personal
+contacts are not retained or displayed. Exact case and parcel references can
+join planning evidence to downstream permits, properties, and nearby parcels.
+The sample surfaced Culver's, Raising Cane's, Erwin Farms, Crosspoint Community
+Church, and a 95.944-acre development. The candidate remains on `legal_hold`
+until Rockwall approves the bounded commercial storage, attribution, derived
+point display, and parcel-join scope.
+
 ## Legistar Source Family
 
 `LegistarPlanningConnector` provides a reusable boundary for cities that expose
