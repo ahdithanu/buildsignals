@@ -470,6 +470,32 @@ def test_arcgis_preserves_requested_polygon_centroid():
     assert http.calls[0][1]["outSR"] == 4326
 
 
+def test_arcgis_keyset_collapses_repeated_publisher_cursor_rows():
+    http = FakeHttpClient([{
+        "features": [
+            {"attributes": {"OBJECTID": 7, "permit": "P-7", "mailing": "one"}},
+            {"attributes": {"OBJECTID": 7, "permit": "P-7", "mailing": "two"}},
+            {"attributes": {"OBJECTID": 8, "permit": "P-8", "mailing": "three"}},
+        ],
+        "exceededTransferLimit": True,
+    }])
+    connector = ArcGISConnector(
+        "https://example.test/FeatureServer/0",
+        page_size=3,
+        keyset_field="OBJECTID",
+        http_client=http,
+    )
+
+    page = connector.fetch_page()
+
+    assert page.records == (
+        {"OBJECTID": 7, "permit": "P-7", "mailing": "one"},
+        {"OBJECTID": 8, "permit": "P-8", "mailing": "three"},
+    )
+    assert page.next_checkpoint == {"keyset": {"OBJECTID": 8}}
+    assert page.has_more is True
+
+
 def test_arcgis_passes_configured_public_headers():
     http = FakeHttpClient([{"features": []}])
     connector = ArcGISConnector(

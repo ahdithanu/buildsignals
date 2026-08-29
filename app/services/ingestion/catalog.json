@@ -1032,9 +1032,9 @@
     "adapter": "socrata",
     "record_type": "permit",
     "jurisdiction": "San Francisco, CA",
-    "base_url": "https://data.sfgov.org/resource/f2jc-ivnc.json",
+    "base_url": "https://data.sfgov.org/resource/i98e-djp9.json",
     "settings": {
-      "official_landing_page": "https://data.sfgov.org/d/f2jc-ivnc",
+      "official_landing_page": "https://data.sfgov.org/d/i98e-djp9",
       "license": "Open Data Commons Public Domain Dedication and License",
       "refresh_frequency": "daily",
       "collection_interval_minutes": 1440,
@@ -1045,16 +1045,24 @@
       "freshness_field": "data_loaded_at",
       "freshness_semantics": "dataset_refreshed_at",
       "freshness_sla_hours": 36,
+      "canary_freshness_probe": {
+        "sample_size": 3,
+        "connector": {
+          "keyset_fields": null,
+          "order_by": "data_loaded_at DESC, record_id DESC"
+        }
+      },
       "reconciliation_mode": "keyset_incremental_with_periodic_full",
       "signal_stage": "pre_approval_and_approved",
       "connector": {
         "page_size": 500,
-        "keyset_fields": ["data_loaded_at", "record_id"]
+        "keyset_fields": ["data_loaded_at", "record_id"],
+        "query": {"$where": "primary_address_flag = 'Y'"}
       },
       "defaults": {
         "city": "San Francisco",
         "state": "CA",
-        "source_url": "https://data.sfgov.org/d/f2jc-ivnc"
+        "source_url": "https://data.sfgov.org/d/i98e-djp9"
       }
     },
     "field_mappings": [
@@ -5555,7 +5563,7 @@
       ],
       "connector": {
         "page_size": 100,
-        "where": "APP_NO IS NOT NULL AND (PROJ_NAME LIKE '%COMMERCIAL%' OR PROJ_NAME LIKE '%RETAIL%' OR PROJ_NAME LIKE '%RESTAURANT%' OR PROJ_NAME LIKE '%WAREHOUSE%' OR PROJ_NAME LIKE '%INDUSTRIAL%' OR PROJ_NAME LIKE '%APARTMENT%' OR PROJ_NAME LIKE '%MULTI%' OR PROJ_NAME LIKE '%HOTEL%' OR PROJ_NAME LIKE '%MEDICAL%' OR PROJ_NAME LIKE '%SUBDIVISION%' OR PROJ_NAME LIKE '%SHOPPING%' OR PROJ_NAME LIKE '%PLAZA%' OR SITE_NAME LIKE '%COMMERCIAL%' OR SITE_NAME LIKE '%RETAIL%' OR SITE_NAME LIKE '%RESTAURANT%' OR SITE_NAME LIKE '%WAREHOUSE%' OR SITE_NAME LIKE '%INDUSTRIAL%' OR SITE_NAME LIKE '%APARTMENT%' OR SITE_NAME LIKE '%MULTI%' OR SITE_NAME LIKE '%HOTEL%' OR SITE_NAME LIKE '%MEDICAL%' OR SITE_NAME LIKE '%SUBDIVISION%' OR SITE_NAME LIKE '%SHOPPING%' OR SITE_NAME LIKE '%PLAZA%' OR PROJ_DESC LIKE '%COMMERCIAL%' OR PROJ_DESC LIKE '%RETAIL%' OR PROJ_DESC LIKE '%RESTAURANT%' OR PROJ_DESC LIKE '%WAREHOUSE%' OR PROJ_DESC LIKE '%INDUSTRIAL%' OR PROJ_DESC LIKE '%APARTMENT%' OR PROJ_DESC LIKE '%MULTI%' OR PROJ_DESC LIKE '%HOTEL%' OR PROJ_DESC LIKE '%MEDICAL%' OR PROJ_DESC LIKE '%SUBDIVISION%' OR PROJ_DESC LIKE '%SHOPPING%' OR PROJ_DESC LIKE '%PLAZA%')",
+        "where": "APP_NO IS NOT NULL AND (PROJ_NAME LIKE '%COMMERCIAL%' OR PROJ_NAME LIKE '%RETAIL%' OR PROJ_NAME LIKE '%RESTAURANT%' OR PROJ_NAME LIKE '%WAREHOUSE%' OR PROJ_NAME LIKE '%INDUSTRIAL%' OR PROJ_NAME LIKE '%APARTMENT%' OR PROJ_NAME LIKE '%MULTI%' OR PROJ_NAME LIKE '%HOTEL%' OR PROJ_NAME LIKE '%MEDICAL%' OR PROJ_NAME LIKE '%SUBDIVISION%' OR PROJ_NAME LIKE '%SHOPPING%' OR PROJ_NAME LIKE '%PLAZA%' OR SITE_NAME LIKE '%COMMERCIAL%' OR SITE_NAME LIKE '%RETAIL%' OR SITE_NAME LIKE '%RESTAURANT%' OR SITE_NAME LIKE '%WAREHOUSE%' OR SITE_NAME LIKE '%INDUSTRIAL%' OR SITE_NAME LIKE '%APARTMENT%' OR SITE_NAME LIKE '%MULTI%' OR SITE_NAME LIKE '%HOTEL%' OR SITE_NAME LIKE '%MEDICAL%' OR SITE_NAME LIKE '%SUBDIVISION%' OR SITE_NAME LIKE '%SHOPPING%' OR SITE_NAME LIKE '%PLAZA%' OR PROJ_DESC LIKE '%COMMERCIAL%' OR PROJ_DESC LIKE '%RETAIL%' OR PROJ_DESC LIKE '%WAREHOUSE%' OR PROJ_DESC LIKE '%SHOPPING%')",
         "out_fields": "OBJECTID,TEMP_ID,APP_NO,SITE_ID,PROJ_NO,PROJ_NAME,SITE_NAME,COMPANY,ADDRESS,CITY,ZIP5,ZIP4,PER_TYPE,PER_SUB,PER_DESC,COUNTY_ID,OFFICE,DISTRICT,PROGRAM,RCVD_DATE,AGENCY_ACT,ACT_DATE,EXPIR_DATE,COMP_DATE,PROJ_DESC,DOCUMENTS,REPORTS",
         "order_by_fields": "OBJECTID DESC",
         "include_geometry": true,
@@ -5882,6 +5890,10 @@
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
         "include_centroid": true,
+        "headers": {
+          "Referer": "https://www.tampa.gov/",
+          "User-Agent": "Mozilla/5.0"
+        },
         "query": {"outSR": 4326}
       },
       "defaults": {

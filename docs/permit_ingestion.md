@@ -96,7 +96,8 @@ used by nearby acquisition discovery. Current permit feeds include:
   signals
 - New Orleans Permits - BLDS (`72f9-bi28`)
 - East Baton Rouge Building Permits (`7fq7-8j7r`)
-- San Francisco Building Permits, deduplicated on primary address (`f2jc-ivnc`)
+- San Francisco Building Permits, filtered to the publisher's primary-address
+  flag (`i98e-djp9`)
 - San Francisco Planning Department Non-Project Records (`y673-d69b`)
 - Marin County Commercial Building Permits (`mkbn-caye`)
 - San Jose Planning Permit Applications (`PLN_Geocortex_Public_PRD/MapServer/153`)
