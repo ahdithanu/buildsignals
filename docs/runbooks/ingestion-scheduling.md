@@ -168,13 +168,33 @@ Production activation order:
 2. Run `catalog host-audit` for the selected wave and review every hostname.
 3. Update the API and exactly one worker with the same static allowlist and digest.
 4. Run `scheduled-due --rollout-wave N --plan-only` for a parity window.
-5. Enable that wave only after its plan, evidence, and worker capacity are approved.
+5. Run `wave-canary-readiness.sh` and retain all passing shard reports.
+6. Enable that wave only after its plan, evidence, and worker capacity are approved.
 
 For the Render Wave 1 worker, a complete plan-only parity window must report
 shard source counts `11`, `6`, `6`, and `4`, totaling 27, with
 `catalog_synced=true`, `unsynced_source_count=0`, and no host-policy or manifest
 failure. Plan-only catalog rows are staged inside the transaction so new
 sources appear in the due plan, then rolled back before the command exits.
+
+Before enabling writes, run the matching four-shard readiness gate against the
+production database and network policy:
+
+```bash
+INGESTION_ORGANIZATION=default-org \
+INGESTION_ROLLOUT_WAVE=1 \
+INGESTION_SHARD_COUNT=4 \
+INGESTION_CANARY_SAMPLE_SIZE=10 \
+./scripts/wave-canary-readiness.sh
+```
+
+The command emits one JSON report per shard and checks every scoped source even
+when an earlier source fails. It exits nonzero unless all sources pass. Each
+report includes source and record totals plus source-level validation errors.
+The gate uses the same checked rollout manifest and outbound host policy as the
+write-enabled worker. It fetches bounded public samples but rolls back the
+catalog staging transaction, so it does not persist sources, records, permits,
+events, graph relationships, or opportunities.
 
 To activate collection after that review:
 

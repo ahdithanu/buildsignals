@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from types import SimpleNamespace
 
@@ -9,7 +10,7 @@ from app.schemas.ingestion import IngestionSourceCreate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.ingestion import cli
 from app.services.ingestion.cli import build_parser
-from app.services.ingestion.health import CandidateCanaryResult
+from app.services.ingestion.health import CandidateCanaryResult, SourceCanaryResult
 
 
 def _catalog_source(
@@ -98,6 +99,116 @@ def test_run_all_parser_defaults_to_bounded_resumable_collection():
     assert args.stage == "all"
     assert args.reset_checkpoints is False
     assert args.source_keys is None
+
+
+def test_canary_parser_supports_reviewed_rollout_scope_and_json():
+    args = build_parser().parse_args([
+        "canary", "--organization", "default-org", "--all",
+        "--rollout-wave", "1", "--shard-count", "4", "--shard-index", "2",
+        "--sample-size", "5", "--json",
+    ])
+
+    assert args.command == "canary"
+    assert args.all is True
+    assert args.rollout_wave == 1
+    assert args.shard_count == 4
+    assert args.shard_index == 2
+    assert args.sample_size == 5
+    assert args.json is True
+
+
+def test_canary_rollout_report_stages_catalog_scope_and_rolls_back(
+    db, monkeypatch, capsys,
+):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.commit()
+    wave_one = _typed_catalog_source("wave_one", "Austin, TX")
+    wave_two = _typed_catalog_source("wave_two", "Los Angeles, CA")
+    policy_scopes = []
+    manifest_checks = []
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "load_catalog", lambda: [wave_one, wave_two])
+    monkeypatch.setattr(cli, "load_candidate_catalog", lambda: [])
+    monkeypatch.setattr(
+        cli,
+        "require_current_rollout_manifest",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            waves=[SimpleNamespace(source_keys=["wave_one"])]
+        ),
+    )
+    monkeypatch.setattr(
+        cli,
+        "_enforce_rollout_manifest_attestation",
+        lambda manifest: manifest_checks.append(manifest),
+    )
+    monkeypatch.setattr(
+        cli,
+        "_enforce_catalog_host_policy",
+        lambda entries: policy_scopes.append([entry.key for entry in entries]),
+    )
+    monkeypatch.setattr(
+        cli,
+        "validate_source_canary",
+        lambda source, **_kwargs: SourceCanaryResult(
+            source_id=source.id,
+            source_key=source.key,
+            ok=True,
+            records_fetched=2,
+            records_valid=2,
+            records_failed=0,
+            approval_stages={"pre_approval": 2},
+            sample_record_ids=["one", "two"],
+            next_checkpoint=None,
+            errors=[],
+        ),
+    )
+
+    result = cli.main([
+        "canary", "--organization", "default-org", "--all",
+        "--rollout-wave", "1", "--sample-size", "2", "--json",
+    ])
+
+    assert result == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["source_count"] == 1
+    assert report["passed_source_count"] == 1
+    assert report["failed_source_count"] == 0
+    assert report["records_fetched"] == 2
+    assert report["sources"][0]["source_key"] == "wave_one"
+    assert policy_scopes == [["wave_one"]]
+    assert len(manifest_checks) == 1
+    assert db.query(IngestionSource).count() == 0
+
+
+def test_production_canary_enforces_host_policy_before_fetch(db, monkeypatch):
+    db.add(Organization(
+        id="default-org", name="Default Organization", slug="default-org",
+        is_active=True,
+    ))
+    db.commit()
+    source = _typed_catalog_source("blocked_source", "Austin, TX")
+    fetched = []
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "ENVIRONMENT", "production")
+    monkeypatch.setattr(cli, "load_catalog", lambda: [source])
+    monkeypatch.delenv("INGESTION_ALLOWED_HOSTS", raising=False)
+    monkeypatch.setattr(
+        cli,
+        "validate_source_canary",
+        lambda *_args, **_kwargs: fetched.append(True),
+    )
+
+    result = cli.main([
+        "canary", "--organization", "default-org",
+        "--source-key", "blocked_source",
+    ])
+
+    assert result == 1
+    assert fetched == []
+    assert db.query(IngestionSource).count() == 0
 
 
 def test_source_request_parser_defaults_to_markdown():
