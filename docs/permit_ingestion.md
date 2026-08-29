@@ -712,6 +712,8 @@ python -m app.services.ingestion.cli canary --organization <id-or-slug> \
   --source-key austin_tx_site_plan_cases --sample-size 10
 python -m app.services.ingestion.cli canary --organization <id-or-slug> \
   --all --sample-size 10
+INGESTION_ORGANIZATION=<id-or-slug> INGESTION_ROLLOUT_WAVE=1 \
+  ./scripts/wave-canary-readiness.sh
 python -m app.services.ingestion.cli health --organization <id-or-slug>
 python -m app.services.ingestion.cli health --organization <id-or-slug> \
   --source-key washington_state_lcb_local_authority_letters \
@@ -832,6 +834,13 @@ report lifecycle counts and record-level errors. They do not persist raw
 records, permits, events, graph relationships, or retailer candidates. Run a
 canary after every source mapping change and before the first write-enabled
 backfill.
+
+CLI canaries can be pinned to `--rollout-wave`, `--shard-count`, and
+`--shard-index`. In staging and production they verify the checked rollout
+manifest and exact outbound host policy before fetching. `--json` emits a
+machine-readable readiness report. The four-shard
+`scripts/wave-canary-readiness.sh` wrapper continues through the complete wave
+and returns nonzero when any source fails.
 
 Some official APIs need stable ID-based pagination for production backfills but
 need a different sort order to prove the publisher is current. Those sources can

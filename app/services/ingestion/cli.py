@@ -303,6 +303,17 @@ def build_parser() -> argparse.ArgumentParser:
     canary_target.add_argument("--source-key")
     canary_target.add_argument("--all", action="store_true")
     canary.add_argument("--sample-size", type=int, default=10, choices=range(1, 101), metavar="1..100")
+    canary.add_argument("--json", action="store_true")
+    canary.add_argument(
+        "--shard-count", type=int, default=1, choices=range(1, 129), metavar="1..128",
+    )
+    canary.add_argument(
+        "--shard-index", type=int, default=0, choices=range(0, 128), metavar="0..127",
+    )
+    canary.add_argument(
+        "--rollout-wave", type=int, choices=range(1, 5), metavar="1..4",
+        help="Limit canaries to one reviewed nationwide rollout wave",
+    )
 
     health = subcommands.add_parser("health", help="Report ingestion source health")
     health.add_argument("--organization", required=True, help="Organization ID or slug")
@@ -923,21 +934,101 @@ def main(argv: list[str] | None = None) -> int:
                 db, selected, sample_size=args.sample_size
             ) else 0
 
-        if args.command == "canary" and args.all:
-            failed = False
-            for source in list_sources(db):
-                try:
-                    result = validate_source_canary(source, sample_size=args.sample_size)
-                    failed = failed or not result.ok
-                    print(
-                        f"{result.source_key}: ok={result.ok} fetched={result.records_fetched} "
-                        f"valid={result.records_valid} failed={result.records_failed}"
+        if args.command == "canary":
+            catalog_entries = load_catalog()
+            source_keys = [args.source_key] if args.source_key else None
+            if source_keys:
+                _validate_catalog_source_keys(catalog_entries, source_keys)
+            scoped_catalog_entries = _scope_catalog_entries(
+                catalog_entries,
+                source_keys=source_keys,
+                shard_count=args.shard_count,
+                shard_index=args.shard_index,
+                rollout_wave=args.rollout_wave,
+            )
+            if not scoped_catalog_entries:
+                raise ValueError("No production catalog sources matched the canary scope")
+            if args.rollout_wave is not None:
+                rollout_manifest = require_current_rollout_manifest(
+                    catalog_entries,
+                    candidates=load_candidate_catalog(),
+                )
+                _enforce_rollout_manifest_attestation(rollout_manifest)
+                approved_wave_keys = set(
+                    rollout_manifest.waves[args.rollout_wave - 1].source_keys
+                )
+                unapproved = sorted(
+                    entry.key for entry in scoped_catalog_entries
+                    if entry.key not in approved_wave_keys
+                )
+                if unapproved:
+                    raise ValueError(
+                        "Sources are absent from the reviewed rollout wave: "
+                        + ", ".join(unapproved)
                     )
-                    for error in result.errors:
-                        print(f"  {error}")
+            _enforce_catalog_host_policy(scoped_catalog_entries)
+            sync_catalog(db, scoped_catalog_entries)
+            scoped_keys = {entry.key for entry in scoped_catalog_entries}
+            selected = sorted(
+                (source for source in list_sources(db) if source.key in scoped_keys),
+                key=lambda source: source.key,
+            )
+            rows = []
+            failed = False
+            for source in selected:
+                try:
+                    result = validate_source_canary(
+                        source, sample_size=args.sample_size
+                    )
+                    row = asdict(result)
+                    failed = failed or not result.ok
                 except Exception as exc:
                     failed = True
-                    print(f"{source.key}: error={exc}")
+                    row = {
+                        "source_id": source.id,
+                        "source_key": source.key,
+                        "ok": False,
+                        "records_fetched": 0,
+                        "records_valid": 0,
+                        "records_failed": 0,
+                        "approval_stages": {},
+                        "sample_record_ids": [],
+                        "next_checkpoint": None,
+                        "errors": [str(exc)],
+                    }
+                rows.append(row)
+            db.rollback()
+            report = {
+                "schema_version": 1,
+                "rollout_wave": args.rollout_wave,
+                "shard_count": args.shard_count,
+                "shard_index": args.shard_index,
+                "sample_size": args.sample_size,
+                "source_count": len(rows),
+                "passed_source_count": sum(row["ok"] for row in rows),
+                "failed_source_count": sum(not row["ok"] for row in rows),
+                "records_fetched": sum(row["records_fetched"] for row in rows),
+                "records_valid": sum(row["records_valid"] for row in rows),
+                "records_failed": sum(row["records_failed"] for row in rows),
+                "sources": rows,
+            }
+            if args.json:
+                print(json.dumps(report, default=str, sort_keys=True))
+            else:
+                for row in rows:
+                    print(
+                        f"{row['source_key']}: ok={row['ok']} "
+                        f"fetched={row['records_fetched']} "
+                        f"valid={row['records_valid']} "
+                        f"failed={row['records_failed']}"
+                    )
+                    for error in row["errors"]:
+                        print(f"  {error}")
+                print(
+                    f"canary readiness: passed={report['passed_source_count']} "
+                    f"failed={report['failed_source_count']} "
+                    f"sources={report['source_count']}"
+                )
             return 1 if failed else 0
 
         if args.command == "run-all":
@@ -1090,16 +1181,6 @@ def main(argv: list[str] | None = None) -> int:
         ).first()
         if source is None:
             raise ValueError(f"Ingestion source not found: {args.source_key}")
-        if args.command == "canary":
-            result = validate_source_canary(source, sample_size=args.sample_size)
-            print(
-                f"canary {result.source_key}: ok={result.ok} fetched={result.records_fetched} "
-                f"valid={result.records_valid} failed={result.records_failed} "
-                f"stages={result.approval_stages}"
-            )
-            for error in result.errors:
-                print(f"  {error}")
-            return 0 if result.ok else 1
         checkpoint = resolve_resume_checkpoint(db, source.id) if args.resume_latest else None
         run = execute_source_run(
             db,
