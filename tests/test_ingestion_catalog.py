@@ -9244,7 +9244,7 @@ def test_boulder_catalog_uses_guid_identity_and_issue_date_boundary():
         "StatusCurrent": "In Review",
         "Description": "Commercial tenant finish for new retail store",
         "OriginalAddress": "1000 Pearl St",
-        "AppliedDate": 1784073600000,
+        "AppliedDate": "2026-07-15",
     }
     prepared, field_mapping = prepare_mapped_record(application, mappings)
     normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
@@ -9254,10 +9254,11 @@ def test_boulder_catalog_uses_guid_identity_and_issue_date_boundary():
     assert normalized.values["approval_stage"] == "pre_approval"
     assert normalized.values["filed_at"].isoformat() == "2026-07-15T00:00:00+00:00"
 
-    issued = {**application, "IssuedDate": 1784160000000, "StatusCurrent": "Issued"}
+    issued = {**application, "IssuedDate": "2026-07-16", "StatusCurrent": "Issued"}
     prepared, field_mapping = prepare_mapped_record(issued, mappings)
     normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
     assert normalized.values["approval_stage"] == "approved"
+    assert normalized.values["issued_at"].isoformat() == "2026-07-16T00:00:00+00:00"
 
 
 def test_somerville_catalog_filters_building_applications_and_preserves_review_stage():
