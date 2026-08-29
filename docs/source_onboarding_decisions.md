@@ -31,7 +31,8 @@ A production source must pass all of these checks:
   square-footage table is reserved for a later enrichment join on `PermitID`.
 - Reliability: same-day data was observed. Because no row-modified cursor is
   published, use a daily full snapshot ordered by `PermitID` and content-hash
-  reconciliation.
+  reconciliation. Lifecycle dates use the canonical parser because the ArcGIS
+  layer has emitted both numeric timestamps and ISO date strings.
 - Rights: CC0 1.0 under the City of Boulder open-data terms.
 
 ### Somerville Applications For Permits And Licenses

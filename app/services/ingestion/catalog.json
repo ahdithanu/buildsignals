@@ -1316,9 +1316,9 @@
       {"source_field": "OriginalZip", "canonical_field": "postal_code"},
       {"source_field": "COBPIN", "canonical_field": "parcel_id", "transform": "first_nonempty", "transform_options": {"fields": ["COBPIN", "BOCOPIN", "BOCOTAX"]}},
       {"source_field": "EstProjectCost", "canonical_field": "valuation"},
-      {"source_field": "AppliedDate", "canonical_field": "filed_at", "transform": "unix_milliseconds"},
-      {"source_field": "IssuedDate", "canonical_field": "issued_at", "transform": "unix_milliseconds"},
-      {"source_field": "CompletedDate", "canonical_field": "completed_at", "transform": "unix_milliseconds"}
+      {"source_field": "AppliedDate", "canonical_field": "filed_at", "transform": "date", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "IssuedDate", "canonical_field": "issued_at", "transform": "date", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "CompletedDate", "canonical_field": "completed_at", "transform": "date", "transform_options": {"max_future_hours": 48}}
     ]
   },
   {
