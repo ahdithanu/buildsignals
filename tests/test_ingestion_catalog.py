@@ -394,6 +394,22 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert all(by_key[key].can_run_canary is False for key in nationwide_holds)
 
 
+def test_san_francisco_building_permits_use_current_primary_address_feed():
+    source = next(
+        entry for entry in load_catalog()
+        if entry.key == "san_francisco_ca_building_permits_primary_address"
+    )
+
+    assert source.base_url == "https://data.sfgov.org/resource/i98e-djp9.json"
+    assert source.settings["connector"]["query"] == {
+        "$where": "primary_address_flag = 'Y'"
+    }
+    assert source.settings["canary_freshness_probe"]["connector"] == {
+        "keyset_fields": None,
+        "order_by": "data_loaded_at DESC, record_id DESC",
+    }
+
+
 def test_savannah_production_source_preserves_distinct_minimized_lifecycle_rows():
     source = next(
         entry
