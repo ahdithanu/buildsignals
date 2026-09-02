@@ -17,8 +17,10 @@ import { uniqueEmail, registerAndLogin } from "./helpers";
 test("create a deal and see it in the inbox list", async ({ page }) => {
   await registerAndLogin(page, uniqueEmail());
 
-  // The deal list + "Add Deal" button live on /inbox (DealInbox.tsx).
-  await page.goto("/inbox");
+  // Use client-side navigation so the intentionally memory-only access token
+  // survives the route change.
+  await page.getByRole("link", { name: /deal inbox/i }).click();
+  await expect(page).toHaveURL(/\/inbox$/);
 
   const dealName = `E2E Deal ${Date.now()}`;
 

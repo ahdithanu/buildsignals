@@ -5,6 +5,53 @@ provenance, structured bulk access, stable identity, complete reconciliation,
 current evidence, and affirmative commercial reuse and redistribution rights.
 Public visibility alone is not sufficient.
 
+## Alaska Statewide DNR Parcel Composite
+
+**Decision: admitted narrowly for attributed derived parcel context.**
+
+- Production source: `alaska_dnr_statewide_parcels_narrow`.
+- Alaska DNR publishes the statewide composite for statewide applications and
+  permits public use with source attribution and disclosure of modifications.
+- `GlobalID` is canonical source identity and `OBJECTID` is the keyset cursor.
+  The production slice retains contributing local government, generalized use,
+  processing date, and polygon-derived proximity.
+- Owner, alternate owner, mailing, land/building/total value, sale, raw source
+  file, and raw geometry replacement exports are excluded.
+- A bounded no-write canary normalized 5 of 5 live records with zero failures.
+  This connector supplies parcel context, not statewide permit coverage.
+
+Evidence: `https://www.arcgis.com/home/item.html?id=458be3d8aafa47cd882af05cee983f6b`.
+
+## Hawaii Statewide TMK Parcels
+
+**Decision: admitted narrowly under the state public-domain designation.**
+
+- Production source: `hawaii_statewide_tmk_parcels_narrow`.
+- `tmk_txt` is canonical source identity and `objectid` is the keyset cursor.
+  The production slice retains county/island divisions, TMK grouping, GIS
+  acreage, county evidence link, and polygon-derived proximity.
+- Owner, mailing, assessed/land/improvement value, sale, legal description, raw
+  source file, and raw geometry replacement exports are excluded.
+- A bounded no-write canary normalized 5 of 5 live records with zero failures.
+  County vintages vary and parcel geometry is not a legal survey boundary.
+
+Evidence: `https://www.arcgis.com/home/item.html?id=579b8dcb7a8e44c1af201e1b3cdf655f`.
+
+## Idaho ITS Participating-County Parcel Framework
+
+**Decision: admitted narrowly for participating counties.**
+
+- Production source: `idaho_its_statewide_parcels_narrow`.
+- `FP_ID` is canonical source identity, `PARCEL_ID` is the parcel grouping, and
+  `OBJECTID` is the keyset cursor. The production slice retains steward/county,
+  extract date, acreage, generalized assessment category, and geometry.
+- Mailing-list fields, owner, legal description, values, exemptions, sales, raw
+  source files, and raw geometry replacement exports are excluded.
+- A bounded no-write canary normalized 5 of 5 live records with zero failures.
+  Participating-county coverage must not be represented as all 44 counties.
+
+Evidence: `https://www.arcgis.com/home/item.html?id=65a3f7c6d4ca404ba6ab677913953b35`.
+
 ## New York City, New York
 
 **Decision: admitted to production.**

@@ -249,6 +249,9 @@ def test_catalog_loads_first_live_source_cohort():
             "arlington_tx_commercial_permit_applications",
             "arlington_tx_commercial_issued_permits",
             "dallas_tx_legistar_planning_agendas",
+            "hawaii_statewide_tmk_parcels_narrow",
+            "alaska_dnr_statewide_parcels_narrow",
+            "idaho_its_statewide_parcels_narrow",
         }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
@@ -465,11 +468,11 @@ def test_candidate_catalog_closes_the_fifty_state_research_gap():
     assert coverage.researched_state_count == 50
     assert coverage.unresearched_state_count == 0
     assert coverage.unresearched_states == []
-    assert coverage.covered_state_count == 40
-    assert coverage.missing_state_count == 10
-    assert coverage.candidate_only_state_count == 10
+    assert coverage.covered_state_count == 43
+    assert coverage.missing_state_count == 7
+    assert coverage.candidate_only_state_count == 7
     assert set(coverage.candidate_only_states) == {
-        "AK", "HI", "IA", "ID", "MS", "MT", "NM", "OK", "WV", "WY",
+        "IA", "MS", "MT", "NM", "OK", "WV", "WY",
     }
     assert set(coverage.missing_states) == set(coverage.candidate_only_states)
 
@@ -9151,6 +9154,72 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "modified_at": "2026-08-12T19:00:00Z",
             "source_url": "https://cityofdallas.legistar.com/LegislationDetail.aspx?ID=1",
         },
+        "hawaii_statewide_tmk_parcels_narrow": {
+            "objectid": 1001,
+            "tmk": "11001001",
+            "tmk_txt": "1-1-001:001",
+            "county": "HONOLULU",
+            "division": "1",
+            "island": "OAHU",
+            "zone": "1",
+            "section": "1",
+            "plat": "001",
+            "plat1": "001",
+            "parcel": "001",
+            "parcel1": "001",
+            "gisacres": 0.75,
+            "cty_tmk": "HONOLULU:1-1-001:001",
+            "qpub_link": "https://qpublic.schneidercorp.com/",
+            "geometry": {
+                "rings": [[
+                    [-157.858, 21.307],
+                    [-157.857, 21.307],
+                    [-157.857, 21.308],
+                    [-157.858, 21.308],
+                    [-157.858, 21.307],
+                ]]
+            },
+        },
+        "alaska_dnr_statewide_parcels_narrow": {
+            "OBJECTID": 2001,
+            "GlobalID": "{A0000000-0000-0000-0000-000000000001}",
+            "parcel_id": "AK-2001",
+            "feature_id": "AK-FEATURE-2001",
+            "local_gov": "Municipality of Anchorage",
+            "property_type": "Commercial",
+            "property_use": "Retail",
+            "datetime_processed": "2026-08-28T00:00:00Z",
+            "geometry": {
+                "rings": [[
+                    [-149.901, 61.217],
+                    [-149.900, 61.217],
+                    [-149.900, 61.218],
+                    [-149.901, 61.218],
+                    [-149.901, 61.217],
+                ]]
+            },
+        },
+        "idaho_its_statewide_parcels_narrow": {
+            "OBJECTID": 3001,
+            "FP_ID": "ID-FP-3001",
+            "PARCEL_ID": "R1234567890",
+            "STEWARD": "Ada County",
+            "County": "Ada",
+            "UPDATED": 1785542400000,
+            "WEBSITE": "https://adacounty.id.gov/assessor/",
+            "FIPS": "16001",
+            "ASR_ACRES": 1.25,
+            "ASR_CATS": "Commercial",
+            "geometry": {
+                "rings": [[
+                    [-116.203, 43.615],
+                    [-116.202, 43.615],
+                    [-116.202, 43.616],
+                    [-116.203, 43.616],
+                    [-116.203, 43.615],
+                ]]
+            },
+        },
     }
 
     for entry in load_catalog():
@@ -9167,6 +9236,9 @@ def test_each_catalog_mapping_normalizes_representative_record():
                 "sedgwick_county_ks_parcels_nearby_narrow",
                 "delaware_firstmap_statewide_parcels_narrow",
                 "virginia_vgin_statewide_parcels_narrow",
+                "hawaii_statewide_tmk_parcels_narrow",
+                "alaska_dnr_statewide_parcels_narrow",
+                "idaho_its_statewide_parcels_narrow",
             }
             if entry.key not in address_optional_parcel_sources and not str(
                 entry.settings.get("export_policy", "")
@@ -10627,3 +10699,62 @@ def test_ocala_legistar_candidate_is_project_filtered_and_rights_gated():
         "group": 1,
     }
     assert "explicit City approval" in ocala.blocker_summary
+
+
+def test_alaska_statewide_parcels_use_narrow_attributed_geometry_scope():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "alaska_dnr_statewide_parcels_narrow"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+
+    assert entry.record_type == "parcel"
+    assert entry.settings["signal_stage"] == "parcel_context"
+    assert entry.settings["attribution_required"] is True
+    assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
+    assert entry.settings["connector"]["include_geometry"] is True
+    assert {"owner", "alt_owner", "land_value", "total_value"}.isdisjoint(out_fields)
+    assert entry.field_mappings[0].source_field == "GlobalID"
+
+
+def test_idaho_statewide_parcels_exclude_mailing_and_value_fields():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "idaho_its_statewide_parcels_narrow"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+
+    assert entry.record_type == "parcel"
+    assert entry.settings["signal_stage"] == "parcel_context"
+    assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
+    assert entry.settings["connector"]["include_geometry"] is True
+    assert {"MAIL_STATE", "LGL_DESCR", "VAL_LAND", "VAL_TOTAL"}.isdisjoint(
+        out_fields
+    )
+    assert "participating Idaho counties" in entry.settings["coverage_limitations"][0]
+    assert entry.field_mappings[0].source_field == "FP_ID"
+
+
+def test_hawaii_statewide_parcels_use_public_domain_tmk_scope():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "hawaii_statewide_tmk_parcels_narrow"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+
+    assert entry.record_type == "parcel"
+    assert entry.settings["signal_stage"] == "parcel_context"
+    assert entry.settings["license"] == "State of Hawaii public domain"
+    assert entry.settings["connector"]["keyset_field"] == "objectid"
+    assert entry.settings["connector"]["include_geometry"] is True
+    assert {
+        "owner",
+        "assessed_value",
+        "sale_price",
+        "legal_description",
+    }.isdisjoint(out_fields)
+    assert "visual reference" in entry.settings["coverage_limitations"][0]
+    assert entry.field_mappings[0].source_field == "tmk_txt"

@@ -357,6 +357,21 @@ The production slice stores parcel PIN, county, acreage, update date, polygon
 geometry, and server centroid for radius search while suppressing owner,
 situs/mailing, valuation, sale/deed, zoning, legal-description, raw parcel
 extract, and bulk geometry export fields.
+Alaska DNR statewide parcels are admitted for attributed, derived nearby-parcel
+context. The slice stores stable source identity, contributing local government,
+generalized use, processing date, and geometry while suppressing owner, mailing,
+value, sale, and raw source-replacement fields. This does not add an Alaska
+permit lifecycle feed.
+Hawaii statewide TMK parcels are admitted under the State GIS Program's public-
+domain designation. The slice stores TMK identity, county/island divisions, GIS
+acreage, official evidence links, and geometry while suppressing owner, value,
+sale, legal-description, and raw source-replacement fields. Boundaries are
+visual and assessment references, not surveys.
+Idaho ITS parcel polygons are admitted for participating counties only. The
+slice stores framework identity, county/steward, extract date, acreage,
+generalized assessment category, and geometry while suppressing mailing-list,
+owner, legal-description, value, sale, and raw source-replacement fields. It
+must not be represented as complete coverage of all 44 Idaho counties.
 
 Charleston active commercial permits and TRC development plans are admitted as
 narrow pre-approval-through-approved signals. They are used for derived permit
