@@ -1819,6 +1819,7 @@ def test_delaware_dnrec_stormwater_noi_preserves_pre_approval_signal():
     assert entry.record_type == "permit"
     assert entry.settings["license"] == "Public Domain"
     assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["connector"]["query"]["$where"] == "datereceived IS NOT NULL"
     assert "planned construction activities" in entry.settings["rights_basis"]
     assert "owneroperator" in entry.settings["field_allowlist"]
     assert "owner_name" in canonical_fields
@@ -2055,7 +2056,8 @@ def test_fairfax_development_tracker_suppresses_internal_fields_and_maps_lifecyc
 
     assert entry.adapter == "arcgis"
     assert entry.record_type == "permit"
-    assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["signal_stage"] == "approved_only"
+    assert "PLUSApprovedSiteRecords" in entry.base_url
     assert entry.settings["connector"]["include_centroid"] is True
     assert entry.settings["export_policy"] == (
         "derived_fairfax_development_context_only_no_raw_plus_resale"
@@ -2875,7 +2877,7 @@ def test_washington_dc_basic_business_licenses_are_retail_opening_context():
     assert entry.settings["retailer_opening_signal"] is True
     assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
     assert "LICENSESTATUS = 'Active'" in entry.settings["connector"]["where"]
-    assert "PREMISEINDC = 'Y'" in entry.settings["connector"]["where"]
+    assert "PREMISEINDC = 'Yes'" in entry.settings["connector"]["where"]
     assert "Restaurant" in entry.settings["connector"]["where"]
     assert "BUSINESSOWNERFIRSTNAME" not in out_fields
     assert "AGENTENTITY" not in out_fields
@@ -2890,12 +2892,12 @@ def test_washington_dc_basic_business_licenses_are_retail_opening_context():
         "CUSTOMERNUMBER": "931326000183",
         "LICENSESTATUS": "Active",
         "LICENSETYPE": "Business License",
-        "LICENSESUBTYPE": "Public Health Food Establish",
+        "CATEGORYSERVICETYPE": "Food Services",
         "LICENSESTATUSDATE": 1782878400000,
         "LICENSESTARTDATE": 1782878400000,
         "LICENSEENDDATE": 1848628800000,
         "INITIALISSUEDATE": 1782878400000,
-        "PRIMARYACTIVITY": "Restaurant",
+        "PRIMARYACTIVITYFLAG": "Yes",
         "BUSINESSACTIVITY": "Caterers",
         "PREMISEADDRESS": "1501 K ST NW, WASHINGTON, DC, 20005",
         "PREMISEINDC": "Y",
@@ -5511,6 +5513,8 @@ def test_greenville_county_parcel_source_excludes_owner_value_sale_and_tax_field
     )
     assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
     assert entry.settings["connector"]["include_geometry"] is True
+    assert entry.base_url.startswith("https://citygis.greenvillesc.gov/")
+    assert entry.settings["connector"]["page_size"] == 25
     assert suppressed.isdisjoint(out_fields)
     assert "OWNAM1" not in entry.settings["connector"]["out_fields"]
     assert "FAIRMKTVAL" not in entry.settings["connector"]["out_fields"]
@@ -9419,7 +9423,7 @@ def test_portland_catalog_scopes_development_records_and_quarantines_bad_dates()
 
     assert entry.settings["connector"] == {
         "page_size": 4000,
-        "where": "TYPE IN ('CO','RS','SD','LU','DR','PC')",
+        "where": "FOLDERTYPE IN ('CO','RS','SD','LU','DR','PC')",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
     }

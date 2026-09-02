@@ -1,5 +1,5 @@
 {
-  "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gis2.arlingtontx.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.columbus.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,pub.sagis.org,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,webapi.legistar.com,www.everettwa.gov,www.fairfaxcounty.gov,www.gcgis.org,www.portlandmaps.com,www.sanmarcostx.gov,www.stlcitypermits.com,www.taylortx.gov",
+  "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,citygis.greenvillesc.gov,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gis2.arlingtontx.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.columbus.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,pub.sagis.org,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,webapi.legistar.com,www.everettwa.gov,www.fairfaxcounty.gov,www.portlandmaps.com,www.sanmarcostx.gov,www.stlcitypermits.com,www.taylortx.gov",
   "candidate_retries": {
     "allowed_hosts_value": "",
     "candidate_catalog_fingerprint": "fb364e94075b9ee357141664703d43c5cacd3cd1fc28f8fb5f579b4564fd6f39",
@@ -9,13 +9,14 @@
     "required_hosts": [],
     "sample_size": 10
   },
-  "catalog_fingerprint": "ee8b3989a4113c5b852d091f64e5ad2cda37f7df1b88932caa749081223d2a51",
-  "manifest_digest": "6eaa74d7fbef91a62c7b9c5d72a1c97ae5bfe742d42e3285dd9002f12cedf3a5",
-  "policy_digest": "c141fb846015b56e1548217ef35a832a9951d7d28d38176964d8a8c53d8dea09",
+  "catalog_fingerprint": "64368c5c08890b3cdaef0b7cd9a26fd435c2c65349d86d8602de64c2c1cb9299",
+  "manifest_digest": "4d836e56cf92517db2ffb39db186a2e9c1bd0ef0169e5a97f02e922d6a4dee82",
+  "policy_digest": "975dc6d420d0c4cae494b6d3461e6ec6fba6f1e3a57609e1cb22af782f3ca914",
   "required_hosts": [
     "anrmaps.vermont.gov",
     "arcgis.tampagov.net",
     "ca.dep.state.fl.us",
+    "citygis.greenvillesc.gov",
     "data.austintexas.gov",
     "data.brla.gov",
     "data.buffalony.gov",
@@ -98,7 +99,6 @@
     "webapi.legistar.com",
     "www.everettwa.gov",
     "www.fairfaxcounty.gov",
-    "www.gcgis.org",
     "www.portlandmaps.com",
     "www.sanmarcostx.gov",
     "www.stlcitypermits.com",
@@ -418,14 +418,15 @@
       "wave": 3
     },
     {
-      "approved_only_source_count": 9,
+      "approved_only_source_count": 10,
       "label": "Nationwide expansion queue",
       "manual_source_count": 0,
       "parcel_source_count": 23,
       "permit_source_count": 44,
-      "pre_approval_source_count": 35,
+      "pre_approval_source_count": 34,
       "required_hosts": [
         "anrmaps.vermont.gov",
+        "citygis.greenvillesc.gov",
         "data.brla.gov",
         "data.cincinnati-oh.gov",
         "data.cityofchicago.org",
@@ -473,7 +474,6 @@
         "tools.wprdc.org",
         "utility.arcgis.com",
         "www.fairfaxcounty.gov",
-        "www.gcgis.org",
         "www.portlandmaps.com",
         "www.stlcitypermits.com"
       ],

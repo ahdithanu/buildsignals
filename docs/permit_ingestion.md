@@ -372,10 +372,11 @@ for Phase 2 nearby-parcel discovery. They are not permit signals; they provide
 parcel identity, locality, optional situs context, currentness, geometry, and
 centroids while owner/mailing, assessor, sale, and raw export fields remain
 suppressed.
-Fairfax County DevelopmentTracker site records are admitted as a narrow
-pre-approval-through-approved Virginia development feed. They use public PLUS
-site records, parcel geometry, status dates, public record links, and
-approved-plan links while suppressing inspector/editor/internal workflow fields.
+Fairfax County approved site records are admitted as a narrow approved-only
+Virginia development feed. The current public PLUS replacement layer preserves
+site identity, parcel geometry, status dates, and evidence links while
+suppressing inspector/editor/internal workflow fields. It does not support an
+early-warning claim by itself.
 Norfolk permit records are admitted from the city's Public Domain Socrata
 dataset as a distinct permit-level slice. The first production query excludes
 inspection rows to avoid duplicate permits and keeps pending zoning/business
@@ -688,6 +689,10 @@ and pre-application conferences. It keys canonical records by unique
 `FOLDERKEY` and uses `OBJECTID` only for transport. A generic date-transform
 tolerance quarantines implausible future lifecycle dates from canonical fields
 without discarding their immutable raw evidence.
+
+Portland's live schema stores the permit class in `FOLDERTYPE`; production
+filtering uses that field rather than the similarly named `TYPE` field. This is
+covered by a catalog contract test so future schema drift fails before rollout.
 
 Pittsburgh exercises the generic CKAN DataStore connector. Its CC BY feed is
 explicitly configured as `approved_only`, preserving the issued confirmation

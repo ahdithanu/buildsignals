@@ -1434,6 +1434,13 @@ improve.**
 
 Primary admitted candidate: `greenville_county_sc_parcels_narrow`.
 
+August 28, 2026 production update: the county endpoint documented below was
+stopped. The source now uses the official City of Greenville parcel layer at
+`https://citygis.greenvillesc.gov/arcgis/rest/services/GeneralData/GeneralData_WGS84/MapServer/2/query`.
+The city describes this layer as weekly county-GIS parcel coverage for the city
+and a two-mile buffer. The narrower footprint is explicit; field suppression and
+the derived-nearby-parcel-only export policy remain unchanged.
+
 Endpoint:
 `https://www.gcgis.org/arcgis/rest/services/GreenvilleJS/Map_Layers_JS/MapServer/52/query`.
 Service iteminfo:

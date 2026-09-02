@@ -290,6 +290,9 @@ A production source must pass all of these checks:
 - Reliability: daily data with `OBJECTID` keyset transport and periodic full
   reconciliation. Source dates more than 48 hours in the future are
   quarantined from canonical lifecycle fields while raw evidence is preserved.
+- August 28, 2026 schema check: permit classes are populated in `FOLDERTYPE`,
+  not `TYPE`. The production filter now uses `FOLDERTYPE` and retains `FOLDERKEY`
+  as canonical identity.
 - Rights: PDDL 1.0 under the PortlandMaps open-data terms.
 
 ### Pittsburgh Issued Building Permits
@@ -1040,16 +1043,14 @@ Evidence URLs:
   Henrico, Chesterfield, Alexandria, Chesapeake, and Richmond remain portal,
   rights, or API-contract holds until a supported export path is verified.
 - Production source: `fairfax_county_va_development_tracker_site_records`.
-  The admitted slice uses DevelopmentTracker layer 2, `Active Site Construction
-  - Parcels`, because metadata says records are publicly available, updated
-  nightly from accepted PLUS records, refreshed on status changes, and used to
-  provide public access to approved plans. Map `RECORDID`, `APPTYPEALIAS`,
-  `PROJECT_NAME`, `PARCEL_ID`, `RECORD_STATUS`, status/submitted/approved/closed
-  dates, `PROJECT_STATUS`, MAR address, public PLUS link, approved-plan link,
-  dwelling-unit count, and parcel geometry/centroid. Suppress inspector names,
-  created/edited users, raw document exports, and internal workflow fields.
-  Treat submitted/accepted/in-review records as pre-approval and approved/closed
-  records as approved/confirmed.
+  On August 28, 2026, the former DevelopmentTracker layer began requiring a
+  token. The current public Fairfax planning map references the replacement
+  `LDS/PLUSApprovedSiteRecords/FeatureServer/0` layer. The catalog now uses that
+  public endpoint and conservatively labels it `approved_only`; it maps the
+  available site, parcel, lifecycle, address, evidence-link, dwelling-unit, and
+  centroid fields while suppressing internal workflow data. A future public
+  accepted/in-review companion is required before restoring pre-approval
+  coverage for Fairfax.
 - Production source: `norfolk_va_permits_and_inspections_permit_records`.
   Norfolk's Socrata `Permits and Inspections` dataset is Public Domain, updated
   daily, and contains permit number, application/issue/final dates, status,
@@ -1305,6 +1306,10 @@ Evidence URLs:
   `permitnumber`, `projectname`, `owneroperator`, `project_location`,
   `datereceived`, `projecttype`, `delegateagency`, `permitstatuscode`,
   latitude/longitude, acreage, and county.
+- Reliability update: the live feed includes rows without `datereceived` ahead
+  of usable records. The bounded production query requires a non-null received
+  date so the required lifecycle timestamp remains deterministic; this does not
+  change the approved field scope or the pre-approval interpretation.
 - Lifecycle mapping: non-closed NOI records are pre-approval/development-intent
   context; `Closed` records are retained as historical approved/closed
   environmental coverage. Preserve `permitstatuscode` as raw status and never
@@ -3101,6 +3106,12 @@ Evidence URLs:
   permission-gated, the license text is a no-warranty disclaimer rather than an
   affirmative commercial SaaS reuse/export grant, and no pre-approval lifecycle,
   update cursor, or deletion feed was verified.
+- Parcel production update: the former Greenville County parcel service was
+  stopped. `greenville_county_sc_parcels_narrow` now uses the official City of
+  Greenville `GeneralData_WGS84/MapServer/2` parcel layer, which covers the city
+  and a two-mile buffer and is refreshed weekly from county GIS. The replacement
+  keeps the narrow derived-nearby-parcel policy and continues to suppress owner,
+  value, sale, and tax fields.
 - Columbia / Richland County: HOLD. Columbia's official Planning and
   Development pages route commercial and multifamily permits to a Tyler Access
   Portal or email intake; public Tyler routes are application-search backends,

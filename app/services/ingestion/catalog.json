@@ -1859,7 +1859,7 @@
       "signal_stage": "pre_approval_and_approved",
       "connector": {
         "page_size": 4000,
-        "where": "TYPE IN ('CO','RS','SD','LU','DR','PC')",
+        "where": "FOLDERTYPE IN ('CO','RS','SD','LU','DR','PC')",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID"
       },
@@ -3127,7 +3127,8 @@
       "export_policy": "public_domain_with_attribution_preserve_raw_noi_status",
       "connector": {
         "page_size": 100,
-        "order_by": "datereceived DESC, permitnumber ASC"
+        "order_by": "datereceived DESC, permitnumber ASC",
+        "query": {"$where": "datereceived IS NOT NULL"}
       },
       "defaults": {
         "state": "DE",
@@ -3351,16 +3352,16 @@
   },
   {
     "key": "fairfax_county_va_development_tracker_site_records",
-    "name": "Fairfax County DevelopmentTracker Site Construction Records",
+    "name": "Fairfax County Approved Site Records",
     "adapter": "arcgis",
     "record_type": "permit",
     "jurisdiction": "Fairfax County, VA",
-    "base_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/DevelopmentTracker/MapServer/2/query",
+    "base_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/PLUSApprovedSiteRecords/FeatureServer/0/query",
     "settings": {
-      "official_landing_page": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/DevelopmentTracker/MapServer",
-      "license": "Fairfax County Land Development Services public DevelopmentTracker ArcGIS layer",
-      "license_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/DevelopmentTracker/MapServer/2",
-      "rights_basis": "Narrow admission supports derived permit/development and opportunity context with Fairfax County / Land Development Services attribution. Layer metadata states the data is publicly available, updated nightly from PLUS accepted records, and used to provide public access to approved plans. Suppress inspector/user/workflow fields, raw document exports, and bulk source replacement resale.",
+      "official_landing_page": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/PLUSApprovedSiteRecords/FeatureServer/0",
+      "license": "Fairfax County Land Development Services public approved site-record layer",
+      "license_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/PLUSApprovedSiteRecords/FeatureServer/0",
+      "rights_basis": "Narrow admission supports derived approved development and opportunity context with Fairfax County / Land Development Services attribution. Layer metadata states the data is publicly available, updated nightly from PLUS records, and used to provide public access to approved plans. Suppress inspector/user/workflow fields, raw document exports, and bulk source replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily",
       "collection_interval_minutes": 1440,
@@ -3370,7 +3371,7 @@
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "RECORDID", "RECORD_STATUS"],
       "reconciliation_mode": "periodic_full",
-      "signal_stage": "pre_approval_and_approved",
+      "signal_stage": "approved_only",
       "field_allowlist": [
         "OBJECTID", "GlobalID", "RECORDID", "APPTYPEALIAS",
         "PROJECT_NAME", "PARCEL_ID", "SUPERVISOR_DISTRICT",
@@ -3404,7 +3405,7 @@
         "county": "Fairfax",
         "state": "VA",
         "jurisdiction": "Fairfax County",
-        "source_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/DevelopmentTracker/MapServer/2"
+        "source_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/PLUSApprovedSiteRecords/FeatureServer/0"
       }
     },
     "field_mappings": [
@@ -3825,9 +3826,9 @@
       "opening_signal_date_field": "INITIALISSUEDATE",
       "field_allowlist": [
         "OBJECTID", "CUSTOMERNUMBER", "LICENSESTATUS", "LICENSETYPE",
-        "LICENSESUBTYPE", "LICENSESTATUSDATE", "LICENSESTARTDATE",
-        "LICENSEENDDATE", "INITIALISSUEDATE", "PRIMARYACTIVITY",
-        "BUSINESSACTIVITY", "PREMISEADDRESS", "PREMISEINDC",
+        "LICENSESTATUSDATE", "LICENSESTARTDATE", "LICENSEENDDATE",
+        "INITIALISSUEDATE", "BUSINESSACTIVITY", "PRIMARYACTIVITYFLAG",
+        "CATEGORYSERVICETYPE", "PREMISEADDRESS", "PREMISEINDC",
         "ENTITYNAME", "ENTITYTRADENAME", "ENTITYTYPE", "DATAREFRESHEDON",
         "WARD", "ANC", "NEIGHBORHOODCLUSTER",
         "BUSINESSIMPROVEMENTDISTRICT", "MAR_ID", "SSL", "LATITUDE",
@@ -3843,8 +3844,8 @@
       ],
       "connector": {
         "page_size": 1000,
-        "where": "CUSTOMERNUMBER IS NOT NULL AND PREMISEINDC = 'Y' AND PREMISEADDRESS IS NOT NULL AND LICENSESTATUS = 'Active' AND (BUSINESSACTIVITY IN ('Restaurant','Grocery Store','Food Products','Delicatessen','Gasoline Dealer','Auto Wash','Caterers') OR PRIMARYACTIVITY IN ('Restaurant','Grocery Store','Food Products','Hotel','Inn And Motel','Auto Wash','Gasoline Dealer','Delicatessen'))",
-        "out_fields": "OBJECTID,CUSTOMERNUMBER,LICENSESTATUS,LICENSETYPE,LICENSESUBTYPE,LICENSESTATUSDATE,LICENSESTARTDATE,LICENSEENDDATE,INITIALISSUEDATE,PRIMARYACTIVITY,BUSINESSACTIVITY,PREMISEADDRESS,PREMISEINDC,ENTITYNAME,ENTITYTRADENAME,ENTITYTYPE,DATAREFRESHEDON,WARD,ANC,NEIGHBORHOODCLUSTER,BUSINESSIMPROVEMENTDISTRICT,MAR_ID,SSL,LATITUDE,LONGITUDE",
+        "where": "CUSTOMERNUMBER IS NOT NULL AND PREMISEINDC = 'Yes' AND PREMISEADDRESS IS NOT NULL AND LICENSESTATUS = 'Active' AND BUSINESSACTIVITY IN ('Restaurant','Grocery Store','Food Products','Delicatessen','Gasoline Dealer','Auto Wash','Caterers')",
+        "out_fields": "OBJECTID,CUSTOMERNUMBER,LICENSESTATUS,LICENSETYPE,LICENSESTATUSDATE,LICENSESTARTDATE,LICENSEENDDATE,INITIALISSUEDATE,BUSINESSACTIVITY,PRIMARYACTIVITYFLAG,CATEGORYSERVICETYPE,PREMISEADDRESS,PREMISEINDC,ENTITYNAME,ENTITYTRADENAME,ENTITYTYPE,DATAREFRESHEDON,WARD,ANC,NEIGHBORHOODCLUSTER,BUSINESSIMPROVEMENTDISTRICT,MAR_ID,SSL,LATITUDE,LONGITUDE",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
         "include_geometry": false
@@ -3861,11 +3862,11 @@
     "field_mappings": [
       {"source_field": "__source_record_id", "canonical_field": "source_record_id", "transform": "join_fields", "transform_options": {"fields": ["CUSTOMERNUMBER", "OBJECTID"], "separator": ":"}, "is_required": true},
       {"source_field": "CUSTOMERNUMBER", "canonical_field": "permit_number"},
-      {"source_field": "LICENSESUBTYPE", "canonical_field": "permit_subtype"},
+      {"source_field": "LICENSETYPE", "canonical_field": "permit_subtype"},
       {"source_field": "BUSINESSACTIVITY", "canonical_field": "work_class"},
-      {"source_field": "PRIMARYACTIVITY", "canonical_field": "proposed_use"},
+      {"source_field": "CATEGORYSERVICETYPE", "canonical_field": "proposed_use"},
       {"source_field": "LICENSESTATUS", "canonical_field": "status"},
-      {"source_field": "__description", "canonical_field": "description", "transform": "join_fields", "transform_options": {"fields": ["ENTITYTRADENAME", "ENTITYNAME", "LICENSESUBTYPE", "PRIMARYACTIVITY", "BUSINESSACTIVITY"], "separator": " | "}},
+      {"source_field": "__description", "canonical_field": "description", "transform": "join_fields", "transform_options": {"fields": ["ENTITYTRADENAME", "ENTITYNAME", "LICENSETYPE", "CATEGORYSERVICETYPE", "BUSINESSACTIVITY"], "separator": " | "}},
       {"source_field": "__project_name", "canonical_field": "project_name", "transform": "first_nonempty", "transform_options": {"fields": ["ENTITYTRADENAME", "ENTITYNAME"]}},
       {"source_field": "PREMISEADDRESS", "canonical_field": "address"},
       {"source_field": "SSL", "canonical_field": "parcel_id"},
@@ -4666,11 +4667,11 @@
     "adapter": "arcgis",
     "record_type": "parcel",
     "jurisdiction": "Greenville County, SC",
-    "base_url": "https://www.gcgis.org/arcgis/rest/services/GreenvilleJS/Map_Layers_JS/MapServer/52/query",
+    "base_url": "https://citygis.greenvillesc.gov/arcgis/rest/services/GeneralData/GeneralData_WGS84/MapServer/2/query",
     "settings": {
-      "official_landing_page": "https://www.gcgis.org/arcgis/rest/services/GreenvilleJS/Map_Layers_JS/MapServer/52",
+      "official_landing_page": "https://citygis.greenvillesc.gov/arcgis/rest/services/GeneralData/GeneralData_WGS84/MapServer/2",
       "license": "Greenville County GIS public access; derived nearby-parcel context only",
-      "rights_basis": "Narrow admission supports derived nearby-parcel discovery with Greenville County attribution; owner, mailing, value, tax, sale, deed, raw county extract, and bulk geometry export fields remain excluded",
+      "rights_basis": "Narrow admission supports derived nearby-parcel discovery from the City of Greenville public parcel layer, which covers the city and a two-mile buffer and is refreshed weekly from Greenville County GIS. Owner, mailing, value, tax, sale, deed, raw county extract, and bulk geometry export fields remain excluded.",
       "attribution_required": true,
       "refresh_frequency": "monthly",
       "collection_interval_minutes": 43200,
@@ -4683,7 +4684,7 @@
       "signal_stage": "parcel_context",
       "field_allowlist": [
         "OBJECTID", "PIN", "STRNUM", "LOCATE", "JURIS", "DIST", "MKTAREA",
-        "LANDUSE", "PROPTYPE", "IMPROVED", "SUBDIV", "TACRES", "geometry"
+        "LANDUSE", "SUBDIV", "TACRES", "geometry"
       ],
       "suppressed_fields": [
         "OWNAM1", "OWNAM2", "STREET", "CITY", "STATE", "ZIP5", "NAMECO",
@@ -4695,9 +4696,9 @@
       "export_policy": "derived_nearby_parcel_context_only_no_raw_greenville_county_sc_resale",
       "max_snapshot_retirement_fraction": 0.02,
       "connector": {
-        "page_size": 200,
+        "page_size": 25,
         "where": "PIN IS NOT NULL AND PIN <> ''",
-        "out_fields": "OBJECTID,PIN,STRNUM,LOCATE,JURIS,DIST,MKTAREA,LANDUSE,PROPTYPE,IMPROVED,SUBDIV,TACRES",
+        "out_fields": "OBJECTID,PIN,STRNUM,LOCATE,JURIS,DIST,MKTAREA,LANDUSE,SUBDIV,TACRES",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
         "include_geometry": true,
@@ -4707,7 +4708,7 @@
         "county": "Greenville",
         "state": "SC",
         "jurisdiction": "Greenville County",
-        "source_url": "https://www.gcgis.org/arcgis/rest/services/GreenvilleJS/Map_Layers_JS/MapServer/52"
+        "source_url": "https://citygis.greenvillesc.gov/arcgis/rest/services/GeneralData/GeneralData_WGS84/MapServer/2"
       }
     },
     "field_mappings": [
@@ -4717,7 +4718,7 @@
       {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
       {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
       {"source_field": "TACRES", "canonical_field": "land_area_sq_ft", "transform": "multiply", "transform_options": {"factor": 43560}},
-      {"source_field": "__land_use", "canonical_field": "land_use", "transform": "first_nonempty", "transform_options": {"fields": ["PROPTYPE", "LANDUSE", "IMPROVED"]}},
+      {"source_field": "__land_use", "canonical_field": "land_use", "transform": "first_nonempty", "transform_options": {"fields": ["LANDUSE"]}},
       {"source_field": "JURIS", "canonical_field": "zoning_code"}
     ]
   },
@@ -7930,7 +7931,7 @@
       "connector": {
         "page_size": 1000,
         "where": "record_id IS NOT NULL AND address IS NOT NULL AND issued_date IS NOT NULL",
-        "out_fields": "record_id,address,submitted_date,issued_date,work_description,permit_type,construction_type,current_use_type,proposed_use_type,num_units,amt_permit_cost,amt_estimated_contractor_cost,amt_estimated_department_cost",
+        "out_fields": "ObjectId,record_id,address,submitted_date,issued_date,work_description,permit_type,construction_type,current_use_type,proposed_use_type,num_units,amt_permit_cost,amt_estimated_contractor_cost,amt_estimated_department_cost",
         "order_by_fields": "ObjectId ASC",
         "keyset_field": "ObjectId",
         "query": {
