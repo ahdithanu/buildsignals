@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import app.services.ingestion.service as ingestion_service
 from app.models.brand import BrandAlias, BrandPartyFingerprint, BrandProfile, PermitBrandMatch
@@ -199,7 +199,7 @@ def test_review_queue_ranks_recent_source_activity_before_confidence(client, db,
     old_permit = permits["old_brand_signal"]
     recent_permit = permits["recent_brand_signal"]
     old_permit.filed_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
-    recent_permit.filed_at = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    recent_permit.filed_at = datetime.now(timezone.utc) - timedelta(days=7)
     old_match = db.query(PermitBrandMatch).filter_by(permit_id=old_permit.id).one()
     recent_match = db.query(PermitBrandMatch).filter_by(permit_id=recent_permit.id).one()
     old_match.confidence = 0.99

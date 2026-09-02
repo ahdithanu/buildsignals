@@ -139,7 +139,7 @@ def test_coverage_builds_a_50_state_clustered_rollout_queue():
         "add_retailer_opening_source",
         "add_secondary_jurisdiction",
     }
-    assert by_state["AK"].next_action == "resolve_candidate_blocker"
+    assert by_state["AK"].next_action == "add_pre_approval_source"
 
 
 def _source(db, *, key: str = "canary_source", name: str = "Canary source"):
@@ -1108,11 +1108,11 @@ def test_ingestion_coverage_endpoint_reports_active_catalog_footprint(client, db
     assert body["researched_state_count"] == 50
     assert body["unresearched_state_count"] == 0
     assert body["unresearched_states"] == []
-    assert body["covered_state_count"] == 40
-    assert body["missing_state_count"] == 10
-    assert body["candidate_only_state_count"] == 10
+    assert body["covered_state_count"] == 43
+    assert body["missing_state_count"] == 7
+    assert body["candidate_only_state_count"] == 7
     assert set(body["candidate_only_states"]) == {
-        "AK", "HI", "IA", "ID", "MS", "MT", "NM", "OK", "WV", "WY",
+        "IA", "MS", "MT", "NM", "OK", "WV", "WY",
     }
     assert set(body["missing_states"]) == set(body["candidate_only_states"])
 

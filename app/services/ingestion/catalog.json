@@ -8981,5 +8981,188 @@
       {"source_field": "FINALDATE", "canonical_field": "completed_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
       {"source_field": "ImportDate", "canonical_field": "status_updated_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}}
     ]
+  },
+  {
+    "key": "hawaii_statewide_tmk_parcels_narrow",
+    "name": "Hawaii Statewide TMK Parcel Spine",
+    "adapter": "arcgis",
+    "record_type": "parcel",
+    "jurisdiction": "Hawaii",
+    "base_url": "https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=579b8dcb7a8e44c1af201e1b3cdf655f",
+      "license": "State of Hawaii public domain",
+      "license_url": "https://portal.ehawaii.gov/page/terms-of-use/",
+      "rights_basis": "The Hawaii Statewide GIS Program expressly marks the 2026 statewide TMK parcel layer public domain. Narrow admission stores TMK identity, county/island divisions, GIS acreage, county evidence link, and geometry for derived nearby-parcel context. The layer is a visual and assessment reference, not a legal survey, title source, or replacement for county parcel systems.",
+      "attribution_required": true,
+      "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_sla_hours": 960,
+      "canary_required_fields": ["objectid", "tmk_txt", "county", "geometry"],
+      "reconciliation_mode": "monthly_full_snapshot",
+      "signal_stage": "parcel_context",
+      "coverage_limitations": [
+        "County source dates vary and parcel geometry is a visual reference, not a legal or survey boundary."
+      ],
+      "field_allowlist": [
+        "objectid", "tmk", "tmk_txt", "county", "division", "island",
+        "zone", "section", "plat", "plat1", "parcel", "parcel1",
+        "gisacres", "cty_tmk", "qpub_link", "geometry"
+      ],
+      "suppressed_fields": [
+        "owner", "mailing_address", "assessed_value", "land_value",
+        "improvement_value", "sale_date", "sale_price", "legal_description",
+        "raw_source_file", "raw_geometry_export"
+      ],
+      "export_policy": "derived_nearby_parcel_context_only_hawaii_public_domain_no_raw_source_replacement",
+      "max_snapshot_retirement_fraction": 0.02,
+      "connector": {
+        "page_size": 100,
+        "where": "tmk_txt IS NOT NULL AND county IS NOT NULL",
+        "out_fields": "objectid,tmk,tmk_txt,county,division,island,zone,section,plat,plat1,parcel,parcel1,gisacres,cty_tmk,qpub_link",
+        "order_by_fields": "objectid ASC",
+        "keyset_field": "objectid",
+        "include_geometry": true,
+        "query": {"outSR": 4326}
+      },
+      "defaults": {
+        "state": "HI",
+        "jurisdiction": "Hawaii",
+        "source_url": "https://www.arcgis.com/home/item.html?id=579b8dcb7a8e44c1af201e1b3cdf655f"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "tmk_txt", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "cty_tmk", "canonical_field": "parcel_group_id", "transform": "first_nonempty", "transform_options": {"fields": ["cty_tmk", "tmk_txt"]}},
+      {"source_field": "county", "canonical_field": "county"},
+      {"source_field": "island", "canonical_field": "city"},
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
+      {"source_field": "gisacres", "canonical_field": "land_area_sq_ft", "transform": "multiply", "transform_options": {"factor": 43560}},
+      {"source_field": "qpub_link", "canonical_field": "source_url"}
+    ]
+  },
+  {
+    "key": "alaska_dnr_statewide_parcels_narrow",
+    "name": "Alaska DNR Statewide Parcel Composite",
+    "adapter": "arcgis",
+    "record_type": "parcel",
+    "jurisdiction": "Alaska",
+    "base_url": "https://services1.arcgis.com/7HDiw78fcUiM2BWn/arcgis/rest/services/AK_Parcels/FeatureServer/0/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=458be3d8aafa47cd882af05cee983f6b",
+      "license": "State of Alaska DNR public use with attribution and modification disclosure",
+      "license_url": "https://www.arcgis.com/sharing/rest/content/items/458be3d8aafa47cd882af05cee983f6b",
+      "rights_basis": "The Alaska Department of Natural Resources Division of Forestry and Fire Protection publishes this statewide composite for statewide applications and permits use with source attribution and disclosure of modifications. Narrow admission stores only source identity, contributing local government, generalized use, processing date, and geometry for derived nearby-parcel context. Owner, alternate owner, values, raw statewide extracts, and source-replacement exports remain excluded.",
+      "attribution_required": true,
+      "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_sla_hours": 960,
+      "canary_required_fields": ["OBJECTID", "GlobalID", "local_gov", "geometry"],
+      "reconciliation_mode": "monthly_full_snapshot",
+      "signal_stage": "parcel_context",
+      "field_allowlist": [
+        "OBJECTID", "GlobalID", "parcel_id", "feature_id", "local_gov",
+        "property_type", "property_use", "datetime_processed", "geometry"
+      ],
+      "suppressed_fields": [
+        "owner", "alt_owner", "land_value", "building_value", "total_value",
+        "mailing_address", "sale_date", "sale_price", "raw_source_file",
+        "raw_geometry_export"
+      ],
+      "export_policy": "derived_nearby_parcel_context_only_alaska_dnr_attributed_no_raw_resale",
+      "max_snapshot_retirement_fraction": 0.02,
+      "connector": {
+        "page_size": 100,
+        "where": "GlobalID IS NOT NULL AND local_gov IS NOT NULL",
+        "out_fields": "OBJECTID,GlobalID,parcel_id,feature_id,local_gov,property_type,property_use,datetime_processed",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": true,
+        "query": {"outSR": 4326}
+      },
+      "defaults": {
+        "state": "AK",
+        "jurisdiction": "Alaska",
+        "source_url": "https://www.arcgis.com/home/item.html?id=458be3d8aafa47cd882af05cee983f6b"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "GlobalID", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "__parcel_group_id", "canonical_field": "parcel_group_id", "transform": "first_nonempty", "transform_options": {"fields": ["parcel_id", "feature_id", "GlobalID"]}},
+      {"source_field": "local_gov", "canonical_field": "county"},
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
+      {"source_field": "__land_use", "canonical_field": "land_use", "transform": "first_nonempty", "transform_options": {"fields": ["property_use", "property_type"]}},
+      {"source_field": "datetime_processed", "canonical_field": "observed_at", "transform": "date"}
+    ]
+  },
+  {
+    "key": "idaho_its_statewide_parcels_narrow",
+    "name": "Idaho ITS Statewide Parcel Framework",
+    "adapter": "arcgis",
+    "record_type": "parcel",
+    "jurisdiction": "Idaho",
+    "base_url": "https://services1.arcgis.com/CNPdEkvnGl65jCX8/ArcGIS/rest/services/Public_Idaho_Parcels_/FeatureServer/7/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=cc1d9d013e584c89b448344723504b29",
+      "license": "State of Idaho public parcel data terms; no mailing-list use",
+      "license_url": "https://www.arcgis.com/sharing/rest/content/items/65a3f7c6d4ca404ba6ab677913953b35",
+      "rights_basis": "The State of Idaho Office of Information Technology Services publishes participating-county standardized parcel polygons for public and private-sector business use. Narrow admission stores parcel identity, steward, county, extract date, acreage, generalized assessment category, and geometry for derived nearby-parcel context. Owner, mailing-list, legal-description, valuation, improvement, raw extract, and source-replacement export fields remain excluded.",
+      "attribution_required": true,
+      "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_sla_hours": 960,
+      "canary_required_fields": ["OBJECTID", "FP_ID", "PARCEL_ID", "County", "geometry"],
+      "reconciliation_mode": "monthly_full_snapshot",
+      "signal_stage": "parcel_context",
+      "coverage_limitations": [
+        "Coverage includes participating Idaho counties and must not be described as complete title or assessor coverage for all 44 counties."
+      ],
+      "field_allowlist": [
+        "OBJECTID", "FP_ID", "PARCEL_ID", "STEWARD", "County", "UPDATED",
+        "WEBSITE", "FIPS", "ASR_ACRES", "ASR_CATS", "geometry"
+      ],
+      "suppressed_fields": [
+        "MAIL_STATE", "LGL_DESCR", "VAL_LAND", "VAL_IMPVTS", "VAL_TOTAL",
+        "HOME_EXMPT", "owner", "mailing_address", "sale_date", "sale_price",
+        "raw_source_file", "raw_geometry_export"
+      ],
+      "export_policy": "derived_nearby_parcel_context_only_idaho_its_no_mail_list_or_raw_resale",
+      "max_snapshot_retirement_fraction": 0.02,
+      "connector": {
+        "page_size": 100,
+        "where": "FP_ID IS NOT NULL AND PARCEL_ID IS NOT NULL",
+        "out_fields": "OBJECTID,FP_ID,PARCEL_ID,STEWARD,County,UPDATED,WEBSITE,FIPS,ASR_ACRES,ASR_CATS",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": true,
+        "query": {"outSR": 4326}
+      },
+      "defaults": {
+        "state": "ID",
+        "jurisdiction": "Idaho",
+        "source_url": "https://www.arcgis.com/home/item.html?id=cc1d9d013e584c89b448344723504b29"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "FP_ID", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "PARCEL_ID", "canonical_field": "parcel_group_id"},
+      {"source_field": "County", "canonical_field": "county"},
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
+      {"source_field": "ASR_ACRES", "canonical_field": "land_area_sq_ft", "transform": "multiply", "transform_options": {"factor": 43560}},
+      {"source_field": "ASR_CATS", "canonical_field": "land_use"},
+      {"source_field": "UPDATED", "canonical_field": "observed_at", "transform": "unix_milliseconds"}
+    ]
   }
 ]

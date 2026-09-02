@@ -125,7 +125,7 @@ services:
       - key: INGESTION_HOST_POLICY_DIGEST
         value: ac5e6fd26bdab13c493e3ff27d0680958951eace448119b66377dd14de15ba2c
       - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
-        value: 4d836e56cf92517db2ffb39db186a2e9c1bd0ef0169e5a97f02e922d6a4dee82
+        value: f910785985e4109a9f58c80b4ebcf3f2f270058334315a643c7b0a2eae992898
       - key: INGESTION_ROLLOUT_WAVE
         value: "1"
       - key: INGESTION_SHARD_COUNT
@@ -201,7 +201,7 @@ services:
       - key: INGESTION_HOST_POLICY_DIGEST
         value: a3e282659996966df47ab7297eb3c0c3fc4072066ceb34931584c965bf0fe5cd
       - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
-        value: 4d836e56cf92517db2ffb39db186a2e9c1bd0ef0169e5a97f02e922d6a4dee82
+        value: f910785985e4109a9f58c80b4ebcf3f2f270058334315a643c7b0a2eae992898
       - key: INGESTION_ORGANIZATION
         sync: false
 
@@ -237,7 +237,7 @@ services:
       - key: INGESTION_HOST_POLICY_DIGEST
         value: f69e8ec6e3bf9d6795e24bb734886df9d0251026a46e18fadcbb23493815043c
       - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
-        value: 4d836e56cf92517db2ffb39db186a2e9c1bd0ef0169e5a97f02e922d6a4dee82
+        value: f910785985e4109a9f58c80b4ebcf3f2f270058334315a643c7b0a2eae992898
       - key: INGESTION_ORGANIZATION
         sync: false
 

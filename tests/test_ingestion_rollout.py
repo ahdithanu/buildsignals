@@ -45,8 +45,8 @@ def test_rollout_manifest_assigns_every_source_to_one_wave_and_shard():
     manifest = _manifest()
     all_wave_keys = [key for wave in manifest.waves for key in wave.source_keys]
 
-    assert manifest.source_count == len(entries) == 131
-    assert manifest.state_count == 41
+    assert manifest.source_count == len(entries) == 134
+    assert manifest.state_count == 44
     assert len(all_wave_keys) == len(set(all_wave_keys)) == len(entries)
     assert set(all_wave_keys) == {entry.key for entry in entries}
 
@@ -69,7 +69,7 @@ def test_rollout_manifest_matches_catalog_wave_classification():
         (1, 27),
         (2, 26),
         (3, 11),
-        (4, 67),
+        (4, 70),
     ]
 
 
