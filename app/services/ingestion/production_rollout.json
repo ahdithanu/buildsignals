@@ -2,7 +2,7 @@
   "allowed_hosts_value": "anrmaps.vermont.gov,arcgis.tampagov.net,ca.dep.state.fl.us,citygis.greenvillesc.gov,data.austintexas.gov,data.brla.gov,data.buffalony.gov,data.cincinnati-oh.gov,data.cityofchicago.org,data.cityofnewyork.us,data.cityoforlando.net,data.delaware.gov,data.lacity.org,data.marincounty.gov,data.mesaaz.gov,data.milwaukee.gov,data.montgomerycountymd.gov,data.nola.gov,data.norfolk.gov,data.ny.gov,data.seattle.gov,data.sfgov.org,data.somervillema.gov,data.texas.gov,data.townofcary.org,data.wa.gov,data.wprdc.org,datacatalog.cookcountyil.gov,enterprise.firstmap.delaware.gov,geo.sandag.org,geo.sanjoseca.gov,geodata.hawaii.gov,gis.arkansas.gov,gis.bostonplans.org,gis.charleston-sc.gov,gis.charlottenc.gov,gis.colorado.gov,gis.greensboro-nc.gov,gis.hennepin.us,gis.indy.gov,gis.lincoln.ne.gov,gis.lojic.org,gis.maine.gov,gis.montgomeryal.gov,gis.nhcgov.com,gis.polk-county.net,gis.siouxfalls.gov,gis2.arlingtontx.gov,gisdata.alleghenycounty.us,gispublicweb.provo.org,gisshare.norfolk.gov,gisweb.casscountynd.gov,gisweb.miamidade.gov,granit24a.sr.unh.edu,mapit.fortworthtexas.gov,maps-apis.carync.gov,maps.cityofhenderson.com,maps.cityofmadison.com,maps.cob.org,maps.coj.net,maps.cot.tn.gov,maps.fayetteville-ar.gov,maps.nj.gov,maps.wake.gov,maps2.columbus.gov,maps2.dcgis.dc.gov,maps8.stlouis-mo.gov,mapviewer.lynchburgva.gov,mdgeodata.md.gov,mgmgis.montgomeryal.gov,pub.sagis.org,risegis.ri.gov,services.arcgis.com,services.dwr.virginia.gov,services1.arcgis.com,services2.arcgis.com,services3.arcgis.com,services5.arcgis.com,services7.arcgis.com,services9.arcgis.com,seshat.datasd.org,tools.wprdc.org,utility.arcgis.com,vgispublic.ocpafl.org,webapi.legistar.com,www.everettwa.gov,www.fairfaxcounty.gov,www.portlandmaps.com,www.sanmarcostx.gov,www.stlcitypermits.com,www.taylortx.gov",
   "candidate_retries": {
     "allowed_hosts_value": "",
-    "candidate_catalog_fingerprint": "fb364e94075b9ee357141664703d43c5cacd3cd1fc28f8fb5f579b4564fd6f39",
+    "candidate_catalog_fingerprint": "90d09353969269e80ef3e26e819bf5a97ba4f2dbc2c5d12710344a87704df51c",
     "candidate_count": 0,
     "candidate_keys": [],
     "policy_digest": "71c92f3d9c19b0dce7b2e31dac7f533536760cf6c86de049be76d22eb79d4eba",
@@ -10,7 +10,7 @@
     "sample_size": 10
   },
   "catalog_fingerprint": "d934fae4c936abf16326fe569b1f46c221c3eea27ed79f0ab0e93841ed13e87c",
-  "manifest_digest": "f910785985e4109a9f58c80b4ebcf3f2f270058334315a643c7b0a2eae992898",
+  "manifest_digest": "458c44bf67d7e2a0f35d85c57023c85302669a006f9ddafd4f93c06a25cd4d13",
   "policy_digest": "fb6ebf49f5e17c919b614f13118a7fdb38bda42244cd045b3b000f73795ee480",
   "required_hosts": [
     "anrmaps.vermont.gov",

@@ -44,6 +44,7 @@ from app.routes.graph import opportunity_router as graph_opportunity_router
 from app.routes.graph import router as graph_router
 from app.routes.health import router as health_router
 from app.routes.ingestion import router as ingestion_router
+from app.routes.ingestion_onboarding import router as ingestion_onboarding_router
 from app.routes.memos import router as memos_router
 from app.routes.organizations import router as organizations_router
 from app.routes.organizations import switch_router as auth_switch_router
@@ -132,6 +133,7 @@ app.include_router(data_portability_router, prefix=CURRENT_API_PREFIX)
 app.include_router(graph_router, prefix=CURRENT_API_PREFIX)
 app.include_router(graph_opportunity_router, prefix=CURRENT_API_PREFIX)
 app.include_router(ingestion_router, prefix=CURRENT_API_PREFIX)
+app.include_router(ingestion_onboarding_router, prefix=CURRENT_API_PREFIX)
 app.include_router(brands_router, prefix=CURRENT_API_PREFIX)
 app.include_router(parcels_router, prefix=CURRENT_API_PREFIX)
 app.include_router(planning_router, prefix=CURRENT_API_PREFIX)

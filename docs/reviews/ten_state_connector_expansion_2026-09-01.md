@@ -51,6 +51,6 @@ context only and do not close statewide permit-lifecycle gaps in those states.
 
 The catalog contains 134 production sources. The generated rollout manifest
 digest is
-`f910785985e4109a9f58c80b4ebcf3f2f270058334315a643c7b0a2eae992898`.
+`458c44bf67d7e2a0f35d85c57023c85302669a006f9ddafd4f93c06a25cd4d13`.
 Production services must use this exact digest and the manifest-generated
 outbound host policy before write-enabled collection.

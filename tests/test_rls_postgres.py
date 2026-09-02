@@ -171,6 +171,28 @@ def test_rls_blocks_when_app_current_org_unset(pg_engine):
         s.close()
 
 
+def test_ingestion_onboarding_tables_force_tenant_rls(pg_session):
+    tables = {
+        "organization_ingestion_enrollments",
+        "organization_ingestion_enrollment_sources",
+    }
+    rows = pg_session.execute(
+        text(
+            "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, p.polname "
+            "FROM pg_class c "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "LEFT JOIN pg_policy p ON p.polrelid = c.oid "
+            "WHERE n.nspname = current_schema() AND c.relname = ANY(:tables)"
+        ),
+        {"tables": sorted(tables)},
+    ).all()
+
+    assert {row.relname for row in rows} == tables
+    assert all(row.relrowsecurity for row in rows)
+    assert all(row.relforcerowsecurity for row in rows)
+    assert all(row.polname == "tenant_isolation" for row in rows)
+
+
 def test_raw_record_trigger_blocks_direct_mutation_but_allows_org_erasure(
     pg_session,
 ):

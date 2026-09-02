@@ -3135,6 +3135,27 @@ Evidence URLs:
 
 ### Mississippi Permit Sources
 
+- D'Iberville's official council agenda/minutes center and planning department
+  were added to the candidate queue on 2026-09-02. The archive is a direct
+  primary-evidence path for development agreements, tax-sharing votes,
+  Planning Commission cases, business openings, subdivisions, rezonings,
+  conditional uses, signage, and infrastructure commitments. Seed discovery
+  evidence includes BJ's Wholesale Club, the I-10 commercial corridor, Miss
+  Kelly Furniture, and Pleasant Junior Pit Stop. The city archive must be the
+  authoritative relationship evidence; media coverage is corroboration only.
+  The source remains a legal hold because the site states all rights reserved
+  and does not publish commercial storage/derived-display permission or a
+  supported archive API and reconciliation contract.
+- The official statewide MDEQ Permit Activity Search was revalidated on
+  2026-09-02 and added to the candidate queue. It publishes current application
+  and decision events by county with named facilities/projects, cities, permit
+  classes, event dates, and official detail links. Current evidence includes
+  construction applications for subdivisions, industrial sites, Amazon Data
+  Services infrastructure, D.R. Horton projects, and other large developments.
+  It remains a legal hold until MDEQ confirms commercial storage, derived
+  display, API/export, and redistribution rights; production also needs durable
+  event identity, control totals, pagination, correction, withdrawal, and
+  deletion semantics.
 - Jackson's official OpenGov workflows contain strong pre-issuance and issued
   commercial evidence, including proposed use, work description, address,
   owner, applicant, contractor, cost, area, and documents. The raw `Active`
