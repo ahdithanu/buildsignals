@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -10,6 +10,7 @@ from app.schemas.ingestion import IngestionSourceCreate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.ingestion import cli
 from app.services.ingestion.cli import build_parser
+from app.services.ingestion.dispatcher import DispatchResult
 from app.services.ingestion.health import CandidateCanaryResult, SourceCanaryResult
 
 
@@ -115,6 +116,66 @@ def test_canary_parser_supports_reviewed_rollout_scope_and_json():
     assert args.shard_index == 2
     assert args.sample_size == 5
     assert args.json is True
+
+
+def test_dispatch_enrollments_parser_defaults_to_bounded_execution():
+    args = build_parser().parse_args(["dispatch-enrollments"])
+
+    assert args.command == "dispatch-enrollments"
+    assert args.max_organizations == 100
+    assert args.max_sources == 100
+    assert args.max_sources_per_organization == 25
+    assert args.wall_clock_seconds == 3000
+    assert args.lease_seconds == 3600
+    assert args.plan_only is False
+
+
+def test_dispatch_enrollments_resolves_org_and_pins_manifest(
+    db, monkeypatch, capsys,
+):
+    db.add(Organization(
+        id="dispatch-org", name="Dispatch Org", slug="dispatch-org", is_active=True,
+    ))
+    db.commit()
+    source = _typed_catalog_source("wave_one", "Austin, TX")
+    observed = {}
+    now = datetime(2026, 9, 3, tzinfo=timezone.utc)
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db)
+    monkeypatch.setattr(cli, "load_catalog", lambda: [source])
+    monkeypatch.setattr(cli, "load_candidate_catalog", lambda: [])
+    monkeypatch.setattr(
+        cli,
+        "require_current_rollout_manifest",
+        lambda *_args, **_kwargs: SimpleNamespace(manifest_digest="manifest-digest"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "_enforce_rollout_manifest_attestation",
+        lambda _manifest: None,
+    )
+
+    def dispatch(**kwargs):
+        observed.update(kwargs)
+        return DispatchResult(
+            started_at=now,
+            completed_at=now,
+            plan_only=True,
+        )
+
+    monkeypatch.setattr(cli, "dispatch_enrolled_ingestion", dispatch)
+
+    exit_code = cli.main([
+        "dispatch-enrollments",
+        "--organization", "dispatch-org",
+        "--rollout-wave", "1",
+        "--plan-only",
+    ])
+
+    assert exit_code == 0
+    assert observed["organization_ids"] == {"dispatch-org"}
+    assert observed["allowed_source_keys"] == {"wave_one"}
+    assert observed["catalog_manifest_digest"] == "manifest-digest"
+    assert json.loads(capsys.readouterr().out)["plan_only"] is True
 
 
 def test_canary_rollout_report_stages_catalog_scope_and_rolls_back(
