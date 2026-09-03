@@ -24,6 +24,7 @@ from app.services.ingestion.catalog import (
     load_catalog,
     sync_catalog,
 )
+from app.services.ingestion.dispatcher import dispatch_enrolled_ingestion
 from app.services.ingestion.health import (
     CandidateCanaryResult,
     evaluate_source_health,
@@ -295,6 +296,36 @@ def build_parser() -> argparse.ArgumentParser:
     scheduled_due.add_argument(
         "--rollout-wave", type=int, choices=range(1, 5), metavar="1..4",
         help="Limit execution to one reviewed nationwide rollout wave",
+    )
+
+    dispatcher = subcommands.add_parser(
+        "dispatch-enrollments",
+        help="Run due reviewed sources for active customer ingestion enrollments",
+    )
+    dispatcher.add_argument(
+        "--organization", action="append", dest="organizations",
+        help="Limit dispatch to an organization ID or slug (repeatable)",
+    )
+    dispatcher.add_argument(
+        "--rollout-wave", type=int, choices=range(1, 5), metavar="1..4",
+        help="Limit execution to one reviewed nationwide rollout wave",
+    )
+    dispatcher.add_argument(
+        "--shard-count", type=int, default=1, choices=range(1, 129), metavar="1..128",
+    )
+    dispatcher.add_argument(
+        "--shard-index", type=int, default=0, choices=range(0, 128), metavar="0..127",
+    )
+    dispatcher.add_argument("--max-organizations", type=_positive_int, default=100)
+    dispatcher.add_argument("--max-sources", type=_positive_int, default=100)
+    dispatcher.add_argument(
+        "--max-sources-per-organization", type=_positive_int, default=25
+    )
+    dispatcher.add_argument("--wall-clock-seconds", type=_positive_int, default=3000)
+    dispatcher.add_argument("--lease-seconds", type=_positive_int, default=3600)
+    dispatcher.add_argument(
+        "--plan-only", action="store_true",
+        help="Report due enrolled sources without claiming or executing them",
     )
 
     canary = subcommands.add_parser("canary", help="Validate one source without writing data")
@@ -618,6 +649,70 @@ def _report_health(db, sources: list[IngestionSource], *, as_json: bool = False)
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "dispatch-enrollments":
+        try:
+            if ENVIRONMENT == "production" and not args.plan_only and args.rollout_wave is None:
+                raise ValueError(
+                    "Production enrollment dispatch requires --rollout-wave"
+                )
+            catalog_entries = load_catalog()
+            manifest = require_current_rollout_manifest(
+                catalog_entries,
+                candidates=load_candidate_catalog(),
+            )
+            scoped_entries = _scope_catalog_entries(
+                catalog_entries,
+                shard_count=args.shard_count,
+                shard_index=args.shard_index,
+                rollout_wave=args.rollout_wave,
+            )
+            if args.rollout_wave is not None:
+                _enforce_rollout_manifest_attestation(manifest)
+            if not args.plan_only:
+                _enforce_catalog_host_policy(scoped_entries)
+
+            organization_ids = None
+            if args.organizations:
+                control_db = SessionLocal()
+                try:
+                    organizations = control_db.query(Organization).filter(
+                        or_(
+                            Organization.id.in_(args.organizations),
+                            Organization.slug.in_(args.organizations),
+                        ),
+                        Organization.is_active.is_(True),
+                    ).all()
+                    resolved = {organization.id for organization in organizations}
+                    resolved_names = {
+                        value
+                        for organization in organizations
+                        for value in (organization.id, organization.slug)
+                    }
+                    missing = sorted(set(args.organizations) - resolved_names)
+                    if missing:
+                        raise ValueError(
+                            "Active organization not found: " + ", ".join(missing)
+                        )
+                    organization_ids = resolved
+                finally:
+                    control_db.close()
+
+            result = dispatch_enrolled_ingestion(
+                allowed_source_keys={entry.key for entry in scoped_entries},
+                catalog_manifest_digest=manifest.manifest_digest,
+                organization_ids=organization_ids,
+                max_organizations=args.max_organizations,
+                max_sources=args.max_sources,
+                max_sources_per_organization=args.max_sources_per_organization,
+                wall_clock_seconds=args.wall_clock_seconds,
+                lease_seconds=args.lease_seconds,
+                plan_only=args.plan_only,
+            )
+            print(json.dumps(asdict(result), default=str, sort_keys=True))
+            return 1 if result.sources_failed or result.deadline_reached else 0
+        except Exception as exc:
+            print(f"error: {exc}")
+            return 1
     if args.command == "catalog" and args.catalog_command == "host-audit":
         try:
             entries = load_catalog(args.path)

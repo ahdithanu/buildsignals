@@ -69,10 +69,12 @@ supported reconciliation contracts are confirmed.
   change. This is intentional: production scope must be reviewed and regenerated
   before customer activation resumes.
 
-## Next Scaling Step
+## Continuous Dispatch
 
-The multi-tenant dispatcher will claim due enrollment-source rows with expiring
-leases, establish a fresh organization context and database session per tenant,
-and call the existing bounded source executor. It must enforce organization,
-source, page, and wall-clock limits; isolate failures between customers; and
-apply exponential retry backoff without expanding catalog or host policy.
+Activation does not perform a network fetch inside the API request. The
+separate [customer ingestion dispatcher](./customer_ingestion_dispatcher.md)
+claims due enrollment-source rows with expiring leases, establishes a fresh
+organization context and database session per tenant, and calls the existing
+bounded source executor. It enforces organization, source, page, and wall-clock
+limits; isolates failures between customers; and applies exponential retry
+backoff without expanding catalog or host policy.

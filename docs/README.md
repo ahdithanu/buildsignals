@@ -9,6 +9,7 @@ permit intelligence pipeline.
 - [Permit ingestion architecture and dataflow diagrams](./ingestion_architecture.md)
 - [Nationwide source coverage and state rollout map](./nationwide_source_coverage.md)
 - [Customer ingestion onboarding](./customer_ingestion_onboarding.md)
+- [Customer ingestion dispatcher](./customer_ingestion_dispatcher.md)
 - [Permit ingestion decision log](./permit_ingestion.md)
 - [Nearby parcel discovery](./nearby_parcel_discovery.md)
 - [Planning and meeting intelligence](./planning_intelligence.md)
