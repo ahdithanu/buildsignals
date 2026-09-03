@@ -57,3 +57,7 @@ from app.models.parcel_lineage import (  # noqa
     ParcelLineageParticipant,
 )
 from app.models.planning import PlanningCompanyMatch, PlanningRecord  # noqa
+from app.models.ingestion_onboarding import (  # noqa
+    OrganizationIngestionEnrollment,
+    OrganizationIngestionEnrollmentSource,
+)

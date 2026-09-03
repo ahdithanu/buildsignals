@@ -5419,6 +5419,259 @@
         "title": "IngestionCoverageResponse",
         "type": "object"
       },
+      "IngestionEnrollmentResponse": {
+        "properties": {
+          "catalog_manifest_digest": {
+            "title": "Catalog Manifest Digest",
+            "type": "string"
+          },
+          "coverage_mode": {
+            "enum": [
+              "nationwide",
+              "selected_states"
+            ],
+            "title": "Coverage Mode",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "last_catalog_sync_at": {
+            "format": "date-time",
+            "title": "Last Catalog Sync At",
+            "type": "string"
+          },
+          "last_dispatch_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Dispatch At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "record_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Record Types",
+            "type": "array"
+          },
+          "rollout_waves": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Rollout Waves",
+            "type": "array"
+          },
+          "shard_count": {
+            "title": "Shard Count",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/IngestionEnrollmentSourceResponse"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Codes"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "organization_id",
+          "enabled",
+          "coverage_mode",
+          "state_codes",
+          "record_types",
+          "rollout_waves",
+          "shard_count",
+          "catalog_manifest_digest",
+          "last_catalog_sync_at",
+          "last_dispatch_at",
+          "last_error",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "IngestionEnrollmentResponse",
+        "type": "object"
+      },
+      "IngestionEnrollmentSourceResponse": {
+        "properties": {
+          "cadence_minutes": {
+            "title": "Cadence Minutes",
+            "type": "integer"
+          },
+          "consecutive_failures": {
+            "title": "Consecutive Failures",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "ingestion_source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingestion Source Id"
+          },
+          "last_completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Completed At"
+          },
+          "last_dispatched_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Dispatched At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "max_pages_per_run": {
+            "title": "Max Pages Per Run",
+            "type": "integer"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "record_type": {
+            "title": "Record Type",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "state_code": {
+            "title": "State Code",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ingestion_source_id",
+          "source_key",
+          "state_code",
+          "record_type",
+          "status",
+          "cadence_minutes",
+          "max_pages_per_run",
+          "next_run_at",
+          "consecutive_failures",
+          "last_dispatched_at",
+          "last_completed_at",
+          "last_error",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "IngestionEnrollmentSourceResponse",
+        "type": "object"
+      },
       "IngestionHostPolicyResponse": {
         "properties": {
           "configured_host_count": {
@@ -5519,6 +5772,230 @@
           "requirements"
         ],
         "title": "IngestionHostPolicyResponse",
+        "type": "object"
+      },
+      "IngestionOnboardingActivationResponse": {
+        "properties": {
+          "catalog_created": {
+            "title": "Catalog Created",
+            "type": "integer"
+          },
+          "catalog_unchanged": {
+            "title": "Catalog Unchanged",
+            "type": "integer"
+          },
+          "catalog_updated": {
+            "title": "Catalog Updated",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "enrollment": {
+            "$ref": "#/components/schemas/IngestionEnrollmentResponse"
+          },
+          "enrollment_sources_created": {
+            "title": "Enrollment Sources Created",
+            "type": "integer"
+          },
+          "enrollment_sources_removed": {
+            "title": "Enrollment Sources Removed",
+            "type": "integer"
+          },
+          "enrollment_sources_unchanged": {
+            "title": "Enrollment Sources Unchanged",
+            "type": "integer"
+          },
+          "enrollment_sources_updated": {
+            "title": "Enrollment Sources Updated",
+            "type": "integer"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/IngestionOnboardingPlanResponse"
+          }
+        },
+        "required": [
+          "plan",
+          "enrollment",
+          "catalog_created",
+          "catalog_updated",
+          "catalog_unchanged",
+          "enrollment_sources_created",
+          "enrollment_sources_updated",
+          "enrollment_sources_unchanged",
+          "enrollment_sources_removed",
+          "dry_run"
+        ],
+        "title": "IngestionOnboardingActivationResponse",
+        "type": "object"
+      },
+      "IngestionOnboardingPlanResponse": {
+        "properties": {
+          "approved_only_source_count": {
+            "title": "Approved Only Source Count",
+            "type": "integer"
+          },
+          "automatic_source_count": {
+            "title": "Automatic Source Count",
+            "type": "integer"
+          },
+          "coverage_mode": {
+            "enum": [
+              "nationwide",
+              "selected_states"
+            ],
+            "title": "Coverage Mode",
+            "type": "string"
+          },
+          "covered_regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Covered Regions",
+            "type": "array"
+          },
+          "manual_source_count": {
+            "title": "Manual Source Count",
+            "type": "integer"
+          },
+          "missing_regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Regions",
+            "type": "array"
+          },
+          "parcel_source_count": {
+            "title": "Parcel Source Count",
+            "type": "integer"
+          },
+          "permit_source_count": {
+            "title": "Permit Source Count",
+            "type": "integer"
+          },
+          "planning_source_count": {
+            "title": "Planning Source Count",
+            "type": "integer"
+          },
+          "pre_approval_source_count": {
+            "title": "Pre Approval Source Count",
+            "type": "integer"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingRegionCoverageResponse"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "requested_regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requested Regions",
+            "type": "array"
+          },
+          "rollout_waves": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Rollout Waves",
+            "type": "array"
+          },
+          "shard_count": {
+            "title": "Shard Count",
+            "type": "integer"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingSourceItemResponse"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "coverage_mode",
+          "requested_regions",
+          "covered_regions",
+          "missing_regions",
+          "source_count",
+          "permit_source_count",
+          "planning_source_count",
+          "parcel_source_count",
+          "pre_approval_source_count",
+          "approved_only_source_count",
+          "automatic_source_count",
+          "manual_source_count",
+          "shard_count",
+          "rollout_waves",
+          "regions",
+          "sources"
+        ],
+        "title": "IngestionOnboardingPlanResponse",
+        "type": "object"
+      },
+      "IngestionOnboardingRequest": {
+        "properties": {
+          "coverage_mode": {
+            "default": "nationwide",
+            "enum": [
+              "nationwide",
+              "selected_states"
+            ],
+            "title": "Coverage Mode",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "record_types": {
+            "items": {
+              "enum": [
+                "permit",
+                "planning",
+                "parcel"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Record Types",
+            "type": "array"
+          },
+          "rollout_waves": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Rollout Waves",
+            "type": "array"
+          },
+          "shard_count": {
+            "default": 4,
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Shard Count",
+            "type": "integer"
+          },
+          "state_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 51,
+            "title": "State Codes",
+            "type": "array"
+          }
+        },
+        "title": "IngestionOnboardingRequest",
         "type": "object"
       },
       "IngestionReliabilitySummaryResponse": {
@@ -6709,6 +7186,128 @@
           "created_at"
         ],
         "title": "NearbyParcelSearchSummary",
+        "type": "object"
+      },
+      "OnboardingRegionCoverageResponse": {
+        "properties": {
+          "approved_only_source_count": {
+            "title": "Approved Only Source Count",
+            "type": "integer"
+          },
+          "coverage_status": {
+            "enum": [
+              "covered",
+              "missing"
+            ],
+            "title": "Coverage Status",
+            "type": "string"
+          },
+          "parcel_source_count": {
+            "title": "Parcel Source Count",
+            "type": "integer"
+          },
+          "permit_source_count": {
+            "title": "Permit Source Count",
+            "type": "integer"
+          },
+          "planning_source_count": {
+            "title": "Planning Source Count",
+            "type": "integer"
+          },
+          "pre_approval_source_count": {
+            "title": "Pre Approval Source Count",
+            "type": "integer"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "region",
+          "coverage_status",
+          "source_count",
+          "permit_source_count",
+          "planning_source_count",
+          "parcel_source_count",
+          "pre_approval_source_count",
+          "approved_only_source_count"
+        ],
+        "title": "OnboardingRegionCoverageResponse",
+        "type": "object"
+      },
+      "OnboardingSourceItemResponse": {
+        "properties": {
+          "interval_minutes": {
+            "title": "Interval Minutes",
+            "type": "integer"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "max_pages_per_run": {
+            "title": "Max Pages Per Run",
+            "type": "integer"
+          },
+          "record_type": {
+            "title": "Record Type",
+            "type": "string"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "rollout_wave": {
+            "title": "Rollout Wave",
+            "type": "integer"
+          },
+          "schedule_mode": {
+            "title": "Schedule Mode",
+            "type": "string"
+          },
+          "shard_index": {
+            "title": "Shard Index",
+            "type": "integer"
+          },
+          "signal_stage": {
+            "title": "Signal Stage",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_key",
+          "source_name",
+          "region",
+          "jurisdiction",
+          "record_type",
+          "signal_stage",
+          "rollout_wave",
+          "shard_index",
+          "schedule_mode",
+          "interval_minutes",
+          "max_pages_per_run"
+        ],
+        "title": "OnboardingSourceItemResponse",
         "type": "object"
       },
       "OpportunityGraphContextResponse": {
@@ -15826,6 +16425,171 @@
         "summary": "Get Ingestion Host Policy",
         "tags": [
           "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/onboarding/enrollment": {
+      "get": {
+        "operationId": "get_current_ingestion_enrollment_v1_ingestion_onboarding_enrollment_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionEnrollmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Current Ingestion Enrollment",
+        "tags": [
+          "ingestion-onboarding"
+        ]
+      },
+      "put": {
+        "operationId": "put_ingestion_enrollment_v1_ingestion_onboarding_enrollment_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionOnboardingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionOnboardingActivationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Ingestion Enrollment",
+        "tags": [
+          "ingestion-onboarding"
+        ]
+      }
+    },
+    "/v1/ingestion/onboarding/plan": {
+      "post": {
+        "operationId": "plan_ingestion_onboarding_v1_ingestion_onboarding_plan_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionOnboardingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionOnboardingPlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plan Ingestion Onboarding",
+        "tags": [
+          "ingestion-onboarding"
         ]
       }
     },

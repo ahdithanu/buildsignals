@@ -311,6 +311,8 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "honolulu_hi_building_permits_2005_2025",
         "boise_id_development_tracker",
         "cedar_rapids_ia_building_permits",
+        "mississippi_mdeq_permit_activity",
+        "diberville_ms_council_planning_agendas",
         "biloxi_ms_development_review_agendas",
         "bozeman_mt_active_planning_projects",
         "bernalillo_county_nm_accela_permits",
@@ -382,11 +384,29 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert "application status" in evansville.blocker_summary
     assert evansville.can_run_canary is False
 
+    mississippi = by_key["mississippi_mdeq_permit_activity"]
+    assert mississippi.status == "legal_hold"
+    assert mississippi.record_type == "permit"
+    assert mississippi.base_url.endswith("/epd-activity-search.aspx")
+    assert "before final approval" in mississippi.early_warning_value
+    assert mississippi.last_checked_on.isoformat() == "2026-09-02"
+    assert mississippi.can_run_canary is False
+
+    diberville = by_key["diberville_ms_council_planning_agendas"]
+    assert diberville.status == "legal_hold"
+    assert diberville.record_type == "planning"
+    assert diberville.base_url.endswith("/council-committee-center/")
+    assert "business openings" in diberville.early_warning_value
+    assert "primary evidence" in diberville.notes
+    assert diberville.can_run_canary is False
+
     nationwide_holds = {
         "anchorage_ak_bsd_permit_lookup",
         "honolulu_hi_building_permits_2005_2025",
         "boise_id_development_tracker",
         "cedar_rapids_ia_building_permits",
+        "mississippi_mdeq_permit_activity",
+        "diberville_ms_council_planning_agendas",
         "biloxi_ms_development_review_agendas",
         "bozeman_mt_active_planning_projects",
         "bernalillo_county_nm_accela_permits",

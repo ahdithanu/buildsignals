@@ -8,6 +8,7 @@ permit intelligence pipeline.
 - [Knowledge graph schema and scaling notes](./knowledge_graph.md)
 - [Permit ingestion architecture and dataflow diagrams](./ingestion_architecture.md)
 - [Nationwide source coverage and state rollout map](./nationwide_source_coverage.md)
+- [Customer ingestion onboarding](./customer_ingestion_onboarding.md)
 - [Permit ingestion decision log](./permit_ingestion.md)
 - [Nearby parcel discovery](./nearby_parcel_discovery.md)
 - [Planning and meeting intelligence](./planning_intelligence.md)

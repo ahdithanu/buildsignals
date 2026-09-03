@@ -912,6 +912,8 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "honolulu_hi_building_permits_2005_2025",
         "boise_id_development_tracker",
         "cedar_rapids_ia_building_permits",
+        "mississippi_mdeq_permit_activity",
+        "diberville_ms_council_planning_agendas",
         "biloxi_ms_development_review_agendas",
         "bozeman_mt_active_planning_projects",
         "bernalillo_county_nm_accela_permits",
