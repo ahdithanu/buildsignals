@@ -331,6 +331,10 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "ocala_fl_legistar_planning_zoning",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
+        "citrus_county_fl_accela_permits",
+        "highlands_county_fl_etrakit_permits",
+        "sebring_fl_building_permit_records",
+        "hernando_county_fl_energov_permits",
     }
     by_key = {entry.key: entry for entry in entries}
 
@@ -339,6 +343,15 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert "san_marcos_tx_planning_application_notices" not in by_key
     assert "taylor_tx_development_notices" not in by_key
     assert not {key for key in by_key if key.startswith("bend_or_")}
+
+    assert by_key["citrus_county_fl_accela_permits"].status == "technical_hold"
+    assert by_key["highlands_county_fl_etrakit_permits"].jurisdiction == (
+        "Highlands County, FL"
+    )
+    assert by_key["sebring_fl_building_permit_records"].adapter == "manual_export"
+    assert by_key["hernando_county_fl_energov_permits"].base_url.startswith(
+        "https://hernandocountyfl-energovweb.tylerhost.net/"
+    )
 
     orlando = by_key["orlando_fl_planning_applications"]
     assert orlando.status == "legal_hold"

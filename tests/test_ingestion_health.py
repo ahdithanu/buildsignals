@@ -933,6 +933,10 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
         "ocala_fl_legistar_planning_zoning",
         "san_jose_ca_planning_director_hearings",
         "san_jose_ca_large_energy_projects",
+        "citrus_county_fl_accela_permits",
+        "highlands_county_fl_etrakit_permits",
+        "sebring_fl_building_permit_records",
+        "hernando_county_fl_energov_permits",
     }
     assert all(
         row["catalog_backed"]
