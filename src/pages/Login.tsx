@@ -44,7 +44,7 @@ export default function Login() {
           <p className="mt-2 text-[9px] uppercase text-muted-foreground">Infrastructure opportunities. Early.</p>
         </div>
 
-        <div className="my-auto w-full max-w-md py-10">
+        <div className="mt-10 w-full max-w-md sm:mt-12">
           <p className="section-label">Enterprise access</p>
           <h1 className="mt-3 text-2xl font-semibold">Sign in</h1>
           <p className="mt-1 text-xs text-muted-foreground">Permit, development and ownership intelligence.</p>
@@ -103,11 +103,18 @@ export default function Login() {
 
             <div className="flex items-center gap-3 text-[9px] text-muted-foreground"><span className="h-px flex-1 bg-border" />OR<span className="h-px flex-1 bg-border" /></div>
             <button type="button" className="h-11 w-full border-2 border-foreground bg-card px-4 text-left text-xs font-semibold">Continue with SSO (SAML)</button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              No account?{' '}
+              <Link to="/register" className="font-semibold text-foreground underline-offset-4 hover:underline">
+                Create account
+              </Link>
+            </p>
           </form>
         </div>
 
-        <p className="text-[10px] text-muted-foreground">
-          No account? <Link to="/register" className="font-semibold text-foreground hover:underline">Request access</Link> · Status · Security · Terms
+        <p className="mt-auto pt-8 text-[10px] text-muted-foreground">
+          Status · Security · Terms
         </p>
       </section>
 
