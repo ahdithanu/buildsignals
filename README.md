@@ -62,6 +62,8 @@ The frontend talks to `http://localhost:8000` by default
 (`VITE_API_BASE_URL`). All API routes are versioned under `/v1`. Production on
 Vercel uses the checked-in same-origin `/v1` proxy so refresh cookies remain
 first-party; set `VITE_API_SAME_ORIGIN=false` only on a host without that proxy.
+Public authentication pages render immediately while session restoration runs,
+so an API cold start cannot trap new users behind a loading screen.
 
 ### Production frontend (Vercel)
 

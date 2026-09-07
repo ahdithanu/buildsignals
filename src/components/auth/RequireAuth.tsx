@@ -49,20 +49,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
  * /register so a signed-in user reloading those URLs lands on the app.
  */
 export function RedirectIfAuthenticated({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
-
-  if (isLoading) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex min-h-screen items-center justify-center text-sm text-muted-foreground"
-      >
-        Loading…
-      </div>
-    );
-  }
 
   if (isAuthenticated) {
     const from =
