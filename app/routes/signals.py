@@ -5,12 +5,26 @@ from app.db import get_db
 from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.models.signal import Signal
+from app.schemas.buildsignal import BuildSignalAssessmentDraft, BuildSignalAssessmentResponse
 from app.schemas.signal import SignalCreate, SignalResponse
+from app.services.buildsignal_assessment import resolve_assessment
 from app.services.normalization_service import normalize_signal_type
 from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query, get_org_id, scope_query
 
 router = APIRouter(tags=["signals"])
+
+
+@router.post(
+    "/signals/{signal_id}/assessment-preview",
+    response_model=BuildSignalAssessmentResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def preview_assessment(
+    signal_id: str, payload: BuildSignalAssessmentDraft, db: Session = Depends(get_db),
+):
+    """Validate and resolve an analyst draft without publishing or storing it."""
+    return resolve_assessment(db, signal_id, payload)
 
 
 # ── list all signals ─────────────────────────────────────────────────────────
