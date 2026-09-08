@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Check, ExternalLink } from 'lucide-react';
+import { Check, ExternalLink, Plus } from 'lucide-react';
+import { AssessmentComposer } from './AssessmentComposer';
 import { assessmentsApi, type ReviewDecision } from '@/api/assessments';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -16,6 +17,8 @@ function sourceLink(value: string | null) {
 export function SignalAssessmentPanel({ signalId }: { signalId: string }) {
   const { organizationId, user, role } = useAuth();
   const [revisionId, setRevisionId] = useState('');
+  const [composing, setComposing] = useState(false);
+  const client = useQueryClient();
   const revisions = useQuery({
     queryKey: ['assessments', organizationId, signalId],
     queryFn: () => assessmentsApi.revisions(signalId),
@@ -24,6 +27,10 @@ export function SignalAssessmentPanel({ signalId }: { signalId: string }) {
   const selected = revisions.data?.find(row => row.id === revisionId) ?? revisions.data?.[0];
   return <section aria-label="Investment assessment" className="border-b border-border p-4 md:p-5">
     <h2 className="text-base font-semibold">Investment assessment</h2>
+    {(role === 'admin' || role === 'editor') && !composing && <button className="mt-3 inline-flex items-center gap-1 text-sm" onClick={() => setComposing(true)}><Plus size={16} />New assessment</button>}
+    {composing && (role === 'admin' || role === 'editor') && <AssessmentComposer key={`${organizationId}-${signalId}`} signalId={signalId} onCancel={() => setComposing(false)} onSaved={id => {
+      setRevisionId(id); setComposing(false); client.invalidateQueries({ queryKey: ['assessments', organizationId, signalId] });
+    }} />}
     {revisions.isLoading && <p role="status" className="mt-3 text-sm">Loading assessments...</p>}
     {revisions.error && <div role="alert" className="mt-3 text-sm">Assessments could not be loaded. <button onClick={() => revisions.refetch()} className="underline">Retry</button></div>}
     {!revisions.isLoading && !revisions.error && !selected && <p className="mt-3 text-sm text-muted-foreground">No saved assessment.</p>}

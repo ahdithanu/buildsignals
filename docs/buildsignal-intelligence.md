@@ -29,12 +29,12 @@ Confidence labels are analyst judgments, not calibrated probabilities or returns
 
 ## Next increments
 
-1. Persist immutable assessment revisions with author, review status, and audit
-   history. Add organization RLS and explicit approval before publication.
+1. Add explicit publication and withdrawal controls on top of saved revisions,
+   independent review, organization RLS, and audit history.
 2. Build source snapshot comparisons with event time, first-seen time,
    corrections, and idempotent change identity. Preserve approved and pending
    development stages separately.
-3. Add analyst review and evidence navigation to the existing signals UI.
+3. Extend assessment authoring to multiple affected entities and event dates.
 4. Link direct asset exposures before inferring second-order nearby effects.
    Separate nearby parcel candidates from verified sale availability.
 5. Add licensed debt, securities, and portfolio identifiers and time-bounded
@@ -64,9 +64,37 @@ not publish the signal or change the original snapshot's draft status.
 Both writes include an audit event in the same transaction. Both tables use
 organization-scoped queries and PostgreSQL forced row-level security.
 
-Publication, withdrawal, review UI, and automatic change detection remain future
-increments. Saved revisions and recorded reviews implement the persistence and
-review-record portion of step 1 above.
+Publication, withdrawal, and automatic change detection remain future increments.
+Saved revisions and recorded reviews implement persistence and review history.
+
+## Analyst workspace
+
+The Market Signals detail panel displays saved assessments, evidence excerpts,
+safe HTTP(S) source links, graph entity links, confidence rationales,
+counterevidence, investigation questions, and revision-specific review history.
+Independent admins can record a decision; authors cannot review their own work.
+The panel explicitly identifies assessments as drafts even after approval.
+
+Editors and admins can create a draft in the same panel. The initial composer
+supports one affected entity per draft and selects citations from that entity's
+stored relationship evidence. It supports distinct stances for change and thesis,
+requires change-supporting evidence, and rejects duplicate source/claim pairs.
+Confidence defaults to unassessed, not a synthetic score. All included citations
+are attached to the single affected-entity implication; backend reference
+resolution remains authoritative. Investment causality still requires review.
+The API supports multiple implications; the composer does not yet expose that
+capability or event-date entry. Missing event dates remain explicitly flagged.
+
+Draft content survives save failures in the mounted form but is not autosaved.
+Cancel, navigation, or reload discards unsaved input. Revision and review lists
+currently show the first API page (up to 50 records); UI pagination is pending.
+Changing the affected entity clears citation selections to prevent stale links.
+Read-only viewers do not receive authoring or review controls.
+
+The surrounding legacy Market Signals screen still contains placeholder
+priority, confidence, company, timeline, and freshness content. That content is
+not verified institutional intelligence and must be replaced before external
+production demonstrations. This assessment panel only displays backend records.
 
 ## Production dependencies
 
