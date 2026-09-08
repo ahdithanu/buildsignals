@@ -16,6 +16,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { signalStageFor } from "@/lib/signalStage";
 import { cn } from "@/lib/utils";
 import type { Signal } from "@/types/activity";
+import { SignalAssessmentPanel } from '@/components/SignalAssessmentPanel';
 
 const savedViews = ["Priority queue", "Pre-approval", "Chain entries", "Changed records"];
 const filters = ["Stage", "Market", "Opportunity", "Confidence", "Priority", "Named party"];
@@ -151,6 +152,7 @@ export default function MarketSignals() {
 
             {selected && (
               <section className="min-w-0 bg-background" aria-label="Selected signal diligence">
+                <SignalAssessmentPanel key={selected.id} signalId={selected.id} />
                 <div className="flex flex-wrap items-start gap-3 border-b-2 border-foreground bg-card px-4 py-4 md:px-5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

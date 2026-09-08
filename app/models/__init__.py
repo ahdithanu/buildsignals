@@ -61,3 +61,4 @@ from app.models.ingestion_onboarding import (  # noqa
     OrganizationIngestionEnrollment,
     OrganizationIngestionEnrollmentSource,
 )
+from app.models.buildsignal import BuildSignalRevision, BuildSignalReview  # noqa: F401
