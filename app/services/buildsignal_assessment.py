@@ -4,15 +4,53 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.models.buildsignal import BuildSignalReview, BuildSignalRevision
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
 from app.models.signal import Signal
 from app.schemas.buildsignal import (
     BuildSignalAssessmentDraft,
     BuildSignalAssessmentResponse,
+    BuildSignalReviewCreate,
     ResolvedCitation,
     ResolvedImplication,
 )
-from app.utils.org_scope import scope_query
+from app.services.audit_service import log_change
+from app.utils.org_scope import get_org_id, scope_query
+
+
+def save_revision(db: Session, signal_id: str, draft: BuildSignalAssessmentDraft, author_id: str):
+    snapshot = resolve_assessment(db, signal_id, draft)
+    row = BuildSignalRevision(signal_id=signal_id, organization_id=get_org_id(),
+                              author_id=author_id, snapshot=snapshot.model_dump(mode="json"))
+    db.add(row)
+    db.flush()
+    log_change(db, "buildsignal_revision", row.id, "create", actor_id=author_id,
+               organization_id=get_org_id(), new_values={"signal_id": signal_id})
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def get_revision(db: Session, revision_id: str):
+    row = scope_query(db.query(BuildSignalRevision), BuildSignalRevision).filter_by(id=revision_id).first()
+    if row is None:
+        raise HTTPException(404, "Assessment revision not found")
+    return row
+
+
+def review_revision(db: Session, revision_id: str, payload: BuildSignalReviewCreate, reviewer_id: str):
+    revision = get_revision(db, revision_id)
+    if revision.author_id == reviewer_id:
+        raise HTTPException(409, "A revision requires an independent reviewer")
+    row = BuildSignalReview(revision_id=revision.id, organization_id=get_org_id(),
+                            reviewer_id=reviewer_id, **payload.model_dump())
+    db.add(row)
+    db.flush()
+    log_change(db, "buildsignal_review", row.id, payload.decision, actor_id=reviewer_id,
+               organization_id=get_org_id(), new_values={"revision_id": revision.id})
+    db.commit()
+    db.refresh(row)
+    return row
 
 
 def resolve_assessment(

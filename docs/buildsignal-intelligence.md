@@ -47,6 +47,27 @@ domain-specific extraction in connectors; keep assessment and evidence contracts
 independent of permit schemas. Broader utilities, demographics, corporate, and
 capital-market adapters can then feed the same review workflow.
 
+## Saved revisions and review
+
+Authenticated editors and admins can POST the draft contract to
+`/v1/signals/{signal_id}/assessment-revisions`. Each call saves a new snapshot
+of the resolved evidence with author and creation time. GET on that path lists
+revisions with bounded limit/skip pagination. No update or delete API is exposed.
+Snapshots are append-only through the application, not tamper-proof against
+database administrators. Organization deletion and signal deletion cascade.
+
+Admins can POST `{decision, rationale}` to
+`/v1/assessment-revisions/{revision_id}/reviews`. Decisions are approved,
+changes_requested, or rejected; self-review is rejected. GET returns the review
+history. Each decision applies only to its specified revision. Approval does
+not publish the signal or change the original snapshot's draft status.
+Both writes include an audit event in the same transaction. Both tables use
+organization-scoped queries and PostgreSQL forced row-level security.
+
+Publication, withdrawal, review UI, and automatic change detection remain future
+increments. Saved revisions and recorded reviews implement the persistence and
+review-record portion of step 1 above.
+
 ## Production dependencies
 
 This increment does not resolve the outstanding authentication deployment,

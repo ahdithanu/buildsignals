@@ -78,3 +78,25 @@ class BuildSignalAssessmentResponse(BuildSignalAssessmentDraft):
     citations: list[ResolvedCitation]
     implications: list[ResolvedImplication]
     review_flags: list[str]
+
+
+class BuildSignalRevisionResponse(AssessmentModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    signal_id: str
+    author_id: str | None
+    created_at: datetime
+    snapshot: BuildSignalAssessmentResponse
+
+
+class BuildSignalReviewCreate(AssessmentModel):
+    decision: Literal["approved", "changes_requested", "rejected"]
+    rationale: str = Field(min_length=1, max_length=5000)
+
+
+class BuildSignalReviewResponse(BuildSignalReviewCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    revision_id: str
+    reviewer_id: str | None
+    created_at: datetime
