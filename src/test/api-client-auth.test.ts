@@ -227,7 +227,7 @@ describe("ApiClient — auth integration", () => {
     expect(result.filename).toBe("reviewed-parcels.csv");
     expect(result.exportedCount).toBe(1);
     expect(result.omittedCount).toBe(2);
-    const content = await new Promise<string>((resolve, reject) => {
+    const content = typeof result.blob.text === "function" ? await result.blob.text() : await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
       reader.onerror = () => reject(reader.error);
