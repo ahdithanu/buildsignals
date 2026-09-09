@@ -111,6 +111,14 @@ describe('Build Signals wireframe screens', () => {
     expect(screen.getByRole('checkbox', { name: /keep me signed in/i })).toHaveAttribute('aria-checked', 'true');
   });
 
+  it('shows account creation as a primary login-page action', () => {
+    render(<MemoryRouter initialEntries={['/login']}><Login /></MemoryRouter>);
+
+    const createAccountLinks = screen.getAllByRole('link', { name: /create account/i });
+    expect(createAccountLinks.length).toBeGreaterThan(0);
+    expect(createAccountLinks[0]).toHaveAttribute('href', '/register');
+  });
+
   it('renders BuildSignals registration with the production password policy', () => {
     render(<MemoryRouter initialEntries={['/register']}><Register /></MemoryRouter>);
 

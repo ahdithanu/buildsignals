@@ -38,6 +38,10 @@
   ],
   "rewrites": [
     {
+      "source": "/v1/:path*",
+      "destination": "https://buildsignals-api.onrender.com/v1/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/"
     }
