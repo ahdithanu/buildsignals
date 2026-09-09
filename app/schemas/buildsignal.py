@@ -100,3 +100,21 @@ class BuildSignalReviewResponse(BuildSignalReviewCreate):
     revision_id: str
     reviewer_id: str | None
     created_at: datetime
+
+
+class PublicationCreate(AssessmentModel):
+    action: Literal["published", "withdrawn"]
+    rationale: str = Field(min_length=1, max_length=5000)
+    expected_version: int = Field(ge=0)
+
+
+class PublicationResponse(AssessmentModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    revision_id: str
+    actor_id: str | None
+    review_id: str | None
+    version: int
+    action: Literal["published", "withdrawn"]
+    rationale: str
+    created_at: datetime

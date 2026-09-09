@@ -99,7 +99,9 @@ describe('Build Signals wireframe screens', () => {
     fireEvent.change(screen.getByLabelText(/^password/i), {
       target: { value: 'secret-password' },
     });
-    fireEvent.click(screen.getByRole('checkbox', { name: /keep me signed in/i }));
+    expect(screen.queryByRole('checkbox', { name: /keep me signed in/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /create account/i })).toHaveAttribute('href', '/register');
+    expect(screen.queryByText(/SOC 2|1,412|97%/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
@@ -108,7 +110,7 @@ describe('Build Signals wireframe screens', () => {
         password: 'secret-password',
       });
     });
-    expect(screen.getByRole('checkbox', { name: /keep me signed in/i })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('button', { name: /SSO/i })).not.toBeInTheDocument();
   });
 
   it('renders BuildSignals registration with the production password policy', () => {

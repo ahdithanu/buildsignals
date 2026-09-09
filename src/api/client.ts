@@ -112,17 +112,36 @@ export interface DownloadResponse {
 
 let refreshInFlight: Promise<string | null> | null = null;
 
+async function withRequestDeadline<T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new ApiError('Request timed out. Check whether it completed before retrying.', 408));
+      controller.abort();
+    }, 30_000);
+  });
+  try {
+    return await Promise.race([run(controller.signal), deadline]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+
 async function attemptRefresh(baseUrl: string): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
     try {
-      const res = await fetch(`${baseUrl}${API_VERSION_PREFIX}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
+      const body = await withRequestDeadline(async signal => {
+        const res = await fetch(`${baseUrl}${API_VERSION_PREFIX}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          signal,
+        });
+        if (!res.ok) return null;
+        return await res.json() as { access_token?: string };
       });
-      if (!res.ok) return null;
-      const body = (await res.json()) as { access_token?: string };
-      if (!body.access_token) return null;
+      if (!body?.access_token) return null;
       setAccessToken(body.access_token);
       return body.access_token;
     } catch {
@@ -180,10 +199,12 @@ export class ApiClient {
     options: RequestInit = {},
     withContentType = true,
   ): Promise<T> {
-    const response = await this.response(endpoint, options, withContentType);
-
-    if (response.status === 204) return undefined as T;
-    return response.json();
+    const execute = async (signal?: AbortSignal) => {
+      const response = await this.response(endpoint, { ...options, signal }, withContentType);
+      if (response.status === 204) return undefined as T;
+      return response.json();
+    };
+    return endpoint.startsWith('/auth/') ? withRequestDeadline(execute) : execute();
   }
 
   private async response(

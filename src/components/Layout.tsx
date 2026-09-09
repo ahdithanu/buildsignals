@@ -70,21 +70,20 @@ export function Layout({ children }: LayoutProps) {
         </nav>
 
         <div className="ml-auto flex min-w-0 items-center gap-2 md:gap-3">
-          <button
-            type="button"
+          <Link
+            to="/graph"
             className="hidden h-7 w-52 items-center gap-2 border border-foreground bg-background px-2 text-left text-[10px] text-muted-foreground xl:flex"
-            aria-label="Search or run a command"
+            aria-label="Search graph entities"
           >
             <Search className="h-3.5 w-3.5" />
-            <span className="truncate">Search permits, parcels, parties</span>
-            <kbd className="ml-auto font-mono text-[9px]">⌘K</kbd>
-          </button>
+            <span className="truncate">Search graph entities</span>
+          </Link>
           <Link
             to="/source-health"
             className="hidden border-l-2 border-foreground pl-3 text-right text-[9px] leading-tight sm:block"
           >
-            <span className="block font-semibold text-foreground">97% fresh</span>
-            <span className="text-muted-foreground">last ingest 14m</span>
+            <span className="block font-semibold text-foreground">Source health</span>
+            <span className="text-muted-foreground">Coverage and ingestion</span>
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger

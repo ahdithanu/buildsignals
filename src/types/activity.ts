@@ -16,6 +16,9 @@ export interface CreateActivityRequest {
 
 export interface Signal {
   id: string;
+  dealId?: string | null;
+  source?: string | null;
+  severity?: number | null;
   type: SignalType;
   property: string;
   summary: string;

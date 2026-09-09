@@ -14,6 +14,21 @@ vi.mock("@/contexts/AuthContext", () => ({
 import { useParcelDetail } from "@/hooks/useParcelDetail";
 
 describe("<ParcelDetail>", () => {
+  it("retains the closest distance when a farther hit has a better score", () => {
+    (useParcelDetail as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        parcel: { id: 'parcel', external_parcel_id: 'TEST-1', latitude: 30, longitude: -97, last_verified_at: '2026-09-09T12:00:00Z' },
+        facts: [], graph_related: [], lineage_events: [], search_count: 2,
+        search_hits: [
+          { search_id: 'near', deal_id: 'near-deal', persona: 'developer', score: 80, distance_miles: 0.1, created_at: '2026-09-08T12:00:00Z', rank: 1, score_confidence: 0.8, radius_miles: 2, review_status: 'candidate' },
+          { search_id: 'far', deal_id: 'far-deal', persona: 'developer', score: 99, distance_miles: 1.5, created_at: '2026-09-09T12:00:00Z', rank: 1, score_confidence: 0.8, radius_miles: 2, review_status: 'candidate' },
+        ],
+      }, isLoading: false, error: null,
+    });
+    render(<MemoryRouter initialEntries={['/parcels/parcel']}><Routes><Route path="/parcels/:parcelId" element={<ParcelDetail />} /></Routes></MemoryRouter>);
+    expect(screen.getByText('Best score 99 · closest 0.10 mi')).toBeInTheDocument();
+  });
+
   it("shows parcel facts and search hits", () => {
     (useParcelDetail as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
