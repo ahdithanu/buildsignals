@@ -1779,6 +1779,300 @@
         "title": "BrandProfileResponse",
         "type": "object"
       },
+      "BuildSignalAssessmentDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "change_confidence": {
+            "$ref": "#/components/schemas/ConfidenceAssessment"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceCitation"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Citations",
+            "type": "array"
+          },
+          "detected_change": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Detected Change",
+            "type": "string"
+          },
+          "event_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event At"
+          },
+          "further_investigation": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Further Investigation",
+            "type": "array"
+          },
+          "implications": {
+            "items": {
+              "$ref": "#/components/schemas/InvestmentImplication"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Implications",
+            "type": "array"
+          },
+          "investment_thesis": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Investment Thesis",
+            "type": "string"
+          },
+          "thesis_confidence": {
+            "$ref": "#/components/schemas/ConfidenceAssessment"
+          }
+        },
+        "required": [
+          "detected_change",
+          "investment_thesis",
+          "change_confidence",
+          "thesis_confidence",
+          "citations",
+          "implications",
+          "further_investigation"
+        ],
+        "title": "BuildSignalAssessmentDraft",
+        "type": "object"
+      },
+      "BuildSignalAssessmentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "change_confidence": {
+            "$ref": "#/components/schemas/ConfidenceAssessment"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedCitation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "detected_change": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Detected Change",
+            "type": "string"
+          },
+          "event_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event At"
+          },
+          "further_investigation": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Further Investigation",
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "implications": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedImplication"
+            },
+            "title": "Implications",
+            "type": "array"
+          },
+          "investment_thesis": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Investment Thesis",
+            "type": "string"
+          },
+          "review_flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Review Flags",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "signal_id": {
+            "title": "Signal Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "draft",
+            "default": "draft",
+            "title": "Status",
+            "type": "string"
+          },
+          "thesis_confidence": {
+            "$ref": "#/components/schemas/ConfidenceAssessment"
+          }
+        },
+        "required": [
+          "detected_change",
+          "investment_thesis",
+          "change_confidence",
+          "thesis_confidence",
+          "citations",
+          "implications",
+          "further_investigation",
+          "signal_id",
+          "generated_at",
+          "review_flags"
+        ],
+        "title": "BuildSignalAssessmentResponse",
+        "type": "object"
+      },
+      "BuildSignalReviewCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "approved",
+              "changes_requested",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "rationale"
+        ],
+        "title": "BuildSignalReviewCreate",
+        "type": "object"
+      },
+      "BuildSignalReviewResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "approved",
+              "changes_requested",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "revision_id": {
+            "title": "Revision Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "rationale",
+          "id",
+          "revision_id",
+          "reviewer_id",
+          "created_at"
+        ],
+        "title": "BuildSignalReviewResponse",
+        "type": "object"
+      },
+      "BuildSignalRevisionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "author_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "signal_id": {
+            "title": "Signal Id",
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/BuildSignalAssessmentResponse"
+          }
+        },
+        "required": [
+          "id",
+          "signal_id",
+          "author_id",
+          "created_at",
+          "snapshot"
+        ],
+        "title": "BuildSignalRevisionResponse",
+        "type": "object"
+      },
       "BuyBoxCreate": {
         "properties": {
           "asset_type": {
@@ -2148,6 +2442,33 @@
           "errors"
         ],
         "title": "CandidateCanaryResponse",
+        "type": "object"
+      },
+      "ConfidenceAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "level": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "unassessed"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "level",
+          "rationale"
+        ],
+        "title": "ConfidenceAssessment",
         "type": "object"
       },
       "ContactCreate": {
@@ -3372,6 +3693,48 @@
           "uploaded_at"
         ],
         "title": "DocumentResponse",
+        "type": "object"
+      },
+      "EvidenceCitation": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "enum": [
+              "change",
+              "thesis"
+            ],
+            "title": "Claim",
+            "type": "string"
+          },
+          "evidence_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "stance": {
+            "enum": [
+              "supports",
+              "contradicts",
+              "context"
+            ],
+            "title": "Stance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "stance",
+          "claim",
+          "rationale"
+        ],
+        "title": "EvidenceCitation",
         "type": "object"
       },
       "EvidencePreview": {
@@ -6436,6 +6799,57 @@
           }
         },
         "title": "IngestionSourceUpdate",
+        "type": "object"
+      },
+      "InvestmentImplication": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "positive",
+              "negative",
+              "mixed",
+              "uncertain"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entity_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "horizon": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Horizon",
+            "type": "string"
+          },
+          "mechanism": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Mechanism",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "mechanism",
+          "direction",
+          "horizon",
+          "evidence_ids"
+        ],
+        "title": "InvestmentImplication",
         "type": "object"
       },
       "InviteMemberRequest": {
@@ -10188,6 +10602,105 @@
         "title": "PlanningRecordResponse",
         "type": "object"
       },
+      "PublicationCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "published",
+              "withdrawn"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "rationale": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "rationale",
+          "expected_version"
+        ],
+        "title": "PublicationCreate",
+        "type": "object"
+      },
+      "PublicationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "published",
+              "withdrawn"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "review_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Id"
+          },
+          "revision_id": {
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "revision_id",
+          "actor_id",
+          "review_id",
+          "version",
+          "action",
+          "rationale",
+          "created_at"
+        ],
+        "title": "PublicationResponse",
+        "type": "object"
+      },
       "RecentSignal": {
         "properties": {
           "created_at": {
@@ -10421,6 +10934,179 @@
           "new_password"
         ],
         "title": "ResetPasswordRequest",
+        "type": "object"
+      },
+      "ResolvedCitation": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "enum": [
+              "change",
+              "thesis"
+            ],
+            "title": "Claim",
+            "type": "string"
+          },
+          "evidence_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "relationship_id": {
+            "title": "Relationship Id",
+            "type": "string"
+          },
+          "relationship_is_current": {
+            "title": "Relationship Is Current",
+            "type": "boolean"
+          },
+          "relationship_last_verified_at": {
+            "format": "date-time",
+            "title": "Relationship Last Verified At",
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "stance": {
+            "enum": [
+              "supports",
+              "contradicts",
+              "context"
+            ],
+            "title": "Stance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "stance",
+          "claim",
+          "rationale",
+          "source_system",
+          "source_id",
+          "source_url",
+          "excerpt",
+          "observed_at",
+          "relationship_id",
+          "relationship_is_current",
+          "relationship_last_verified_at"
+        ],
+        "title": "ResolvedCitation",
+        "type": "object"
+      },
+      "ResolvedImplication": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "positive",
+              "negative",
+              "mixed",
+              "uncertain"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entity_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_name": {
+            "title": "Entity Name",
+            "type": "string"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "horizon": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Horizon",
+            "type": "string"
+          },
+          "mechanism": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Mechanism",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "mechanism",
+          "direction",
+          "horizon",
+          "evidence_ids",
+          "entity_name",
+          "entity_type"
+        ],
+        "title": "ResolvedImplication",
         "type": "object"
       },
       "RetailerOpeningCoverageSourceResponse": {
@@ -11891,6 +12577,308 @@
         "summary": "Get Acquisition Radar",
         "tags": [
           "nearby parcels"
+        ]
+      }
+    },
+    "/v1/assessment-revisions/{revision_id}/publication": {
+      "get": {
+        "operationId": "list_publication_events_v1_assessment_revisions__revision_id__publication_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicationResponse"
+                  },
+                  "title": "Response List Publication Events V1 Assessment Revisions  Revision Id  Publication Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Publication Events",
+        "tags": [
+          "signals"
+        ]
+      },
+      "post": {
+        "operationId": "record_publication_event_v1_assessment_revisions__revision_id__publication_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Publication Event",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/assessment-revisions/{revision_id}/reviews": {
+      "get": {
+        "operationId": "list_assessment_reviews_v1_assessment_revisions__revision_id__reviews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BuildSignalReviewResponse"
+                  },
+                  "title": "Response List Assessment Reviews V1 Assessment Revisions  Revision Id  Reviews Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Assessment Reviews",
+        "tags": [
+          "signals"
+        ]
+      },
+      "post": {
+        "operationId": "create_assessment_review_v1_assessment_revisions__revision_id__reviews_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildSignalReviewCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildSignalReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Assessment Review",
+        "tags": [
+          "signals"
         ]
       }
     },
@@ -19070,6 +20058,226 @@
           }
         },
         "summary": "Create Signal",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/signals/{signal_id}/assessment-preview": {
+      "post": {
+        "description": "Validate and resolve an analyst draft without publishing or storing it.",
+        "operationId": "preview_assessment_v1_signals__signal_id__assessment_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildSignalAssessmentDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildSignalAssessmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Assessment",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/signals/{signal_id}/assessment-revisions": {
+      "get": {
+        "operationId": "list_assessment_revisions_v1_signals__signal_id__assessment_revisions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BuildSignalRevisionResponse"
+                  },
+                  "title": "Response List Assessment Revisions V1 Signals  Signal Id  Assessment Revisions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Assessment Revisions",
+        "tags": [
+          "signals"
+        ]
+      },
+      "post": {
+        "operationId": "create_assessment_revision_v1_signals__signal_id__assessment_revisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildSignalAssessmentDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildSignalRevisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Assessment Revision",
         "tags": [
           "signals"
         ]
