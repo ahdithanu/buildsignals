@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SignalAssessmentPanel } from '@/components/SignalAssessmentPanel';
 import { assessmentsApi, type AssessmentRevision } from '@/api/assessments';
 
-vi.mock('@/api/assessments', () => ({ assessmentsApi: { revisions: vi.fn(), reviews: vi.fn(), review: vi.fn() } }));
+vi.mock('@/api/assessments', () => ({ assessmentsApi: { revisions: vi.fn(), reviews: vi.fn(), review: vi.fn(), publication: vi.fn() } }));
 const identity = { organizationId: 'org', user: { id: 'reviewer' }, role: 'admin' };
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => identity }));
 const revision: AssessmentRevision = {
@@ -27,6 +27,7 @@ describe('Saved assessment review', () => {
     vi.resetAllMocks(); identity.user.id = 'reviewer'; identity.role = 'admin';
     vi.mocked(assessmentsApi.revisions).mockResolvedValue([revision]);
     vi.mocked(assessmentsApi.reviews).mockResolvedValue([]);
+    vi.mocked(assessmentsApi.publication).mockResolvedValue([]);
     vi.mocked(assessmentsApi.review).mockResolvedValue({ id: 'review', decision: 'approved', rationale: 'Reviewed', reviewer_id: 'reviewer', created_at: '2026-09-08T13:00:00Z' });
   });
   it('shows counterevidence and excludes unsafe source links', async () => {

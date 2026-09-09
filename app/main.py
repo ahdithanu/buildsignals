@@ -60,6 +60,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
+# requests fall through to the default-org for backward compatibility.
+app.add_middleware(AuthContextMiddleware)
+
+# Per-IP DoS backstop. Sits outside AuthContext so a hammering client gets
+# rejected before we touch the DB, but inside RequestContext so the 429 still
+# carries an X-Request-ID for tracing. Auth routes have their own tighter
+# limits at the route layer; those still apply on top of this.
+app.add_middleware(GlobalRateLimitMiddleware)
+
+# Wrap early auth/rate-limit responses so browsers can read a 401 and refresh.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOWED_ORIGINS,
@@ -74,16 +85,6 @@ app.add_middleware(
     ],
     max_age=600,
 )
-
-# Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
-# requests fall through to the default-org for backward compatibility.
-app.add_middleware(AuthContextMiddleware)
-
-# Per-IP DoS backstop. Sits outside AuthContext so a hammering client gets
-# rejected before we touch the DB, but inside RequestContext so the 429 still
-# carries an X-Request-ID for tracing. Auth routes have their own tighter
-# limits at the route layer; those still apply on top of this.
-app.add_middleware(GlobalRateLimitMiddleware)
 
 # API versioning: rewrite unversioned inbound paths to /v1/* and stamp
 # Deprecation + Sunset headers on the response. Sits outside AuthContext

@@ -33,7 +33,20 @@ export interface AssessmentReview {
   reviewer_id: string | null;
   created_at: string;
 }
+export interface PublicationEvent {
+  id: string;
+  revision_id: string;
+  version: number;
+  action: 'published' | 'withdrawn';
+  rationale: string;
+  actor_id: string | null;
+  review_id: string | null;
+  created_at: string;
+}
 export const assessmentsApi = {
+  publication: (revisionId: string) => apiClient.get<PublicationEvent[]>(`/assessment-revisions/${encodeURIComponent(revisionId)}/publication`),
+  changePublication: (revisionId: string, action: PublicationEvent['action'], expectedVersion: number, rationale: string) =>
+    apiClient.post<PublicationEvent>(`/assessment-revisions/${encodeURIComponent(revisionId)}/publication`, { action, expected_version: expectedVersion, rationale }),
   save: (signalId: string, draft: AssessmentDraft) =>
     apiClient.post<AssessmentRevision>(`/signals/${encodeURIComponent(signalId)}/assessment-revisions`, draft),
   revisions: (signalId: string) => apiClient.get<AssessmentRevision[]>(`/signals/${encodeURIComponent(signalId)}/assessment-revisions`),

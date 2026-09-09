@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models.buildsignal import BuildSignalReview, BuildSignalRevision
+from app.models.buildsignal import BuildSignalPublication, BuildSignalReview, BuildSignalRevision
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
 from app.models.signal import Signal
 from app.schemas.buildsignal import (
@@ -31,17 +31,23 @@ def save_revision(db: Session, signal_id: str, draft: BuildSignalAssessmentDraft
     return row
 
 
-def get_revision(db: Session, revision_id: str):
-    row = scope_query(db.query(BuildSignalRevision), BuildSignalRevision).filter_by(id=revision_id).first()
+def get_revision(db: Session, revision_id: str, lock: bool = False):
+    query = scope_query(db.query(BuildSignalRevision), BuildSignalRevision).filter_by(id=revision_id)
+    row = (query.with_for_update() if lock else query).first()
     if row is None:
         raise HTTPException(404, "Assessment revision not found")
     return row
 
 
 def review_revision(db: Session, revision_id: str, payload: BuildSignalReviewCreate, reviewer_id: str):
-    revision = get_revision(db, revision_id)
+    revision = get_revision(db, revision_id, lock=True)
     if revision.author_id == reviewer_id:
         raise HTTPException(409, "A revision requires an independent reviewer")
+    latest = scope_query(db.query(BuildSignalPublication), BuildSignalPublication).filter_by(
+        revision_id=revision.id,
+    ).order_by(BuildSignalPublication.version.desc()).first()
+    if latest and latest.action == "published":
+        raise HTTPException(409, "Withdraw the published revision before recording another review")
     row = BuildSignalReview(revision_id=revision.id, organization_id=get_org_id(),
                             reviewer_id=reviewer_id, **payload.model_dump())
     db.add(row)

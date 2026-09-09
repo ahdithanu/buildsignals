@@ -12,8 +12,11 @@ from app.schemas.buildsignal import (
     BuildSignalReviewCreate,
     BuildSignalReviewResponse,
     BuildSignalRevisionResponse,
+    PublicationCreate,
+    PublicationResponse,
 )
 from app.schemas.signal import SignalCreate, SignalResponse
+from app.services.assessment_publication import change_publication, publication_history
 from app.services.buildsignal_assessment import (
     get_revision,
     resolve_assessment,
@@ -25,6 +28,23 @@ from app.utils.auth_deps import require_role, require_role_strict
 from app.utils.org_scope import active_query, get_org_id, scope_query
 
 router = APIRouter(tags=["signals"])
+
+
+@router.get("/assessment-revisions/{revision_id}/publication", response_model=list[PublicationResponse],
+            dependencies=[Depends(require_role_strict(MemberRole.admin, MemberRole.editor, MemberRole.viewer))])
+def list_publication_events(
+    revision_id: str, limit: int = Query(50, ge=1, le=100), skip: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    return publication_history(db, revision_id, limit, skip)
+
+
+@router.post("/assessment-revisions/{revision_id}/publication", response_model=PublicationResponse, status_code=201)
+def record_publication_event(
+    revision_id: str, payload: PublicationCreate,
+    principal: dict = Depends(require_role_strict(MemberRole.admin)), db: Session = Depends(get_db),
+):
+    return change_publication(db, revision_id, payload, principal["user_id"])
 
 
 @router.post("/signals/{signal_id}/assessment-revisions", response_model=BuildSignalRevisionResponse, status_code=201)

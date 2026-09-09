@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Check, ExternalLink, Plus } from 'lucide-react';
 import { AssessmentComposer } from './AssessmentComposer';
+import { AssessmentPublicationControls } from './AssessmentPublicationControls';
 import { assessmentsApi, type ReviewDecision } from '@/api/assessments';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -60,6 +61,7 @@ export function SignalAssessmentPanel({ signalId }: { signalId: string }) {
       <ul className="list-disc space-y-1 pl-5 text-sm">{selected.snapshot.further_investigation.map((item, index) => <li className="break-words" key={index}>{item}</li>)}</ul>
       <ul className="mt-4 space-y-1 text-xs text-muted-foreground">{selected.snapshot.review_flags.map((flag, index) => <li key={index}>{flag}</li>)}</ul>
       <RevisionReviews key={selected.id} revisionId={selected.id} organizationId={organizationId} canReview={role === 'admin' && Boolean(user?.id) && selected.author_id !== user?.id} />
+      <AssessmentPublicationControls key={`publication-${selected.id}`} revisionId={selected.id} organizationId={organizationId} canPublish={role === 'admin'} />
     </>}
   </section>;
 }
@@ -68,6 +70,7 @@ function RevisionReviews({ revisionId, organizationId, canReview }: { revisionId
   const client = useQueryClient();
   const queryKey = ['assessment-reviews', organizationId, revisionId];
   const reviews = useQuery({ queryKey, queryFn: () => assessmentsApi.reviews(revisionId) });
+  const publication = useQuery({ queryKey: ['assessment-publication', organizationId, revisionId], queryFn: () => assessmentsApi.publication(revisionId), enabled: Boolean(organizationId) });
   const [decision, setDecision] = useState<ReviewDecision>('changes_requested');
   const [rationale, setRationale] = useState('');
   const save = useMutation({
@@ -76,12 +79,12 @@ function RevisionReviews({ revisionId, organizationId, canReview }: { revisionId
   });
   return <div className="mt-5 border-t border-border pt-4">
     <h3 className="text-sm font-semibold">Review history</h3>
-    <p className="text-xs text-muted-foreground">Draft assessment · approval does not publish.</p>
+    <p className="text-xs text-muted-foreground">{publication.data?.[0]?.action === 'published' ? 'Published revision. Withdraw before recording another review.' : 'Approval and publication are separate decisions.'}</p>
     {reviews.isLoading && <p role="status">Loading reviews...</p>}
     {reviews.error && <p role="alert">Reviews could not be loaded. <button className="underline" onClick={() => reviews.refetch()}>Retry</button></p>}
     {reviews.data?.length === 0 && <p className="mt-2 text-sm">No review decisions.</p>}
     {reviews.data?.map(row => <div key={row.id} className="border-b border-border py-2 text-sm"><p className="font-medium">{row.decision.replace(/_/g, ' ')} · {new Date(row.created_at).toLocaleString()}</p><p className="whitespace-pre-wrap break-words">{row.rationale}</p></div>)}
-    {canReview && <form className="mt-4 space-y-3" onSubmit={event => { event.preventDefault(); if (!save.isPending && rationale.trim()) save.mutate(); }}>
+    {canReview && publication.data && !publication.error && publication.data[0]?.action !== 'published' && <form className="mt-4 space-y-3" onSubmit={event => { event.preventDefault(); if (!save.isPending && rationale.trim()) save.mutate(); }}>
       <label className="block text-xs">Decision<select className="mt-1 block w-full border border-border bg-background p-2" value={decision} onChange={event => setDecision(event.target.value as ReviewDecision)}><option value="changes_requested">Changes requested</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
       <label className="block text-xs">Review rationale<textarea required maxLength={5000} value={rationale} onChange={event => setRationale(event.target.value)} className="mt-1 block min-h-24 w-full border border-border bg-background p-2" /></label>
       {save.error && <p role="alert" className="text-sm text-destructive">{save.error.message}</p>}

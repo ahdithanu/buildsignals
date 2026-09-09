@@ -27,9 +27,30 @@ describe("ApiClient — auth integration", () => {
     setUnauthorizedHandler(null);
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     setAccessToken(null);
     setUnauthorizedHandler(null);
+  });
+
+  it("times out a stalled request and aborts its fetch", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockImplementation(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = new ApiClient("http://api.test").get("/auth/me");
+    const assertion = expect(result).rejects.toMatchObject({ status: 408 });
+    await vi.advanceTimersByTimeAsync(30_000);
+    await assertion;
+    expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+  });
+
+  it("times out a stalled response body as well as connection setup", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 200, ok: true, json: () => new Promise(() => {}) }));
+    const result = new ApiClient("http://api.test").get("/auth/me");
+    const assertion = expect(result).rejects.toMatchObject({ status: 408 });
+    await vi.advanceTimersByTimeAsync(30_000);
+    await assertion;
   });
 
   it("attaches Authorization header when an access token is set", async () => {
@@ -206,7 +227,13 @@ describe("ApiClient — auth integration", () => {
     expect(result.filename).toBe("reviewed-parcels.csv");
     expect(result.exportedCount).toBe(1);
     expect(result.omittedCount).toBe(2);
-    expect(await result.blob.text()).toContain("P-1");
+    const content = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(result.blob);
+    });
+    expect(content).toContain("P-1");
     const [, init] = fetchMock.mock.calls[0];
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).Authorization).toBe(

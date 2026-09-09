@@ -89,6 +89,21 @@ def test_public_path_matcher_exact_and_prefix():
 # ── Middleware behaviour ──────────────────────────────────────────────────
 
 
+def test_strict_unauthorized_response_allows_browser_refresh(strict_client):
+    origin = app_config.CORS_ALLOWED_ORIGINS[0]
+    response = strict_client.get("/v1/auth/me", headers={"Origin": origin})
+    assert response.status_code == 401
+    assert response.headers["access-control-allow-origin"] == origin
+    assert response.headers["access-control-allow-credentials"] == "true"
+    assert "x-request-id" in response.headers
+
+
+def test_strict_unauthorized_response_does_not_allow_untrusted_origin(strict_client):
+    response = strict_client.get("/v1/auth/me", headers={"Origin": "https://untrusted.invalid"})
+    assert response.status_code == 401
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_permissive_mode_allows_anon_to_protected(client):
     """Default test fixture runs with ALLOW_ANONYMOUS=True (legacy demo)."""
     r = client.get("/dashboard/summary")
