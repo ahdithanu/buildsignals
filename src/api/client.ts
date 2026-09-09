@@ -117,7 +117,7 @@ async function withRequestDeadline<T>(run: (signal: AbortSignal) => Promise<T>):
   let timer: ReturnType<typeof setTimeout>;
   const deadline = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      reject(new ApiError('Request timed out. Check your connection and try again.', 408));
+      reject(new ApiError('Request timed out. Check whether it completed before retrying.', 408));
       controller.abort();
     }, 30_000);
   });
@@ -199,11 +199,12 @@ export class ApiClient {
     options: RequestInit = {},
     withContentType = true,
   ): Promise<T> {
-    return withRequestDeadline(async signal => {
+    const execute = async (signal?: AbortSignal) => {
       const response = await this.response(endpoint, { ...options, signal }, withContentType);
       if (response.status === 204) return undefined as T;
       return response.json();
-    });
+    };
+    return endpoint.startsWith('/auth/') ? withRequestDeadline(execute) : execute();
   }
 
   private async response(

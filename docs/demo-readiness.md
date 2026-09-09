@@ -14,14 +14,17 @@ website or production ingestion has been updated.
   filtering, and opportunity graph navigation.
 - Removed hardcoded signal companies, confidence/priority scores, milestone dates,
   source counts, global freshness numbers, and inert signal action buttons.
-- 101 frontend tests; targeted backend/auth tests; production frontend build.
+- Full backend suite: 921 passed, 6 skipped. Parcel-focused backend suite:
+  33 passed. Frontend suite after parcel fixes: 110 passed. Production frontend
+  build passes with the existing large-bundle warning.
 - Isolated SQLite upgrade, downgrade, and re-upgrade of the publication migration.
 - Desktop/mobile browser checks with explicitly mocked local test records.
+- Parcel detail renders at 1440px and 390px without horizontal overflow.
 - Real local browser login, cookie refresh after navigation, graph evidence
   selection, draft save, second-account review, publication, withdrawal, and
   reload persistence against an isolated backend.
 - CORS on early authentication errors, preserving allowed-origin browser refresh
-  without granting untrusted origins access. JSON requests and silent refresh
+  without granting untrusted origins access. Authentication requests and silent refresh
   have 30-second deadlines rather than unbounded sign-in loading.
 - Sign-in no longer advertises fabricated coverage, unsupported SOC 2/SAML,
   or nonfunctional session controls. Registration and password reset remain.
@@ -44,6 +47,23 @@ website or production ingestion has been updated.
 - Revision, review, and publication-history UI pagination.
 - Source version comparisons and durable change identity.
 - Verified portfolio/exposure linkage and analyst evaluation metrics.
+
+## Parcel acceptance
+
+The existing parcel workflows cover bounded 0.25-5 mile searches, buyer-lens
+ranking, ownership/fact evidence, boundaries, split/merge lineage, shortlisting,
+assignment, outreach/follow-up, explicit opportunity promotion, and reviewed
+policy-controlled CSV exports. Dedicated backend tests exercise those behaviors.
+
+Additional fixes preserve the saved search's anchor, radius, and persona while
+new controls are edited; reset invalidated anchor selection; retain the true
+closest distance independently of the highest score; and reject unsafe source
+URL schemes in parcel facts, lineage, and nearby-result evidence links.
+
+These are acquisition candidates, not verified for-sale listings. Actual sale
+availability requires an authorized listing/broker source or explicit current
+owner evidence. Source licensing and live parcel coverage are not established by
+passing workflow tests. Those input and production checks remain open.
 
 ## Demo sequence
 
