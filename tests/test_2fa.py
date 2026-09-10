@@ -11,8 +11,11 @@ Covers:
 """
 from __future__ import annotations
 
+import json
+
 import pyotp
 import pytest
+from cryptography.fernet import Fernet
 
 from app.models.user import User
 from app.services.account_lockout import lockout
@@ -22,11 +25,13 @@ STRONG_PW = "CorrectHorseBattery42"
 
 
 @pytest.fixture(autouse=True)
-def _reset_state():
+def _reset_state(monkeypatch):
     """Rate limiter + lockout are process-global; bleed between tests will
     falsely 429 us or falsely 423 us."""
     limiter.clear()
     lockout.clear()
+    monkeypatch.setenv("MFA_ENCRYPTION_KEYS", json.dumps({"test": Fernet.generate_key().decode()}))
+    monkeypatch.setenv("MFA_ACTIVE_KEY_ID", "test")
     yield
     limiter.clear()
     lockout.clear()
@@ -93,6 +98,9 @@ def test_verify_with_correct_code_enables_2fa(client, db):
     assert r.status_code == 204
     user = db.query(User).filter(User.id == body["user_id"]).first()
     assert user.totp_enabled is True
+    assert user.totp_secret is None
+    assert user.totp_secret_ciphertext.startswith("v1:test:")
+    assert secret not in user.totp_secret_ciphertext
 
 
 def test_verify_with_wrong_code_rejects(client, db):
@@ -210,3 +218,4 @@ def test_disable_with_password_and_valid_code_succeeds(client, db):
     user = db.query(User).filter(User.id == body["user_id"]).first()
     assert user.totp_enabled is False
     assert user.totp_secret is None
+    assert user.totp_secret_ciphertext is None

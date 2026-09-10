@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.user import User
 from app.services.audit_service import log_change
+from app.services.mfa_secrets import read_secret, store_secret
 from app.services.security import verify_password
 from app.utils.auth_deps import get_current_user
 
@@ -49,6 +50,7 @@ class DisableRequest(BaseModel):
 
 @router.post("/setup", response_model=SetupResponse)
 def setup(
+    response: Response,
     db: Session = Depends(get_db),
     principal: dict = Depends(get_current_user),
 ):
@@ -70,9 +72,10 @@ def setup(
             detail="2FA already enabled. Disable it first to re-enroll.",
         )
     secret = pyotp.random_base32()
-    user.totp_secret = secret
+    store_secret(user, secret)
     db.add(user)
     db.commit()
+    response.headers["Cache-Control"] = "no-store"
     otpauth_uri = pyotp.TOTP(secret).provisioning_uri(
         name=user.email, issuer_name="BuildSignals",
     )
@@ -91,12 +94,13 @@ def verify(
     and the server — a single window on either side of the current step.
     """
     user: User = principal["user"]
-    if not user.totp_secret:
+    secret = read_secret(user)
+    if not secret:
         raise HTTPException(
             status_code=400,
             detail="2FA setup not initiated. Call /auth/2fa/setup first.",
         )
-    if not pyotp.TOTP(user.totp_secret).verify(payload.code, valid_window=1):
+    if not pyotp.TOTP(secret).verify(payload.code, valid_window=1):
         raise HTTPException(status_code=400, detail="Invalid TOTP code")
     user.totp_enabled = True
     db.add(user)
@@ -127,12 +131,14 @@ def disable(
     # attacker *which* of password / code was wrong.
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not user.totp_secret or not pyotp.TOTP(user.totp_secret).verify(
+    secret = read_secret(user)
+    if not secret or not pyotp.TOTP(secret).verify(
         payload.code, valid_window=1,
     ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     user.totp_enabled = False
     user.totp_secret = None
+    user.totp_secret_ciphertext = None
     db.add(user)
     db.commit()
     log_change(

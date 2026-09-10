@@ -24,7 +24,7 @@ import os
 import uuid
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, literal, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import sessionmaker
 
@@ -45,6 +45,9 @@ def pg_engine():
     missing, the first assertion will fail loud.
     """
     engine = create_engine(POSTGRES_URL, future=True)
+    with engine.connect() as connection:
+        role = connection.execute(text("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")).one()
+        assert not role.rolsuper and not role.rolbypassrls, "RLS tests require a restricted role"
     yield engine
     engine.dispose()
 
@@ -142,7 +145,7 @@ def test_rls_blocks_writes_with_wrong_org(pg_session):
     )
     # Attempt to insert a row claiming to belong to org_b while acting as
     # org_a — WITH CHECK must reject it.
-    with pytest.raises(Exception):  # psycopg raises on RLS violation
+    with pytest.raises(DBAPIError) as error:
         pg_session.execute(
             text(
                 "INSERT INTO deals (id, name, organization_id, status) "
@@ -150,7 +153,82 @@ def test_rls_blocks_writes_with_wrong_org(pg_session):
             ),
             {"id": str(uuid.uuid4()), "o": org_b},
         )
+    assert getattr(error.value.orig, "pgcode", None) == "42501"
     pg_session.rollback()
+
+
+def test_restored_copy_probe_rolls_back_its_synthetic_records(pg_engine):
+    from app.services.recovery_verification import verify_restored_postgres
+
+    with pg_engine.connect() as connection:
+        before = connection.execute(text("SELECT count(*) FROM public.organizations")).scalar_one()
+    report = verify_restored_postgres(pg_engine)
+    assert report["passed"], report
+    with pg_engine.connect() as connection:
+        after = connection.execute(text("SELECT count(*) FROM public.organizations")).scalar_one()
+    assert after == before
+
+
+def test_later_added_tables_block_cross_tenant_reads_and_inserts(pg_session):
+    from app.models.brand import BrandProfile
+    from app.models.ingestion import (
+        IngestionCandidateCanaryAttempt,
+        IngestionRun,
+        IngestionSource,
+        RawSourceRecord,
+        RecordExternalReference,
+    )
+    from app.models.organization import Organization
+    from app.models.planning import PlanningCompanyMatch, PlanningRecord
+
+    orgs = [str(uuid.uuid4()), str(uuid.uuid4())]
+    protected = (IngestionCandidateCanaryAttempt, PlanningRecord, PlanningCompanyMatch, RecordExternalReference)
+    ids = {model: [] for model in protected}
+    for org in orgs:
+        pg_session.add(Organization(id=org, name="Isolation fixture", slug=org))
+        pg_session.flush()
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {"org": org})
+        source = IngestionSource(organization_id=org, key=org, name="Test", adapter="csv", record_type="planning")
+        pg_session.add(source)
+        pg_session.flush()
+        run = IngestionRun(organization_id=org, source_id=source.id, status="completed", trigger="manual")
+        pg_session.add(run)
+        pg_session.flush()
+        raw = RawSourceRecord(organization_id=org, source_id=source.id, run_id=run.id, external_record_id="1", content_hash="test", payload={})
+        brand = BrandProfile(organization_id=org, key="test", name="Test", normalized_name="test")
+        pg_session.add_all([raw, brand])
+        pg_session.flush()
+        planning = PlanningRecord(organization_id=org, source_id=source.id, latest_raw_record_id=raw.id,
+                                  external_record_id="1", normalization_hash="test", event_type="planning", title="Test")
+        pg_session.add(planning)
+        pg_session.flush()
+        rows = [
+            IngestionCandidateCanaryAttempt(organization_id=org, candidate_key="test", candidate_name="Test"),
+            planning,
+            PlanningCompanyMatch(organization_id=org, planning_record_id=planning.id, brand_id=brand.id,
+                                 raw_record_id=raw.id, confidence=1, matched_alias="test", matched_field="title", excerpt="Test", detector_version="test"),
+            RecordExternalReference(organization_id=org, record_type="planning", record_id=planning.id,
+                                    raw_source_record_id=raw.id, namespace="test", normalized_value="test", source_field="id"),
+        ]
+        pg_session.add_all(rows)
+        pg_session.flush()
+        for row in rows:
+            ids[type(row)].append(row.id)
+    pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {"org": orgs[0]})
+    for model in protected:
+        table = model.__table__
+        visible = pg_session.execute(select(table.c.id).where(table.c.id.in_(ids[model]))).scalars().all()
+        assert visible == [ids[model][0]]
+        fields = [literal(str(uuid.uuid4())) if col.name == "id" else
+                  literal(orgs[1]) if col.name == "organization_id" else col for col in table.c]
+        with pg_session.begin_nested():
+            with pytest.raises(DBAPIError) as error:
+                pg_session.execute(table.insert().from_select(
+                    [col.name for col in table.c], select(*fields).where(table.c.id == ids[model][0]),
+                ))
+            assert getattr(error.value.orig, "pgcode", None) == "42501"
+            # Roll back the failed statement before the savepoint context exits.
+            pg_session.get_nested_transaction().rollback()
 
 
 def test_rls_blocks_when_app_current_org_unset(pg_engine):

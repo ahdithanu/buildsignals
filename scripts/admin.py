@@ -151,6 +151,7 @@ def cmd_reset_2fa(args: argparse.Namespace) -> int:
             print(f"{user.email} does not have 2FA enabled; nothing to do")
             return 0
         user.totp_secret = None
+        user.totp_secret_ciphertext = None
         user.totp_enabled = False
         # Also bump token_version — any session created after enrolling in 2FA
         # should not survive a 2FA reset.
