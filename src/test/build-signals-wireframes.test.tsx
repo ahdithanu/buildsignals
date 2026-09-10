@@ -113,6 +113,23 @@ describe('Build Signals wireframe screens', () => {
     expect(screen.queryByRole('button', { name: /SSO/i })).not.toBeInTheDocument();
   });
 
+  it('submits an authenticator code and permits retry after rejection', async () => {
+    login.mockRejectedValueOnce(new Error('Invalid authenticator code'));
+    login.mockResolvedValueOnce(undefined);
+    render(<MemoryRouter><Login /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: 'alex@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'secret-password' } });
+    const code = screen.getByLabelText('Authenticator code');
+    fireEvent.change(code, { target: { value: '000123' } });
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid authenticator code');
+    expect(login).toHaveBeenLastCalledWith({ email: 'alex@example.com', password: 'secret-password', totp_code: '000123' });
+    fireEvent.change(code, { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+    await waitFor(() => expect(login).toHaveBeenCalledTimes(2));
+    expect(login).toHaveBeenLastCalledWith({ email: 'alex@example.com', password: 'secret-password', totp_code: '123456' });
+  });
+
   it('renders BuildSignals registration with the production password policy', () => {
     render(<MemoryRouter initialEntries={['/register']}><Register /></MemoryRouter>);
 
