@@ -5,7 +5,7 @@ import os
 from dataclasses import asdict
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -40,6 +40,7 @@ from app.schemas.ingestion import (
     SourceHealthResponse,
     SourceSchedulePlanResponse,
 )
+from app.schemas.measured_coverage import MeasuredCoverageResponse
 from app.services.brand_intelligence import list_permit_brand_matches
 from app.services.graph_service import entity_for_record, relationships_for_entity
 from app.services.ingestion.catalog import (
@@ -69,10 +70,26 @@ from app.services.ingestion.service import (
     list_sources,
     update_source,
 )
-from app.utils.auth_deps import require_role
+from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
+
+
+@router.get("/coverage/measured", response_model=MeasuredCoverageResponse, dependencies=[Depends(get_current_user)])
+def get_measured_coverage(
+    response: Response,
+    record_type: str = Query(default="parcel", pattern="^(parcel|permit|planning)$"),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    freshness_hours: int = Query(default=72, ge=1, le=8760),
+    db: Session = Depends(get_db),
+):
+    from app.services.ingestion.measured_coverage import measured_coverage
+
+    response.headers["Cache-Control"] = "no-store"
+    return measured_coverage(db, record_type=record_type, limit=limit,
+                             offset=offset, freshness_hours=freshness_hours)
 
 
 def _normalize_state_filter(state: str | None) -> str | None:

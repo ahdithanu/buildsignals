@@ -6982,6 +6982,124 @@
         "title": "MeResponse",
         "type": "object"
       },
+      "MeasuredCoverageResponse": {
+        "properties": {
+          "count_semantics": {
+            "title": "Count Semantics",
+            "type": "string"
+          },
+          "freshness_hours": {
+            "title": "Freshness Hours",
+            "type": "integer"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "record_type": {
+            "enum": [
+              "parcel",
+              "permit",
+              "planning"
+            ],
+            "title": "Record Type",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/MeasuredSourceCoverage"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "measured_at",
+          "record_type",
+          "scope",
+          "count_semantics",
+          "freshness_hours",
+          "limit",
+          "offset",
+          "has_more",
+          "sources",
+          "warnings"
+        ],
+        "title": "MeasuredCoverageResponse",
+        "type": "object"
+      },
+      "MeasuredSourceCoverage": {
+        "properties": {
+          "configured_active": {
+            "title": "Configured Active",
+            "type": "boolean"
+          },
+          "configured_jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configured Jurisdiction"
+          },
+          "observed_states": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedStateCoverage"
+            },
+            "title": "Observed States",
+            "type": "array"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "stored_records": {
+            "title": "Stored Records",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_key",
+          "configured_active",
+          "configured_jurisdiction",
+          "stored_records",
+          "observed_states"
+        ],
+        "title": "MeasuredSourceCoverage",
+        "type": "object"
+      },
       "MemberResponse": {
         "properties": {
           "email": {
@@ -7600,6 +7718,135 @@
           "created_at"
         ],
         "title": "NearbyParcelSearchSummary",
+        "type": "object"
+      },
+      "ObservedStateCoverage": {
+        "properties": {
+          "future_source_date_records": {
+            "title": "Future Source Date Records",
+            "type": "integer"
+          },
+          "geocoded_records": {
+            "title": "Geocoded Records",
+            "type": "integer"
+          },
+          "max_latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Latitude"
+          },
+          "max_longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Longitude"
+          },
+          "min_latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Latitude"
+          },
+          "min_longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Longitude"
+          },
+          "newest_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newest Seen At"
+          },
+          "newest_source_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newest Source Date"
+          },
+          "observed_jurisdiction_count": {
+            "title": "Observed Jurisdiction Count",
+            "type": "integer"
+          },
+          "recent_source_date_records": {
+            "title": "Recent Source Date Records",
+            "type": "integer"
+          },
+          "recently_seen_records": {
+            "title": "Recently Seen Records",
+            "type": "integer"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "stored_records": {
+            "title": "Stored Records",
+            "type": "integer"
+          },
+          "unknown_source_date_records": {
+            "title": "Unknown Source Date Records",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "stored_records",
+          "geocoded_records",
+          "recently_seen_records",
+          "unknown_source_date_records",
+          "future_source_date_records",
+          "recent_source_date_records",
+          "newest_seen_at",
+          "newest_source_date",
+          "observed_jurisdiction_count",
+          "min_latitude",
+          "max_latitude",
+          "min_longitude",
+          "max_longitude"
+        ],
+        "title": "ObservedStateCoverage",
         "type": "object"
       },
       "OnboardingRegionCoverageResponse": {
@@ -17308,6 +17555,101 @@
           }
         },
         "summary": "Get Ingestion Coverage",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/coverage/measured": {
+      "get": {
+        "operationId": "get_measured_coverage_v1_ingestion_coverage_measured_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "record_type",
+            "required": false,
+            "schema": {
+              "default": "parcel",
+              "pattern": "^(parcel|permit|planning)$",
+              "title": "Record Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "freshness_hours",
+            "required": false,
+            "schema": {
+              "default": 72,
+              "maximum": 8760,
+              "minimum": 1,
+              "title": "Freshness Hours",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasuredCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Measured Coverage",
         "tags": [
           "ingestion"
         ]

@@ -2,6 +2,7 @@ import { Activity, CheckCircle2, ChevronDown, ChevronUp, Clock3, Database, Exter
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
+import { MeasuredCoveragePanel } from '@/components/MeasuredCoveragePanel';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -474,7 +475,7 @@ export default function IngestionOperations() {
         onSuccess: (source) => {
           toast({
             title: 'Source promoted',
-            description: `${candidate.name} is now live as ${source.name}.`,
+            description: `${candidate.name} is now configured as ${source.name}.`,
           });
           navigate(`/source-health/sources/${source.id}`);
         },
@@ -730,16 +731,18 @@ export default function IngestionOperations() {
           ) : null}
         </section>
 
+        <MeasuredCoveragePanel />
+
         {!isLoading && !error && sources.length > 0 && (
-          <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Live source mix">
+          <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Configured source mix">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Live Source Mix</h3>
+                <h3 className="text-sm font-semibold text-foreground">Configured Source Mix</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Official feeds grouped by signal stage
                 </p>
               </div>
-              <span className="text-xs text-muted-foreground">{sources.length} live sources</span>
+              <span className="text-xs text-muted-foreground">{sources.length} configured sources</span>
             </div>
             <div className="grid gap-3 md:grid-cols-3">
               {Object.entries(coverage?.live_signal_sources_by_stage ?? {})
@@ -776,16 +779,16 @@ export default function IngestionOperations() {
           <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Ingestion coverage footprint">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Coverage Footprint</h3>
+                <h3 className="text-sm font-semibold text-foreground">Configured Footprint</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Live sources, candidate sources, and the jurisdictions they touch
+                  Source configuration, not verified imported records or geographic completeness
                 </p>
               </div>
               <span className="text-xs text-muted-foreground">{coverage.jurisdiction_count} jurisdictions</span>
             </div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
               <div className="rounded-md border bg-secondary/35 px-3 py-3">
-                <p className="text-[11px] text-muted-foreground">Live sources</p>
+                <p className="text-[11px] text-muted-foreground">Configured sources</p>
                 <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">{coverage.live_source_count}</p>
               </div>
               <div className="rounded-md border bg-secondary/35 px-3 py-3">
@@ -810,7 +813,7 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">State coverage gap</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {coverage.covered_state_count} states live · {coverage.missing_state_count} still need a live source
+                    {coverage.covered_state_count} states configured · {coverage.missing_state_count} still need a configured source
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     {coverage.researched_state_count} states researched · {coverage.unresearched_state_count} without a source decision
@@ -833,7 +836,7 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">State leaders</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    States with the most live, candidate, and readiness signals
+                    States with the most configured and candidate sources
                   </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -858,7 +861,7 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">Next activation queue</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {coverage.candidate_only_state_count} states have candidate coverage but no live source yet
+                    {coverage.candidate_only_state_count} states have candidates but no configured source yet
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     Ranked by candidate depth and retry readiness
@@ -913,7 +916,7 @@ export default function IngestionOperations() {
                         </span>
                       </span>
                       <span className="shrink-0 text-[10px] capitalize text-muted-foreground">
-                        {item.coverage_status}
+                        {item.coverage_status === 'live' ? 'configured' : item.coverage_status}
                       </span>
                     </Link>
                   ))}
@@ -999,7 +1002,7 @@ export default function IngestionOperations() {
                 title={selectedState ? "No sources for this state" : "No sources configured"}
                 description={
                   selectedState
-                    ? "This state does not have any live or candidate source rows yet."
+                    ? "This state does not have any configured or candidate source rows yet."
                     : "The source catalog has not been synchronized."
                 }
               />
