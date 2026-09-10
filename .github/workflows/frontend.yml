@@ -25,6 +25,8 @@ on:
       - "eslint.config.js"
       - "tailwind.config.ts"
       - "postcss.config.js"
+      - "vercel.json"
+      - "scripts/verify_browser_policy.cjs"
       - ".github/workflows/frontend.yml"
 
 jobs:
@@ -56,4 +58,12 @@ jobs:
         run: npm run test
 
       - name: Production build
+        env:
+          VITE_API_BASE_URL: https://buildsignals-api.onrender.com
         run: npm run build
+
+      - name: Install browser for policy checks
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify browser policy and login
+        run: node scripts/verify_browser_policy.cjs
