@@ -10,6 +10,7 @@ export default function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,7 +21,7 @@ export default function Login() {
     setError(null);
     setSubmitting(true);
     try {
-      await login({ email, password });
+      await login({ email, password, ...(totpCode ? { totp_code: totpCode } : {}) });
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -72,6 +73,14 @@ export default function Login() {
                 placeholder="Password"
                 className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
+            </label>
+
+            <label className="block">
+              <span className="section-label">Authenticator code (if enabled)</span>
+              <input aria-label="Authenticator code" type="text" inputMode="numeric"
+                autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6}
+                value={totpCode} onChange={(event) => setTotpCode(event.target.value)}
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm focus:ring-2 focus:ring-[#1a63c7]" />
             </label>
 
             {error && <p className="border-l-2 border-destructive pl-3 text-xs text-destructive" role="alert">{error}</p>}

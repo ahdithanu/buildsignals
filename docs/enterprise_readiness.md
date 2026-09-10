@@ -1,5 +1,11 @@
 # Enterprise readiness checklist
 
+> Historical implementation tracker, not a production attestation. A checked
+> item can indicate code or documentation only. Use
+> [the September commercial readiness audit](commercial-readiness-audit.md)
+> for current verification gaps; deployment, restore, monitoring, and isolation
+> claims require dated operational evidence.
+
 Living tracker for DealSignal production readiness. Update status as items
 ship. IDs match the tiers used in planning conversations.
 
