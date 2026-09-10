@@ -23,6 +23,10 @@ fields, excluding both MFA storage columns and credential-revocation state.
 Backoffice MFA reset now clears ciphertext as well as legacy plaintext.
 The recovery probe tests deal-table behavior and metadata for all tenant tables;
 the broader regression suite separately tests the four newly protected tables.
+Here, the metadata inventory means mapped `OrgMixin` business tables. It does
+not include organization-scoped authentication/audit tables such as
+`organization_memberships` and `audit_logs`, which need separate authorization
+review. A passing probe is not a complete database-security attestation.
 
 ## MFA Rollout
 
@@ -131,6 +135,16 @@ observed state nor a jurisdiction count proves geographic completeness, uptime,
 rights to redistribute, verified sale availability, or a statewide parcel total.
 
 ## Additional Audit Finding
+
+Public registration without an organization name was found to join the shared
+default organization. A separate no-migration security release (PR #113) changes
+public signup to provision an isolated workspace and adds session-response guards.
+Existing default-organization memberships need an authorized production audit;
+do not infer a breach or automatically remove legitimate members.
+
+The browser-session guards do not resolve out-of-order HttpOnly `Set-Cookie`
+headers from overlapping auth requests. This remains a separate protocol-level
+audit item requiring real-browser cookie-race verification.
 
 A local `alembic check` reports pre-existing model/migration drift: legacy
 nullability and index differences plus PostGIS-owned objects. No destructive

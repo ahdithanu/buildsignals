@@ -3,8 +3,11 @@ const { chromium } = require('@playwright/test');
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
+const artifacts = process.env.BROWSER_POLICY_ARTIFACT_DIR || path.join(os.tmpdir(), 'buildsignals-browser-policy');
+fs.mkdirSync(artifacts, { recursive: true });
 const headers = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'))).headers[0].headers.map(h => [h.key, h.value]));
 // Exercise the proposed strict policy in addition to the deployed baseline.
 headers['Content-Security-Policy'] += '; ' + headers['Content-Security-Policy-Report-Only'];
@@ -90,7 +93,7 @@ const server = http.createServer((request, response) => {
       assert.equal(submitted.totp_code, '000123');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.deepEqual(await page.evaluate(() => window.policyViolations), []);
-      await page.screenshot({ path: `/private/tmp/buildsignals-csp-login-${width}.png` });
+      await page.screenshot({ path: path.join(artifacts, `buildsignals-csp-login-${width}.png`) });
       await page.evaluate(() => { const script = document.createElement('script'); script.textContent = 'window.inlineExecuted = true'; document.body.append(script); });
       await page.waitForFunction(() => window.policyViolations.includes('script-src-elem'));
       assert.equal(await page.evaluate(() => window.inlineExecuted), undefined);
@@ -106,7 +109,7 @@ const server = http.createServer((request, response) => {
       await panel.scrollIntoViewIfNeeded();
       assert.equal(await panel.evaluate(element => element.scrollWidth <= element.clientWidth), true);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-      await panel.screenshot({ path: `/private/tmp/buildsignals-measured-inventory-${width}.png` });
+      await panel.screenshot({ path: path.join(artifacts, `buildsignals-measured-inventory-${width}.png`) });
       await panel.getByRole('button', { name: 'Next source page' }).click();
       await panel.getByText('No permit sources on this page.').waitFor();
       assert.equal(measurements.at(-1).offset, '25');
