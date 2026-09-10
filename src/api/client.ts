@@ -26,12 +26,16 @@ export const TOKEN_STORAGE_KEY = 'dealsignal_token';
 // the AuthContext calls /auth/refresh exactly once, and if a valid refresh
 // cookie is present the user is silently re-authenticated.
 let accessTokenMemory: string | null = null;
+// Explicit token changes mark a new session, even when the token is identical.
+// Silent rotation keeps this generation so concurrent requests can share it.
+let authSession = 0;
 
 export function getAccessToken(): string | null {
   return accessTokenMemory;
 }
 
 export function setAccessToken(token: string | null): void {
+  authSession += 1;
   accessTokenMemory = token;
 }
 
@@ -45,14 +49,14 @@ export function getStoredToken(): string | null {
   if (typeof window === 'undefined' || !window.localStorage) return null;
   const legacy = window.localStorage.getItem(TOKEN_STORAGE_KEY);
   if (legacy) {
-    accessTokenMemory = legacy;
+    setAccessToken(legacy);
     window.localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
   return accessTokenMemory;
 }
 
 export function setStoredToken(token: string | null): void {
-  accessTokenMemory = token;
+  setAccessToken(token);
   if (typeof window !== 'undefined' && window.localStorage) {
     // Make sure no stale copy survives from the old build.
     window.localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -71,6 +75,12 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+  }
+}
+
+function assertCurrentSession(session: number): void {
+  if (session !== authSession) {
+    throw new ApiError('Session changed. The response was discarded.', 409);
   }
 }
 
@@ -110,7 +120,7 @@ export interface DownloadResponse {
 // 401 at once, only one /auth/refresh call goes out and the rest await its
 // resolution.
 
-let refreshInFlight: Promise<string | null> | null = null;
+let refreshInFlight: { session: number; promise: Promise<string | null> } | null = null;
 
 async function withRequestDeadline<T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> {
   const controller = new AbortController();
@@ -128,9 +138,10 @@ async function withRequestDeadline<T>(run: (signal: AbortSignal) => Promise<T>):
   }
 }
 
-async function attemptRefresh(baseUrl: string): Promise<string | null> {
-  if (refreshInFlight) return refreshInFlight;
-  refreshInFlight = (async () => {
+async function attemptRefresh(baseUrl: string, session: number): Promise<string | null> {
+  if (session !== authSession) return null;
+  if (refreshInFlight?.session === session) return refreshInFlight.promise;
+  const promise = (async () => {
     try {
       const body = await withRequestDeadline(async signal => {
         const res = await fetch(`${baseUrl}${API_VERSION_PREFIX}/auth/refresh`, {
@@ -141,19 +152,20 @@ async function attemptRefresh(baseUrl: string): Promise<string | null> {
         if (!res.ok) return null;
         return await res.json() as { access_token?: string };
       });
-      if (!body?.access_token) return null;
-      setAccessToken(body.access_token);
+      if (!body?.access_token || session !== authSession) return null;
+      accessTokenMemory = body.access_token;
       return body.access_token;
     } catch {
       return null;
     } finally {
       // Clear after the awaiting callers have captured the resolved value.
       queueMicrotask(() => {
-        refreshInFlight = null;
+        if (refreshInFlight?.promise === promise) refreshInFlight = null;
       });
     }
   })();
-  return refreshInFlight;
+  refreshInFlight = { session, promise };
+  return promise;
 }
 
 export class ApiClient {
@@ -166,6 +178,7 @@ export class ApiClient {
   private buildHeaders(
     base: HeadersInit | undefined,
     withContentType: boolean,
+    token: string | null,
   ): Record<string, string> {
     const headers: Record<string, string> = {
       ...((base as Record<string, string>) || {}),
@@ -173,7 +186,6 @@ export class ApiClient {
     if (withContentType && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
-    const token = getAccessToken();
     if (token && !headers['Authorization']) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -184,10 +196,11 @@ export class ApiClient {
     endpoint: string,
     options: RequestInit,
     withContentType: boolean,
+    token: string | null,
   ): Promise<Response> {
     return fetch(`${this.baseUrl}${API_VERSION_PREFIX}${endpoint}`, {
       ...options,
-      headers: this.buildHeaders(options.headers, withContentType),
+      headers: this.buildHeaders(options.headers, withContentType, token),
       // credentials:'include' ensures the refresh cookie rides along with
       // /auth/refresh. Harmless on other calls since CORS is locked down.
       credentials: 'include',
@@ -199,12 +212,16 @@ export class ApiClient {
     options: RequestInit = {},
     withContentType = true,
   ): Promise<T> {
+    const session = authSession;
     const execute = async (signal?: AbortSignal) => {
       const response = await this.response(endpoint, { ...options, signal }, withContentType);
+      assertCurrentSession(session);
       if (response.status === 204) return undefined as T;
       return response.json();
     };
-    return endpoint.startsWith('/auth/') ? withRequestDeadline(execute) : execute();
+    const result = await (endpoint.startsWith('/auth/') ? withRequestDeadline(execute) : execute());
+    assertCurrentSession(session);
+    return result;
   }
 
   private async response(
@@ -212,22 +229,27 @@ export class ApiClient {
     options: RequestInit = {},
     withContentType = true,
   ): Promise<Response> {
-    let response = await this.doFetch(endpoint, options, withContentType);
+    const session = authSession;
+    const token = getAccessToken();
+    let response = await this.doFetch(endpoint, options, withContentType, token);
 
     // 401 → attempt silent refresh once, then retry the original request.
     // Skip the retry for /auth/refresh itself so we don't loop.
-    if (response.status === 401 && !endpoint.startsWith('/auth/refresh')) {
-      const newToken = await attemptRefresh(this.baseUrl);
-      if (newToken) {
-        response = await this.doFetch(endpoint, options, withContentType);
+    if (response.status === 401 && !endpoint.startsWith('/auth/refresh') && session === authSession) {
+      // A sibling request may already have refreshed this same session.
+      const newToken = token !== getAccessToken()
+        ? getAccessToken()
+        : await attemptRefresh(this.baseUrl, session);
+      if (newToken && session === authSession) {
+        response = await this.doFetch(endpoint, options, withContentType, newToken);
         // If the retry with a fresh token STILL 401s (rotated/revoked token,
         // or an authz-level 401), we're genuinely logged out — don't leave
         // the app half-authenticated. Clear and bounce to login.
-        if (response.status === 401) {
+        if (response.status === 401 && session === authSession && getAccessToken() === newToken) {
           setAccessToken(null);
           if (unauthorizedHandler) unauthorizedHandler();
         }
-      } else {
+      } else if (session === authSession) {
         // Refresh failed — we're really logged out.
         setAccessToken(null);
         if (unauthorizedHandler) unauthorizedHandler();
@@ -244,6 +266,8 @@ export class ApiClient {
       );
     }
 
+    // Keep server errors above intact, including 401s that retire this session.
+    assertCurrentSession(session);
     return response;
   }
 
@@ -307,7 +331,9 @@ export class ApiClient {
   }
 
   async download(endpoint: string, method: 'GET' | 'POST' = 'GET'): Promise<DownloadResponse> {
+    const session = authSession;
     const response = await this.response(endpoint, { method }, false);
+    assertCurrentSession(session);
     const disposition = response.headers.get('Content-Disposition');
     const filename = disposition?.match(/filename="?([^";]+)"?/i)?.[1] ?? null;
     const parseCount = (name: string) => {
@@ -316,8 +342,10 @@ export class ApiClient {
       const parsed = Number(value);
       return Number.isFinite(parsed) ? parsed : null;
     };
+    const blob = await response.blob();
+    assertCurrentSession(session);
     return {
-      blob: await response.blob(),
+      blob,
       filename,
       exportedCount: parseCount('X-Exported-Count'),
       omittedCount: parseCount('X-Omitted-Count'),
