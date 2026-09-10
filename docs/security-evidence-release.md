@@ -2,16 +2,24 @@
 
 ## Scope and Status
 
-Implemented on the security-evidence branch; not a production attestation.
-Production changes require migration and separately provisioned MFA keys.
+Partially released; not a production attestation. The remaining MFA and RLS
+changes require migration and separately provisioned MFA keys. PR #112 stays
+draft until those production prerequisites are satisfied.
 
 PR #113 merged as `8e536ad26e0ba0f3aff87861b214943f7d60d292` after all checks
 passed. On 2026-09-10 UTC, the canonical `https://www.buildsignals.ai/login`
 returned both the enforced baseline CSP and strict report-only header. The public
 backend schema now describes isolated signup, confirming the updated API contract
-is deployed. No production account was created for this check. The measured
-coverage endpoint was not yet present in that deployed schema; it remains in this
-gated release alongside MFA encryption and the RLS migrations.
+is deployed. No production account was created for this check.
+
+PR #114 merged as `c8117d0e841d67c34df94f95ed937c3c9cd88fda` after backend,
+frontend, browser, pre-commit, secret-scan and Vercel checks passed. On 2026-09-10
+UTC, the live login served the new `index-a3p9P9LG.js` asset and retained its CSP
+headers. The live API schema included `/v1/ingestion/coverage/measured`.
+Unauthenticated requests to that endpoint and `/v1/deals?limit=1` returned 401;
+response bodies were discarded. This release also includes the profile-export
+allowlist. No production tenant record counts or authenticated exports were
+examined. Those checks still require an authorized production session.
 
 | Control | Implemented | Verified | Production gap |
 | --- | --- | --- | --- |
