@@ -5,6 +5,14 @@
 Implemented on the security-evidence branch; not a production attestation.
 Production changes require migration and separately provisioned MFA keys.
 
+PR #113 merged as `8e536ad26e0ba0f3aff87861b214943f7d60d292` after all checks
+passed. On 2026-09-10 UTC, the canonical `https://www.buildsignals.ai/login`
+returned both the enforced baseline CSP and strict report-only header. The public
+backend schema now describes isolated signup, confirming the updated API contract
+is deployed. No production account was created for this check. The measured
+coverage endpoint was not yet present in that deployed schema; it remains in this
+gated release alongside MFA encryption and the RLS migrations.
+
 | Control | Implemented | Verified | Production gap |
 | --- | --- | --- | --- |
 | MFA encryption | Authenticated, randomized ciphertext bound to user ID; versioned separate key ring; no new plaintext writes | Enrollment/login/disable, tampering, missing key, legacy gate, atomic backfill and rotation tests | Provision managed secrets, backfill, disable legacy reads, validate recovery keys |
