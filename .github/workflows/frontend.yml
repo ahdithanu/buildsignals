@@ -66,4 +66,15 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Verify browser policy and login
+        env:
+          BROWSER_POLICY_ARTIFACT_DIR: ${{ runner.temp }}/browser-policy
         run: node scripts/verify_browser_policy.cjs
+
+      - name: Save browser policy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-policy-screenshots
+          path: ${{ runner.temp }}/browser-policy
+          if-no-files-found: ignore
+          retention-days: 7

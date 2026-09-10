@@ -10792,7 +10792,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optional name for a new org. If omitted, user joins default-org.",
+            "description": "Optional display name for a new isolated workspace. If omitted, a workspace name is generated; existing organizations are never joined implicitly.",
             "title": "Organization Name"
           },
           "password": {
