@@ -375,3 +375,47 @@ export interface PermitDetail {
   graph_entity?: GraphEntityDetail | null;
   graph_related: GraphRelatedEntity[];
 }
+
+export type CoverageRecordType = 'parcel' | 'permit' | 'planning';
+
+export interface MeasuredCoverageParams {
+  record_type: CoverageRecordType;
+  freshness_hours: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ObservedStateCoverage {
+  state: string | null;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  unknown_source_date_records: number;
+  future_source_date_records: number;
+  recent_source_date_records: number;
+  newest_seen_at: string | null;
+  newest_source_date: string | null;
+  observed_jurisdiction_count: number;
+  min_latitude: number | null;
+  max_latitude: number | null;
+  min_longitude: number | null;
+  max_longitude: number | null;
+}
+
+export interface MeasuredSourceCoverage {
+  source_id: string;
+  source_key: string;
+  configured_active: boolean;
+  configured_jurisdiction: string | null;
+  stored_records: number;
+  observed_states: ObservedStateCoverage[];
+}
+
+export interface MeasuredCoverage extends MeasuredCoverageParams {
+  measured_at: string;
+  scope: string;
+  count_semantics: string;
+  has_more: boolean;
+  sources: MeasuredSourceCoverage[];
+  warnings: string[];
+}

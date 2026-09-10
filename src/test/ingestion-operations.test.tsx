@@ -4,6 +4,10 @@ import { render, screen, within } from "@testing-library/react";
 
 import IngestionOperations from "@/pages/IngestionOperations";
 
+vi.mock("@/hooks/useMeasuredCoverage", () => ({
+  useMeasuredCoverage: () => ({ isPending: true, isFetching: false }),
+}));
+
 vi.mock("@/hooks/useIngestionHealth", () => ({
   useIngestionHealth: vi.fn(),
   useIngestionSchedulePlan: vi.fn(),

@@ -2,6 +2,7 @@ import { Activity, CheckCircle2, ChevronDown, ChevronUp, Clock3, Database, Exter
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
+import { MeasuredCoveragePanel } from '@/components/MeasuredCoveragePanel';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -729,6 +730,8 @@ export default function IngestionOperations() {
             </>
           ) : null}
         </section>
+
+        <MeasuredCoveragePanel />
 
         {!isLoading && !error && sources.length > 0 && (
           <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Configured source mix">

@@ -10,8 +10,9 @@ Production changes require migration and separately provisioned MFA keys.
 | MFA encryption | Authenticated, randomized ciphertext bound to user ID; versioned separate key ring; no new plaintext writes | Enrollment/login/disable, tampering, missing key, legacy gate, atomic backfill and rotation tests | Provision managed secrets, backfill, disable legacy reads, validate recovery keys |
 | Tenant isolation | Forced RLS added to four previously unprotected tables | PostgreSQL restricted-role read/write tests on all four; 46 tenant tables checked for forced RLS metadata | Apply migration and verify real application role |
 | Recovery | Rollback-only restricted-role probe and explicit restored-copy CLI | Local PostgreSQL dump/restore into a second database; probe passed | Actual provider snapshot, approved restore access, measured RPO/RTO and recovery evidence |
-| Browser policy | Enforced baseline plus strict report-only CSP in Vercel configuration | Built login at 390px and 1440px with strict policy enforced; code submission, no overflow, injected inline script blocked | Observe all authenticated production flows before enforcing strict script/network policy |
-| Coverage | Authenticated database aggregation by source and observed state | Tenant isolation, zero rows, unknown dates, old-source/recent-collection distinction | Run against live authorized tenant database; no live counts claimed |
+| Browser policy | Enforced baseline plus strict report-only CSP in Vercel configuration | Built login and measured inventory at 390px, 768px and 1440px with strict policy enforced; code submission, no overflow, injected inline script blocked | Observe all authenticated production flows before enforcing strict script/network policy |
+| Browser cache isolation | Separate query client and remounted page state per user, organization and role | Account, organization, role, logout, unchanged identity and late-response regressions | Supplements but does not replace backend isolation verification |
+| Coverage | Authenticated database aggregation plus paginated ingestion inventory UI | Tenant isolation, zero rows, unknown dates, old-source/recent-collection distinction, filters, pagination and unavailable states | Run against live authorized tenant database; no live counts claimed |
 
 The four corrected tables are `ingestion_candidate_canary_attempts`,
 `planning_records`, `planning_company_matches`, and `record_external_references`.
@@ -75,6 +76,8 @@ Build with the production API origin, then run
 `node scripts/verify_browser_policy.cjs`. This serves the built frontend locally
 under the strict trial policy. Auth responses are synthetic; it does not prove
 production account authentication or all screens work under strict CSP.
+The browser test also exercises a protected-page login redirect, measured
+inventory pagination and filters, and unavailable/retry states at three widths.
 
 ## Recovery Verification
 
@@ -104,7 +107,22 @@ source-scoped identities, not globally deduplicated parcels. The state field use
 recognized US abbreviations (including DC); missing/unrecognized values remain
 unknown rather than being inferred from the configured jurisdiction.
 The ingestion screen now labels its existing registry totals as configured,
-not live. The measured report is currently an API surface, not a new dashboard.
+not live. The measured inventory panel on `/source-health` lists 25 sources per
+page, with permit/parcel/planning and freshness-window controls. All summary
+counts are explicitly current-page measurements, not national totals. The panel
+is organization-wide even when another part of the operations page is filtered
+to a configured state. Unknown state values are not attributed to that filter.
+Changing record type or freshness resets pagination. Failed measurements hide
+old totals rather than presenting them as current. A missing older-backend
+endpoint produces an unavailable state, never catalog-derived fallback counts.
+
+The API query is disabled without an authenticated organization, and its cache
+key includes organization and all filter parameters. The application query
+client is additionally recreated on user, organization or role changes; page
+state is remounted and prior queries/mutations are cleared. This prevents a
+previous identity's cached or late result appearing in the next identity's UI.
+It does not cancel already accepted server-side mutation work or replace server
+authorization. No persistent browser cache of business records was found.
 
 `recently_seen_records` measures collection recency. `recent_source_date_records`
 uses the latest stored raw version's source timestamp. Unknown and future source
