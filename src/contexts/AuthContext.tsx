@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { authApi } from '@/api/auth';
@@ -12,7 +13,7 @@ import {
   setAccessToken,
   setUnauthorizedHandler,
 } from '@/api/client';
-import type { LoginRequest, MemberRole, RegisterRequest, User } from '@/types/auth';
+import type { LoginRequest, MemberRole, RegisterRequest, TokenResponse, User } from '@/types/auth';
 
 interface AuthState {
   user: User | null;
@@ -39,25 +40,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Start loading — we need to attempt a silent refresh before we know
   // whether the user is authenticated.
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const authOperation = useRef(0);
 
   const reset = useCallback(() => {
+    authOperation.current += 1;
+    setAccessToken(null);
     setUser(null);
     setOrganizationId(null);
     setRole(null);
+    setIsLoading(false);
   }, []);
 
   const hydrate = useCallback(async () => {
+    const operation = ++authOperation.current;
     try {
       const me = await authApi.me();
+      if (operation !== authOperation.current) return;
       setUser(me.user);
       setOrganizationId(me.organization_id);
       setRole(me.role);
     } catch {
       // /auth/me failed even after the client tried a silent refresh.
       // We're really logged out.
-      reset();
+      if (operation === authOperation.current) reset();
     } finally {
-      setIsLoading(false);
+      if (operation === authOperation.current) setIsLoading(false);
     }
   }, [reset]);
 
@@ -66,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // /auth/me directly and let the client handle the first 401 under the hood.
   useEffect(() => {
     hydrate();
+    return () => { authOperation.current += 1; };
   }, [hydrate]);
 
   // Wire client-level terminal 401 → reset auth state.
@@ -78,40 +86,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = hydrate;
 
-  const login = useCallback(
-    async (data: LoginRequest) => {
-      const res = await authApi.login(data);
-      setAccessToken(res.access_token);
-      const me = await authApi.me();
-      setUser(me.user);
-      setOrganizationId(me.organization_id);
-      setRole(me.role);
-      return me.user;
+  const authenticate = useCallback(
+    async (request: () => Promise<TokenResponse>) => {
+      // Invalidate old requests before starting an explicit identity change.
+      reset();
+      const operation = authOperation.current;
+      const assertCurrent = () => {
+        if (operation !== authOperation.current) {
+          throw new Error('Authentication attempt was superseded. Please try again.');
+        }
+      };
+      try {
+        const res = await request();
+        assertCurrent();
+        setAccessToken(res.access_token);
+        const me = await authApi.me();
+        assertCurrent();
+        setUser(me.user);
+        setOrganizationId(me.organization_id);
+        setRole(me.role);
+        return me.user;
+      } catch (error) {
+        if (operation === authOperation.current) reset();
+        throw error;
+      }
     },
-    [],
+    [reset],
+  );
+
+  const login = useCallback(
+    (data: LoginRequest) => authenticate(() => authApi.login(data)),
+    [authenticate],
   );
 
   const register = useCallback(
-    async (data: RegisterRequest) => {
-      const res = await authApi.register(data);
-      setAccessToken(res.access_token);
-      const me = await authApi.me();
-      setUser(me.user);
-      setOrganizationId(me.organization_id);
-      setRole(me.role);
-      return me.user;
-    },
-    [],
+    (data: RegisterRequest) => authenticate(() => authApi.register(data)),
+    [authenticate],
   );
 
   const logout = useCallback(async () => {
     try {
-      await authApi.logout();
+      // Dispatch with the current credential, then immediately retire it locally.
+      let pending: Promise<void>;
+      try {
+        pending = authApi.logout();
+      } finally {
+        reset();
+      }
+      await pending;
     } catch {
       // Network error on logout is fine — we still clear local state.
     }
-    setAccessToken(null);
-    reset();
   }, [reset]);
 
   const value = useMemo<AuthState>(
