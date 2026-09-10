@@ -4,6 +4,10 @@ import { render, screen, within } from "@testing-library/react";
 
 import IngestionOperations from "@/pages/IngestionOperations";
 
+vi.mock("@/hooks/useMeasuredCoverage", () => ({
+  useMeasuredCoverage: () => ({ isPending: true, isFetching: false }),
+}));
+
 vi.mock("@/hooks/useIngestionHealth", () => ({
   useIngestionHealth: vi.fn(),
   useIngestionSchedulePlan: vi.fn(),
@@ -267,7 +271,8 @@ describe("<IngestionOperations>", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Coverage Footprint")).toBeInTheDocument();
+    expect(screen.getByText("Configured Footprint")).toBeInTheDocument();
+    expect(screen.getByText(/not verified imported records or geographic completeness/i)).toBeInTheDocument();
     expect(screen.getByText("Production Activation")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();
     expect(screen.getByText("data.example.gov")).toBeInTheDocument();
@@ -276,8 +281,8 @@ describe("<IngestionOperations>", () => {
       "href",
       "/source-health/sources/source-texas-comptroller-sales-tax-locations",
     );
-    const liveMix = screen.getByLabelText("Live source mix");
-    expect(within(liveMix).getByText("Live Source Mix")).toBeInTheDocument();
+    const liveMix = screen.getByLabelText("Configured source mix");
+    expect(within(liveMix).getByText("Configured Source Mix")).toBeInTheDocument();
     expect(within(liveMix).getByText("approved only")).toBeInTheDocument();
     expect(screen.getByText("State leaders")).toBeInTheDocument();
     expect(screen.getByText("Next activation queue")).toBeInTheDocument();
