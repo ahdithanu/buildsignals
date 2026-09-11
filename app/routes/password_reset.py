@@ -34,6 +34,7 @@ from app.services.email_service import get_email_service
 from app.services.password_policy import PasswordPolicyError, validate_password
 from app.services.rate_limiter import limiter
 from app.services.security import hash_password
+from app.utils.client_address import client_address as _client_ip
 
 router = APIRouter(prefix="/auth/password", tags=["auth"])
 
@@ -71,13 +72,6 @@ class ResetPasswordRequest(BaseModel):
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
-
-
-def _client_ip(request: Request) -> str:
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        return xff.split(",", 1)[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 def _too_many(detail: str, retry_after: int) -> JSONResponse:
@@ -143,6 +137,7 @@ def forgot_password(
         key=f"forgot:ip:{ip}",
         limit=FORGOT_IP_LIMIT,
         window_seconds=FORGOT_IP_WINDOW,
+        required=True,
     )
     if not ip_decision.allowed:
         return _too_many(
@@ -156,6 +151,7 @@ def forgot_password(
         key=f"forgot:email:{email_key}",
         limit=FORGOT_EMAIL_LIMIT,
         window_seconds=FORGOT_EMAIL_WINDOW,
+        required=True,
     )
     if not email_decision.allowed:
         return _too_many(
@@ -214,6 +210,7 @@ def reset_password(
         key=f"reset:ip:{ip}",
         limit=RESET_IP_LIMIT,
         window_seconds=RESET_IP_WINDOW,
+        required=True,
     )
     if not decision.allowed:
         return _too_many(

@@ -1,10 +1,8 @@
-"""Admin-only organization export of the explicitly listed table inventory.
+"""Admin-only bounded export of explicitly registered tenant tables/columns.
 
-Includes organization metadata, membership/profile pairs, deals, assumptions,
-outputs, contacts, outreach, signals, documents, memos, pipeline events, buy
-boxes, distributions, and audit logs. Graph, assessment, ingestion, and other
-unlisted tables are not exported. This is not a complete account-data copy or
-an assertion of GDPR compliance. Organization deletion is a separate operation.
+Includes deal workflows, graph metadata, saved assessments, and a manifest of
+scopes/exclusions. This is not a complete account-data copy or an assertion of
+GDPR compliance. Organization deletion uses its separate, unchanged inventory.
 
 Posture
 -------
@@ -26,15 +24,14 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Iterable
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
-from sqlalchemy import inspect as sa_inspect
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.db import get_db
 from app.models.audit_log import AuditLog
@@ -53,6 +50,15 @@ from app.models.pipeline_event import PipelineEvent
 from app.models.signal import Signal
 from app.models.user import User
 from app.services.audit_service import log_change
+from app.services.organization_export import (
+    EXPORT_SCHEMA_VERSION,
+    EXPORT_TABLES,
+    USER_FIELDS,
+    build_manifest,
+    prepare_row,
+    serialize,
+    validate_references,
+)
 from app.utils.auth_deps import require_role_of
 from app.utils.org_scope import DEFAULT_ORG_ID
 
@@ -142,9 +148,7 @@ class OrgDeletionRequest(BaseModel):
     confirm: str = Field(..., description="Must exactly equal the organization's name.")
 
 
-# Tables to dump, in stable order. Key is the JSON field name in the export.
-# Each model has an `organization_id` column we filter on. We do NOT use
-# `active_query` here: this inventory includes its soft-deleted rows.
+# Legacy deletion inventory. Export additions must not change deletion behavior.
 _ORG_SCOPED_MODELS: list[tuple[str, type]] = [
     ("deals", Deal),
     ("deal_assumptions", DealAssumptions),
@@ -161,36 +165,17 @@ _ORG_SCOPED_MODELS: list[tuple[str, type]] = [
 ]
 
 # Allowlist public profile fields so future credential columns cannot leak.
-_USER_EXPORT_FIELDS = {"id", "email", "full_name", "is_active", "totp_enabled",
-                       "last_login_at", "created_at", "updated_at"}
+_USER_EXPORT_FIELDS = set(USER_FIELDS)
 
 
-def _serialize(obj: Any, *, drop: Iterable[str] = ()) -> dict:
-    """Convert a SQLAlchemy ORM instance into a JSON-safe dict.
-
-    Walks the mapper's column list (not `__dict__`) so relationships and
-    unloaded lazy attributes don't accidentally trigger queries or leak.
-    """
-    drop_set = set(drop)
-    out: dict[str, Any] = {}
-    mapper = sa_inspect(obj.__class__)
-    for col in mapper.columns:
-        name = col.key
-        if name in drop_set:
-            continue
-        val = getattr(obj, name, None)
-        if hasattr(val, "value") and hasattr(val, "name"):  # Enum
-            val = val.value
-        elif hasattr(val, "isoformat"):  # datetime / date
-            val = val.isoformat()
-        out[name] = val
-    return out
+def _serialize(obj: Any) -> dict:
+    """Serialize only registered columns, without traversing relationships."""
+    return serialize(obj)
 
 
 def _serialize_user(user: User) -> dict:
-    """Same as `_serialize` but always strips secret credential fields."""
-    return _serialize(user, drop=(col.key for col in sa_inspect(User).columns
-                                  if col.key not in _USER_EXPORT_FIELDS))
+    """Only explicitly registered profile fields, never credential columns."""
+    return _serialize(user)
 
 
 def _serialize_member(row) -> dict:
@@ -242,20 +227,24 @@ def export_organization_data(
     member_query = (
         db.query(OrganizationMembership, User)
         .outerjoin(User, User.id == OrganizationMembership.user_id)
+        .options(load_only(*(getattr(User, field) for field in USER_FIELDS), raiseload=True))
         .filter(OrganizationMembership.organization_id == org_id)
         .order_by(OrganizationMembership.id)
     )
     export["members"] = budget.collect(member_query, _serialize_member, row_cost=2)
 
-    # Include all rows from the listed tables, including soft-deleted rows.
-    # This is an explicit inventory, not an exhaustive application-data export.
-    for field_name, model in _ORG_SCOPED_MODELS:
-        query = (
-            db.query(model)
-            .filter(model.organization_id == org_id)
-            .order_by(model.id)
+    member_ids = {member["user"]["id"] for member in export["members"]}
+    redactions = {"nonmember_user_references": 0, "unsupported_graph_link_targets": 0}
+    for entry in EXPORT_TABLES:
+        export[entry.name] = budget.collect(
+            entry.query(db, org_id),
+            lambda row: prepare_row(entry, _serialize(row), member_ids, redactions),
         )
-        export[field_name] = budget.collect(query, _serialize)
+    validate_references(db, org_id, export)
+    export["manifest"] = build_manifest(
+        export, row_count=budget.rows, row_cap=EXPORT_ROW_CAP,
+        byte_cap=EXPORT_BYTE_CAP, redactions=redactions,
+    )
 
     # Prepare and size-check the entire response BEFORE recording success. This
     # catches encoding failures and JSON envelope overhead as well as row data.
@@ -280,7 +269,8 @@ def export_organization_data(
         actor_id=principal["user_id"],
         organization_id=org_id,
         new_values={"exported_at": export["exported_at"], "row_count": budget.rows,
-                    "byte_count": len(response.body)},
+                    "byte_count": len(response.body), "schema_version": EXPORT_SCHEMA_VERSION,
+                    "scopes": export["manifest"]["scopes"]},
     )
     db.commit()
 

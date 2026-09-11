@@ -41,6 +41,7 @@ def _limited_principal(principal: dict = Depends(get_current_user)) -> dict:
         key=f"mfa:code:{principal['user_id']}",
         limit=CODE_ATTEMPT_LIMIT,
         window_seconds=CODE_ATTEMPT_WINDOW,
+        required=True,
     )
     if not decision.allowed:
         raise HTTPException(

@@ -30,6 +30,8 @@ from app.services.browser_sessions import (
 )
 from app.services.password_policy import PasswordPolicyError, validate_password
 from app.services.rate_limiter import (
+    LOGIN_ACCOUNT_LIMIT,
+    LOGIN_IP_LIMIT,
     LOGIN_LIMIT,
     LOGIN_WINDOW,
     REFRESH_LIMIT,
@@ -46,6 +48,7 @@ from app.services.security import (
     verify_password,
 )
 from app.utils.auth_deps import get_current_user
+from app.utils.client_address import client_address as _client_ip
 
 
 def _refresh_failure(detail: str) -> JSONResponse:
@@ -54,22 +57,6 @@ def _refresh_failure(detail: str) -> JSONResponse:
     return JSONResponse(status_code=401, content={"detail": detail}, headers={"Cache-Control": "no-store"})
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _client_ip(request: Request) -> str:
-    """Best-effort client IP.
-
-    `request.client.host` is the immediate peer (Render's load balancer).
-    When running behind a trusted proxy, X-Forwarded-For holds the real
-    client. We take the leftmost entry — note that in prod you want to
-    configure uvicorn with --proxy-headers and --forwarded-allow-ips so
-    `request.client.host` is already resolved correctly; this fallback
-    is defensive.
-    """
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        return xff.split(",", 1)[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 def _too_many(detail: str, retry_after: int) -> JSONResponse:
@@ -104,6 +91,7 @@ def register(
         key=f"register:{ip}",
         limit=REGISTER_LIMIT,
         window_seconds=REGISTER_WINDOW,
+        required=True,
     )
     if not decision.allowed:
         return _too_many(
@@ -187,23 +175,21 @@ def login(
     db: Session = Depends(get_db),
 ):
     browser_request(request)
-    # Two layered checks run in order:
-    #   1. IP-based rate limiter (cheap, kills password-grinders fast).
-    #   2. Per-account lockout (catches distributed spray across many IPs).
-    # Precedence: the IP check runs first, so a single-IP grinder will see
-    # a 429 well before the 423 lockout ever fires. The lockout only
-    # surfaces when the attempts came from many sources.
+    # Admission budgets run before password hashing. Broad IP/account budgets
+    # cannot be cleared by a racing successful login; failure locks are separate.
     ip = _client_ip(request)
     email_key = payload.email.lower()
     rl_key = f"login:{email_key}:{ip}"
-    decision = limiter.check(
-        key=rl_key, limit=LOGIN_LIMIT, window_seconds=LOGIN_WINDOW,
-    )
-    if not decision.allowed:
-        return _too_many(
-            "Too many login attempts. Try again later.",
-            decision.retry_after,
+    for key, limit in (
+        (f"login:ip:{ip}", LOGIN_IP_LIMIT),
+        (rl_key, LOGIN_LIMIT),
+        (f"login:account:{email_key}", LOGIN_ACCOUNT_LIMIT),
+    ):
+        decision = limiter.check(
+            key=key, limit=limit, window_seconds=LOGIN_WINDOW, required=True,
         )
+        if not decision.allowed:
+            return _too_many("Too many login attempts. Try again later.", decision.retry_after)
 
     # Account-level lockout: distributed password-spray protection.
     locked, retry_after = lockout.is_locked(email_key)
@@ -261,10 +247,9 @@ def login(
                 headers={"X-Auth-Reason": "totp_invalid"},
             )
 
-    # Successful login — clear both the IP bucket and the account
-    # lockout counter so a user who mistyped twice doesn't carry the
-    # failed attempts forward into their next session.
-    limiter.reset(rl_key)
+    # Clear consecutive-failure state, but retain the aggregate admission
+    # budgets that bound parallel attempts and repeated successful logins.
+    limiter.reset(rl_key, required=True)
     lockout.reset(email_key)
 
     # Pick the default membership, or the first one
@@ -303,6 +288,7 @@ def refresh(
         key=f"refresh:{ip}",
         limit=REFRESH_LIMIT,
         window_seconds=REFRESH_WINDOW,
+        required=True,
     )
     if not decision.allowed:
         return _too_many(

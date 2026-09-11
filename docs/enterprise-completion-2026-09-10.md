@@ -60,15 +60,20 @@ workspace-screen downloads and tests a failed Settings chunk followed by reload.
   historical actor identifiers are retained without disclosing another tenant's
   current profile. CSV cells are neutralized against spreadsheet formulas.
 - Synchronous organization exports have global 10,000-row and 20 MiB caps.
-  Overflow fails without a partial download. Only the explicitly registered
-  export tables are included, not the entire graph/assessment/ingestion store.
+  Overflow fails without a partial download. The September 11 extension adds
+  explicit graph metadata/evidence and assessment revision/review/publication
+  tables, tenant-reference checks and a schema-versioned manifest. It is still
+  not a full account export or backup; raw ingestion and other unlisted data are
+  excluded. See [organization export](organization-export.md).
 - MFA transitions reload a locked user row and commit with their audit record.
   Code attempts share an account-keyed budget across verify/disable endpoints.
-  This uses the existing rate-limiter infrastructure: in-memory limits are per
-  process, and its Redis backend currently fails open on connectivity errors.
-  Do not describe this as independently verified distributed abuse prevention.
+  The September 11 extension makes required authentication limits fail closed,
+  adds shared Redis account locks and non-resettable admission budgets, and
+  removes raw forwarded-header trust. Ordinary traffic limits still fail open.
+  Local counters remain development-only. See
+  [authentication protection](auth-abuse-protection.md).
 
-## Local Acceptance
+## September 10 Acceptance
 
 Final combined schema: `20260910_0001`, following the two MFA/RLS migrations.
 
@@ -99,6 +104,42 @@ traffic. The refreshed preview is `http://127.0.0.1:4191/login`; it uses a local
 test database and ephemeral keys, not production credentials or durable MFA setup.
 The draft release incorporates the gated security branch; neither is deployed.
 
+## September 11 Extension
+
+No database migration is added by the authentication/export extension.
+
+- Combined backend/real-Redis suite: 1,313 passed, 54 skipped. This run includes
+  all 23 real-Redis cases. Optional PostgreSQL and other gated cases still skip
+  without their explicitly configured targets; no production evidence is implied.
+- Explicit graph/assessment export inventory and corruption/isolation controls:
+  82 focused tests passed, including 49 new cases. Unknown snapshot structures
+  fail closed; historical missing evidence and oversized workspaces still need
+  a separate archival/background-export solution.
+- Real Redis scripts: 23 tests passed against an owned, temporary Redis 7.2.16
+  process, including concurrent admission, TTLs, shared locks, wrong-type keys,
+  outages and cleanup. No production cache was contacted. Details and verified
+  binary provenance are in [the Redis test record](auth-abuse-redis-test.md).
+- Independent review found and fixed the template's eviction policy, missing
+  explicit proxy configuration and incomplete readiness permission checks.
+  Render/Docker/Procfile now use `app.server`; production requires reviewed proxy peers
+  or explicit direct-listener mode. The Redis template uses `noeviction`.
+- Final authentication/proxy/rollout follow-up tests: 71 passed, after adding
+  the Procfile guard and two collective-CIDR cases to the combined-run tree.
+  The dependency probe
+  now exercises synthetic writes, reads and deletes without customer counters.
+- Frontend: 278 tests passed, typecheck and production build passed. All nine
+  Chromium workflow cases passed, including 390px/768px/1440px assessment and
+  authenticator flows. No frontend layout was changed in this extension.
+- Python lint and whitespace checks passed; frontend lint remains zero errors
+  with 20 existing warnings. OpenAPI includes 111 paths. Hosted
+  CI now enables the owned-process Redis tests; hosted execution remains pending.
+
+The preview already running on port 4191 was not restarted during this backend
+extension, preserving its in-memory demo keys and sessions. The new backend
+behavior was exercised in disposable test servers, not production or that
+existing preview process. Prior PostgreSQL/WebKit evidence above is dated to
+the preceding build and was not rerun for this extension.
+
 ## Operator-only production gates
 
 1. Provision independently managed MFA keys, apply the compatible migrations,
@@ -120,6 +161,11 @@ The draft release incorporates the gated security branch; neither is deployed.
 6. Observe authenticated production flows before enforcing the strict
    script/network CSP. The existing baseline CSP is enforced; strict CSP remains
    report-only.
+7. Configure and verify shared Redis persistence/HA/capacity and `noeviction`,
+   plus the actual proxy trust boundary. Missing production Redis blocks
+   sensitive authentication with 503; missing launcher proxy configuration
+   refuses startup. `/health/auth-protection` must report `shared` using the
+   real application role. Template changes have not been applied to providers.
 
 These gates are independent of the longer-term SSO/SCIM, organization API-key,
 usage-billing and portfolio-exposure roadmap. None of those capabilities should

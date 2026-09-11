@@ -21,10 +21,7 @@ case "${1:-serve}" in
     # Honor $PORT (App Runner/ECS inject it); default 8000.
     # Scale within an instance via WEB_CONCURRENCY (needs REDIS_URL so the
     # rate limiter is shared across workers — see app/services/rate_limiter.py).
-    exec uvicorn app.main:app \
-      --host 0.0.0.0 \
-      --port "${PORT:-8000}" \
-      --workers "${WEB_CONCURRENCY:-1}"
+    exec python -m app.server
     ;;
   *)
     # Anything else: run it verbatim (e.g. `python scripts/admin.py ...`).

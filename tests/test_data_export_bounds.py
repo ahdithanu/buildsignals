@@ -67,8 +67,9 @@ def test_empty_organization_export_has_all_sections_and_profile_allowlist(client
     assert len(body["members"]) == 1
     assert set(body["members"][0]["user"]) == routes._USER_EXPORT_FIELDS
     assert body["members"][0]["user"]["id"] == user.id
-    for field, _ in routes._ORG_SCOPED_MODELS:
-        assert body[field] == []
+    for entry in routes.EXPORT_TABLES:
+        assert body[entry.name] == []
+        assert body["manifest"]["tables"][entry.name]["row_count"] == 0
     for secret in ("synthetic-password-hash", "SYNTHETIC-MFA-SECRET", "password_hash",
                    "totp_secret", "token_version", "is_superuser"):
         assert secret not in response.text

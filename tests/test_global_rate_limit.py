@@ -55,9 +55,9 @@ def test_remaining_header_decrements(tiny_limit_app):
         )
 
 
-def test_x_forwarded_for_isolates_buckets(tiny_limit_app):
+def test_untrusted_x_forwarded_for_cannot_reset_bucket(tiny_limit_app):
     with TestClient(tiny_limit_app) as c:
         for _ in range(3):
             c.get("/protected", headers={"X-Forwarded-For": "1.1.1.1"})
         r = c.get("/protected", headers={"X-Forwarded-For": "2.2.2.2"})
-        assert r.status_code == 200
+        assert r.status_code == 429

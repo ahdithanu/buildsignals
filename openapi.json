@@ -12795,6 +12795,54 @@
         ]
       }
     },
+    "/health/auth-protection": {
+      "get": {
+        "description": "Dependency readiness, not a restart probe or an authentication bypass.",
+        "operationId": "authentication_protection_health_health_auth_protection_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Authentication Protection Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
     "/health/deep": {
       "get": {
         "operationId": "health_check_deep_health_deep_get",

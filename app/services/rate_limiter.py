@@ -1,29 +1,14 @@
-"""Sliding-window rate limiter with pluggable backend.
+"""Fixed-window budgets. Authentication uses required=True and fails closed.
 
-Backends
---------
-- `InMemoryRateLimiter` (default) — one bucket per key in a module-
-  level dict. Cheap, no external deps. Correct for a single-process
-  deploy; under gunicorn -w N each worker gets its own view, so the
-  effective limit is N × configured. Fine for pilot / local dev.
-
-- `RedisRateLimiter` — used automatically when `REDIS_URL` is set.
-  Atomic INCR + EXPIRE for fixed-window counting; shared state across
-  all workers and pods. Fails open on Redis errors (logs a warning
-  and allows the request through) — rate limiting is a nicety, and
-  hard-failing every request when Redis flaps is worse than briefly
-  dropping the guard.
-
-The limiter exposes `check()` which returns a decision dataclass so the
-route can surface a 429 with Retry-After instead of raising deep in
-middleware where the response headers are harder to shape.
-
-Interface is shared: routes call `limiter.check(...)`, `limiter.reset(...)`,
-`limiter.clear()` and don't care which backend is behind them.
+Redis counters and expiry are changed in one atomic script. Local development
+can use bounded in-process counters; production never substitutes those for a
+missing shared backend. Noncritical traffic limits retain fail-open behavior.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
+import math
 import os
 import threading
 import time
@@ -31,6 +16,26 @@ from dataclasses import dataclass
 from typing import Dict, Tuple
 
 log = logging.getLogger(__name__)
+
+
+class RateLimitUnavailable(RuntimeError):
+    """A required abuse-prevention decision could not be made."""
+
+
+def redis_key(kind: str, key: str) -> str:
+    # Do not put raw email addresses, IPs, or user IDs into Redis key names.
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    return f"buildsignals:abuse:v1:{kind}:{digest}"
+
+
+def _unavailable(required: bool, limit: int) -> RateLimitDecision:
+    if required:
+        raise RateLimitUnavailable("Authentication protection unavailable")
+    return RateLimitDecision(allowed=True, remaining=max(0, limit), retry_after=0)
+
+
+def _valid_policy(limit: int, window_seconds: int) -> bool:
+    return type(limit) is int and type(window_seconds) is int and limit > 0 and window_seconds > 0
 
 
 @dataclass(frozen=True)
@@ -43,28 +48,31 @@ class RateLimitDecision:
 class InMemoryRateLimiter:
     """Fixed-window counter, process-local. Default when REDIS_URL is unset."""
 
-    def __init__(self) -> None:
-        # key -> (window_start_epoch, count)
+    def __init__(self, *, max_buckets: int = 100_000) -> None:
+        # key -> (expiry_monotonic, count)
         self._buckets: Dict[str, Tuple[float, int]] = {}
         self._lock = threading.Lock()
+        self._max_buckets = max_buckets
 
-    def check(self, *, key: str, limit: int, window_seconds: int) -> RateLimitDecision:
+    def check(self, *, key: str, limit: int, window_seconds: int, required: bool = False) -> RateLimitDecision:
         """Record a hit against `key`. Returns whether it should proceed."""
-        if limit <= 0 or window_seconds <= 0:
-            # Misconfiguration — fail open rather than DoS ourselves.
-            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0)
+        if not _valid_policy(limit, window_seconds):
+            return _unavailable(required, limit)
 
         now = time.monotonic()
         with self._lock:
-            window_start, count = self._buckets.get(key, (now, 0))
-            # Roll the window forward if we're past it.
-            if now - window_start >= window_seconds:
-                window_start, count = now, 0
-            count += 1
-            self._buckets[key] = (window_start, count)
+            if key not in self._buckets and len(self._buckets) >= self._max_buckets:
+                self._buckets = {k: v for k, v in self._buckets.items() if v[0] > now}
+                if len(self._buckets) >= self._max_buckets:
+                    return _unavailable(required, limit)
+            expiry, count = self._buckets.get(key, (now + window_seconds, 0))
+            if expiry <= now:
+                expiry, count = now + window_seconds, 0
+            count = min(count + 1, limit + 1)
+            self._buckets[key] = (expiry, count)
 
             if count > limit:
-                retry = max(1, int(window_seconds - (now - window_start)))
+                retry = max(1, math.ceil(expiry - now))
                 return RateLimitDecision(allowed=False, remaining=0, retry_after=retry)
             return RateLimitDecision(
                 allowed=True,
@@ -72,7 +80,7 @@ class InMemoryRateLimiter:
                 retry_after=0,
             )
 
-    def reset(self, key: str) -> None:
+    def reset(self, key: str, *, required: bool = False) -> None:
         """Drop a bucket — used after a successful login so the user who
         fat-fingered their password twice isn't penalized."""
         with self._lock:
@@ -85,17 +93,16 @@ class InMemoryRateLimiter:
 
 
 class RedisRateLimiter:
-    """Fixed-window counter backed by Redis.
+    """One-key script works across independent workers without a TTL race."""
 
-    Algorithm: INCR the key, set an EXPIRE if the key was fresh, compare
-    the count to the limit. Two round-trips in a pipeline — a Lua script
-    would collapse them into one, but the two-step is easier to reason
-    about and the extra hop is cheap on a colocated Redis.
-
-    Fails open on any Redis exception. This is a deliberate choice: rate
-    limiting is a defensive layer, not a hard requirement for correctness.
-    A Redis flap should not turn into a full-app outage.
-    """
+    _CHECK = """
+local count = tonumber(redis.call('GET', KEYS[1]) or '0')
+local ttl = redis.call('PTTL', KEYS[1])
+if ttl < 0 then ttl = tonumber(ARGV[2]) end
+count = math.min(count + 1, tonumber(ARGV[1]) + 1)
+redis.call('SET', KEYS[1], count, 'PX', math.max(1, ttl))
+return {count, ttl}
+"""
 
     def __init__(self, url: str) -> None:
         # Local import so the `redis` package is only required when this
@@ -111,29 +118,25 @@ class RedisRateLimiter:
         )
         self._redis_err = redis.RedisError
 
-    def check(self, *, key: str, limit: int, window_seconds: int) -> RateLimitDecision:
-        if limit <= 0 or window_seconds <= 0:
-            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0)
+    def check(self, *, key: str, limit: int, window_seconds: int, required: bool = False) -> RateLimitDecision:
+        if not _valid_policy(limit, window_seconds):
+            return _unavailable(required, limit)
 
         try:
-            pipe = self._client.pipeline()
-            pipe.incr(key)
-            pipe.ttl(key)
-            count, ttl = pipe.execute()
-            # ttl == -1 means no TTL set (fresh key that only INCR touched);
-            # ttl == -2 means key doesn't exist (shouldn't happen post-INCR).
-            if ttl < 0:
-                self._client.expire(key, window_seconds)
-                ttl = window_seconds
-        except self._redis_err as exc:
-            # Fail open. Log once per class of error so a Redis outage
-            # doesn't drown the app logs.
-            log.warning("rate_limiter: redis error, failing open: %s", exc)
-            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0)
+            count, ttl = self._client.eval(
+                self._CHECK, 1, redis_key("rate", key), limit, window_seconds * 1000,
+            )
+            count, ttl = int(count), int(ttl)
+            if count < 1 or ttl < 0:
+                raise ValueError("Invalid counter response")
+        except (self._redis_err, ValueError, TypeError):
+            # Do not log the exception: URLs and credentials can appear in it.
+            log.warning("rate_limiter: shared backend unavailable; required=%s", required)
+            return _unavailable(required, limit)
 
         if count > limit:
             return RateLimitDecision(
-                allowed=False, remaining=0, retry_after=max(1, int(ttl))
+                allowed=False, remaining=0, retry_after=max(1, math.ceil(ttl / 1000))
             )
         return RateLimitDecision(
             allowed=True,
@@ -141,37 +144,44 @@ class RedisRateLimiter:
             retry_after=0,
         )
 
-    def reset(self, key: str) -> None:
+    def reset(self, key: str, *, required: bool = False) -> None:
         try:
-            self._client.delete(key)
-        except self._redis_err as exc:
-            log.warning("rate_limiter: redis error on reset, ignoring: %s", exc)
+            self._client.delete(redis_key("rate", key))
+        except self._redis_err:
+            log.warning("rate_limiter: shared reset unavailable; required=%s", required)
+            _unavailable(required, 0)
 
     def clear(self) -> None:
-        """Wipe all state. Tests only — production should never call this.
+        raise RuntimeError("Shared rate-limit state cannot be cleared; use an isolated test backend")
 
-        Uses FLUSHDB which will drop every key in the selected Redis DB.
-        If prod and app share a Redis instance, this is destructive.
-        """
-        try:
-            self._client.flushdb()
-        except self._redis_err as exc:
-            log.warning("rate_limiter: redis error on clear, ignoring: %s", exc)
+
+class UnavailableRateLimiter:
+    """Missing production configuration must not become per-worker protection."""
+
+    def check(self, *, key: str, limit: int, window_seconds: int, required: bool = False) -> RateLimitDecision:
+        return _unavailable(required, limit)
+
+    def reset(self, key: str, *, required: bool = False) -> None:
+        _unavailable(required, 0)
+
+    def clear(self) -> None:
+        raise RuntimeError("No shared backend configured")
 
 
 def _build_limiter():
     """Pick a backend based on env. Called once at import time."""
     url = os.environ.get("REDIS_URL", "").strip()
     if not url:
+        if os.environ.get("ENVIRONMENT", "development").strip().lower() == "production":
+            return UnavailableRateLimiter()
         return InMemoryRateLimiter()
     try:
         return RedisRateLimiter(url)
-    except ImportError:
+    except (ImportError, ValueError):
         log.warning(
-            "REDIS_URL is set but `redis` package is not installed; "
-            "falling back to in-memory limiter (per-worker buckets)"
+            "rate_limiter: configured shared backend could not be initialized"
         )
-        return InMemoryRateLimiter()
+        return UnavailableRateLimiter()
 
 
 # Shared, process-wide instance. Import this from routes.
@@ -203,6 +213,11 @@ def _int_env(name: str, default: int) -> int:
 
 LOGIN_LIMIT = _int_env("LOGIN_RATE_LIMIT", 10)          # attempts per email+IP combo
 LOGIN_WINDOW = _int_env("LOGIN_RATE_WINDOW_SECONDS", 15 * 60)    # 15 minutes
+
+# These admission budgets are not reset by successful logins. They also bound
+# in-flight attempts that have not yet contributed to consecutive-failure locks.
+LOGIN_IP_LIMIT = _int_env("LOGIN_IP_RATE_LIMIT", 100)
+LOGIN_ACCOUNT_LIMIT = _int_env("LOGIN_ACCOUNT_RATE_LIMIT", 30)
 
 REGISTER_LIMIT = _int_env("REGISTER_RATE_LIMIT", 5)        # attempts per IP
 REGISTER_WINDOW = _int_env("REGISTER_RATE_WINDOW_SECONDS", 60 * 60)  # 1 hour
