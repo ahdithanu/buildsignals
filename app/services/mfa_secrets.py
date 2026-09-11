@@ -29,6 +29,15 @@ def _keyring() -> tuple[str, dict[str, Fernet]]:
         raise _unavailable() from None
 
 
+def enrollment_ready() -> bool:
+    """Check the existing encryption configuration without reading user secrets."""
+    try:
+        _keyring()
+    except HTTPException:
+        return False
+    return True
+
+
 def encrypt_secret(user_id: str, secret: str) -> str:
     active, keys = _keyring()
     payload = json.dumps({"user_id": user_id, "secret": secret}).encode("utf-8")

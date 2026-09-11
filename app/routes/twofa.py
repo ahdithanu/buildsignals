@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.user import User
 from app.services.audit_service import log_change
-from app.services.mfa_secrets import read_secret, store_secret
+from app.services.mfa_secrets import enrollment_ready, read_secret, store_secret
 from app.services.security import verify_password
 from app.utils.auth_deps import get_current_user
 
@@ -37,6 +37,11 @@ class SetupResponse(BaseModel):
     otpauth_uri: str
 
 
+class StatusResponse(BaseModel):
+    enabled: bool
+    enrollment_ready: bool
+
+
 class VerifyRequest(BaseModel):
     code: str
 
@@ -47,6 +52,19 @@ class DisableRequest(BaseModel):
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────
+
+@router.get("/status", response_model=StatusResponse)
+def authenticator_status(
+    response: Response,
+    principal: dict = Depends(get_current_user),
+):
+    """Report account state independently from enrollment key availability."""
+    response.headers["Cache-Control"] = "no-store"
+    return StatusResponse(
+        enabled=principal["user"].totp_enabled,
+        enrollment_ready=enrollment_ready(),
+    )
+
 
 @router.post("/setup", response_model=SetupResponse)
 def setup(
