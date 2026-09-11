@@ -4,10 +4,10 @@ import { uniqueEmail, registerAndLogin } from "./helpers";
 /**
  * Create-a-deal happy path through the AddDealModal.
  *
- * ⚠️ MORE FRAGILE than auth.spec — the modal's Asset Type / Market fields are
+ * The modal's Asset Type / Market fields are
  * radix <Select> components (role="combobox" trigger + role="option" items in
  * a portal), which are the most likely selectors to need adjustment on the
- * first real run. The text inputs (#deal-name etc.) are stable.
+ * a styling update. The text inputs (#deal-name etc.) are stable.
  *
  * Selectors read from src/components/AddDealModal.tsx and
  * src/pages/DealInbox.tsx. Asset types: Multifamily/Retail/Industrial/Mixed

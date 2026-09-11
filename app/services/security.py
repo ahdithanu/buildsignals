@@ -75,6 +75,7 @@ def dummy_verify() -> None:
 def create_access_token(
     *, user_id: str, org_id: str, token_version: int = 0,
     expires_minutes: Optional[int] = None,
+    browser_session: Optional[dict] = None,
 ) -> str:
     """Create a short-lived access JWT, carried in the Authorization header."""
     expire = datetime.now(timezone.utc) + timedelta(
@@ -89,16 +90,17 @@ def create_access_token(
         # the same second (JWT `exp` is second-granular). Also a hook for a
         # future server-side blocklist without reshaping the token format.
         "jti": uuid4().hex,
-        # `tv` (token version) is bumped by /auth/logout-all to invalidate
-        # every outstanding refresh cookie for this user. Embedded here too
-        # so a future check could reject access tokens after logout-all;
-        # today we accept the 15-min window as a documented tradeoff.
+        # Shared with refresh tokens: logout-all/password reset revoke access
+        # on the next request through the database-backed identity dependency.
         "tv": token_version,
     }
+    if browser_session:
+        payload.update(browser_session)
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_refresh_token(*, user_id: str, org_id: str, token_version: int = 0) -> str:
+def create_refresh_token(*, user_id: str, org_id: str, token_version: int = 0,
+                         browser_session: Optional[dict] = None) -> str:
     """Create a long-lived refresh JWT, carried as an httpOnly cookie."""
     expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     payload = {
@@ -109,14 +111,16 @@ def create_refresh_token(*, user_id: str, org_id: str, token_version: int = 0) -
         "jti": uuid4().hex,
         "tv": token_version,
     }
+    if browser_session:
+        payload.update(browser_session)
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_access_token(token: str) -> Optional[dict]:
+def decode_access_token(token: str, *, verify_exp: bool = True) -> Optional[dict]:
     """Decode an access JWT. Rejects tokens missing typ=='access' so a stolen
     refresh cookie can never be used as a bearer token, and vice versa."""
     try:
-        claims = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        claims = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": verify_exp})
     except jwt.PyJWTError:
         return None
     # Legacy tokens minted before the typ claim existed are still accepted
@@ -128,10 +132,10 @@ def decode_access_token(token: str) -> Optional[dict]:
     return claims
 
 
-def decode_refresh_token(token: str) -> Optional[dict]:
+def decode_refresh_token(token: str, *, verify_exp: bool = True) -> Optional[dict]:
     """Decode a refresh JWT. Rejects anything missing typ=='refresh'."""
     try:
-        claims = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        claims = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": verify_exp})
     except jwt.PyJWTError:
         return None
     if claims.get("typ") != REFRESH_TOKEN_TYPE:

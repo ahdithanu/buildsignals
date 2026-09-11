@@ -14,7 +14,7 @@ if os.environ.get("SENTRY_DSN"):
         send_default_pii=False,
     )
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ALLOWED_ORIGINS
@@ -24,6 +24,7 @@ from app.middleware.rate_limit import GlobalRateLimitMiddleware
 from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.versioning import CURRENT_API_PREFIX, ApiVersioningMiddleware
+from app.utils.auth_deps import validate_request_identity
 
 configure_logging()
 from app.routes.activities import router as activities_router
@@ -58,6 +59,7 @@ from app.routes.twofa import router as twofa_router
 app = FastAPI(
     title="BuildSignals - Permit and Development Intelligence",
     version="1.0.0",
+    dependencies=[Depends(validate_request_identity)],
 )
 
 # Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
@@ -76,7 +78,10 @@ app.add_middleware(
     allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Organization-ID"],
+    allow_headers=[
+        "Authorization", "Content-Type", "X-Request-ID", "X-Organization-ID",
+        "X-Browser-Protocol", "X-Browser-Id", "X-Browser-Epoch",
+    ],
     expose_headers=[
         "Content-Disposition",
         "X-Exported-Count",

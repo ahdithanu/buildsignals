@@ -6,6 +6,11 @@
 > for current verification gaps; deployment, restore, monitoring, and isolation
 > claims require dated operational evidence.
 
+Current local completion and release gates are tracked separately in
+[the September 10 workflow acceptance record](enterprise-completion-2026-09-10.md).
+Its implementation, local verification and production-evidence columns take
+precedence over the historical checkmarks below.
+
 Living tracker for DealSignal production readiness. Update status as items
 ship. IDs match the tiers used in planning conversations.
 

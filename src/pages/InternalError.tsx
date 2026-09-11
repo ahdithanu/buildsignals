@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -27,7 +27,7 @@ export default function InternalError({ onReset, error }: InternalErrorProps) {
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-sm text-muted-foreground">
-            An unexpected error occurred. Engineering has been notified.
+            An unexpected error occurred.
           </p>
           {isDev && error?.message && (
             <pre className="text-left text-xs bg-secondary rounded p-2 overflow-auto max-h-40 whitespace-pre-wrap break-all">
@@ -40,8 +40,11 @@ export default function InternalError({ onReset, error }: InternalErrorProps) {
                 Try again
               </Button>
             )}
+            <Button onClick={() => window.location.reload()} variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" />Reload page
+            </Button>
             <Button asChild variant="outline">
-              <Link to="/">Back to dashboard</Link>
+              <Link to="/" onClick={onReset}>Back to dashboard</Link>
             </Button>
           </div>
         </CardContent>

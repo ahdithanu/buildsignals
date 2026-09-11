@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import type { MeResponse, TokenResponse } from "@/types/auth";
 
 vi.mock("@/api/auth", () => ({
-  authApi: { me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn() },
+  authApi: { me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn(), switchOrg: vi.fn() },
 }));
 
 function deferred<T>() {
@@ -254,5 +254,37 @@ describe("AuthProvider session races", () => {
     pendingToken.resolve(token("old"));
     await assertion;
     expect(getAccessToken()).toBe("another.provider.token");
+  });
+
+  it("retires old workspace state before switching with the captured credential", async () => {
+    const { result } = await mountAuthenticated();
+    const pendingToken = deferred<TokenResponse>();
+    vi.mocked(authApi.switchOrg).mockReturnValueOnce(pendingToken.promise);
+    vi.mocked(authApi.me).mockResolvedValueOnce({ ...me("old"), organization_id: "org-target", role: "editor" });
+    let switching!: Promise<unknown>;
+    act(() => { switching = result.current.switchOrganization("org-target"); });
+    expect(result.current.user).toBeNull();
+    expect(result.current.organizationId).toBeNull();
+    expect(getAccessToken()).toBeNull();
+    expect(authApi.switchOrg).toHaveBeenCalledWith("org-target", "old.token");
+    await act(async () => { pendingToken.resolve(token("target")); await switching; });
+    expect(result.current.user?.id).toBe("old");
+    expect(result.current.organizationId).toBe("org-target");
+    expect(result.current.role).toBe("editor");
+  });
+
+  it("discards an obsolete workspace switch after a newer login", async () => {
+    const { result } = await mountAuthenticated();
+    const pendingToken = deferred<TokenResponse>();
+    vi.mocked(authApi.switchOrg).mockReturnValueOnce(pendingToken.promise);
+    let assertion!: Promise<unknown>;
+    act(() => { assertion = expect(result.current.switchOrganization("org-target")).rejects.toThrow(/superseded/i); });
+    vi.mocked(authApi.login).mockResolvedValueOnce(token("new"));
+    vi.mocked(authApi.me).mockResolvedValueOnce(me("new"));
+    await act(async () => { await result.current.login(credentials); });
+    await act(async () => { pendingToken.resolve(token("target")); await assertion; });
+    expect(result.current.user?.id).toBe("new");
+    expect(result.current.organizationId).toBe("org-new");
+    expect(getAccessToken()).toBe("new.token");
   });
 });

@@ -1,8 +1,10 @@
-"""GDPR data portability — admin-only org-wide data export.
+"""Admin-only organization export of the explicitly listed table inventory.
 
-Buyers in regulated industries need to answer two questions before signing:
-"can a user export all their data?" and "can we delete an org?". This module
-ships the export half; deletion lives in a separate PR.
+Includes organization metadata, membership/profile pairs, deals, assumptions,
+outputs, contacts, outreach, signals, documents, memos, pipeline events, buy
+boxes, distributions, and audit logs. Graph, assessment, ingestion, and other
+unlisted tables are not exported. This is not a complete account-data copy or
+an assertion of GDPR compliance. Organization deletion is a separate operation.
 
 Posture
 -------
@@ -13,19 +15,23 @@ Posture
   We don't allow admins of org A to export org B even if they happen to
   also be members of B — they have to switch orgs first. This keeps the
   audit trail clean (the export is logged against the active org).
-- Includes soft-deleted rows. GDPR "complete copy" obligations override the
-  default `active_query` filter. Each row carries its own `deleted_at` so
-  the recipient can distinguish live vs tombstoned data.
-- Strips `password_hash` everywhere. Never include it. Tests assert this.
+- Includes soft-deleted rows from the listed tables, with `deleted_at` retained.
+- Member profiles use an explicit allowlist that excludes credential columns.
+- Synchronous exports are all-or-nothing across the existing table inventory:
+  at most 10,000 database rows and 20 MiB of encoded JSON. Larger organizations
+  need a separately implemented background export, not silent truncation.
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session
@@ -50,9 +56,84 @@ from app.services.audit_service import log_change
 from app.utils.auth_deps import require_role_of
 from app.utils.org_scope import DEFAULT_ORG_ID
 
-router = APIRouter(prefix="/organizations", tags=["data-portability"])
-
 log = logging.getLogger("dealsignal.erasure")
+
+# Global per-export budgets, not per-table limits or client-selectable page sizes.
+# A member embeds two database rows (membership + allowlisted user profile).
+EXPORT_ROW_CAP = 10_000
+EXPORT_BYTE_CAP = 20 * 1024 * 1024
+_EXPORT_HEADERS = {"Cache-Control": "no-store"}
+
+
+class _NoStoreExportRoute(APIRoute):
+    def get_route_handler(self):
+        handler = super().get_route_handler()
+        if self.name != "export_organization_data":
+            return handler
+
+        async def export_handler(request: Request):
+            try:
+                response = await handler(request)
+            except HTTPException as exc:
+                exc.headers = {**(exc.headers or {}), **_EXPORT_HEADERS}
+                raise
+            except RequestValidationError:
+                return JSONResponse(
+                    status_code=422,
+                    content={"detail": "Invalid organization export request."},
+                    headers=_EXPORT_HEADERS,
+                )
+            except Exception:
+                # Do not return partial data, DB error details, or a download
+                # attachment when serialization, reading, or audit commit fails.
+                log.error("organization.export_failed")
+                return JSONResponse(
+                    status_code=500,
+                    content={"detail": "Organization export failed. No data was returned."},
+                    headers=_EXPORT_HEADERS,
+                )
+            response.headers.update(_EXPORT_HEADERS)
+            return response
+
+        return export_handler
+
+
+router = APIRouter(prefix="/organizations", tags=["data-portability"], route_class=_NoStoreExportRoute)
+
+
+def _export_too_large(limit: str) -> None:
+    raise HTTPException(
+        status_code=413,
+        detail=f"Organization export exceeds the synchronous {limit} limit. No data was returned.",
+        headers=_EXPORT_HEADERS,
+    )
+
+
+class _ExportBudget:
+    def __init__(self):
+        self.rows = 0
+        self.encoded_bytes = 0
+
+    def add(self, item: dict, *, row_cost: int = 1) -> dict:
+        self.rows += row_cost
+        if self.rows > EXPORT_ROW_CAP:
+            _export_too_large(f"{EXPORT_ROW_CAP:,}-row")
+        encoder = json.JSONEncoder(ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+        for chunk in encoder.iterencode(item):
+            self.encoded_bytes += len(chunk.encode("utf-8"))
+            if self.encoded_bytes > EXPORT_BYTE_CAP:
+                _export_too_large(f"{EXPORT_BYTE_CAP:,}-byte")
+        return item
+
+    def collect(self, query, serialize, *, row_cost: int = 1) -> list[dict]:
+        allowance = max(0, (EXPORT_ROW_CAP - self.rows) // row_cost)
+        items = []
+        # The extra row detects overflow without COUNT(*) or unbounded .all().
+        for index, row in enumerate(query.limit(allowance + 1).yield_per(100)):
+            if index == allowance:
+                _export_too_large(f"{EXPORT_ROW_CAP:,}-row")
+            items.append(self.add(serialize(row), row_cost=row_cost))
+        return items
 
 
 class OrgDeletionRequest(BaseModel):
@@ -63,7 +144,7 @@ class OrgDeletionRequest(BaseModel):
 
 # Tables to dump, in stable order. Key is the JSON field name in the export.
 # Each model has an `organization_id` column we filter on. We do NOT use
-# `active_query` here — GDPR exports must include soft-deleted rows.
+# `active_query` here: this inventory includes its soft-deleted rows.
 _ORG_SCOPED_MODELS: list[tuple[str, type]] = [
     ("deals", Deal),
     ("deal_assumptions", DealAssumptions),
@@ -112,6 +193,20 @@ def _serialize_user(user: User) -> dict:
                                   if col.key not in _USER_EXPORT_FIELDS))
 
 
+def _serialize_member(row) -> dict:
+    membership, user = row
+    if user is None:
+        # A corrupt membership must not disappear from a supposedly full copy.
+        raise ValueError("Organization member profile is missing")
+    return {
+        "user": _serialize_user(user),
+        "role": membership.role.value,
+        "is_default": membership.is_default,
+        "joined_at": membership.joined_at.isoformat() if membership.joined_at else None,
+        "membership_id": membership.id,
+    }
+
+
 @router.get("/{org_id}/export")
 def export_organization_data(
     org_id: str,
@@ -120,11 +215,13 @@ def export_organization_data(
     ),
     db: Session = Depends(get_db),
 ):
-    """Return every tenant-scoped row for `org_id` as a downloadable JSON blob.
+    """Return the registered tenant-scoped tables as one downloadable JSON blob.
 
     Admin-only. The `{org_id}` must match the caller's active org — admins
     cannot cross-export by guessing another org's id, even one they belong
-    to under a different membership.
+    to under a different membership. The row cap covers the organization,
+    membership/profile pairs (two rows each), and all exported table rows.
+    Overflow returns 413, never a partial or paginated download.
     """
     org = db.get(Organization, org_id)
     if not org:
@@ -133,41 +230,45 @@ def export_organization_data(
         # to export.
         raise HTTPException(status_code=404, detail="Organization not found")
 
+    budget = _ExportBudget()
     export: dict[str, Any] = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "organization_id": org_id,
-        "organization": _serialize(org),
+        "organization": budget.add(_serialize(org)),
     }
 
     # Members: include each user's profile (sans password_hash) plus their
     # membership row. Joining here avoids two N+1 round-trips on the client.
-    member_rows = (
+    member_query = (
         db.query(OrganizationMembership, User)
-        .join(User, User.id == OrganizationMembership.user_id)
+        .outerjoin(User, User.id == OrganizationMembership.user_id)
         .filter(OrganizationMembership.organization_id == org_id)
-        .all()
+        .order_by(OrganizationMembership.id)
     )
-    export["members"] = [
-        {
-            "user": _serialize_user(user),
-            "role": membership.role.value,
-            "is_default": membership.is_default,
-            "joined_at": membership.joined_at.isoformat() if membership.joined_at else None,
-            "membership_id": membership.id,
-        }
-        for membership, user in member_rows
-    ]
+    export["members"] = budget.collect(member_query, _serialize_member, row_cost=2)
 
-    # Tenant-scoped tables. Include soft-deleted rows so the export is
-    # genuinely complete — the recipient can filter on `deleted_at` if they
-    # only want live data.
+    # Include all rows from the listed tables, including soft-deleted rows.
+    # This is an explicit inventory, not an exhaustive application-data export.
     for field_name, model in _ORG_SCOPED_MODELS:
-        rows = (
+        query = (
             db.query(model)
             .filter(model.organization_id == org_id)
-            .all()
+            .order_by(model.id)
         )
-        export[field_name] = [_serialize(r) for r in rows]
+        export[field_name] = budget.collect(query, _serialize)
+
+    # Prepare and size-check the entire response BEFORE recording success. This
+    # catches encoding failures and JSON envelope overhead as well as row data.
+    filename = f"dealsignal-export-{org.slug or org_id}-{export['exported_at'][:10]}.json"
+    response = JSONResponse(
+        content=export,
+        headers={
+            **_EXPORT_HEADERS,
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+    if len(response.body) > EXPORT_BYTE_CAP:
+        _export_too_large(f"{EXPORT_BYTE_CAP:,}-byte")
 
     # Audit the export itself. Compliance officers care that exports happened
     # at all — it's an exfiltration vector worth surveilling.
@@ -178,20 +279,12 @@ def export_organization_data(
         action="data_export",
         actor_id=principal["user_id"],
         organization_id=org_id,
-        new_values={"exported_at": export["exported_at"]},
+        new_values={"exported_at": export["exported_at"], "row_count": budget.rows,
+                    "byte_count": len(response.body)},
     )
     db.commit()
 
-    # Return as a downloadable JSON file so a browser hitting this directly
-    # gets a save dialog instead of a wall of text. JSON-encodes via FastAPI's
-    # default encoder, which already handles the primitive types we built.
-    filename = f"dealsignal-export-{org.slug or org_id}-{export['exported_at'][:10]}.json"
-    return JSONResponse(
-        content=export,
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-        },
-    )
+    return response
 
 
 @router.post("/{org_id}/delete")

@@ -1,5 +1,6 @@
 from app.models.organization import Organization  # noqa
 from app.models.user import User  # noqa
+from app.models.browser_session import BrowserSession  # noqa
 from app.models.organization_membership import OrganizationMembership  # noqa
 from app.models.deal import Deal  # noqa
 from app.models.deal_assumptions import DealAssumptions  # noqa

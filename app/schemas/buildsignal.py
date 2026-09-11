@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 
 class AssessmentModel(BaseModel):
@@ -29,6 +29,27 @@ class InvestmentImplication(AssessmentModel):
     evidence_ids: list[str] = Field(min_length=1, max_length=50)
 
 
+class AssessmentSourceVersion(AssessmentModel):
+    """Bounded optimistic comparison of source facts already exposed by the graph API."""
+
+    evidence_id: str = Field(min_length=1, max_length=36)
+    relationship_id: str = Field(min_length=1, max_length=36)
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    observed_at: datetime | None
+    created_at: datetime
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    source_entity_id: str = Field(min_length=1, max_length=36)
+    target_entity_id: str = Field(min_length=1, max_length=36)
+    relationship_updated_at: datetime
+    relationship_last_verified_at: datetime
+    relationship_is_current: StrictBool
+
+
+class AssessmentSourcePrecondition(AssessmentModel):
+    schema_version: Literal["1"]
+    evidence: list[AssessmentSourceVersion] = Field(min_length=1, max_length=100)
+
+
 class BuildSignalAssessmentDraft(AssessmentModel):
     detected_change: str = Field(min_length=1, max_length=5000)
     event_at: datetime | None = None
@@ -38,6 +59,7 @@ class BuildSignalAssessmentDraft(AssessmentModel):
     citations: list[EvidenceCitation] = Field(min_length=1, max_length=100)
     implications: list[InvestmentImplication] = Field(min_length=1, max_length=50)
     further_investigation: list[str] = Field(min_length=1, max_length=30)
+    source_precondition: AssessmentSourcePrecondition | None = None
 
     @model_validator(mode="after")
     def validate_evidence_links(self):
@@ -49,6 +71,10 @@ class BuildSignalAssessmentDraft(AssessmentModel):
         cited = {c.evidence_id for c in self.citations}
         if any(set(item.evidence_ids) - cited for item in self.implications):
             raise ValueError("Implications must reference included citations")
+        if self.source_precondition is not None:
+            versions = [item.evidence_id for item in self.source_precondition.evidence]
+            if len(versions) != len(set(versions)) or set(versions) != cited:
+                raise ValueError("Source preconditions must cover every cited evidence record exactly once")
         if any(not item.strip() or len(item) > 2000 for item in self.further_investigation):
             raise ValueError("Investigation items must contain 1 to 2000 characters")
         return self
