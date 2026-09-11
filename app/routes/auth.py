@@ -248,7 +248,10 @@ def login(
                 content={"detail": "TOTP code required"},
                 headers={"X-Auth-Reason": "totp_required"},
             )
-        if not user.totp_secret or not pyotp.TOTP(user.totp_secret).verify(
+        from app.services.mfa_secrets import read_secret
+
+        secret = read_secret(user)
+        if not secret or not pyotp.TOTP(secret).verify(
             payload.totp_code, valid_window=1,
         ):
             lockout.record_failure(email_key)

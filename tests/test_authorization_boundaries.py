@@ -11,7 +11,12 @@ from app.models.organization_membership import MemberRole, OrganizationMembershi
 from app.models.user import User
 from app.routes import organizations
 from app.services.audit_service import log_change
-from app.services.security import create_access_token, decode_access_token, decode_refresh_token, hash_password
+from app.services.security import (
+    create_access_token,
+    decode_access_token,
+    decode_refresh_token,
+    hash_password,
+)
 from app.utils.org_scope import (
     DEFAULT_ORG_ID,
     RequestContext,

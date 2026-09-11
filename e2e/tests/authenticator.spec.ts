@@ -50,7 +50,7 @@ for (const width of [390, 768, 1440]) {
     await expect(page).toHaveURL(/\/login$/);
     await page.getByLabel("Authenticator code", { exact: true }).fill(await authenticatorCode(secret));
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL("http://localhost:8080/");
+    await expect(page).toHaveURL("http://localhost:8080/account");
 
     await page.goto("/account");
     await section.getByRole("button", { name: "Disable authenticator", exact: true }).click();

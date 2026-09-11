@@ -56,7 +56,7 @@ describe("AuthProvider session races", () => {
     setUnauthorizedHandler(null);
   });
 
-  it("ignores initial /auth/me after logout and finishes loading immediately", async () => {
+  it("retires identity immediately but waits for logout settlement before leaving the loading boundary", async () => {
     const initial = deferred<MeResponse>();
     const logout = deferred<void>();
     vi.mocked(authApi.me).mockReturnValueOnce(initial.promise);
@@ -64,7 +64,7 @@ describe("AuthProvider session races", () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     let pending!: Promise<void>;
     act(() => { pending = result.current.logout(); });
-    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isLoading).toBe(true);
     expect(result.current.isAuthenticated).toBe(false);
     expect(getAccessToken()).toBeNull();
 
@@ -73,6 +73,7 @@ describe("AuthProvider session races", () => {
     expect(result.current.organizationId).toBeNull();
     expect(result.current.role).toBeNull();
     await act(async () => { logout.resolve(); await pending; });
+    expect(result.current.isLoading).toBe(false);
   });
 
   it("does not rehydrate from a manual /auth/me refresh after logout", async () => {

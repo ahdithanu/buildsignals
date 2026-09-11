@@ -3,8 +3,9 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const api = process.env.ASSESSMENT_TEST_API || 'http://127.0.0.1:8191/v1';
-const web = process.env.ASSESSMENT_TEST_WEB || 'http://127.0.0.1:4189';
+const api = process.env.ASSESSMENT_TEST_API;
+const web = process.env.ASSESSMENT_TEST_WEB;
+if (!api || !web) throw new Error('Use the managed Playwright suite, or explicitly set ASSESSMENT_TEST_API and ASSESSMENT_TEST_WEB for an isolated disposable backend.');
 const artifacts = process.env.ASSESSMENT_ARTIFACT_DIR || path.join(os.tmpdir(), 'buildsignals-assessment-workflow');
 for (const value of [api, web]) {
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(new URL(value).hostname)) throw new Error('This synthetic workflow check only runs against loopback hosts');

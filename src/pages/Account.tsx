@@ -4,13 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { accountApi } from "@/api/account";
+import { AuthenticatorSettings } from "@/components/AuthenticatorSettings";
 
 /**
  * /account — identity summary + per-user security actions.
  *
- * Right now the only action is "Sign out of all devices", which calls
- * /auth/logout-all on the backend (revokes every refresh token) and then
- * tears down local auth state via useAuth().logout().
+ * Authenticator enrollment and session revocation use the existing auth API.
  */
 export default function Account() {
   const { user, role, organizationId, logout } = useAuth();
@@ -45,25 +44,22 @@ export default function Account() {
 
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto p-6 space-y-8">
+      <div className="max-w-3xl mx-auto p-4 md:p-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Your identity and security settings.
-          </p>
+          <h1 className="text-xl font-semibold">Account</h1>
         </div>
 
-        <section className="rounded-lg border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-medium">Profile</h2>
+        <section className="border-b py-6 space-y-4">
+          <h2 className="text-base font-semibold">Profile</h2>
           {user ? (
             <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
+              <div className="min-w-0">
                 <dt className="text-muted-foreground">Name</dt>
-                <dd className="text-foreground mt-1">{user.full_name}</dd>
+                <dd className="text-foreground mt-1 [overflow-wrap:anywhere]">{user.full_name}</dd>
               </div>
-              <div>
+              <div className="min-w-0">
                 <dt className="text-muted-foreground">Email</dt>
-                <dd className="text-foreground mt-1">{user.email}</dd>
+                <dd className="text-foreground mt-1 [overflow-wrap:anywhere]">{user.email}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Role</dt>
@@ -81,8 +77,10 @@ export default function Account() {
           )}
         </section>
 
-        <section className="rounded-lg border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-medium">Security</h2>
+        <AuthenticatorSettings />
+
+        <section className="py-6 space-y-4">
+          <h2 className="text-base font-semibold">Sessions</h2>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
               Revokes every active session including this one. You'll be
@@ -90,6 +88,7 @@ export default function Account() {
             </p>
             <Button
               variant="destructive"
+              className="min-h-11"
               onClick={handleLogoutAll}
               disabled={isPending}
             >

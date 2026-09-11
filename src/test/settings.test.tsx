@@ -32,6 +32,7 @@ function setAuth(overrides: Partial<ReturnType<typeof useAuth>> = {}) {
     register: vi.fn(),
     logout: vi.fn(),
     refresh: vi.fn(),
+    switchOrganization: vi.fn(),
     ...overrides,
   });
 }

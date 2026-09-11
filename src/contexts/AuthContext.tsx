@@ -141,10 +141,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // and rejects this logout if a newer identity transition wins the lock.
     const credential = getAccessToken();
     reset();
+    const operation = authOperation.current;
+    // Retire private data immediately, but do not present a completed sign-out
+    // before the browser coordinator has dispatched and settled revocation.
+    setIsLoading(true);
     try {
       await authApi.logout(credential);
     } catch {
       // Network error on logout is fine — we still clear local state.
+    } finally {
+      if (operation === authOperation.current) setIsLoading(false);
     }
   }, [reset]);
 
