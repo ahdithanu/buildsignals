@@ -120,8 +120,10 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -d dealsignal_test -v ON_ERROR_STOP=1 <<'SQL'
-          CREATE ROLE appuser LOGIN PASSWORD 'app';
+          CREATE ROLE appuser LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS;
           GRANT ALL ON SCHEMA public TO appuser;
+          -- Disposable CI only: MFA transaction fixtures create private schemas.
+          GRANT CREATE ON DATABASE dealsignal_test TO appuser;
           SQL
           DATABASE_URL="$TEST_POSTGRES_URL" alembic upgrade head
 

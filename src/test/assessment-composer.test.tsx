@@ -265,15 +265,20 @@ describe('Assessment authoring', () => {
     await complete();
     const addCitation = screen.getByRole('button', { name: 'Add citation' });
     const implication = entry('Parcel A');
+    // Scope selectors so each addition avoids scanning all accumulated source options
+    // and recomputing accessible names for every implication checkbox.
     for (let index = 2; index <= 51; index++) {
       fireEvent.click(addCitation);
-      fill(`Source ${index}`, `e${index}`);
-      if (index <= 50) fireEvent.click(implication.getByRole('checkbox', { name: `Planning · e${index}` }));
+      const source = within(screen.getByText(`Source ${index}`, { selector: 'label' })).getByRole('combobox');
+      fireEvent.change(source, { target: { value: `e${index}` } });
+      if (index <= 50) fireEvent.click(implication.getByLabelText(`Planning · e${index}`, { selector: 'input[type="checkbox"]' }));
     }
-    expect(entry('Parcel A').getByText('Implication evidence (50/50)')).toBeInTheDocument();
-    expect(entry('Parcel A').getByRole('checkbox', { name: 'Planning · e51' })).toBeDisabled();
-    fireEvent.click(entry('Parcel A').getByRole('checkbox', { name: 'Planning · e1' }));
-    expect(entry('Parcel A').getByRole('checkbox', { name: 'Planning · e51' })).toBeEnabled();
+    expect(screen.getByText('Citations (51/100)')).toBeInTheDocument();
+    expect(implication.getByText('Implication evidence (50/50)')).toBeInTheDocument();
+    const overflowSource = implication.getByLabelText('Planning · e51', { selector: 'input[type="checkbox"]' });
+    expect(overflowSource).toBeDisabled();
+    fireEvent.click(implication.getByLabelText('Planning · e1', { selector: 'input[type="checkbox"]' }));
+    expect(overflowSource).toBeEnabled();
   }, 20000);
   it('does not attribute a mismatched detail response to the selected entity', async () => {
     vi.mocked(graphApi.entityDetail).mockResolvedValue(detail('other-entity'));
