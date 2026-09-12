@@ -3,7 +3,8 @@ import { ArrowRight, Building, Map, Radar, RefreshCw, Store } from 'lucide-react
 import { Link } from 'react-router-dom';
 
 import { Layout } from '@/components/Layout';
-import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
+import { ErrorState, LoadingState } from '@/components/DataStates';
+import { ImportedDataEmptyState } from '@/components/ImportedDataEmptyState';
 import { Button } from '@/components/ui/button';
 import { useBrandExpansion } from '@/hooks/usePermitBrandMatches';
 import { cn } from '@/lib/utils';
@@ -17,7 +18,7 @@ const cohorts = {
     icon: Store,
     signalLabel: 'Retail signals',
     emptyTitle: 'No retail expansion signals',
-    emptyDescription: 'No candidate or confirmed national retail activity was observed',
+    emptyDescription: 'No candidate or confirmed national retail signals match',
     sectionLabel: 'National retail expansion',
     categoryFallback: 'Retailer',
   },
@@ -26,8 +27,8 @@ const cohorts = {
     heading: 'Major Builder Activity',
     icon: Building,
     signalLabel: 'Builder signals',
-    emptyTitle: 'No major builder activity',
-    emptyDescription: 'No candidate or confirmed major builder activity was observed',
+    emptyTitle: 'No major builder signals found',
+    emptyDescription: 'No candidate or confirmed major builder signals match',
     sectionLabel: 'Major builder activity',
     categoryFallback: 'Builder',
   },
@@ -120,10 +121,12 @@ export default function BrandExpansion() {
         {isLoading && <LoadingState message={`Ranking ${cohortConfig.heading.toLowerCase()} signals...`} />}
         {error && <ErrorState message={`${cohortConfig.heading} intelligence could not be loaded.`} onRetry={() => refetch()} />}
         {!isLoading && !error && rows.length === 0 && (
-          <EmptyState
+          <ImportedDataEmptyState
+            recordTypes={['permit', 'planning']}
+            recordLabel="permit or planning"
             title={cohortConfig.emptyTitle}
-            description={`${cohortConfig.emptyDescription} in the last ${days} days.`}
-            action={<Link to="/permit-review" className="border-2 border-foreground px-3 py-2 text-xs font-semibold">Open permit review</Link>}
+            description={`${cohortConfig.emptyDescription} the last ${days} days in this organization's imported records.`}
+            action={<Button asChild variant="outline" size="sm"><Link to={`/permit-review?status=all&cohort=${cohort}`}>Open permit review<ArrowRight className="h-3.5 w-3.5" /></Link></Button>}
           />
         )}
 
@@ -137,8 +140,8 @@ export default function BrandExpansion() {
               <Metric label="Parcel candidates" value={totals.parcels} />
             </section>
 
-            <div className="flex items-center justify-between border-b px-1 py-2 text-[10px] text-muted-foreground">
-              <span>Ranked by planning activity, active filings, parcel coverage and recency</span>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-1 py-2 text-[10px] text-muted-foreground">
+              <span>Activity may include alterations or signage; no verified new opening is implied.</span>
               <span>Parcel candidates are not verified listings</span>
             </div>
 
@@ -152,7 +155,7 @@ export default function BrandExpansion() {
                       <span className="text-[10px] text-muted-foreground">{row.brand.category || cohortConfig.categoryFallback}</span>
                     </div>
                     <p className="mt-1 text-[10px] text-muted-foreground">
-                      {row.market_count} market{row.market_count === 1 ? '' : 's'} · {Math.round(row.average_confidence * 100)}% mean confidence · latest {new Date(row.latest_signal_at).toLocaleDateString()}
+                      {row.market_count} market{row.market_count === 1 ? '' : 's'} · {Math.round(row.average_confidence * 100)}% mean company-name match confidence · latest {new Date(row.latest_signal_at).toLocaleDateString()}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                       {row.planning_count > 0 ? (

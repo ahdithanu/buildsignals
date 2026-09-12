@@ -1002,9 +1002,10 @@ export default function IngestionOperations() {
                 title={selectedState ? "No sources for this state" : "No sources configured"}
                 description={
                   selectedState
-                    ? "This state does not have any configured or candidate source rows yet."
-                    : "The source catalog has not been synchronized."
+                    ? "No configured sources match this state. Source candidates are listed separately below."
+                    : "No sources are configured for this organization. An administrator must complete source onboarding before collection can begin."
                 }
+                action={<a href="#source-candidates" className="text-xs font-semibold underline">Review source candidates</a>}
               />
             ) : (
               filteredSources.map((source) => (
@@ -1020,7 +1021,7 @@ export default function IngestionOperations() {
         </section>
 
         {!isLoading && !error && (
-          <section className="overflow-hidden rounded-md border bg-card card-shadow" aria-label="Ingestion candidate queue">
+          <section id="source-candidates" className="overflow-hidden rounded-md border bg-card card-shadow" aria-label="Ingestion candidate queue">
             <div className="border-b px-4 py-3">
               <h3 className="text-sm font-semibold text-foreground">Expansion Queue</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
