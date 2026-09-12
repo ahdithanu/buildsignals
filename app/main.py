@@ -14,8 +14,9 @@ if os.environ.get("SENTRY_DSN"):
         send_default_pii=False,
     )
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import CORS_ALLOWED_ORIGINS
 from app.logging_config import configure_logging
@@ -24,6 +25,8 @@ from app.middleware.rate_limit import GlobalRateLimitMiddleware
 from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.versioning import CURRENT_API_PREFIX, ApiVersioningMiddleware
+from app.services.rate_limiter import RateLimitUnavailable
+from app.utils.auth_deps import validate_request_identity
 
 configure_logging()
 from app.routes.activities import router as activities_router
@@ -58,7 +61,17 @@ from app.routes.twofa import router as twofa_router
 app = FastAPI(
     title="BuildSignals - Permit and Development Intelligence",
     version="1.0.0",
+    dependencies=[Depends(validate_request_identity)],
 )
+
+
+@app.exception_handler(RateLimitUnavailable)
+async def authentication_protection_unavailable(request, exc):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Authentication is temporarily unavailable. Please try again shortly."},
+        headers={"Retry-After": "30", "Cache-Control": "no-store"},
+    )
 
 # Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
 # requests fall through to the default-org for backward compatibility.
@@ -76,8 +89,12 @@ app.add_middleware(
     allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Organization-ID"],
+    allow_headers=[
+        "Authorization", "Content-Type", "X-Request-ID", "X-Organization-ID",
+        "X-Browser-Protocol", "X-Browser-Id", "X-Browser-Epoch",
+    ],
     expose_headers=[
+        "Retry-After",
         "Content-Disposition",
         "X-Exported-Count",
         "X-Omitted-Count",

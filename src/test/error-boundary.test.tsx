@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -37,10 +37,12 @@ describe("<ErrorBoundary>", () => {
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(
-      screen.getByText(/An unexpected error occurred\. Engineering has been notified\./),
+      screen.getByText('An unexpected error occurred.'),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /back to dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reload page' })).toBeInTheDocument();
+    expect(screen.queryByText(/Engineering has been notified/)).not.toBeInTheDocument();
   });
 
   it("resets and re-renders children when 'Try again' is clicked and the issue is gone", () => {
@@ -71,5 +73,14 @@ describe("<ErrorBoundary>", () => {
 
     expect(screen.getByText(/RECOVERED/)).toBeInTheDocument();
     expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+  });
+  it('clears the failed route when navigating back to the dashboard', () => {
+    render(<MemoryRouter initialEntries={['/broken']}><ErrorBoundary><Routes>
+      <Route path="/broken" element={<Boom />} />
+      <Route path="/" element={<p>Working dashboard</p>} />
+    </Routes></ErrorBoundary></MemoryRouter>);
+    fireEvent.click(screen.getByRole('link', { name: 'Back to dashboard' }));
+    expect(screen.getByText('Working dashboard')).toBeInTheDocument();
+    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });
 });

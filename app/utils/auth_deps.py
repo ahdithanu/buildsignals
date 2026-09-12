@@ -6,9 +6,12 @@ from typing import Optional
 from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.config import ALLOW_ANONYMOUS, is_public_path
 from app.db import get_db
+from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
+from app.services.browser_sessions import validate_browser_claims
 from app.services.security import decode_access_token
 from app.utils.org_scope import RequestContext
 
@@ -57,12 +60,20 @@ def get_current_user(
 
     user_id = claims.get("sub")
     org_id = claims.get("org_id")
-    if not user_id or not org_id:
+    if not isinstance(user_id, str) or not user_id or not isinstance(org_id, str) or not org_id:
         raise HTTPException(status_code=401, detail="Token missing required claims")
 
     user = db.get(User, user_id)
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+    version = claims.get("tv", 0)
+    if type(version) is not int or version != user.token_version:
+        raise HTTPException(status_code=401, detail="Session has been revoked")
+    validate_browser_claims(db, claims, allow_legacy_access=True)
+
+    organization = db.get(Organization, org_id)
+    if not organization or not organization.is_active:
+        raise HTTPException(status_code=403, detail="Organization is unavailable")
 
     membership = (
         db.query(OrganizationMembership)
@@ -83,7 +94,26 @@ def get_current_user(
         "org_id": org_id,
         "user_id": user_id,
         "role": membership.role.value,
+        "claims": claims,
     }
+
+
+def validate_request_identity(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> None:
+    """Verify live identity on every business route, including read-only routes.
+
+    Middleware establishes tenant context from the signed token; this dependency
+    also checks current account, organization, membership and revocation state.
+    Explicit public endpoints retain their own authentication protocols.
+    """
+    if is_public_path(request.url.path):
+        return
+    if not authorization and ALLOW_ANONYMOUS:
+        return
+    get_current_user(authorization=authorization, db=db)
 
 
 def require_role(*allowed: MemberRole):
@@ -146,7 +176,7 @@ def require_role_of(
 
     1. Requires authentication (401 without a valid Bearer token).
     2. Looks up the caller's membership in the *path* org and requires
-       one of `allowed` roles (403 otherwise).
+       one of `allowed` roles and an active target org (403 otherwise).
     3. Optionally requires the path org to equal the caller's active org
        (`principal['org_id']`) — set `must_match_active_org=True` for
        endpoints that must not act on a different org even if the caller
@@ -202,6 +232,12 @@ def require_role_of(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires one of roles: {sorted(allowed_values)}",
+            )
+        target_org = db.get(Organization, path_org_id, populate_existing=True)
+        if target_org is None or not target_org.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Organization is unavailable",
             )
         return principal
 

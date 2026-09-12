@@ -6,6 +6,7 @@ happy-path shape the frontend depends on.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -62,6 +63,77 @@ def _seed_log(db, *, org_id, entity_type="deal", action="create",
 
 
 class TestAuditAPI:
+    def test_equal_timestamp_pages_use_stable_id_order(self, client, db):
+        reg = _register(client)
+        entries = [_seed_log(db, org_id=reg["organization_id"]) for _ in range(3)]
+        stamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        for entry in entries:
+            entry.created_at = stamp
+        db.commit()
+        expected = sorted((entry.id for entry in entries), reverse=True)
+        actual = []
+        for offset in range(3):
+            response = client.get(
+                f"/audit?entity_type=deal&limit=1&offset={offset}",
+                headers=_auth(reg["access_token"]),
+            )
+            assert response.status_code == 200
+            actual.append(response.json()["items"][0]["id"])
+        assert actual == expected
+
+    def test_foreign_actor_profile_is_not_resolved(self, client, db):
+        reg_a = _register(client, email="alice@acme.com", org_name="Acme")
+        reg_b = _register(client, email="bob@globex.com", org_name="Globex")
+        entry = _seed_log(db, org_id=reg_a["organization_id"],
+                          actor_id=reg_b["user_id"])
+        response = client.get("/audit?entity_type=deal", headers=_auth(reg_a["access_token"]))
+        assert response.status_code == 200
+        item = response.json()["items"][0]
+        assert item["id"] == entry.id
+        assert item["actor_id"] == reg_b["user_id"]  # Preserve the original evidence.
+        assert item["actor_email"] is None
+        assert item["actor_name"] is None
+        assert "bob@globex.com" not in response.text
+        assert response.headers["cache-control"] == "no-store"
+
+    def test_filters_and_raw_audit_ids_cannot_reveal_foreign_records(self, client, db):
+        reg_a = _register(client, email="alice@acme.com", org_name="Acme")
+        reg_b = _register(client, email="bob@globex.com", org_name="Globex")
+        foreign = _seed_log(db, org_id=reg_b["organization_id"],
+                            actor_id=reg_b["user_id"], new_values={"private": "globex"})
+        for query in [{"entity_id": foreign.entity_id}, {"actor_id": reg_b["user_id"]}]:
+            response = client.get("/audit", params=query, headers=_auth(reg_a["access_token"]))
+            assert response.status_code == 200
+            assert response.json()["items"] == []
+            assert response.json()["total"] == 0
+        # No detail endpoint is registered; a raw row ID must not bypass list scoping.
+        response = client.get(f"/audit/{foreign.id}", headers=_auth(reg_a["access_token"]))
+        assert response.status_code == 404
+        assert "globex" not in response.text
+
+    def test_revoked_actor_profile_is_hidden_without_dropping_history(self, client, db):
+        reg = _register(client)
+        actor = User(id=str(uuid4()), email="former@example.com", full_name="Former member",
+                     password_hash="unused", is_active=True)
+        db.add(actor)
+        db.flush()
+        membership = OrganizationMembership(organization_id=reg["organization_id"],
+                                            user_id=actor.id, role=MemberRole.editor)
+        db.add(membership)
+        db.commit()
+        entry = _seed_log(db, org_id=reg["organization_id"], actor_id=actor.id)
+        db.delete(membership)
+        db.commit()
+        actor.email = "new-private-profile@example.com"
+        db.commit()
+        response = client.get("/audit?entity_type=deal", headers=_auth(reg["access_token"]))
+        item = response.json()["items"][0]
+        assert item["id"] == entry.id
+        assert item["actor_id"] == actor.id
+        assert item["actor_email"] is None
+        assert item["actor_name"] is None
+        assert "new-private-profile" not in response.text
+
     def test_unauthenticated_returns_401(self, client):
         r = client.get("/audit")
         assert r.status_code == 401

@@ -122,6 +122,30 @@ def test_brand_catalog_sync_is_idempotent(db):
     assert db.query(BrandAlias).count() == alias_count == expected_aliases
 
 
+def test_brand_match_response_retains_permit_subtype(client, db, tmp_path):
+    sync_brand_catalog(db, load_brand_catalog())
+    db.commit()
+    path = tmp_path / "sign.csv"
+    path.write_text(
+        "id,type,subtype,description,stage,project,address,city,state\n"
+        "1,Building Permit,Sign,Walmart signage,pre_approval,Walmart,100 Main St,Austin,TX\n"
+    )
+    payload = _source_payload(str(path))
+    payload["field_mappings"].append({"source_field": "subtype", "canonical_field": "permit_subtype"})
+    source = client.post("/ingestion/sources", json=payload)
+    assert source.status_code == 201, source.text
+    run = client.post(f"/ingestion/sources/{source.json()['id']}/runs", json={"max_pages": 1})
+    assert run.status_code == 201, run.text
+    assert run.json()["records_failed"] == 0
+    matches = client.get("/permit-brand-matches")
+    assert matches.status_code == 200, matches.text
+    assert len(matches.json()) == 1
+    match = matches.json()[0]
+    assert match["review_status"] == "candidate"
+    assert match["permit"]["permit_type"] == "Building Permit"
+    assert match["permit"]["permit_subtype"] == "Sign"
+
+
 def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()

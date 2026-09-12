@@ -49,6 +49,24 @@ beforeEach(() => {
 });
 
 describe("<IngestionOperations>", () => {
+  it.each([undefined, 'TX'])('explains missing configured sources without inferring catalog or candidate state (%s)', (state) => {
+    vi.mocked(useIngestionHealth).mockReturnValue({
+      data: { sources: [], candidates: [] }, isLoading: false, isFetching: false,
+      error: null, refetch: vi.fn(), canary: { isPending: false }, candidateCanary: { isPending: false },
+    } as unknown as ReturnType<typeof useIngestionHealth>);
+    vi.mocked(useIngestionSchedulePlan).mockReturnValue({ isLoading: false } as ReturnType<typeof useIngestionSchedulePlan>);
+    vi.mocked(usePromoteIngestionCandidate).mockReturnValue({ isPending: false } as ReturnType<typeof usePromoteIngestionCandidate>);
+    render(<MemoryRouter initialEntries={[state ? `/source-health?state=${state}` : '/source-health']}><IngestionOperations /></MemoryRouter>);
+    const health = within(screen.getByRole('region', { name: 'Ingestion source health' }));
+    expect(health.getByText(state ? 'No sources for this state' : 'No sources configured')).toBeInTheDocument();
+    expect(health.getByText(state
+      ? 'No configured sources match this state. Source candidates are listed separately below.'
+      : 'No sources are configured for this organization. An administrator must complete source onboarding before collection can begin.')).toBeInTheDocument();
+    expect(health.getByRole('link', { name: 'Review source candidates' })).toHaveAttribute('href', '#source-candidates');
+    expect(screen.getByRole('region', { name: 'Ingestion candidate queue' })).toHaveAttribute('id', 'source-candidates');
+    expect(screen.queryByText('The source catalog has not been synchronized.')).not.toBeInTheDocument();
+  });
+
   it("shows approved-only source names in the coverage footprint", () => {
     (useIngestionHealth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {

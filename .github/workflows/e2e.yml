@@ -3,10 +3,7 @@ name: e2e
 # Browser-level Playwright tests. Kept SEPARATE from ci.yml because it's
 # slow (boots two servers + a real browser) and shouldn't block every push.
 #
-# Trigger is manual-only (workflow_dispatch) until the specs are confirmed
-# green on a real run — see e2e/README.md, they were authored but never
-# executed. Once they pass, uncomment the pull_request trigger below to gate
-# PRs on them.
+# Pull requests run the real local browser workflows against isolated test data.
 on:
   workflow_dispatch:
   pull_request:
@@ -14,6 +11,9 @@ on:
       - "src/**"
       - "app/**"
       - "e2e/**"
+      - "scripts/verify_assessment_workflow.cjs"
+      - "scripts/verify_browser_policy.cjs"
+      - "vercel.json"
       - "package.json"
       - "package-lock.json"
       - "requirements.txt"
@@ -23,12 +23,6 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      # The Playwright config's webServer boots the backend with these; set
-      # here too so anything the workflow runs directly sees consistent values.
-      DATABASE_URL: "sqlite:///./e2e-test.db"
-      SECRET_KEY: "e2e-ci-secret-key-not-for-production"
-      ENVIRONMENT: "ci"
     steps:
       - uses: actions/checkout@v4
 
@@ -60,6 +54,20 @@ jobs:
         # migrated throwaway DB, rate limits raised) and the Vite dev server
         # (:8080). No manual server startup needed here.
         run: npm run e2e
+
+      - name: Check real-cookie session ordering
+        run: node e2e/auth-cookie-races/reproduce.mjs --require-safe
+
+      - name: Build frontend for browser policy verification
+        env:
+          VITE_API_BASE_URL: https://buildsignals-api.onrender.com
+          VITE_SENTRY_DSN: ""
+        run: npm run build
+
+      - name: Verify strict browser policy and login download budget
+        env:
+          BROWSER_POLICY_ARTIFACT_DIR: playwright-report/browser-policy
+        run: node scripts/verify_browser_policy.cjs
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

@@ -80,6 +80,7 @@ export interface BrandPermitSummary {
   state?: string | null;
   jurisdiction?: string | null;
   permit_type?: string | null;
+  permit_subtype?: string | null;
   work_class?: string | null;
   proposed_use?: string | null;
   valuation?: number | null;

@@ -23,6 +23,8 @@ from sqlalchemy.orm import Session
 
 from app import metrics
 from app.db import get_db
+from app.services.account_lockout import lockout
+from app.services.rate_limiter import InMemoryRateLimiter, RateLimitUnavailable, limiter
 
 router = APIRouter(tags=["health"])
 
@@ -45,6 +47,25 @@ def health_check_deep(db: Session = Depends(get_db)):
             content={"status": "degraded", "db": type(exc).__name__},
         )
     return {"status": "ok", "db": "ok"}
+
+
+@router.get("/health/auth-protection")
+def authentication_protection_health():
+    """Dependency readiness, not a restart probe or an authentication bypass."""
+    headers = {"Cache-Control": "no-store"}
+    try:
+        # Fixed synthetic keys test the same writes, reads and deletes used by
+        # login without consuming a customer's budget. Probe races are harmless.
+        limiter.check(key="readiness", limit=1, window_seconds=60, required=True)
+        lockout.record_failure("__buildsignals_readiness__")
+        lockout.is_locked("__buildsignals_readiness__")
+        lockout.reset("__buildsignals_readiness__")
+        limiter.reset("readiness", required=True)
+    except RateLimitUnavailable:
+        return JSONResponse(status_code=503, content={"status": "degraded", "auth_protection": "unavailable"}, headers=headers)
+    return JSONResponse(content={
+        "status": "ok", "auth_protection": "local" if isinstance(limiter, InMemoryRateLimiter) else "shared",
+    }, headers=headers)
 
 
 @router.get("/metrics")

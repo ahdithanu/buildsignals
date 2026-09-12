@@ -6,8 +6,6 @@ import { PASSWORD, uniqueEmail, registerAndLogin, signOut } from "./helpers";
  * fixed element ids (#email, #password, #fullName, #orgName) so these
  * selectors should survive restyling.
  *
- * ⚠️ Never executed yet — see e2e/README.md. Selectors were read from
- * src/pages/Login.tsx and Register.tsx.
  */
 
 test("register lands on the authenticated dashboard", async ({ page }) => {
@@ -40,9 +38,9 @@ test("bad password is rejected", async ({ page }) => {
 
   await page.locator("#email").fill(email);
   await page.locator("#password").fill("wrong-password");
+  const rejected = page.waitForResponse(response => response.url().endsWith("/auth/login") && response.request().method() === "POST");
   await page.getByRole("button", { name: /sign in/i }).click();
-
-  // Should stay on /login. Exact error copy may need adjusting on first run;
-  // the URL assertion is the stable part.
+  expect((await rejected).status()).toBe(401);
+  await expect(page.getByRole("alert")).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
 });

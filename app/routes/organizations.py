@@ -1,13 +1,13 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
-from app.routes.auth import _set_refresh_cookie
 from app.schemas.auth import TokenResponse
 from app.schemas.organization import (
     InviteMemberRequest,
@@ -18,7 +18,7 @@ from app.schemas.organization import (
     UpdateMemberRequest,
 )
 from app.services.audit_service import log_change
-from app.services.security import create_access_token
+from app.services.browser_sessions import issue_browser_session
 from app.utils.auth_deps import get_current_user, require_role_of
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -33,6 +33,7 @@ def _ensure_membership(db: Session, *, org_id: str, user_id: str) -> Organizatio
             OrganizationMembership.organization_id == org_id,
             OrganizationMembership.user_id == user_id,
         )
+        .populate_existing()
         .first()
     )
     if not m:
@@ -40,16 +41,67 @@ def _ensure_membership(db: Session, *, org_id: str, user_id: str) -> Organizatio
     return m
 
 
+def _lock_admin_membership(db: Session, *, org_id: str, user_id: str) -> None:
+    # Serialize member mutations on their parent, including concurrent demotions.
+    # SQLite ignores FOR UPDATE; a no-op write provides its equivalent write lock.
+    if db.get_bind().dialect.name == "sqlite":
+        db.execute(
+            update(Organization)
+            .where(Organization.id == org_id)
+            .values(updated_at=Organization.updated_at)
+        )
+    org = (
+        db.query(Organization)
+        .filter(Organization.id == org_id)
+        .with_for_update()
+        .populate_existing()
+        .first()
+    )
+    if org is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    if not org.is_active:
+        raise HTTPException(status_code=403, detail="Organization is unavailable")
+    # Dependencies may have run before another admin's revocation committed.
+    user = db.query(User).filter(User.id == user_id).populate_existing().first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    membership = _ensure_membership(db, org_id=org_id, user_id=user_id)
+    if membership.role != MemberRole.admin:
+        raise HTTPException(status_code=403, detail="Requires admin role")
+
+
+def _ensure_other_active_admin(db: Session, *, org_id: str, user_id: str, action: str) -> None:
+    other_admin = (
+        db.query(OrganizationMembership.id)
+        .join(User, User.id == OrganizationMembership.user_id)
+        .filter(
+            OrganizationMembership.organization_id == org_id,
+            OrganizationMembership.user_id != user_id,
+            OrganizationMembership.role == MemberRole.admin,
+            User.is_active.is_(True),
+        )
+        .first()
+    )
+    if other_admin is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot {action} the last admin of the organization (last active admin)",
+        )
+
+
 # ── list my organizations ──────────────────────────────────────────────────
 
 @router.get("/me", response_model=list[MyOrganizationItem])
 def list_my_organizations(
+    response: Response,
     principal: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    response.headers["Cache-Control"] = "no-store"
     memberships = (
         db.query(OrganizationMembership)
-        .filter(OrganizationMembership.user_id == principal["user_id"])
+        .join(Organization, Organization.id == OrganizationMembership.organization_id)
+        .filter(OrganizationMembership.user_id == principal["user_id"], Organization.is_active.is_(True))
         .order_by(OrganizationMembership.is_default.desc(), OrganizationMembership.joined_at.asc())
         .all()
     )
@@ -69,11 +121,16 @@ def list_my_organizations(
 @router.get("/{org_id}/members", response_model=list[MemberResponse])
 def list_members(
     org_id: str,
+    response: Response,
     principal: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     # Any member can list (read-only operation)
     _ensure_membership(db, org_id=org_id, user_id=principal["user_id"])
+    org = db.get(Organization, org_id)
+    if org is None or not org.is_active:
+        raise HTTPException(status_code=403, detail="Organization is unavailable")
+    response.headers["Cache-Control"] = "no-store"
 
     rows = (
         db.query(OrganizationMembership, User)
@@ -102,12 +159,11 @@ def list_members(
 def invite_member(
     org_id: str,
     payload: InviteMemberRequest,
+    response: Response,
     principal: dict = Depends(require_role_of(MemberRole.admin)),
     db: Session = Depends(get_db),
 ):
-    org = db.get(Organization, org_id)
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
+    _lock_admin_membership(db, org_id=org_id, user_id=principal["user_id"])
 
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
@@ -115,6 +171,8 @@ def invite_member(
             status_code=404,
             detail="No user with that email exists. Have them register first.",
         )
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="Cannot invite an inactive user")
 
     existing = (
         db.query(OrganizationMembership)
@@ -135,7 +193,7 @@ def invite_member(
         is_default=False,
     )
     db.add(membership)
-    db.commit()
+    db.flush()
 
     log_change(
         db, "membership", membership.id, "invite",
@@ -143,6 +201,7 @@ def invite_member(
         new_values={"user_id": user.id, "email": user.email, "role": payload.role.value},
     )
     db.commit()
+    response.headers["Cache-Control"] = "no-store"
 
     return MemberResponse(
         id=membership.id,
@@ -162,30 +221,24 @@ def update_member_role(
     org_id: str,
     user_id: str,
     payload: UpdateMemberRequest,
+    response: Response,
     principal: dict = Depends(require_role_of(MemberRole.admin)),
     db: Session = Depends(get_db),
 ):
+    _lock_admin_membership(db, org_id=org_id, user_id=principal["user_id"])
     membership = _ensure_membership(db, org_id=org_id, user_id=user_id)
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Member user not found")
+    if payload.role == MemberRole.admin and not user.is_active:
+        raise HTTPException(status_code=400, detail="Cannot promote an inactive user to admin")
 
     # Prevent demoting the last admin
     if membership.role == MemberRole.admin and payload.role != MemberRole.admin:
-        admin_count = (
-            db.query(OrganizationMembership)
-            .filter(
-                OrganizationMembership.organization_id == org_id,
-                OrganizationMembership.role == MemberRole.admin,
-            )
-            .count()
-        )
-        if admin_count <= 1:
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot demote the last admin of the organization",
-            )
+        _ensure_other_active_admin(db, org_id=org_id, user_id=user_id, action="demote")
 
     old_role = membership.role.value
     membership.role = payload.role
-    db.commit()
 
     log_change(
         db, "membership", membership.id, "role_change",
@@ -193,8 +246,8 @@ def update_member_role(
         old_values={"role": old_role}, new_values={"role": payload.role.value},
     )
     db.commit()
+    response.headers["Cache-Control"] = "no-store"
 
-    user = db.get(User, user_id)
     return MemberResponse(
         id=membership.id,
         user_id=user.id,
@@ -215,26 +268,14 @@ def remove_member(
     principal: dict = Depends(require_role_of(MemberRole.admin)),
     db: Session = Depends(get_db),
 ):
+    _lock_admin_membership(db, org_id=org_id, user_id=principal["user_id"])
     membership = _ensure_membership(db, org_id=org_id, user_id=user_id)
 
     # Prevent removing the last admin
     if membership.role == MemberRole.admin:
-        admin_count = (
-            db.query(OrganizationMembership)
-            .filter(
-                OrganizationMembership.organization_id == org_id,
-                OrganizationMembership.role == MemberRole.admin,
-            )
-            .count()
-        )
-        if admin_count <= 1:
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot remove the last admin of the organization",
-            )
+        _ensure_other_active_admin(db, org_id=org_id, user_id=user_id, action="remove")
 
     db.delete(membership)
-    db.commit()
 
     log_change(
         db, "membership", membership.id, "remove",
@@ -254,11 +295,12 @@ switch_router = APIRouter(prefix="/auth", tags=["auth"])
 @switch_router.post("/switch-org", response_model=TokenResponse)
 def switch_org(
     payload: SwitchOrgRequest,
+    request: Request,
     response: Response,
     principal: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Issue a new JWT scoped to a different org the user belongs to."""
+    """Rotate this browser family into another active member workspace."""
     membership = (
         db.query(OrganizationMembership)
         .filter(
@@ -273,20 +315,16 @@ def switch_org(
             detail="Not a member of that organization",
         )
 
-    token = create_access_token(
-        user_id=principal["user_id"],
+    org = db.get(Organization, payload.organization_id)
+    if org is None or not org.is_active:
+        raise HTTPException(status_code=403, detail="Organization is unavailable")
+
+    result = issue_browser_session(
+        db, request, response,
+        user=principal["user"],
         org_id=payload.organization_id,
-    )
-    # Rotate the refresh cookie so a silent refresh can't throw the user
-    # back to the previous org.
-    _set_refresh_cookie(
-        response,
-        user_id=principal["user_id"],
-        org_id=payload.organization_id,
-    )
-    return TokenResponse(
-        access_token=token,
-        user_id=principal["user_id"],
-        organization_id=payload.organization_id,
         role=membership.role.value,
+        principal_claims=principal["claims"],
     )
+    db.commit()
+    return result

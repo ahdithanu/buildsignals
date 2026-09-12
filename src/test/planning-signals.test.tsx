@@ -6,6 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlanningSignals from '@/pages/PlanningSignals';
 
 const usePlanningSignalsMock = vi.fn();
+const useImportedRecordAvailabilityMock = vi.fn();
+
+vi.mock('@/hooks/useImportedRecordAvailability', () => ({
+  useImportedRecordAvailability: (...args: unknown[]) => useImportedRecordAvailabilityMock(...args),
+}));
 
 vi.mock('@/components/Layout', () => ({
   Layout: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -76,6 +81,8 @@ describe('<PlanningSignals>', () => {
   beforeEach(() => {
     usePlanningSignalsMock.mockReset();
     usePlanningSignalsMock.mockReturnValue(planningResult);
+    useImportedRecordAvailabilityMock.mockReset();
+    useImportedRecordAvailabilityMock.mockReturnValue({ data: false, isPending: false, error: null, refetch: vi.fn() });
   });
 
   it('loads the company filter from the URL and displays evidence-backed matches', () => {
@@ -91,10 +98,12 @@ describe('<PlanningSignals>', () => {
     });
     expect(screen.getByRole('heading', { name: 'Planning Signals' })).toBeInTheDocument();
     expect(screen.getByText('Applicant requests approval for a new Starbucks drive-through location.')).toBeInTheDocument();
-    expect(screen.getByText('94%')).toBeInTheDocument();
+    expect(screen.getByText('94% company-match confidence')).toBeInTheDocument();
+    expect(screen.getByText('Review status: candidate (unreviewed)')).toBeInTheDocument();
     expect(screen.getByText('scheduled hearing')).toBeInTheDocument();
     expect(screen.getByText('100 N First St · San Jose · CA')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /source/i })).toHaveAttribute('href', 'https://example.gov/agendas/42');
+    expect(useImportedRecordAvailabilityMock).not.toHaveBeenCalled();
   });
 
   it('writes planning filters to the URL-backed query', () => {
@@ -107,5 +116,59 @@ describe('<PlanningSignals>', () => {
     expect(usePlanningSignalsMock).toHaveBeenLastCalledWith(expect.objectContaining({
       state: 'TX', minimum_priority: 80,
     }));
+  });
+
+  it('does not blame planning filters when the organization has no imported planning data', () => {
+    usePlanningSignalsMock.mockReturnValue({ ...planningResult, data: [] });
+    render(<MemoryRouter initialEntries={['/planning?state=TX&brand_id=brand-1']}><PlanningSignals /></MemoryRouter>);
+    expect(screen.getByText('No imported records available')).toBeInTheDocument();
+    expect(screen.getByText(/No stored planning records were measured for this organization/)).toBeInTheDocument();
+    expect(useImportedRecordAvailabilityMock).toHaveBeenCalledWith(['planning']);
+    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health');
+    expect(screen.queryByText(/Adjust the active filters|none match the active filters/)).not.toBeInTheDocument();
+  });
+
+  it('identifies an empty filtered result only after confirming imported planning records', () => {
+    usePlanningSignalsMock.mockReturnValue({ ...planningResult, data: [] });
+    useImportedRecordAvailabilityMock.mockReturnValue({ data: true, isPending: false, error: null, refetch: vi.fn() });
+    render(<MemoryRouter initialEntries={['/planning?state=TX']}><PlanningSignals /></MemoryRouter>);
+    expect(screen.getByText('Planning records are available for this organization, but none match the active filters.')).toBeInTheDocument();
+    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
+  });
+
+  it('does not suggest changing filters when no filters are active', () => {
+    usePlanningSignalsMock.mockReturnValue({ ...planningResult, data: [] });
+    useImportedRecordAvailabilityMock.mockReturnValue({ data: true, isPending: false, error: null, refetch: vi.fn() });
+    render(<MemoryRouter><PlanningSignals /></MemoryRouter>);
+    expect(screen.getByText('No planning signals were returned for this organization. Review source health for collection status.')).toBeInTheDocument();
+    expect(screen.queryByText(/active filters/)).not.toBeInTheDocument();
+  });
+
+  it('collapses a long source title without repeating a prefix excerpt or losing source text', () => {
+    const title = 'Dallas planning agenda source text with application details. '.repeat(80).slice(0, 3857);
+    const excerpt = `${title.slice(0, 500)}...`;
+    usePlanningSignalsMock.mockReturnValue({ ...planningResult, data: [{ ...planningResult.data[0], title, evidence_excerpt: excerpt }] });
+    render(<MemoryRouter><PlanningSignals /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Planning record PD-2026-42' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: title })).not.toBeInTheDocument();
+    expect(screen.queryByText(excerpt)).not.toBeInTheDocument();
+    const fullText = screen.getByText(title);
+    expect(fullText.textContent).toBe(title);
+    expect(fullText).not.toBeVisible();
+    fireEvent.click(screen.getByText('Source text'));
+    expect(fullText).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Full source text' })).toHaveClass('max-h-64', 'overflow-y-auto');
+    expect(screen.getByText('Review status: candidate (unreviewed)')).toBeInTheDocument();
+    expect(screen.getByText('94% company-match confidence')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /source/i })).toHaveAttribute('href', 'https://example.gov/agendas/42');
+  });
+
+  it.each(['confirmed', 'dismissed', 'retracted'])('shows the returned company-match review status: %s', (review_status) => {
+    const record = planningResult.data[0];
+    usePlanningSignalsMock.mockReturnValue({ ...planningResult, data: [{ ...record, company_matches: [{ ...record.company_matches[0], review_status }] }] });
+    render(<MemoryRouter><PlanningSignals /></MemoryRouter>);
+    expect(screen.getByText(`Review status: ${review_status}`)).toBeInTheDocument();
+    expect(screen.getByText('94% company-match confidence')).toBeInTheDocument();
+    expect(screen.queryByText('Review status: candidate (unreviewed)')).not.toBeInTheDocument();
   });
 });

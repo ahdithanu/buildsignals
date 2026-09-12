@@ -1530,7 +1530,10 @@ def _project_planning_to_graph(
         db,
         GraphEntityCreate(
             entity_type=GraphEntityType.source_record,
-            display_name=planning.title,
+            display_name=(
+                planning.title if len(planning.title) <= 255
+                else _bounded_source_id("Planning", planning.reference_number or stable_id)
+            ),
             source_system=source.key,
             source_id=stable_id,
             address=planning.address,
@@ -1540,6 +1543,7 @@ def _project_planning_to_graph(
             confidence=planning.confidence,
             attributes={
                 "planning_record_id": planning.id,
+                "title": planning.title,
                 "reference_number": planning.reference_number,
                 "event_type": planning.event_type,
                 "stage": planning.stage,

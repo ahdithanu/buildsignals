@@ -48,6 +48,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         for name, value in _ALWAYS_ON_HEADERS.items():
             response.headers.setdefault(name, value)
+        if request.headers.get("authorization") or request.url.path.startswith(("/auth/", "/v1/auth/")):
+            # Auth responses contain credentials; business responses are tenant
+            # scoped. Neither may survive in shared or browser HTTP caches.
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Pragma"] = "no-cache"
+            response.headers.add_vary_header("Authorization")
         if app_config.IS_PRODUCTION:
             response.headers.setdefault("Strict-Transport-Security", _HSTS_VALUE)
         return response

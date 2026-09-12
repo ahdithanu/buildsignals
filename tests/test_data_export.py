@@ -1,4 +1,4 @@
-"""Tests for the GDPR data export endpoint.
+"""Tests for the scoped organization data export endpoint.
 
 Covers the security contract (admin-only, single-org), the shape of the
 dump, and the hard guarantee that `password_hash` never leaks.

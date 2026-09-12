@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,37 +9,38 @@ import {
   RedirectIfAuthenticated,
   RequireAuth,
 } from "@/components/auth/RequireAuth";
-import Dashboard from "./pages/Dashboard";
-import DealInbox from "./pages/DealInbox";
-import DealDetail from "./pages/DealDetail";
-import Underwriting from "./pages/Underwriting";
-import MemoGenerator from "./pages/MemoGenerator";
-import Pipeline from "./pages/Pipeline";
-import MarketSignals from "./pages/MarketSignals";
-import PermitBrandReview from "./pages/PermitBrandReview";
-import BrandExpansion from "./pages/BrandExpansion";
-import PlanningSignals from "./pages/PlanningSignals";
-import PermitDetail from "./pages/PermitDetail";
-import IngestionOperations from "./pages/IngestionOperations";
-import IngestionCandidateDetail from "./pages/IngestionCandidateDetail";
-import IngestionSourceDetail from "./pages/IngestionSourceDetail";
-import GraphEntityDetail from "./pages/GraphEntityDetail";
-import GraphRelationshipDetail from "./pages/GraphRelationshipDetail";
-import GraphExplorer from "./pages/GraphExplorer";
-import GraphVerificationQueue from "./pages/GraphVerificationQueue";
-import ParcelDetail from "./pages/ParcelDetail";
-import AcquisitionRadar from "./pages/AcquisitionRadar";
-import AcquisitionMap from "./pages/AcquisitionMap";
-import Settings from "./pages/Settings";
-import AuditLog from "./pages/AuditLog";
-import Team from "./pages/Team";
-import Account from "./pages/Account";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const DealInbox = lazy(() => import('./pages/DealInbox'));
+const DealDetail = lazy(() => import('./pages/DealDetail'));
+const Underwriting = lazy(() => import('./pages/Underwriting'));
+const MemoGenerator = lazy(() => import('./pages/MemoGenerator'));
+const Pipeline = lazy(() => import('./pages/Pipeline'));
+const MarketSignals = lazy(() => import('./pages/MarketSignals'));
+const PermitBrandReview = lazy(() => import('./pages/PermitBrandReview'));
+const BrandExpansion = lazy(() => import('./pages/BrandExpansion'));
+const PlanningSignals = lazy(() => import('./pages/PlanningSignals'));
+const PermitDetail = lazy(() => import('./pages/PermitDetail'));
+const IngestionOperations = lazy(() => import('./pages/IngestionOperations'));
+const IngestionCandidateDetail = lazy(() => import('./pages/IngestionCandidateDetail'));
+const IngestionSourceDetail = lazy(() => import('./pages/IngestionSourceDetail'));
+const GraphEntityDetail = lazy(() => import('./pages/GraphEntityDetail'));
+const GraphRelationshipDetail = lazy(() => import('./pages/GraphRelationshipDetail'));
+const GraphExplorer = lazy(() => import('./pages/GraphExplorer'));
+const GraphVerificationQueue = lazy(() => import('./pages/GraphVerificationQueue'));
+const ParcelDetail = lazy(() => import('./pages/ParcelDetail'));
+const AcquisitionRadar = lazy(() => import('./pages/AcquisitionRadar'));
+const AcquisitionMap = lazy(() => import('./pages/AcquisitionMap'));
+const Settings = lazy(() => import('./pages/Settings'));
+const AuditLog = lazy(() => import('./pages/AuditLog'));
+const Team = lazy(() => import('./pages/Team'));
+const Account = lazy(() => import('./pages/Account'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const App = () => (
   <AuthProvider>
@@ -48,6 +50,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ErrorBoundary>
+          <Suspense fallback={<main role="status" className="flex min-h-dvh items-center justify-center p-6 text-sm text-muted-foreground">Loading...</main>}>
           <Routes>
             {/* Public — authed users get bounced back to the app */}
             <Route
@@ -286,6 +289,7 @@ const App = () => (
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>

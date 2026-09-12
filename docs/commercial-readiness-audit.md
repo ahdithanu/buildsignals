@@ -1,5 +1,9 @@
 # Commercial Readiness Audit - September 9, 2026
 
+Implementation follow-up: [Security and coverage evidence release](security-evidence-release.md)
+records local verification, newly discovered missing RLS policies, and the
+remaining production gates. Findings below retain their original audit context.
+
 This is a scoped code/configuration review and public-header check, not a
 penetration test, certification, or guarantee of investment results.
 
