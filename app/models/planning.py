@@ -49,7 +49,7 @@ class PlanningRecord(OrgMixin, Base):
     reference_number: Mapped[Optional[str]] = mapped_column(String(255))
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     stage: Mapped[Optional[str]] = mapped_column(String(50))
-    title: Mapped[str] = mapped_column(String(1000), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[Optional[str]] = mapped_column(Text)
     evidence_excerpt: Mapped[Optional[str]] = mapped_column(Text)
     agenda_item_number: Mapped[Optional[str]] = mapped_column(String(100))

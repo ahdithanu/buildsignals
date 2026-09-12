@@ -3,7 +3,9 @@ import { CalendarDays, ExternalLink, FileSearch, MapPin, RefreshCw, X } from 'lu
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Layout } from '@/components/Layout';
-import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
+import { ErrorState, LoadingState } from '@/components/DataStates';
+import { ImportedDataEmptyState } from '@/components/ImportedDataEmptyState';
+import { SourceRecordHeading, SourceRecordText } from '@/components/SourceRecordText';
 import { Button } from '@/components/ui/button';
 import { usePlanningSignals } from '@/hooks/usePlanningSignals';
 import { cn } from '@/lib/utils';
@@ -42,6 +44,7 @@ export default function PlanningSignals() {
   }, [searchParams]);
   const { data, isLoading, isFetching, error, refetch } = usePlanningSignals(params);
   const records = data ?? [];
+  const hasFilters = !!(params.brand_id || params.state || params.city || params.category || params.minimum_priority);
   const matchedBrand = records
     .flatMap((record) => record.company_matches)
     .find((match) => match.brand.id === params.brand_id)?.brand;
@@ -107,7 +110,14 @@ export default function PlanningSignals() {
         {isLoading && <LoadingState message="Loading planning signals..." />}
         {error && <ErrorState message="Planning signals could not be loaded." onRetry={() => refetch()} />}
         {!isLoading && !error && records.length === 0 && (
-          <EmptyState title="No planning signals found" description="Adjust the active filters or broaden the priority range." />
+          <ImportedDataEmptyState
+            recordTypes={['planning']}
+            recordLabel="planning"
+            title="No planning signals found"
+            description={hasFilters
+              ? 'Planning records are available for this organization, but none match the active filters.'
+              : 'No planning signals were returned for this organization. Review source health for collection status.'}
+          />
         )}
 
         {!isLoading && !error && records.length > 0 && (
@@ -136,7 +146,7 @@ export default function PlanningSignals() {
 
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <h2 className="text-sm font-semibold">{record.title}</h2>
+                      <SourceRecordHeading title={record.title} reference={record.reference_number || record.external_record_id} fallbackReference={record.id} />
                       {record.agenda_item_number && <span className="text-[9px] text-muted-foreground">Item {record.agenda_item_number}</span>}
                     </div>
                     {(record.meeting_name || record.governing_body) && (
@@ -144,7 +154,7 @@ export default function PlanningSignals() {
                         {[record.meeting_name, record.governing_body].filter(Boolean).join(' · ')}
                       </p>
                     )}
-                    <p className="mt-3 text-xs leading-relaxed">{record.evidence_excerpt || record.summary || 'Evidence excerpt unavailable.'}</p>
+                    <SourceRecordText title={record.title} excerpt={record.evidence_excerpt || record.summary} className="mt-3 text-xs leading-relaxed" />
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {record.signal_categories.map((category) => (
                         <span key={category} className="border border-border bg-background px-1.5 py-0.5 text-[9px]">{category.replace(/_/g, ' ')}</span>
@@ -157,12 +167,11 @@ export default function PlanningSignals() {
                     {record.company_matches.length > 0 ? (
                       <div className="mt-2 border-t border-foreground">
                         {record.company_matches.map((match) => (
-                          <div key={match.id} className="flex items-center justify-between gap-3 border-b border-border py-2 text-[10px]">
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold">{match.brand.name}</p>
-                              <p className="truncate text-[9px] text-muted-foreground">Matched “{match.matched_alias}”</p>
-                            </div>
-                            <span className="shrink-0 tabular-nums">{Math.round(match.confidence * 100)}%</span>
+                          <div key={match.id} className="min-w-0 space-y-1 break-words border-b border-border py-2 text-[10px] [overflow-wrap:anywhere]">
+                            <p className="font-semibold">{match.brand.name}</p>
+                            <p className="text-[9px] text-muted-foreground">Matched “{match.matched_alias}”</p>
+                            <p>Review status: {match.review_status || 'Not recorded'}{match.review_status === 'candidate' && ' (unreviewed)'}</p>
+                            <p className="tabular-nums">{Math.round(match.confidence * 100)}% company-match confidence</p>
                           </div>
                         ))}
                       </div>

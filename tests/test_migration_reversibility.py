@@ -151,7 +151,7 @@ def test_browser_downgrade_refuses_to_discard_revocation_history(tmp_path):
                 "VALUES ('synthetic-session','synthetic-browser',1,1,1,"
                 "'2026-09-11','2026-09-10','2026-09-10')"
             ))
-        down = _alembic("downgrade", "-1", db_url=db_url)
+        down = _alembic("downgrade", "20260909_0002", db_url=db_url)
         assert down.returncode != 0
         assert "Refusing to discard browser revocation history" in down.stderr
         with engine.connect() as connection:
@@ -290,7 +290,13 @@ def test_postgres_round_trip_leaves_no_orphaned_enum_types():
                 "WHERE tgname = 'trg_raw_source_records_immutable' "
                 "AND NOT tgisinternal"
             )).scalar_one()
+            title_type = conn.execute(text(
+                "SELECT data_type FROM information_schema.columns "
+                "WHERE table_schema = current_schema() "
+                "AND table_name = 'planning_records' AND column_name = 'title'"
+            )).scalar_one()
         assert raw_guard_count == 1
+        assert title_type == "text"
     finally:
         engine.dispose()
     down = _alembic("downgrade", "base", db_url=_PG_URL)

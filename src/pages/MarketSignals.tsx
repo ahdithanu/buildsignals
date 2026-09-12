@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, RefreshCw, Search } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
+import { DetectedActivity } from '@/components/DetectedActivity';
 import { SignalAssessmentPanel } from '@/components/SignalAssessmentPanel';
 import { OpportunityGraphPanel } from '@/components/OpportunityGraphPanel';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +34,8 @@ export default function MarketSignals() {
       && `${signal.property} ${signal.summary} ${signal.source ?? ''} ${signal.id}`.toLowerCase().includes(search));
   }, [signals.data, query, type]);
   const selected = filtered.find(signal => signal.id === selectedId) ?? filtered[0];
-  const types = [...new Set((signals.data ?? []).map(signal => signal.type))].sort();
+  const types = [...new Set([...(signals.data ?? []).map(signal => signal.type), ...(type ? [type] : [])])].sort();
+  const hasFilters = !!(query.trim() || type);
   return <Layout>
     <div className="flex min-h-[calc(100vh-48px)] flex-col">
       <header className="flex flex-wrap items-center gap-3 border-b-2 border-foreground px-4 py-3">
@@ -43,12 +45,20 @@ export default function MarketSignals() {
         <button title="Refresh signals" aria-label="Refresh signals" disabled={signals.isFetching} onClick={() => signals.refetch()}><RefreshCw size={16} className={signals.isFetching ? 'animate-spin' : ''} /></button>
       </header>
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-xs">
-        <span>{filtered.length} shown on page {page + 1}</span>
+        <span>{page === 0 && signals.isSuccess && signals.data.length === 0 ? 'No saved market signals' : `${filtered.length} saved signals shown on page ${page + 1}`}</span>
         <div className="flex items-center gap-3"><button title="Previous page" aria-label="Previous page" disabled={page === 0 || signals.isFetching} onClick={() => { setPage(value => value - 1); setType(''); }}><ArrowLeft size={16} /></button><button title="Next page" aria-label="Next page" disabled={signals.isFetching || (signals.data?.length ?? 0) < pageSize} onClick={() => { setPage(value => value + 1); setType(''); }}><ArrowRight size={16} /></button></div>
       </div>
       {signals.isLoading && <LoadingState message="Loading signals..." />}
       {signals.error && <ErrorState message="Failed to load signals." onRetry={() => signals.refetch()} />}
-      {!signals.isLoading && !signals.error && !filtered.length && <EmptyState title="No signals found" description="No records match the current page and filters." />}
+      {!signals.isLoading && !signals.error && !filtered.length && (
+        page === 0 && signals.data?.length === 0 ? (
+          hasFilters ? <EmptyState title="No saved signals found" description="No market signals are saved for this organization. Clear filters to view detected activity." /> : <DetectedActivity />
+        ) : (
+          <EmptyState title="No signals found" description={signals.data?.length
+            ? 'No loaded records match the selected filters.'
+            : 'No signals on this page. Return to the previous page.'} />
+        )
+      )}
       {!signals.error && selected && <div className="grid flex-1 content-start lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
         <section aria-label="Signal queue" className="min-w-0 border-r border-border">
           {filtered.map(signal => <button key={signal.id} aria-pressed={selected.id === signal.id} onClick={() => setSelectedId(signal.id)} className={cn('block w-full border-b border-border p-4 text-left hover:bg-secondary', selected.id === signal.id && 'bg-secondary')}>
