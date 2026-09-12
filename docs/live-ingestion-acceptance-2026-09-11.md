@@ -81,6 +81,11 @@ Evidence links and raw version lineage remain attached in the application.
    activity shows the work description rather than only a matched company name.
    Older API responses still display signage/alteration context when the
    canonical description supplies it.
+9. An organization with no saved deals now sees bounded detected activity on
+   both the default post-login Dashboard and Deal Inbox. The compact saved-deal
+   empty state no longer hides imported evidence behind a manual-entry prompt.
+   Saved-deal filters remain scoped to saved deals; displaying source activity
+   does not create deals, confirm company matches, or publish assessments.
 
 ## Verification
 
@@ -99,6 +104,13 @@ parcel references, worker autoflush behavior, safe title downgrades, onboarding
 authorization/dry-run/auditing, and permit-subtype serialization. Frontend tests
 cover empty/error distinctions, bounded read-only activity, tenant query keys,
 long evidence text, and unreviewed company-match labels.
+
+The Inbox follow-up passed 334 frontend tests, typecheck, the production build,
+and all nine Chromium workflow tests. The create-deal browser test verifies that
+activity is available on the empty Dashboard and Inbox, then gives way to the
+saved-deal list after an explicit creation. The actual customer Inbox displayed
+Walmart and Wawa candidate permit matches and Dallas planning evidence locally;
+390px and 1440px layout checks found no horizontal document overflow.
 
 ## Reproduction And Release Gates
 
