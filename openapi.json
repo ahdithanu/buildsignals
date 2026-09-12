@@ -12636,6 +12636,25 @@
         ]
       }
     },
+    "/health/ready": {
+      "get": {
+        "operationId": "health_check_ready_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check Ready",
+        "tags": [
+          "health"
+        ]
+      }
+    },
     "/metrics": {
       "get": {
         "description": "Prometheus scrape endpoint.\n\nWhen METRICS_TOKEN is set, requires `Authorization: Bearer <token>`;\nwhen unset (dev), it's open. Restrict at the network layer in prod\nregardless \u2014 it exposes route names and traffic volume.",
