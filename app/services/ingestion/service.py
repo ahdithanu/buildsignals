@@ -1530,7 +1530,8 @@ def _project_planning_to_graph(
         db,
         GraphEntityCreate(
             entity_type=GraphEntityType.source_record,
-            display_name=planning.title,
+            # Graph labels are shorter than planning titles; retain the full title on the record.
+            display_name=planning.title[:255],
             source_system=source.key,
             source_id=stable_id,
             address=planning.address,
