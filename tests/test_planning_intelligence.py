@@ -7,6 +7,7 @@ import pytest
 from app.models.brand import BrandAlias, BrandProfile
 from app.models.graph import (
     GraphEntity,
+    GraphEntityAlias,
     GraphEntityLink,
     GraphRelationship,
     GraphRelationshipEvidence,
@@ -209,23 +210,30 @@ def test_planning_ingestion_requires_title(client, db, tmp_path):
 
 
 @pytest.mark.parametrize("title_length", [255, 256, 1000])
+@pytest.mark.parametrize("prefix", ["Planning application ", "Planning & zoning "])
 def test_planning_graph_bounds_label_preserving_title_evidence_and_identity(
-    client, db, tmp_path, title_length
+    client, db, tmp_path, title_length, prefix
 ):
-    title = "Planning application " + "x" * (title_length - len("Planning application "))
+    title = prefix + "x" * (title_length - len(prefix))
     csv_path = tmp_path / "long-planning-titles.csv"
-    with csv_path.open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=["id", "title", "address", "city", "state", "url"])
-        writer.writeheader()
-        for record_id in ("LONG-1", "LONG-2"):
-            writer.writerow({
-                "id": record_id,
-                "title": title,
-                "address": "100 Market Street",
-                "city": "Dallas",
-                "state": "TX",
-                "url": f"https://example.test/agendas/{record_id}",
-            })
+
+    def write_records(first_title):
+        with csv_path.open("w", newline="", encoding="utf-8") as stream:
+            writer = csv.DictWriter(
+                stream, fieldnames=["id", "title", "address", "city", "state", "url"]
+            )
+            writer.writeheader()
+            for record_id, record_title in (("LONG-1", first_title), ("LONG-2", title)):
+                writer.writerow({
+                    "id": record_id,
+                    "title": record_title,
+                    "address": "100 Market Street",
+                    "city": "Dallas",
+                    "state": "TX",
+                    "url": f"https://example.test/agendas/{record_id}",
+                })
+
+    write_records(title)
     source_response = client.post("/ingestion/sources", json=_planning_source(str(csv_path)))
     assert source_response.status_code == 201, source_response.text
     source_id = source_response.json()["id"]
@@ -244,14 +252,42 @@ def test_planning_graph_bounds_label_preserving_title_evidence_and_identity(
     assert {record["external_record_id"] for record in records} == {"LONG-1", "LONG-2"}
     links = db.query(GraphEntityLink).filter(GraphEntityLink.record_type == "planning").all()
     assert len({link.entity_id for link in links}) == 2
+    original_links = {link.record_id: link.entity_id for link in links}
     entities = db.query(GraphEntity).filter(GraphEntity.id.in_([link.entity_id for link in links])).all()
-    assert {entity.display_name for entity in entities} == {title[:255]}
+    for entity in entities:
+        assert title.startswith(entity.display_name)
+        assert 0 < len(entity.display_name) <= 255
+        assert 0 < len(entity.normalized_name) <= 255
+    aliases = db.query(GraphEntityAlias).filter(
+        GraphEntityAlias.entity_id.in_([link.entity_id for link in links])
+    ).all()
+    assert aliases
+    assert all(len(alias.alias) <= 255 and len(alias.normalized_alias) <= 255 for alias in aliases)
     evidence = db.query(GraphRelationshipEvidence).all()
     assert len(evidence) == 2
     assert {item.excerpt for item in evidence} == {title}
     assert {item.source_url for item in evidence} == {
         "https://example.test/agendas/LONG-1", "https://example.test/agendas/LONG-2"
     }
+
+    revised_title = "Updated " + title[:-len("Updated ")]
+    write_records(revised_title)
+    updated = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert updated.status_code == 201, updated.text
+    assert updated.json()["records_inserted"] == 0, updated.text
+    assert updated.json()["records_updated"] == 1, updated.text
+    assert updated.json()["records_failed"] == 0, updated.text
+    db.expire_all()
+    updated_links = db.query(GraphEntityLink).filter(GraphEntityLink.record_type == "planning").all()
+    assert {link.record_id: link.entity_id for link in updated_links} == original_links
+    revised_record = db.query(PlanningRecord).filter(PlanningRecord.external_record_id == "LONG-1").one()
+    assert revised_record.title == revised_title
+    revised_entity = db.get(GraphEntity, original_links[revised_record.id])
+    assert revised_entity.display_name.startswith("Updated ")
+    assert revised_title.startswith(revised_entity.display_name)
+    assert len(revised_entity.display_name) <= 255
+    assert len(revised_entity.normalized_name) <= 255
+    assert {item.excerpt for item in db.query(GraphRelationshipEvidence).all()} == {title, revised_title}
 
 
 def _permit_source(csv_path: str) -> dict:

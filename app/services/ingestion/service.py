@@ -36,7 +36,12 @@ from app.models.planning import PlanningCompanyMatch, PlanningRecord
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
 from app.schemas.ingestion import IngestionSourceCreate, IngestionSourceUpdate
 from app.services.brand_intelligence import detect_permit_brands, rebuild_brand_party_fingerprints
-from app.services.graph_service import create_relationship, link_entity_to_record, resolve_entity
+from app.services.graph_service import (
+    create_relationship,
+    link_entity_to_record,
+    normalize_name,
+    resolve_entity,
+)
 from app.services.ingestion.connector_config import resolve_connector_config_dates
 from app.services.ingestion.connectors import ConnectorResponseError, build_connector
 from app.services.ingestion.external_references import extract_external_references
@@ -1526,12 +1531,15 @@ def _project_planning_to_graph(
     company_matches: list[PlanningCompanyMatch],
 ) -> None:
     stable_id = _bounded_source_id(source.key, planning.external_record_id)
+    # Both graph labels and their normalized aliases must fit; normalization can expand "&".
+    display_name = planning.title[:255]
+    while len(normalize_name(display_name)) > 255:
+        display_name = display_name[:-1]
     event_entity, _ = resolve_entity(
         db,
         GraphEntityCreate(
             entity_type=GraphEntityType.source_record,
-            # Graph labels are shorter than planning titles; retain the full title on the record.
-            display_name=planning.title[:255],
+            display_name=display_name,
             source_system=source.key,
             source_id=stable_id,
             address=planning.address,
