@@ -4,11 +4,10 @@ import { DealScoreBadge, StatusBadge } from "@/components/DealBadges";
 import { formatCurrency, stageLabels } from "@/lib/formatters";
 import { useDashboardKpis, useTopOpportunities, usePipelineSnapshot, useRecentSignals, useAiInsights } from "@/hooks/useDashboard";
 import { LoadingState, ErrorState } from "@/components/DataStates";
-import { Card, CardContent } from "@/components/ui/card";
+import { DetectedActivity } from "@/components/DetectedActivity";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { GraphCoverageCard } from "@/components/GraphCoverageCard";
-import { Inbox } from "lucide-react";
 import { TrendingUp, Target, Star, DollarSign, BarChart3, Lightbulb, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -50,20 +49,13 @@ export default function Dashboard() {
             <h2 className="text-lg md:text-xl font-semibold font-display text-foreground">Dashboard</h2>
             <p className="text-sm text-muted-foreground mt-0.5">Your acquisition engine at a glance</p>
           </div>
-          <Card className="card-shadow">
-            <CardContent className="flex flex-col items-center justify-center text-center py-16 px-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary mb-4">
-                <Inbox className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground">No deals yet</h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                Paste a listing URL or add a deal manually to start building your pipeline.
-              </p>
-              <Button asChild className="mt-4">
-                <Link to="/inbox">Go to Deal Inbox</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-y py-3 text-sm">
+            <p className="text-muted-foreground">No saved deals yet.</p>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/inbox">Go to Deal Inbox <ArrowRight className="h-3.5 w-3.5" /></Link>
+            </Button>
+          </div>
+          <DetectedActivity />
         </div>
       </Layout>
     );
