@@ -1,4 +1,4 @@
-# DealSignal
+# BuildSignal
 
 Real-estate acquisition intelligence — a multi-tenant platform for sourcing,
 underwriting, and tracking commercial real-estate deals. FastAPI backend,
