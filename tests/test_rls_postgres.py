@@ -351,3 +351,44 @@ def test_raw_record_trigger_blocks_direct_mutation_but_allows_org_erasure(
         text("SELECT count(*) FROM raw_source_records WHERE id = :id"),
         {"id": raw_id},
     ).scalar_one() == 0
+
+
+def test_audit_logs_rls_isolates_reads_and_allows_bootstrap(pg_session):
+    """audit_logs (migration 20260915_0001): a real tenant sees/writes only its
+    own audit rows, but the 'default-org' bootstrap context (registration and
+    other pre-auth writes) is permitted to insert rows for any org."""
+    from app.models.audit_log import AuditLog
+    from app.models.organization import Organization
+
+    orgs = [str(uuid.uuid4()), str(uuid.uuid4())]
+    ids = []
+    for org in orgs:
+        pg_session.add(Organization(id=org, name="Audit RLS fixture", slug=org))
+        pg_session.flush()
+        pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": org})
+        row = AuditLog(organization_id=org, entity_type="deal", entity_id="d1", action="create")
+        pg_session.add(row)
+        pg_session.flush()
+        ids.append(row.id)
+
+    # Under org[0]: read isolation — only org[0]'s audit row is visible.
+    pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": orgs[0]})
+    visible = pg_session.execute(select(AuditLog.id).where(AuditLog.id.in_(ids))).scalars().all()
+    assert visible == [ids[0]]
+
+    # A real tenant cannot insert an audit row for another org (RLS 42501).
+    with pg_session.begin_nested():
+        with pytest.raises(DBAPIError) as err:
+            pg_session.add(AuditLog(organization_id=orgs[1], entity_type="deal", entity_id="x", action="create"))
+            pg_session.flush()
+        assert getattr(err.value.orig, "pgcode", None) == "42501"
+        pg_session.get_nested_transaction().rollback()
+
+    # Bootstrap carve-out: under 'default-org' (e.g. registration, pre-auth), an
+    # audit row for a brand-new org id is allowed — this is what makes forcing
+    # RLS on audit_logs safe for registration.
+    pg_session.execute(text("SELECT set_config('app.current_org', 'default-org', true)"))
+    boot = AuditLog(organization_id=orgs[1], entity_type="user", entity_id="u1", action="register")
+    pg_session.add(boot)
+    pg_session.flush()  # must not raise
+    assert boot.id is not None
