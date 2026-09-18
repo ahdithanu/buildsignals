@@ -53,9 +53,29 @@ if REFRESH_COOKIE_SAMESITE not in ("lax", "strict", "none"):
         f"REFRESH_COOKIE_SAMESITE must be one of lax|strict|none, got {REFRESH_COOKIE_SAMESITE!r}"
     )
 
-# Environment: "development" | "staging" | "production"
+# Environment: "development" | "test" | "ci" | "staging" | "production"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
+
+# Validate ENVIRONMENT against a known set. KEYSTONE GUARD: a typo like "prod"
+# would otherwise leave IS_PRODUCTION False and SILENTLY disable every safety
+# check that branches on this exact string — the production SECRET_KEY / CORS /
+# SQLite guards below, the ALLOW_ANONYMOUS fail-closed default, AND the
+# ingestion INGESTION_ALLOWED_HOSTS / SSRF requirement
+# (services/ingestion/connectors/factory.py keys on ENVIRONMENT in
+# {"staging","production"}). Crash loudly on an unknown value instead of
+# booting a "production" deploy with all guards off. "ci"/"test" are the
+# non-deployed CI/test environments.
+_VALID_ENVIRONMENTS = ("development", "test", "ci", "staging", "production")
+if ENVIRONMENT not in _VALID_ENVIRONMENTS:
+    raise RuntimeError(
+        f"ENVIRONMENT must be one of {list(_VALID_ENVIRONMENTS)}, got {ENVIRONMENT!r}. "
+        "A typo here would silently disable the production safety guards."
+    )
+
 IS_PRODUCTION = ENVIRONMENT == "production"
+# Deployed = staging or production. Both are fail-closed (no anonymous access,
+# ingestion allow-list required); only local dev / CI / test relax these.
+IS_DEPLOYED = ENVIRONMENT in ("staging", "production")
 
 
 def _parse_origins(raw: str | None) -> list[str]:
@@ -106,16 +126,20 @@ def _parse_bool(raw: str | None, default: bool) -> bool:
 # existing pytest suite). When False, any non-public route without a valid
 # token returns 401.
 #
-# Default: True in development/staging, False in production. Override with
-# ALLOW_ANONYMOUS=true|false. Production rejects ALLOW_ANONYMOUS=true outright.
+# Default: True in local dev / CI / test, False in any DEPLOYED environment
+# (staging + production). Override with ALLOW_ANONYMOUS=true|false, but deployed
+# environments reject ALLOW_ANONYMOUS=true outright — previously staging
+# defaulted to allowing anonymous access, which let unauthenticated callers hit
+# mutating endpoints (e.g. add an ingestion source) as default-org.
 ALLOW_ANONYMOUS: bool = _parse_bool(
     os.environ.get("ALLOW_ANONYMOUS"),
-    default=not IS_PRODUCTION,
+    default=not IS_DEPLOYED,
 )
 
-if IS_PRODUCTION and ALLOW_ANONYMOUS:
+if IS_DEPLOYED and ALLOW_ANONYMOUS:
     raise RuntimeError(
-        "ALLOW_ANONYMOUS=true is not permitted when ENVIRONMENT=production"
+        f"ALLOW_ANONYMOUS=true is not permitted when ENVIRONMENT={ENVIRONMENT!r} "
+        "(staging and production are fail-closed)"
     )
 
 # Secure flag on the refresh cookie. Resolved BEFORE the production guards
