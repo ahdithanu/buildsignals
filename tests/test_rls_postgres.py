@@ -352,6 +352,14 @@ def test_raw_record_trigger_blocks_direct_mutation_but_allows_org_erasure(
         {"id": raw_id},
     ).scalar_one() == 0
 
+    # This test created a session-lived TEMP TABLE "organizations" (above) to
+    # prove the immutability trigger holds even when the real table is shadowed.
+    # Temp tables persist for the whole pooled connection (pg_engine is
+    # module-scoped), so drop it here — otherwise it shadows public.organizations
+    # for every later test that inserts an org (was silently breaking them).
+    pg_session.execute(text("DROP TABLE IF EXISTS pg_temp.organizations"))
+    pg_session.commit()
+
 
 def test_audit_logs_rls_isolates_reads_and_allows_bootstrap(pg_session):
     """audit_logs (migration 20260915_0001): a real tenant sees/writes only its
