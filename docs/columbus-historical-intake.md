@@ -335,3 +335,101 @@ parameters used for each recorded measurement.
 [B4]: https://services1.arcgis.com/9yy6msODkIBzkUXU/arcgis/rest/services/Building_Permits/FeatureServer/0/query
 [B5]: https://columbus.maps.arcgis.com/sharing/rest/content/items/3528275d90d74afa8c14c74d72b04e33/data?f=json
 [B6]: https://columbus.maps.arcgis.com/sharing/rest/content/items/ad99db45b9984dbf842796d95a08dbf2/data?f=json
+# Local Qualification Run: September 19, 2026
+
+## First-Quarter Reconciliation Extension
+
+Six independent local cohorts now cover January-March 2024 under the exact
+source predicates, not all Columbus development activity:
+
+| Month | Commercial issuance | Site filings | Failed rows |
+| --- | ---: | ---: | ---: |
+| January | 587 | 72 | 0 |
+| February | 589 | 70 | 0 |
+| March | 665 | 66 | 0 |
+| Total source records | 1,841 | 208 | 0 |
+
+All six runs completed with no checkpoint remaining, and their pre/post
+provider counts matched inserted counts. The 2,049 total is not a distinct
+project count: projects may have multiple permits or appear in both feeds.
+These are current snapshots of historical filings, not historical vintages.
+Do not use these three months alone as evidence of growth or early detection.
+
+February and March reports are saved beside the ignored local databases as
+`columbus-{commercial,site}-20240{2,3}-live.qualification.json`. Each contains
+the exact query, hash, timestamps, run ID, and workflow-readiness counts.
+The CLI exits with status 2 when reconciliation fails; a failed final provider
+count remains in the report without discarding the imported evidence.
+
+All 2,049 records have nonempty parcel references but **zero coordinates** in
+this narrow import scope. A parcel reference does not establish an exact
+parcel match, ownership, availability, or a nearby acquisition candidate.
+The existing permit-detail API exposes events and graph context; nearby search
+is deal-centered. The remaining workflow work is a verified parcel/location
+join and an evidence-backed opportunity handoff, not another permit import.
+
+Official parcel-source research candidates (not activated or rights-approved):
+
+- [Columbus CSIR parcel layer](https://gis.columbus.gov/arcgis/rest/services/Applications/CSIR_Public/MapServer/3)
+  exposes parcel identifiers, site address, and acreage. Its metadata says
+  server-side centroid return is unsupported; do not enable that connector
+  option blindly. Test identifier formats, address agreement, duplicate units,
+  geometry handling, and cross-county parcels before any automatic join.
+- [Franklin County Auditor extracts](https://apps.franklincountyauditor.com/GIS_Shapefiles/CurrentExtracts/)
+  publish parcel polygons. Prefer bounded source qualification before bulk
+  extraction. Public download availability does not by itself qualify
+  commercial redistribution, privacy scope, or complete Columbus coverage.
+
+No production database, ingestion enrollment, dashboard, or host policy was
+changed by these qualification runs.
+
+The bounded intake module `app.services.ingestion.historical_intake` reuses the
+normal connector, normalization, raw evidence, graph, and temporal projection
+pipeline. It only creates a **new local SQLite database**, refuses existing
+files, and never uses the configured application database for ingestion.
+It accepts a completed interval of at most 31 days and at most four pages of
+250 requested rows. A full page budget is not proof of completion. Reports
+retain scope, scope hash, run ID, capture times, checkpoints, and counts.
+The production commercial predicate remains `ISSUED_YEAR >= 2025`.
+
+Verified local runs for January 1 inclusive to February 1 exclusive, 2024:
+
+| Cohort | Provider before/after | Inserted | Failed | Run ID |
+| --- | --- | --- | --- | --- |
+| Commercial issuance | 587 / 587 | 587 | 0 | e87f5e74-82c2-45b0-8839-1dceea3fba64 |
+| Site engineering filings | 72 / 72 | 72 | 0 | 298928f6-0d04-4b7f-ad42-8f8e49d30e4f |
+
+Capture windows (UTC): commercial 19:12:52-19:13:08; site engineering
+19:13:29-19:13:31 on September 19, 2026. Both runs completed without a remaining
+checkpoint. Local ignored databases are `columbus-commercial-202401-live.db`
+and `columbus-site-202401-live.db` in the temporal-foundation worktree.
+Commercial retained 587 raw evidence records, 2,642 temporal observations,
+1,298 graph entities, and 1,761 relationships. These are pipeline inventory
+counts, not unique projects or verified investment opportunities.
+
+Scope SHA-256 values:
+- Commercial: `4f81766497687c871f178682869bbfc60cb4aabad84e4f1e076fa0ec22d9b741`
+- Site engineering: `edbf502dccf251c5d243a06698f6ac06ccba2bd4e9f4d9800a3f98513a334bcd`
+
+The explicit `Approved` site status now maps to approved; commercial freshness
+uses `record_updated_at` for `LAST_STATUS_DT`. Existing Complete/Completed/Closed
+interpretations remain unchanged and still require lifecycle qualification.
+Do not treat those labels as verified construction completion or opening.
+
+Reproduction (choose a new database filename each time):
+
+```bash
+ENVIRONMENT=ci INGESTION_ALLOWED_HOSTS=services1.arcgis.com \
+  .venv/bin/python -m app.services.ingestion.historical_intake \
+  --source-key columbus_oh_commercial_building_permits \
+  --start 2024-01-01 --end 2024-02-01 \
+  --database columbus-commercial-new.db --max-pages 4
+```
+
+The CLI writes an ignored `.qualification.json` beside subsequent databases.
+These development databases use model-created tables, not the production
+migration/security gates, and must not be deployed as application databases.
+Capture timestamps reflect **now**, not 2024. Current source snapshots cannot
+reconstruct historical knowledge or prove detection lead time. Count agreement
+is not a frozen snapshot, citywide completeness, or permission to activate a
+broader production scope. Neither run has been published to the dashboard.

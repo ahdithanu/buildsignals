@@ -8301,7 +8301,7 @@
           "expected_stage": "approved",
           "sample_size": 10,
           "connector": {
-            "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_APPL_STATUS IN ('Complete','Completed','Closed')"
+            "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_APPL_STATUS IN ('Approved','Complete','Completed','Closed')"
           }
         }
       ],
@@ -8339,6 +8339,7 @@
               "field": "B1_APPL_STATUS",
               "operator": "in",
               "values": [
+                "Approved",
                 "Complete",
                 "Completed",
                 "Closed"
@@ -8426,7 +8427,7 @@
       "retry_interval_minutes": 360,
       "schedule_mode": "automatic",
       "freshness_field": "LAST_STATUS_DT",
-      "freshness_semantics": "filing_event_at",
+      "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 48,
       "reconciliation_mode": "periodic_full",
       "signal_stage": "approved_only",

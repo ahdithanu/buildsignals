@@ -9877,7 +9877,8 @@ def test_service_rejects_unbounded_page_counts(db):
         execute_source_run(db, source, max_pages=101)
 
 
-def test_columbus_site_engineering_preserves_pre_approval_project_context():
+@pytest.mark.parametrize("approved_status", ["Approved", "Complete", "Completed", "Closed"])
+def test_columbus_site_engineering_preserves_pre_approval_project_context(approved_status):
     entry = next(
         entry for entry in load_catalog()
         if entry.key == "columbus_oh_site_engineering_applications"
@@ -9930,7 +9931,7 @@ def test_columbus_site_engineering_preserves_pre_approval_project_context():
     assert normalized.values["applicant_name"] == "MARKROB PROPERTIES LLC"
     assert normalized.values["filed_at"].year == 2026
 
-    completed = {**application, "B1_APPL_STATUS": "Completed"}
+    completed = {**application, "B1_APPL_STATUS": approved_status}
     prepared, field_mapping = prepare_mapped_record(completed, mappings)
     normalized = normalize_permit(
         prepared,
