@@ -32,3 +32,25 @@ class PermitParcelCandidates(BaseModel):
     candidates: list[ParcelReferenceCandidate]
     truncated: bool
     limitations: list[str]
+
+
+class ParcelReferenceAuditItem(BaseModel):
+    category: Literal["missing_reference", "no_match", "ambiguous", "address_corroborated",
+                      "conflicting_address", "missing_address_evidence"]
+    result: PermitParcelCandidates
+
+
+class ParcelReferenceAudit(BaseModel):
+    permit_source_id: str
+    parcel_source_id: str
+    measured_at: datetime
+    status: Literal["measured_page", "parcel_evidence_unavailable"]
+    counts: dict[str, int]
+    evaluated_permits: int
+    limit: int
+    after_id: str | None
+    next_after_id: str | None
+    has_more: bool
+    items: list[ParcelReferenceAuditItem]
+    coverage_verified: Literal[False]
+    limitations: list[str]

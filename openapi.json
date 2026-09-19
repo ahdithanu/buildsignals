@@ -9470,6 +9470,133 @@
         "title": "ParcelLineageParticipantResponse",
         "type": "object"
       },
+      "ParcelReferenceAudit": {
+        "properties": {
+          "after_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Id"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "coverage_verified": {
+            "const": false,
+            "title": "Coverage Verified",
+            "type": "boolean"
+          },
+          "evaluated_permits": {
+            "title": "Evaluated Permits",
+            "type": "integer"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelReferenceAuditItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          },
+          "parcel_source_id": {
+            "title": "Parcel Source Id",
+            "type": "string"
+          },
+          "permit_source_id": {
+            "title": "Permit Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "measured_page",
+              "parcel_evidence_unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "permit_source_id",
+          "parcel_source_id",
+          "measured_at",
+          "status",
+          "counts",
+          "evaluated_permits",
+          "limit",
+          "after_id",
+          "next_after_id",
+          "has_more",
+          "items",
+          "coverage_verified",
+          "limitations"
+        ],
+        "title": "ParcelReferenceAudit",
+        "type": "object"
+      },
+      "ParcelReferenceAuditItem": {
+        "properties": {
+          "category": {
+            "enum": [
+              "missing_reference",
+              "no_match",
+              "ambiguous",
+              "address_corroborated",
+              "conflicting_address",
+              "missing_address_evidence"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/PermitParcelCandidates"
+          }
+        },
+        "required": [
+          "category",
+          "result"
+        ],
+        "title": "ParcelReferenceAuditItem",
+        "type": "object"
+      },
       "ParcelReferenceCandidate": {
         "properties": {
           "address_comparison": {
@@ -19378,6 +19505,105 @@
           }
         },
         "summary": "Get Source Health",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/sources/{source_id}/parcel-reference-audit": {
+      "get": {
+        "operationId": "get_parcel_reference_audit_v1_ingestion_sources__source_id__parcel_reference_audit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parcel_source_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Parcel Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelReferenceAudit"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Parcel Reference Audit",
         "tags": [
           "ingestion"
         ]

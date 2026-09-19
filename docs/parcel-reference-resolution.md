@@ -42,6 +42,28 @@ official extract or obtain an authorized query interface and reuse terms.
 
 ## Remaining Gates
 
+### Measurement API Implemented
+
+`GET /ingestion/sources/{permit_source_id}/parcel-reference-audit?parcel_source_id=...`
+requires authentication and active tenant-visible sources of the correct types.
+It evaluates at most 100 permits per request (default 50), ordered by permit ID,
+and returns `next_after_id` for keyset pagination. Each permit occupies exactly
+one bucket: missing reference, no local match, ambiguous, address corroborated,
+conflicting address, or missing address evidence. Ambiguity takes precedence
+over individual candidate address checks. The response includes candidate
+evidence for drill-down and is marked `Cache-Control: no-store`.
+
+No eligible stored parcel evidence yields `parcel_evidence_unavailable` and
+zero **evaluated** permits, not a zero match-rate claim. Measurements describe
+only the requested page and current local snapshots. They do not establish
+source completeness or a frozen historical population. The diagnostic reuses
+the single-permit resolver; the 100-permit cap bounds its per-permit queries.
+Bulk offline population analysis should use a dedicated batched query if scale
+warrants it. The endpoint is read-only and performs no external requests.
+
+This implements the measurement mechanism; real Columbus matching remains
+unmeasured while the parcel-source access and qualification gates are open.
+
 - Qualify a Columbus-area parcel source, field scope, and identifier namespace.
 - Measure exact-match, ambiguous, unmatched, and conflicting-address rates on
   the historical cohort before enabling enrichment.

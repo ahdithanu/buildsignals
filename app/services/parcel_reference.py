@@ -1,4 +1,6 @@
 """Read-only, source-scoped parcel candidates; never silently enrich a permit."""
+from datetime import datetime, timezone
+
 from sqlalchemy import or_
 
 from app.models.ingestion import IngestionSource, PermitRecord, RawSourceRecord
@@ -83,4 +85,64 @@ def permit_parcel_candidates(db, permit_id: str, parcel_source_id: str) -> dict:
         })
     if rows:
         result["status"] = "ambiguous" if len(rows) > 1 else "candidate_requires_review"
+    return result
+
+
+def audit_parcel_references(db, permit_source_id, parcel_source_id, *, limit=50, after_id=None):
+    """Bounded diagnostic page, not a population match-rate or coverage claim."""
+    if not 1 <= limit <= 100:
+        raise ValueError("Audit limit must be between 1 and 100")
+    for source_id, record_type in ((permit_source_id, "permit"), (parcel_source_id, "parcel")):
+        source = active_query(db.query(IngestionSource), IngestionSource).filter_by(
+            id=source_id, record_type=record_type, is_active=True,
+        ).first()
+        if source is None:
+            raise LookupError("Permit or parcel source not found")
+    counts = dict.fromkeys((
+        "missing_reference", "no_match", "ambiguous", "address_corroborated",
+        "conflicting_address", "missing_address_evidence",
+    ), 0)
+    result = {
+        "permit_source_id": permit_source_id, "parcel_source_id": parcel_source_id,
+        "measured_at": datetime.now(timezone.utc), "status": "measured_page",
+        "counts": counts, "evaluated_permits": 0, "limit": limit,
+        "after_id": after_id, "next_after_id": None, "has_more": False,
+        "items": [], "coverage_verified": False,
+        "limitations": [
+            "Counts describe this page only, not the complete source or geographic coverage.",
+            "No match means no eligible local candidate, not proof that a parcel does not exist.",
+            "Pagination is not a frozen snapshot; underlying records can change between requests.",
+            "Corroboration is not analyst acceptance or a calibrated identity probability.",
+        ],
+    }
+    evidence_exists = active_query(db.query(ParcelRecord.id), ParcelRecord).join(
+        RawSourceRecord,
+        (RawSourceRecord.id == ParcelRecord.latest_raw_record_id)
+        & (RawSourceRecord.organization_id == get_org_id())
+        & (RawSourceRecord.source_id == parcel_source_id)
+        & (RawSourceRecord.record_type == "parcel"),
+    ).filter(ParcelRecord.source_id == parcel_source_id, ParcelRecord.is_active.is_(True)).first()
+    if evidence_exists is None:
+        result["status"] = "parcel_evidence_unavailable"
+        return result
+    query = active_query(db.query(PermitRecord), PermitRecord).filter_by(
+        source_id=permit_source_id, is_active=True,
+    )
+    if after_id:
+        query = query.filter(PermitRecord.id > after_id)
+    permits = query.order_by(PermitRecord.id).limit(limit + 1).all()
+    result["has_more"] = len(permits) > limit
+    for permit in permits[:limit]:
+        match = permit_parcel_candidates(db, permit.id, parcel_source_id)
+        category = match["status"]
+        if category == "candidate_requires_review":
+            category = {
+                "match": "address_corroborated", "conflict": "conflicting_address",
+                "missing": "missing_address_evidence",
+            }[match["candidates"][0]["address_comparison"]]
+        counts[category] += 1
+        result["items"].append({"category": category, "result": match})
+    result["evaluated_permits"] = len(result["items"])
+    if result["has_more"]:
+        result["next_after_id"] = permits[limit - 1].id
     return result

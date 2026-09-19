@@ -41,7 +41,7 @@ from app.schemas.ingestion import (
     SourceSchedulePlanResponse,
 )
 from app.schemas.measured_coverage import MeasuredCoverageResponse
-from app.schemas.parcel_reference import PermitParcelCandidates
+from app.schemas.parcel_reference import ParcelReferenceAudit, PermitParcelCandidates
 from app.services.brand_intelligence import list_permit_brand_matches
 from app.services.graph_service import entity_for_record, relationships_for_entity
 from app.services.ingestion.catalog import (
@@ -75,6 +75,26 @@ from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
+
+
+@router.get(
+    "/sources/{source_id}/parcel-reference-audit", response_model=ParcelReferenceAudit,
+    dependencies=[Depends(get_current_user)],
+)
+def get_parcel_reference_audit(
+    source_id: str, response: Response,
+    parcel_source_id: str = Query(min_length=1, max_length=36),
+    limit: int = Query(default=50, ge=1, le=100),
+    after_id: str | None = Query(default=None, min_length=1, max_length=36),
+    db: Session = Depends(get_db),
+):
+    from app.services.parcel_reference import audit_parcel_references
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return audit_parcel_references(db, source_id, parcel_source_id, limit=limit, after_id=after_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get(
