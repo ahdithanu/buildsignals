@@ -53,6 +53,7 @@ from app.routes.password_reset import router as password_reset_router
 from app.routes.pipeline import router as pipeline_router
 from app.routes.planning import router as planning_router
 from app.routes.signals import router as signals_router
+from app.routes.temporal import router as temporal_router
 from app.routes.twofa import router as twofa_router
 
 app = FastAPI(
@@ -138,6 +139,7 @@ app.include_router(ingestion_onboarding_router, prefix=CURRENT_API_PREFIX)
 app.include_router(brands_router, prefix=CURRENT_API_PREFIX)
 app.include_router(parcels_router, prefix=CURRENT_API_PREFIX)
 app.include_router(planning_router, prefix=CURRENT_API_PREFIX)
+app.include_router(temporal_router, prefix=CURRENT_API_PREFIX)
 
 # NOTE: Schema is managed exclusively by Alembic. Production runs
 # `alembic upgrade head` in the Render preDeploy step (see render.yaml).

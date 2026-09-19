@@ -56,6 +56,7 @@ from app.services.ingestion.normalization import (
     parse_source_datetime,
     prepare_mapped_record,
 )
+from app.services.ingestion.temporal_projection import project_record_observations
 from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
 from app.services.parcel_lineage import upsert_lineage_from_snapshot
 from app.services.planning_intelligence import enrich_planning_record
@@ -740,12 +741,14 @@ def _persist_permit(
             for brand_id in confirmed_brand_ids:
                 rebuild_brand_party_fingerprints(db, brand_id)
             _project_permit_to_graph(db, source, permit, raw)
+            _capture_temporal_record(db, "permit", permit, raw, run_id)
             return permit, "reprocessed"
         permit_entity_id = _record_entity_id(db, "permit", permit.id)
         if permit_entity_id:
             _reconcile_planning_permit_links(
                 db, permit=permit, permit_entity_id=permit_entity_id
             )
+        _capture_temporal_record(db, "permit", permit, raw, run_id)
         return permit, "unchanged"
 
     values = {key: value for key, value in normalized.values.items() if key in PERMIT_COLUMNS}
@@ -809,6 +812,7 @@ def _persist_permit(
     db.flush()
     detect_permit_brands(db, permit, raw)
     _project_permit_to_graph(db, source, permit, raw)
+    _capture_temporal_record(db, "permit", permit, raw, run_id)
     return permit, event_type
 
 
@@ -939,13 +943,18 @@ def _persist_planning_record(
             db, source, "planning", planning.id, raw, fetched_at
         )
 
-    if raw_was_existing and planning is not None and planning.normalization_hash == normalization_hash:
+    if (
+        raw_was_existing and planning is not None
+        and planning.latest_raw_record_id == raw.id
+        and planning.normalization_hash == normalization_hash
+    ):
         planning.last_seen_at = fetched_at
         planning_entity_id = _record_entity_id(db, "planning", planning.id)
         if planning_entity_id:
             _reconcile_planning_permit_links(
                 db, planning=planning, planning_entity_id=planning_entity_id
             )
+        _capture_temporal_record(db, "planning", planning, raw, run_id)
         return planning, "unchanged"
 
     values = {key: value for key, value in normalized.values.items() if key in PLANNING_COLUMNS}
@@ -975,7 +984,18 @@ def _persist_planning_record(
     _sync_record_external_references(db, source, "planning", planning.id, raw, fetched_at)
     matches = enrich_planning_record(db, planning, raw)
     _project_planning_to_graph(db, source, planning, raw, matches)
+    _capture_temporal_record(db, "planning", planning, raw, run_id)
     return planning, action
+
+
+def _capture_temporal_record(
+    db: Session, record_type: str, record: PermitRecord | PlanningRecord,
+    raw: RawSourceRecord, run_id: str,
+) -> None:
+    entity_id = _record_entity_id(db, record_type, record.id)
+    if entity_id is None:
+        raise ValueError("Canonical record has no graph identity for temporal projection")
+    project_record_observations(db, record=record, raw=raw, entity_id=entity_id, run_id=run_id)
 
 
 def _touch_raw_observation(

@@ -27,6 +27,7 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
 
@@ -44,7 +45,8 @@ def pg_engine():
     TEST_POSTGRES_URL (CI does this in a setup step). If the policy is
     missing, the first assertion will fail loud.
     """
-    engine = create_engine(POSTGRES_URL, future=True)
+    # Adversarial temp-table tests must not leak connection-local state to peers.
+    engine = create_engine(POSTGRES_URL, future=True, poolclass=NullPool)
     yield engine
     engine.dispose()
 
@@ -273,3 +275,50 @@ def test_raw_record_trigger_blocks_direct_mutation_but_allows_org_erasure(
         text("SELECT count(*) FROM raw_source_records WHERE id = :id"),
         {"id": raw_id},
     ).scalar_one() == 0
+
+
+def test_temporal_tables_force_rls_and_preserve_immutable_history(pg_session):
+    from app.schemas.temporal import EventCreate
+    from app.services.temporal_service import record_event, record_observation
+    from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
+    from tests.test_temporal_foundation import _payload, _seed
+
+    org_id = f"temporal-{uuid.uuid4().hex[:8]}"
+    token = set_current_context(RequestContext(org_id, "system"))
+    try:
+        pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id})
+        entity, raw = _seed(pg_session, org_id=org_id)
+        row, _ = record_observation(pg_session, _payload(entity, raw))
+        derived, _ = record_event(pg_session, EventCreate(observation_id=row.id, event_type="capacity.reported"))
+        row_id, event_id = row.id, derived.id
+        pg_session.commit()
+    finally:
+        reset_current_context(token)
+    tables = ["temporal_observations", "temporal_events"]
+    policies = pg_session.execute(text(
+        "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, p.polname "
+        "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "LEFT JOIN pg_policy p ON p.polrelid = c.oid "
+        "WHERE n.nspname = current_schema() AND c.relname = ANY(:tables)"
+    ), {"tables": tables}).all()
+    assert {row.relname for row in policies} == set(tables)
+    assert all(row.relrowsecurity and row.relforcerowsecurity and row.polname == "tenant_isolation" for row in policies)
+    pg_session.commit()
+    for table, key in zip(tables, [row_id, event_id]):
+        pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": "wrong-org"})
+        assert pg_session.execute(text(f"SELECT count(*) FROM {table} WHERE id = :id"), {"id": key}).scalar_one() == 0
+        pg_session.commit()
+        pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id})
+        assert pg_session.execute(text(f"SELECT count(*) FROM {table} WHERE id = :id"), {"id": key}).scalar_one() == 1
+        pg_session.commit()
+        for statement in (
+            f"UPDATE {table} SET recorded_at = CURRENT_TIMESTAMP WHERE id = :id",
+            f"DELETE FROM {table} WHERE id = :id",
+            f"TRUNCATE {table} CASCADE",
+        ):
+            pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id})
+            with pytest.raises(DBAPIError, match="immutable"):
+                pg_session.execute(text(statement), {"id": key})
+            pg_session.rollback()
+    pg_session.execute(text("DELETE FROM public.organizations WHERE id = :id"), {"id": org_id})
+    pg_session.commit()

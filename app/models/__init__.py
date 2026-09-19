@@ -62,3 +62,4 @@ from app.models.ingestion_onboarding import (  # noqa
     OrganizationIngestionEnrollmentSource,
 )
 from app.models.buildsignal import BuildSignalPublication, BuildSignalRevision, BuildSignalReview  # noqa: F401
+from app.models.temporal import TemporalEvent, TemporalObservation  # noqa: F401

@@ -339,6 +339,149 @@
         "title": "AcquisitionRadarSummaryResponse",
         "type": "object"
       },
+      "ActivityBaselineRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "attribute": {
+            "default": "permit.filed_at",
+            "enum": [
+              "permit.filed_at",
+              "permit.issued_at"
+            ],
+            "title": "Attribute",
+            "type": "string"
+          },
+          "baseline_periods": {
+            "default": 6,
+            "maximum": 12.0,
+            "minimum": 3.0,
+            "title": "Baseline Periods",
+            "type": "integer"
+          },
+          "city": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "City",
+            "type": "string"
+          },
+          "minimum_baseline_records": {
+            "default": 20,
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Minimum Baseline Records",
+            "type": "integer"
+          },
+          "period_days": {
+            "default": 30,
+            "maximum": 90.0,
+            "minimum": 7.0,
+            "title": "Period Days",
+            "type": "integer"
+          },
+          "reporting_lag_days": {
+            "default": 7,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Reporting Lag Days",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceCohort"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          },
+          "state": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "city",
+          "state"
+        ],
+        "title": "ActivityBaselineRequest",
+        "type": "object"
+      },
+      "ActivityBaselineResponse": {
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "attribute": {
+            "title": "Attribute",
+            "type": "string"
+          },
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "request_fingerprint": {
+            "title": "Request Fingerprint",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "null"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceBaseline"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "coverage_unverified",
+              "bounded_query_exceeded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "methodology_version",
+          "request_fingerprint",
+          "as_of",
+          "city",
+          "state",
+          "attribute",
+          "status",
+          "sources",
+          "warnings"
+        ],
+        "title": "ActivityBaselineResponse",
+        "type": "object"
+      },
       "ActivityCreate": {
         "properties": {
           "activity_type": {
@@ -491,6 +634,48 @@
         ],
         "title": "ActivityTypeEnum",
         "type": "string"
+      },
+      "ActivityWindow": {
+        "properties": {
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "evidence_observation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Observation Ids",
+            "type": "array"
+          },
+          "observed_records": {
+            "title": "Observed Records",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "baseline",
+              "current"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "role",
+          "observed_records",
+          "evidence_observation_ids"
+        ],
+        "title": "ActivityWindow",
+        "type": "object"
       },
       "ApprovedOnlyCoverageSourceResponse": {
         "properties": {
@@ -3695,6 +3880,53 @@
         "title": "DocumentResponse",
         "type": "object"
       },
+      "EventResponse": {
+        "properties": {
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "observation_id": {
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "observation_id",
+          "event_type",
+          "occurred_at",
+          "recorded_at"
+        ],
+        "title": "EventResponse",
+        "type": "object"
+      },
       "EvidenceCitation": {
         "additionalProperties": false,
         "properties": {
@@ -6870,6 +7102,7 @@
         "title": "InviteMemberRequest",
         "type": "object"
       },
+      "JsonValue": {},
       "KPIResponse": {
         "properties": {
           "active_deals": {
@@ -7718,6 +7951,264 @@
           "created_at"
         ],
         "title": "NearbyParcelSearchSummary",
+        "type": "object"
+      },
+      "NumericChangeResponse": {
+        "properties": {
+          "absolute_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absolute Change"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "current_observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Observation Id"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "percent_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Change"
+          },
+          "previous_observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Observation Id"
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value"
+          },
+          "series_key": {
+            "title": "Series Key",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series_key",
+          "as_of",
+          "methodology_version",
+          "status",
+          "current_observation_id",
+          "previous_observation_id",
+          "current_value",
+          "previous_value",
+          "absolute_change",
+          "percent_change",
+          "direction"
+        ],
+        "title": "NumericChangeResponse",
+        "type": "object"
+      },
+      "ObservationResponse": {
+        "properties": {
+          "attribute": {
+            "title": "Attribute",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "first_observed_at": {
+            "format": "date-time",
+            "title": "First Observed At",
+            "type": "string"
+          },
+          "geography": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "observation_key": {
+            "title": "Observation Key",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "raw_source_record_id": {
+            "title": "Raw Source Record Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "series_key": {
+            "title": "Series Key",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "source_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Updated At"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "entity_id",
+          "raw_source_record_id",
+          "source_id",
+          "observation_key",
+          "series_key",
+          "attribute",
+          "value",
+          "unit",
+          "effective_at",
+          "first_observed_at",
+          "recorded_at",
+          "source_updated_at",
+          "source_system",
+          "source_type",
+          "source_url",
+          "confidence",
+          "geography",
+          "methodology_version",
+          "content_hash"
+        ],
+        "title": "ObservationResponse",
         "type": "object"
       },
       "ObservedStateCoverage": {
@@ -11594,6 +12085,60 @@
         "title": "SignalResponse",
         "type": "object"
       },
+      "SourceBaseline": {
+        "properties": {
+          "baseline_mean_observed_records": {
+            "title": "Baseline Mean Observed Records",
+            "type": "number"
+          },
+          "diagnostics": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Diagnostics",
+            "type": "object"
+          },
+          "evidence_fingerprint": {
+            "title": "Evidence Fingerprint",
+            "type": "string"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "needs_coverage_review",
+              "insufficient_observed_sample",
+              "ambiguous_latest_observation"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityWindow"
+            },
+            "title": "Windows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source_id",
+          "methodology_version",
+          "status",
+          "windows",
+          "baseline_mean_observed_records",
+          "diagnostics",
+          "evidence_fingerprint"
+        ],
+        "title": "SourceBaseline",
+        "type": "object"
+      },
       "SourceCanaryRequest": {
         "properties": {
           "sample_size": {
@@ -11680,6 +12225,29 @@
           "errors"
         ],
         "title": "SourceCanaryResponse",
+        "type": "object"
+      },
+      "SourceCohort": {
+        "additionalProperties": false,
+        "properties": {
+          "methodology_version": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "source_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "methodology_version"
+        ],
+        "title": "SourceCohort",
         "type": "object"
       },
       "SourceHealthResponse": {
@@ -20641,6 +21209,432 @@
         "summary": "Create Assessment Revision",
         "tags": [
           "signals"
+        ]
+      }
+    },
+    "/v1/temporal/activity-baseline": {
+      "post": {
+        "description": "Read-only diagnostics for a pinned cohort; does not qualify market coverage.",
+        "operationId": "get_activity_baseline_v1_temporal_activity_baseline_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityBaselineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityBaselineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Activity Baseline",
+        "tags": [
+          "temporal"
+        ]
+      }
+    },
+    "/v1/temporal/changes": {
+      "get": {
+        "operationId": "get_change_v1_temporal_changes_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "series_key",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9]{64}$",
+              "title": "Series Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumericChangeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Change",
+        "tags": [
+          "temporal"
+        ]
+      }
+    },
+    "/v1/temporal/events": {
+      "get": {
+        "operationId": "list_events_v1_temporal_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventResponse"
+                  },
+                  "title": "Response List Events V1 Temporal Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Events",
+        "tags": [
+          "temporal"
+        ]
+      }
+    },
+    "/v1/temporal/observations": {
+      "get": {
+        "operationId": "list_observations_v1_temporal_observations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "observation_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Observation Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "attribute",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Attribute"
+            }
+          },
+          {
+            "in": "query",
+            "name": "series_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-f0-9]{64}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Series Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObservationResponse"
+                  },
+                  "title": "Response List Observations V1 Temporal Observations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Observations",
+        "tags": [
+          "temporal"
         ]
       }
     }
