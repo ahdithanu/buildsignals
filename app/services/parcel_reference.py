@@ -7,6 +7,15 @@ from app.services.graph_service import normalize_address
 from app.utils.org_scope import active_query, get_org_id
 
 
+def _comparison(left, right, normalize):
+    if not left or not right or not left.strip() or not right.strip():
+        return "missing"
+    left, right = normalize(left), normalize(right)
+    if not left or not right:
+        return "missing"
+    return "match" if left == right else "conflict"
+
+
 def permit_parcel_candidates(db, permit_id: str, parcel_source_id: str) -> dict:
     permit = active_query(db.query(PermitRecord), PermitRecord).filter_by(
         id=permit_id, is_active=True,
@@ -47,16 +56,15 @@ def permit_parcel_candidates(db, permit_id: str, parcel_source_id: str) -> dict:
     ).order_by(ParcelRecord.id).limit(21).all()
     result["truncated"] = len(rows) > 20
     for parcel, raw in rows[:20]:
-        state_matches = bool(permit.state and parcel.state) and (
-            permit.state.strip().upper() == parcel.state.strip().upper()
+        state_check = _comparison(permit.state, parcel.state, lambda value: value.strip().upper())
+        city_check = _comparison(permit.city, parcel.city, lambda value: value.strip().casefold())
+        street_check = _comparison(permit.address, parcel.address, normalize_address)
+        checks = (state_check, city_check, street_check)
+        address_check = (
+            "conflict" if "conflict" in checks else "missing" if "missing" in checks else "match"
         )
-        address_matches = all(
-            value and value.strip()
-            for value in (permit.address, parcel.address, permit.city, parcel.city)
-        ) and (
-            normalize_address(permit.address, permit.city, permit.state)
-            == normalize_address(parcel.address, parcel.city, parcel.state)
-        )
+        state_matches = state_check == "match"
+        address_matches = address_check == "match"
         coords = (
             parcel.latitude is not None and parcel.longitude is not None
             and -90 <= parcel.latitude <= 90 and -180 <= parcel.longitude <= 180
@@ -65,6 +73,8 @@ def permit_parcel_candidates(db, permit_id: str, parcel_source_id: str) -> dict:
             "parcel_id": parcel.id, "external_parcel_id": parcel.external_parcel_id,
             "reference_kind": "external_id" if parcel.external_parcel_id == reference else "parcel_group",
             "state_matches": state_matches, "address_matches": address_matches,
+            "state_comparison": state_check, "city_comparison": city_check,
+            "street_comparison": street_check, "address_comparison": address_check,
             "identity_assessment": "address_corroborated" if state_matches and address_matches else "needs_review",
             "has_valid_coordinates": coords,
             "raw_source_record_id": raw.id, "captured_at": raw.received_at,

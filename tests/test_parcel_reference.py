@@ -51,6 +51,7 @@ def test_conflicting_address_and_multiple_parcels_require_review(db):
     db.flush()
     result = permit_parcel_candidates(db, permit.id, source.id)
     assert result["candidates"][0]["identity_assessment"] == "needs_review"
+    assert result["candidates"][0]["address_comparison"] == "conflict"
     second = _parcel(db, source, _raw(db, source, run, "002", "c" * 64, now), "002", now)
     second.parcel_group_id = "001"
     db.flush()
@@ -75,3 +76,24 @@ def test_tenant_isolation_and_retired_parcels(db):
 def test_parcel_candidates_require_authentication(client):
     response = client.get("/ingestion/permits/missing/parcel-candidates?parcel_source_id=missing")
     assert response.status_code == 401
+
+
+@pytest.mark.parametrize("field,value", [("state", " "), ("city", None), ("address", "")])
+def test_missing_evidence_is_not_a_conflict_or_a_match(db, field, value):
+    source, _, _, parcel, permit = fixture_records(db)
+    setattr(parcel, field, value)
+    db.flush()
+    candidate = permit_parcel_candidates(db, permit.id, source.id)["candidates"][0]
+    assert candidate["address_comparison"] == "missing"
+    assert candidate["identity_assessment"] == "needs_review"
+
+
+def test_conflict_remains_visible_when_another_field_is_missing(db):
+    source, _, _, parcel, permit = fixture_records(db)
+    parcel.city = None
+    parcel.state = "OH"
+    db.flush()
+    candidate = permit_parcel_candidates(db, permit.id, source.id)["candidates"][0]
+    assert candidate["city_comparison"] == "missing"
+    assert candidate["state_comparison"] == "conflict"
+    assert candidate["address_comparison"] == "conflict"

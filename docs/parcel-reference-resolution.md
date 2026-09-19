@@ -17,6 +17,29 @@ or contradictory addresses remain review cases. Confidence is categorical,
 not a fabricated calibrated probability. Even a single corroborated candidate
 does not write coordinates, create a graph edge, or imply for-sale availability.
 
+Each candidate now reports independent state, city, and street comparisons as
+`match`, `missing`, or `conflict`. The combined address comparison gives
+conflicts precedence over missing fields, and requires all three components
+to match for corroboration. Blank values never corroborate identity. Existing
+boolean fields remain available for clients.
+
+## Columbus Qualification Status (2026-09-19)
+
+The official CSIR parcel-layer metadata is readable at
+https://gis.columbus.gov/arcgis/rest/services/Applications/CSIR_Public/MapServer/3.
+It lists PARCELID, PARCEL_CD, and LOWPARCELID identifiers, but their equivalence
+to permit parcel references has not been verified. Copyright text is blank;
+commercial reuse rights remain unqualified, not implicitly granted.
+
+A bounded read-only check selected the first ten January commercial permits
+ordered by external record ID, queried only those exact references across the
+three ID fields, requested at most 100 rows, and excluded geometry, ownership,
+and contact fields. The official query endpoint returned HTTP 403. No parcel
+payload was received, persisted, or linked; no match rate can be reported.
+Do not reinterpret this access failure as zero matches, retry against hidden
+interfaces, or activate this source. Next research can assess a supported
+official extract or obtain an authorized query interface and reuse terms.
+
 ## Remaining Gates
 
 - Qualify a Columbus-area parcel source, field scope, and identifier namespace.

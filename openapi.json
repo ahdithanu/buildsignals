@@ -9472,6 +9472,15 @@
       },
       "ParcelReferenceCandidate": {
         "properties": {
+          "address_comparison": {
+            "enum": [
+              "match",
+              "missing",
+              "conflict"
+            ],
+            "title": "Address Comparison",
+            "type": "string"
+          },
           "address_matches": {
             "title": "Address Matches",
             "type": "boolean"
@@ -9479,6 +9488,15 @@
           "captured_at": {
             "format": "date-time",
             "title": "Captured At",
+            "type": "string"
+          },
+          "city_comparison": {
+            "enum": [
+              "match",
+              "missing",
+              "conflict"
+            ],
+            "title": "City Comparison",
             "type": "string"
           },
           "external_parcel_id": {
@@ -9530,9 +9548,27 @@
             ],
             "title": "Source Updated At"
           },
+          "state_comparison": {
+            "enum": [
+              "match",
+              "missing",
+              "conflict"
+            ],
+            "title": "State Comparison",
+            "type": "string"
+          },
           "state_matches": {
             "title": "State Matches",
             "type": "boolean"
+          },
+          "street_comparison": {
+            "enum": [
+              "match",
+              "missing",
+              "conflict"
+            ],
+            "title": "Street Comparison",
+            "type": "string"
           }
         },
         "required": [
@@ -9541,6 +9577,10 @@
           "reference_kind",
           "state_matches",
           "address_matches",
+          "state_comparison",
+          "city_comparison",
+          "street_comparison",
+          "address_comparison",
           "identity_assessment",
           "has_valid_coordinates",
           "raw_source_record_id",

@@ -10,6 +10,10 @@ class ParcelReferenceCandidate(BaseModel):
     reference_kind: Literal["external_id", "parcel_group"]
     state_matches: bool
     address_matches: bool
+    state_comparison: Literal["match", "missing", "conflict"]
+    city_comparison: Literal["match", "missing", "conflict"]
+    street_comparison: Literal["match", "missing", "conflict"]
+    address_comparison: Literal["match", "missing", "conflict"]
     identity_assessment: Literal["address_corroborated", "needs_review"]
     has_valid_coordinates: bool
     raw_source_record_id: str
