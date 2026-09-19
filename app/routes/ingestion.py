@@ -41,6 +41,7 @@ from app.schemas.ingestion import (
     SourceSchedulePlanResponse,
 )
 from app.schemas.measured_coverage import MeasuredCoverageResponse
+from app.schemas.parcel_reference import PermitParcelCandidates
 from app.services.brand_intelligence import list_permit_brand_matches
 from app.services.graph_service import entity_for_record, relationships_for_entity
 from app.services.ingestion.catalog import (
@@ -74,6 +75,25 @@ from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
+
+
+@router.get(
+    "/permits/{permit_id}/parcel-candidates", response_model=PermitParcelCandidates,
+    dependencies=[Depends(get_current_user)],
+)
+def get_permit_parcel_candidates(
+    permit_id: str,
+    response: Response,
+    parcel_source_id: str = Query(min_length=1, max_length=36),
+    db: Session = Depends(get_db),
+):
+    from app.services.parcel_reference import permit_parcel_candidates
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return permit_parcel_candidates(db, permit_id, parcel_source_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/coverage/measured", response_model=MeasuredCoverageResponse, dependencies=[Depends(get_current_user)])

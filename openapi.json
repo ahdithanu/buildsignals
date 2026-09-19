@@ -9470,6 +9470,87 @@
         "title": "ParcelLineageParticipantResponse",
         "type": "object"
       },
+      "ParcelReferenceCandidate": {
+        "properties": {
+          "address_matches": {
+            "title": "Address Matches",
+            "type": "boolean"
+          },
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "external_parcel_id": {
+            "title": "External Parcel Id",
+            "type": "string"
+          },
+          "has_valid_coordinates": {
+            "title": "Has Valid Coordinates",
+            "type": "boolean"
+          },
+          "identity_assessment": {
+            "enum": [
+              "address_corroborated",
+              "needs_review"
+            ],
+            "title": "Identity Assessment",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "parcel_id": {
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "raw_source_record_id": {
+            "title": "Raw Source Record Id",
+            "type": "string"
+          },
+          "reference_kind": {
+            "enum": [
+              "external_id",
+              "parcel_group"
+            ],
+            "title": "Reference Kind",
+            "type": "string"
+          },
+          "source_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Updated At"
+          },
+          "state_matches": {
+            "title": "State Matches",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parcel_id",
+          "external_parcel_id",
+          "reference_kind",
+          "state_matches",
+          "address_matches",
+          "identity_assessment",
+          "has_valid_coordinates",
+          "raw_source_record_id",
+          "captured_at",
+          "source_updated_at",
+          "last_verified_at"
+        ],
+        "title": "ParcelReferenceCandidate",
+        "type": "object"
+      },
       "ParcelSearchHitResponse": {
         "properties": {
           "created_at": {
@@ -10283,6 +10364,78 @@
           "created_at"
         ],
         "title": "PermitEventResponse",
+        "type": "object"
+      },
+      "PermitParcelCandidates": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelReferenceCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "parcel_source_id": {
+            "title": "Parcel Source Id",
+            "type": "string"
+          },
+          "permit_id": {
+            "title": "Permit Id",
+            "type": "string"
+          },
+          "permit_parcel_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Parcel Reference"
+          },
+          "permit_raw_source_record_id": {
+            "title": "Permit Raw Source Record Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "no_match",
+              "missing_reference",
+              "ambiguous",
+              "candidate_requires_review"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "permit_id",
+          "permit_raw_source_record_id",
+          "permit_parcel_reference",
+          "parcel_source_id",
+          "status",
+          "method",
+          "candidates",
+          "truncated",
+          "limitations"
+        ],
+        "title": "PermitParcelCandidates",
         "type": "object"
       },
       "PermitRecordResponse": {
@@ -18663,6 +18816,75 @@
           }
         },
         "summary": "Get Permit",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/permits/{permit_id}/parcel-candidates": {
+      "get": {
+        "operationId": "get_permit_parcel_candidates_v1_ingestion_permits__permit_id__parcel_candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "permit_id",
+            "required": true,
+            "schema": {
+              "title": "Permit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parcel_source_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Parcel Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermitParcelCandidates"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Permit Parcel Candidates",
         "tags": [
           "ingestion"
         ]
