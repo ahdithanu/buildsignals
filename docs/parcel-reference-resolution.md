@@ -62,8 +62,23 @@ confidence semantics retain the maximum confidence; each review's requested
 confidence remains recorded separately and is not a calibrated probability.
 
 No coordinates, availability claims, raw source data, or nearby rankings are
-copied into the permit. This is a backend review action, not yet a signed-in
-UI workflow. Real Columbus acceptance is still gated on qualified parcel data.
+copied into the permit. The backend and UI have not yet been verified together
+against live parcel data. Real Columbus acceptance remains gated on source qualification.
+
+### Permit Review UI
+
+The permit detail page includes a parcel-source selector, candidate comparison
+results, evidence identifiers, and links to parcel details. Editor/admin users
+can submit an explicit rationale and confidence for an eligible candidate.
+Viewers cannot access the acceptance form. Ambiguous, truncated, failed, and
+uncorroborated results do not enable acceptance. A stale-evidence rejection
+requires a reload and new review inputs; success refreshes the permit graph.
+Review state and query keys are scoped to the tenant and permit.
+
+Verification: six focused frontend tests, TypeScript checks, and a production
+build passed. Playwright rendered mocked review records at 1440x1000 and
+390x844 with no horizontal overflow. These are UI fixtures, not production
+data or live end-to-end acceptance. The build retains a large-bundle warning.
 
 ### Measurement API Implemented
 
@@ -90,7 +105,7 @@ unmeasured while the parcel-source access and qualification gates are open.
 - Qualify a Columbus-area parcel source, field scope, and identifier namespace.
 - Measure exact-match, ambiguous, unmatched, and conflicting-address rates on
   the historical cohort before enabling enrichment.
-- Connect the reviewed-acceptance API to the signed-in review workflow.
+- Verify reviewed acceptance against a qualified live parcel source.
 - Preserve the existing deal-centered nearby search and its radius/ranking
   controls; do not treat an anchor parcel as a ranked nearby candidate.
 - Verify the signed-in source-to-timeline-to-parcel-to-saved-deal workflow.

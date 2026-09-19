@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import PermitDetail from "@/pages/PermitDetail";
 
@@ -177,11 +178,11 @@ describe("<PermitDetail>", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/permits/permit-1"]}>
+      <QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={["/permits/permit-1"]}>
         <Routes>
           <Route path="/permits/:permitId" element={<PermitDetail />} />
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter></QueryClientProvider>,
     );
 
     expect(screen.getByRole("heading", { name: "BP-1001" })).toBeInTheDocument();

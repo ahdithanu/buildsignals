@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PermitBrandEvidenceSheet } from '@/components/PermitBrandEvidenceSheet';
 import { usePermitDetail } from '@/hooks/usePermitDetail';
+import { PermitParcelReview } from '@/components/PermitParcelReview';
 
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
@@ -130,6 +131,8 @@ export default function PermitDetail() {
           <Metric icon={BadgeInfo} label="Approved" value={formatDate(permit.approved_at || permit.issued_at)} />
           <Metric icon={Store} label="Source stage" value={data.source_key.replace(/_/g, ' ')} />
         </section>
+
+        <PermitParcelReview permitId={permit.id} />
 
         <section className="rounded-md border bg-card p-4 card-shadow">
           <div className="mb-3 flex items-center justify-between gap-3">
