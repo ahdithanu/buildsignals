@@ -4,9 +4,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from app.schemas.temporal import NonblankKey, RecordId
+from app.schemas.temporal import NonblankKey, RecordId, UtcCutoff
 
 
 class SourceCohort(BaseModel):
@@ -19,7 +19,7 @@ class SourceCohort(BaseModel):
 class ActivityBaselineRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    as_of: AwareDatetime
+    as_of: UtcCutoff
     sources: list[SourceCohort] = Field(min_length=1, max_length=10)
     city: NonblankKey
     state: Annotated[str, StringConstraints(strip_whitespace=True, to_upper=True, pattern=r"^[A-Z]{2}$")]

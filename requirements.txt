@@ -21,8 +21,10 @@ bcrypt==5.0.0
 # JWT signing/verification. Migrated off python-jose 3.4.0, whose
 # transitive pyasn1<0.5.0 pin held CVE-2026-30922 open. We only use
 # HS256 (HMAC), so PyJWT needs no cryptography backend at all — this
-# also drops cryptography/ecdsa/rsa/pyasn1 from the dependency tree.
+# removes the legacy ecdsa/rsa/pyasn1 JWT dependency chain.
 PyJWT==2.13.0
+# Authenticated encryption for separately managed MFA secrets.
+cryptography==50.0.0
 sentry-sdk[fastapi]==2.18.0
 pyotp==2.9.0
 prometheus-client==0.25.0

@@ -17,6 +17,17 @@ permit intelligence pipeline.
 - [Source onboarding decisions](./source_onboarding_decisions.md)
 - [Parcel source onboarding decisions](./parcel_source_onboarding_decisions.md)
 
+## Institutional Intelligence
+
+- [PRD capability audit and acceptance roadmap](./institutional-intelligence-roadmap.md)
+- [Temporal observations, evidence and historical queries](./temporal-foundation.md)
+- [Descriptive permit activity baselines](./activity-baseline.md)
+- [Columbus historical-source qualification audit](./columbus-historical-intake.md)
+
+These research foundations do not establish validated investment signals or
+complete live market coverage. The linked documents distinguish tested local
+functionality from source-qualification and production release gates.
+
 ## What This Covers
 
 - Current ingest flow versus the proposed graph-backed flow

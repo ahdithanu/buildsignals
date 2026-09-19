@@ -59,6 +59,10 @@ class TemporalObservation(OrgMixin, Base):
             "ix_temporal_observation_cohort_known",
             "organization_id", "source_id", "attribute", "methodology_version", "recorded_at",
         ),
+        Index(
+            "ix_temporal_observation_raw_attribute_method",
+            "organization_id", "raw_source_record_id", "attribute", "methodology_version", "recorded_at",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))

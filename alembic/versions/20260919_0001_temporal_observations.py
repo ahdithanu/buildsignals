@@ -1,8 +1,8 @@
 """Add tenant-scoped temporal observation snapshots and events.
 
-Revision ID: 20260914_0001
-Revises: 20260908_0001
-Create Date: 2026-09-14
+Revision ID: 20260919_0001
+Revises: 20260915_0001
+Create Date: 2026-09-19
 """
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "20260914_0001"
-down_revision: str = "20260908_0001"
+revision: str = "20260919_0001"
+down_revision: str = "20260915_0001"
 branch_labels = None
 depends_on = None
 
@@ -77,6 +77,10 @@ def upgrade() -> None:
     op.create_index(
         "ix_temporal_observation_cohort_known", "temporal_observations",
         ["organization_id", "source_id", "attribute", "methodology_version", "recorded_at"],
+    )
+    op.create_index(
+        "ix_temporal_observation_raw_attribute_method", "temporal_observations",
+        ["organization_id", "raw_source_record_id", "attribute", "methodology_version", "recorded_at"],
     )
 
     op.create_table(

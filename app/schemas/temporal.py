@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated
 
 from pydantic import (
@@ -16,6 +16,16 @@ from pydantic import (
 )
 
 MAX_JSON_BYTES = 32 * 1024
+
+
+def _utc_cutoff(value: datetime) -> datetime:
+    try:
+        return value.astimezone(timezone.utc)
+    except OverflowError as exc:
+        raise ValueError("Cutoff exceeds the supported UTC date range") from exc
+
+
+UtcCutoff = Annotated[AwareDatetime, AfterValidator(_utc_cutoff)]
 
 
 def _validate_json(value: JsonValue) -> JsonValue:

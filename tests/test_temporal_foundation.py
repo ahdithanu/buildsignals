@@ -250,3 +250,9 @@ def test_temporal_api_requires_login_and_validates_query_bounds(client, db):
     change = client.get(f"/v1/temporal/changes?series_key={row.series_key}", headers=headers)
     assert change.status_code == 200, change.text
     assert change.json()["status"] == "insufficient_history"
+    for path in ("observations", "events", "changes"):
+        for cutoff in ("0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00"):
+            response = client.get(f"/v1/temporal/{path}", headers=headers, params={
+                "as_of": cutoff, "series_key": row.series_key,
+            })
+            assert response.status_code == 422, response.text

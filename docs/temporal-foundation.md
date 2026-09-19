@@ -110,7 +110,7 @@ Velocity score. See `activity-baseline.md` for its counting contract and limits.
 
 ## Backfill And Validation Boundaries
 
-Migration `20260914_0001` creates empty tables. Existing canonical records enter
+Migration `20260919_0001` creates empty tables. Existing canonical records enter
 the timeline when their source is next observed, including an unchanged poll.
 This does not replay every historical raw version automatically. Historical
 source availability, extraction-version registries, cross-source corroboration,
@@ -137,6 +137,11 @@ Its recorded patches were recovered onto `codex/temporal-foundation-recovery` in
 This worktree lives inside the project rather than the system temporary folder.
 The implementation remains separate from the pending parcel-reference repair
 and does not change deployed data or infrastructure.
+
+Current main through `4998f0a` is integrated, including MFA encryption and
+expanded tenant/audit-log RLS. The unreleased temporal migration was renamed
+from `20260914_0001` to `20260919_0001` and follows `20260915_0001` to retain a
+single migration head. No deployed database used the earlier temporal revision.
 
 Apply the additive migration before running the new API or workers. Existing
 source snapshots are not updated. Downgrade removes only the two new tables and
@@ -170,6 +175,30 @@ then migrations were applied as `temporal_test`, a verified non-superuser with
 no BYPASSRLS privilege. Local PostgreSQL tests now cover temporal RLS,
 immutability, tenant erasure, cohort ranking and history overflow. This does not
 replace production-role verification, restore drills or production load testing.
+
+Integrated verification, September 19, 2026:
+
+- Current main through `4998f0a` preserved, including MFA encryption and the
+  expanded tenant/audit-log RLS policies.
+- Full backend suite: **1,068 passed, zero skipped**, with PostgreSQL checks
+  enabled. Two dependency deprecation warnings remain in the HTTP test client.
+- PostgreSQL migration upgrade/downgrade/re-upgrade passed under the restricted
+  application test role. The temporal tables have no model/migration drift,
+  including their cohort and raw-record lookup indexes.
+- Direct SQL update/delete/truncate protections, tenant erasure, tenant read
+  isolation, and baseline ranking/history limits were exercised on PostgreSQL.
+- Source-record null corrections after graph merges and extreme UTC query
+  boundaries are regression-tested. Independent review verified the indexed
+  SQLite query plan and the 422 API responses.
+- Ruff, diff whitespace validation and OpenAPI regeneration passed.
+- The final run used a fresh disposable SQLite database for the CLI tests;
+  `create_all` does not upgrade the old local test file after adding MFA columns.
+- No production migrations, source activation, imports, push or deployment.
+
+The official Columbus source audit is in `columbus-historical-intake.md`.
+Measured provider rows are not imported BuildSignals inventory. Monthly
+completeness, lifecycle semantics, reporting lag and source overlap still need
+qualification before a Development Velocity signal can be accepted.
 
 Start with indexed PostgreSQL queries and bounded batches. Measure growth and
 query latency before adding keyset pagination, bulk projection, partitions,

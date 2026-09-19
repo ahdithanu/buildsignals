@@ -57,6 +57,9 @@ permit, and multiple permits can describe one development project.
   minus the reporting lag. The lag is not a measured provider-latency guarantee.
 - Zero observations are a count, not proof that nothing happened or that a feed
   is complete. The sample threshold is not a completeness test.
+- Records never projected into temporal observations are outside this query.
+  Missing-date diagnostics describe observed history, not every missing date in
+  the underlying provider feed or canonical inventory.
 
 ## Output And Limits
 

@@ -139,6 +139,27 @@ def test_single_step_down_up_targets_latest_migration(tmp_path):
     assert up_one.returncode == 0, f"re-upgrade failed:\n{up_one.stderr}"
 
 
+def test_mfa_downgrade_refuses_to_destroy_ciphertext(tmp_path):
+    db_url = f"sqlite:///{tmp_path / 'mfa-guard.db'}"
+    assert _alembic("upgrade", "head", db_url=db_url).returncode == 0
+    engine = create_engine(db_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text(
+                "INSERT INTO users (id,email,full_name,password_hash,totp_secret_ciphertext) "
+                "VALUES ('guard','guard@example.test','Guard','unused','ciphertext-fixture')"
+            ))
+        down = _alembic("downgrade", "20260908_0001", db_url=db_url)
+        assert down.returncode != 0
+        assert "refusing destructive downgrade" in down.stderr
+        with engine.connect() as connection:
+            assert connection.execute(text(
+                "SELECT totp_secret_ciphertext FROM users WHERE id='guard'"
+            )).scalar_one() == "ciphertext-fixture"
+    finally:
+        engine.dispose()
+
+
 def test_raw_observation_migration_backfills_existing_versions(tmp_path):
     db_url = f"sqlite:///{tmp_path / 'observation-backfill.db'}"
     before = _alembic("upgrade", "20260808_0002", db_url=db_url)

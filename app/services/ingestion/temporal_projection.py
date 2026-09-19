@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.ingestion import PermitRecord, RawSourceRecord
@@ -50,6 +51,11 @@ def project_record_observations(
         if getattr(record, field) is not None
     }
     method = f"{PROJECTION_VERSION}:{record.normalization_hash}"
+    raw_versions = select(RawSourceRecord.id).where(
+        RawSourceRecord.organization_id == get_org_id(),
+        RawSourceRecord.source_id == raw.source_id,
+        RawSourceRecord.external_record_id == raw.external_record_id,
+    )
     for field in [*fields, *lifecycle]:
         value = getattr(record, field)
         effective_at = value if isinstance(value, datetime) else status_date if field == status_field else None
@@ -60,13 +66,9 @@ def project_record_observations(
         attribute = f"{prefix}.{field}"
         series_key = observation_series_key(entity_id, raw.source_id, raw.external_record_id, attribute, method)
         latest = active_query(db.query(TemporalObservation), TemporalObservation).filter(
-            TemporalObservation.source_id == raw.source_id,
+            TemporalObservation.raw_source_record_id.in_(raw_versions),
             TemporalObservation.attribute == attribute,
             TemporalObservation.methodology_version == method,
-        ).join(RawSourceRecord, RawSourceRecord.id == TemporalObservation.raw_source_record_id).filter(
-            RawSourceRecord.organization_id == get_org_id(),
-            RawSourceRecord.source_id == raw.source_id,
-            RawSourceRecord.external_record_id == raw.external_record_id,
         ).order_by(TemporalObservation.recorded_at.desc(), TemporalObservation.id.desc()).first()
         if value is None and latest is None:
             continue
