@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ParcelReferenceCandidate(BaseModel):
@@ -54,3 +54,14 @@ class ParcelReferenceAudit(BaseModel):
     items: list[ParcelReferenceAuditItem]
     coverage_verified: Literal[False]
     limitations: list[str]
+
+
+class ParcelReferenceAcceptance(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    parcel_source_id: str = Field(min_length=1, max_length=36)
+    parcel_id: str = Field(min_length=1, max_length=36)
+    expected_permit_raw_id: str = Field(min_length=1, max_length=36)
+    expected_parcel_raw_id: str = Field(min_length=1, max_length=36)
+    reason: str = Field(min_length=10, max_length=1000)
+    confidence: float = Field(ge=0, le=1)

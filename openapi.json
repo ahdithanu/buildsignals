@@ -9470,6 +9470,57 @@
         "title": "ParcelLineageParticipantResponse",
         "type": "object"
       },
+      "ParcelReferenceAcceptance": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "expected_parcel_raw_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Expected Parcel Raw Id",
+            "type": "string"
+          },
+          "expected_permit_raw_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Expected Permit Raw Id",
+            "type": "string"
+          },
+          "parcel_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "parcel_source_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Parcel Source Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parcel_source_id",
+          "parcel_id",
+          "expected_permit_raw_id",
+          "expected_parcel_raw_id",
+          "reason",
+          "confidence"
+        ],
+        "title": "ParcelReferenceAcceptance",
+        "type": "object"
+      },
       "ParcelReferenceAudit": {
         "properties": {
           "after_id": {
@@ -18983,6 +19034,74 @@
           }
         },
         "summary": "Get Permit",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/permits/{permit_id}/parcel-acceptance": {
+      "post": {
+        "operationId": "accept_permit_parcel_v1_ingestion_permits__permit_id__parcel_acceptance_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "permit_id",
+            "required": true,
+            "schema": {
+              "title": "Permit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParcelReferenceAcceptance"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphRelationshipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Permit Parcel",
         "tags": [
           "ingestion"
         ]

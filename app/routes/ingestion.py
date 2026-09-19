@@ -41,7 +41,11 @@ from app.schemas.ingestion import (
     SourceSchedulePlanResponse,
 )
 from app.schemas.measured_coverage import MeasuredCoverageResponse
-from app.schemas.parcel_reference import ParcelReferenceAudit, PermitParcelCandidates
+from app.schemas.parcel_reference import (
+    ParcelReferenceAcceptance,
+    ParcelReferenceAudit,
+    PermitParcelCandidates,
+)
 from app.services.brand_intelligence import list_permit_brand_matches
 from app.services.graph_service import entity_for_record, relationships_for_entity
 from app.services.ingestion.catalog import (
@@ -71,10 +75,32 @@ from app.services.ingestion.service import (
     list_sources,
     update_source,
 )
-from app.utils.auth_deps import get_current_user, require_role
+from app.utils.auth_deps import get_current_user, require_role, require_role_strict
 from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
+
+
+@router.post("/permits/{permit_id}/parcel-acceptance", response_model=GraphRelationshipResponse)
+def accept_permit_parcel(
+    permit_id: str, payload: ParcelReferenceAcceptance, response: Response,
+    principal: dict = Depends(require_role_strict(MemberRole.admin, MemberRole.editor)),
+    db: Session = Depends(get_db),
+):
+    from app.services.parcel_reference_review import accept_parcel_reference
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        relationship = accept_parcel_reference(db, permit_id, payload, actor_id=principal["user"].id)
+        db.commit()
+        db.refresh(relationship)
+        return relationship
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get(

@@ -42,6 +42,29 @@ official extract or obtain an authorized query interface and reuse terms.
 
 ## Remaining Gates
 
+### Reviewed Acceptance Implemented
+
+`POST /ingestion/permits/{permit_id}/parcel-acceptance` requires strict
+authenticated editor/admin access. Supply the parcel source, parcel ID, the
+expected current raw evidence IDs for both records, a reason of 10-1000
+characters, and explicit analyst-assigned confidence. Stale evidence,
+ambiguous/truncated matches, missing or conflicting address evidence, and
+missing typed graph entities are rejected. A current reviewed link to another
+parcel must be resolved before accepting a new target.
+
+Acceptance creates a `permit_for` graph relationship using the existing graph
+service. Each review retains both raw-record identifiers, capture dates,
+normalization hashes, reviewer ID, reason, and a unique review identifier in
+evidence payloads; an audit log is written in the same transaction. PostgreSQL
+row locks serialize reviews and canonical record updates. Repeated reviews
+reuse the relationship but append a new review/evidence pair. Existing graph
+confidence semantics retain the maximum confidence; each review's requested
+confidence remains recorded separately and is not a calibrated probability.
+
+No coordinates, availability claims, raw source data, or nearby rankings are
+copied into the permit. This is a backend review action, not yet a signed-in
+UI workflow. Real Columbus acceptance is still gated on qualified parcel data.
+
 ### Measurement API Implemented
 
 `GET /ingestion/sources/{permit_source_id}/parcel-reference-audit?parcel_source_id=...`
@@ -67,7 +90,7 @@ unmeasured while the parcel-source access and qualification gates are open.
 - Qualify a Columbus-area parcel source, field scope, and identifier namespace.
 - Measure exact-match, ambiguous, unmatched, and conflicting-address rates on
   the historical cohort before enabling enrichment.
-- Add explicit reviewed acceptance with both source evidence records retained.
+- Connect the reviewed-acceptance API to the signed-in review workflow.
 - Preserve the existing deal-centered nearby search and its radius/ranking
   controls; do not treat an anchor parcel as a ranked nearby candidate.
 - Verify the signed-in source-to-timeline-to-parcel-to-saved-deal workflow.
