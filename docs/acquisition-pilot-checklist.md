@@ -21,7 +21,11 @@
   independent geocoded permit/planning layer. Parcel ranking still requires saved
   searches. Verified desktop/mobile with synthetic test data, not live inventory.
 - [ ] Qualify a pilot-market parcel source, identifier namespace, and use rights.
-  Columbus public candidate query returned 403; historical intake is local only.
+  Columbus CSIR query returned 403. A separate Franklin County public sample
+  succeeded: eight distinct IDs matched after a hypothesized hyphen mapping,
+  but only two of ten permit street addresses matched. City/state corroboration,
+  source rights, acreage semantics, and freshness remain unqualified. See
+  parcel-reference-resolution.md. Historical intake is still local only.
 - [ ] Verify evidence-backed signal to nearby candidate workflow in that market.
 - [ ] Add structured multifamily and small-bay retail buy-box criteria with
   pass/fail/unknown results, provenance, and missing-diligence reasons.

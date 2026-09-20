@@ -54,6 +54,45 @@ parcel snapshot. No bulk files or ownership records were downloaded or ingested.
 Source-use qualification and exact namespace validation remain open before a
 bounded field-level sample can be accepted for production use.
 
+### County query qualification sample (2026-09-20)
+
+The separately published [Franklin County tax-parcel layer](https://gis.franklincountyohio.gov/hosting/rest/services/ParcelFeatures/Parcel_Features_WebMercator/MapServer/0)
+accepted bounded public queries (HTTP 200). This is a county distribution source,
+not an alternate Columbus CSIR access path. Three requests were made: eight
+distinct IDs from the first ten January commercial permits ordered by external
+record ID, one row to inspect identifier formatting, and those same eight IDs
+with the observed hyphen format. No geometry, ownership, or contact fields were
+requested. No database or production source was changed.
+
+- Original nine-digit references: zero returned rows.
+- Hypothesis `NNNNNNNNN -> NNN-NNNNNN`: eight rows for eight distinct references,
+  no reported transfer truncation and no duplicate IDs in the returned sample.
+- Permit-weighted street comparison: two matches, eight conflicts, zero ambiguous,
+  zero unmatched after formatting, zero missing streets. This is ten permits,
+  **not ten distinct parcels**; three permits share one reference.
+- Three conflicts involve county address ranges. Four involve different streets
+  (three permits on MERCHANTS ROW versus WORTH AVE and one THE STRAND versus
+  GRAMERCY ST). One is LOCKBOURNE RD versus LOCKBOURNE AVE. None is auto-accepted.
+- City/state are not established by the selected county fields. Even the two
+  matching streets are not fully corroborated parcel identities.
+- `LOWPARCELID` is a separate map-routing identifier; do not treat it as the
+  permit reference or strip its suffix without qualification.
+- `LASTUPDATE` and `VALID` were null in all eight rows. Freshness is unknown.
+- `STATEDAREA` metadata says Legal Acres, but observed values include 35,069
+  alongside `ACRES=0.80507449`. Units are inconsistent with the alias. Do not map
+  that field to acreage or infer a universal conversion. Geometry-derived
+  `ACRES` also requires qualification before underwriting use.
+
+`scripts/franklin_parcel_qualification.py` provides an offline, non-mutating sample
+report for caller-supplied records. It preserves leading zeros, rejects other
+identifier formats, keeps address ranges as conflicts, and refuses failed or
+truncated responses. Twelve unit tests pass. It is deliberately not connected
+to production resolution or ingestion. No returned parcel payload was persisted.
+The formatting observation is preliminary, not a cohort-wide match rate or
+approved namespace. Reuse rights, historical parcel changes, geometry, and
+evidence-backed acceptance remain open. The 2,049 historical permits remain
+local qualification data only.
+
 ### Reviewed Acceptance Implemented
 
 `POST /ingestion/permits/{permit_id}/parcel-acceptance` requires strict
