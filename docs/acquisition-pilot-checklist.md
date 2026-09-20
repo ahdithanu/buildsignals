@@ -6,6 +6,12 @@
   until authentication is available. Regression tests verify organization changes,
   same-organization user changes, and logout hide the previous result immediately.
   This is client-cache hardening, not a substitute for database tenant isolation.
+- [x] Nearby-search history/results now use organization/user cache namespaces.
+  Creating, reviewing, assigning, and promoting parcel results invalidate the
+  current workspace's radar/readiness queries so returning to the map does not
+  reuse stale ranked results. Focused hook tests cover creation, review,
+  assignment, unauthenticated loading, and workspace changes. Live source-backed
+  parcel acceptance and production browser verification remain separate gates.
 
 - [x] Empty-map workspace diagnostics: authenticated tenant-scoped active permit,
   coordinate-bearing permit, active parcel, coordinate-bearing parcel, and saved

@@ -42,6 +42,18 @@ official extract or obtain an authorized query interface and reuse terms.
 
 ## Remaining Gates
 
+### Official extract follow-up (2026-09-20)
+
+Read-only review of the county's published [current extract directory](https://apps.franklincountyauditor.com/GIS_Shapefiles/CurrentExtracts/)
+confirmed a listed 20260917_Parcel_Polygons.zip (141,615,888 bytes). This is a
+possible supported distribution channel, not evidence of a successful download,
+field mapping, commercial reuse permission, or coverage in BuildSignals.
+The [parcel CSV directory](https://apps.franklincountyauditor.com/Parcel_CSV/)
+lists annual folders through 2025; it must not be advertised as a current 2026
+parcel snapshot. No bulk files or ownership records were downloaded or ingested.
+Source-use qualification and exact namespace validation remain open before a
+bounded field-level sample can be accepted for production use.
+
 ### Reviewed Acceptance Implemented
 
 `POST /ingestion/permits/{permit_id}/parcel-acceptance` requires strict
