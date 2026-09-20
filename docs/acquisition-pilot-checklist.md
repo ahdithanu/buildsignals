@@ -19,6 +19,12 @@
 - [ ] Verify evidence-backed signal to nearby candidate workflow in that market.
 - [ ] Add structured multifamily and small-bay retail buy-box criteria with
   pass/fail/unknown results, provenance, and missing-diligence reasons.
+  Initial read-only screening is implemented on opportunity details. Price,
+  units/area, vintage, and an explicitly selected city/state compare saved deal
+  fields against versioned user-requested defaults. Asset configuration and
+  retail diligence remain unknown. Field references are traceable inputs, not
+  independently verified evidence. Still pending: persisted custom criteria,
+  source-backed rent-roll/lease/capex inputs, and saved screening history.
 - [ ] Verify source evidence, project timeline, nearby parcels, saved opportunity,
   and export on mobile and desktop with real qualified records.
 - [ ] Release and measure live inventory, freshness, and source-specific coverage.
@@ -54,3 +60,15 @@ Remaining pilot gaps: production counts and auth verification, qualified nearby
 parcel inventory, reliable geocoding, reviewed brand relevance, richer geography
 filters/pagination, and unified signal-to-parcel selection. Two maps currently
 separate source-record geography from saved ranked parcel results.
+
+## Initial acquisition screening
+
+GET /deals/{deal_id}/acquisition-screen requires authentication, tenant-scopes
+the active deal, and returns no-store. Profile choices are small_multifamily and
+small_bay_retail. Missing/nonpositive/nonfinite numeric inputs are unknown, not
+failed criteria. Any explicit failure yields outside_buy_box; otherwise missing
+diligence yields needs_diligence. No investment score or recommendation is issued.
+Market matching requires exact city and state rather than substring matching.
+The existing legacy buy-box matcher is unchanged for compatibility. New criteria
+are a preliminary separate view, not a completed underwriting or source-verification
+workflow. The profile and target market selection are not yet persisted.

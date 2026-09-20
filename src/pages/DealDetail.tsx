@@ -9,6 +9,7 @@ import { OpportunityGraphPanel } from "@/components/OpportunityGraphPanel";
 import { RetailPermitSignalsPanel } from "@/components/RetailPermitSignalsPanel";
 import { NearbyParcelsPanel } from "@/components/NearbyParcelsPanel";
 import { OpportunityLocationPanel } from "@/components/OpportunityLocationPanel";
+import { AcquisitionScreenPanel } from "@/components/AcquisitionScreenPanel";
 import { ArrowLeft, MapPin, Building2, Calendar, Ruler, User, FileText, Lightbulb, AlertTriangle, CheckCircle, MessageSquare, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -96,6 +97,7 @@ export default function DealDetail() {
 
             <motion.div {...fadeIn} transition={{ delay: 0.12 }}>
               <OpportunityLocationPanel dealId={id} />
+              <AcquisitionScreenPanel key={id} dealId={id} />
             </motion.div>
 
             {/* Deal Score */}
