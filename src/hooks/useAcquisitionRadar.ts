@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { parcelsApi } from '@/api/parcels';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   AcquisitionRadarParams,
   ParcelAcquisitionActivityCreate,
@@ -8,9 +9,11 @@ import type {
 } from '@/types/parcel';
 
 export function useAcquisitionRadar(params: AcquisitionRadarParams) {
+  const { organizationId, user } = useAuth();
   const queryClient = useQueryClient();
   const radar = useQuery({
-    queryKey: ['acquisition-radar', params],
+    queryKey: ['acquisition-radar', organizationId, user?.id, params],
+    enabled: !!organizationId && !!user,
     queryFn: () => parcelsApi.radar(params),
   });
   const updateCase = useMutation({

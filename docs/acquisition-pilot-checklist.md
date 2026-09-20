@@ -2,6 +2,11 @@
 
 ## Local implementation, not deployed
 
+- [x] Scope acquisition-radar browser cache by organization and user; defer reads
+  until authentication is available. Regression tests verify organization changes,
+  same-organization user changes, and logout hide the previous result immediately.
+  This is client-cache hardening, not a substitute for database tenant isolation.
+
 - [x] Empty-map workspace diagnostics: authenticated tenant-scoped active permit,
   coordinate-bearing permit, active parcel, coordinate-bearing parcel, and saved
   search counts. Invalid geographic ranges excluded. Failed requests are not zeros.
