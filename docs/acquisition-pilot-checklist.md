@@ -95,3 +95,23 @@ Desktop and mobile screenshots were inspected. Fixtures are artificial test
 deals, not ingested projects or proof of market coverage. This closes the initial
 screening panel's local browser verification gap, not the qualified live-record
 signal-to-parcel workflow or PostgreSQL production acceptance.
+
+### Integrated regression pass (2026-09-20)
+
+After the map, evidence navigation, screening, and parcel-cache changes:
+
+- All 252 frontend tests across 55 files pass.
+- All nine configured Playwright workflows pass against the real disposable local
+  API/database, including login/logout, rejected passwords, deal creation,
+  desktop/mobile screening, activity presentation, and measured empty inventory.
+- Forty-four focused backend tests pass for parcel reference resolution, audit,
+  reviewed acceptance, map diagnostics/signals, and acquisition screening.
+- TypeScript and focused lint checks pass.
+
+The broad run exposed two test-harness regressions: Node's unavailable file-backed
+localStorage shadowed browser storage in the auth suite, and the legacy wireframe
+test did not isolate the newly added query-driven map. Tests now explicitly use
+isolated JSDOM Storage and isolate the separately tested map components. Existing
+router-future and some asynchronous-test warnings remain. These results do not
+claim nationwide ingestion, production restore qualification, or PostgreSQL RLS
+acceptance; source qualification and production validation remain open.

@@ -9,8 +9,10 @@ deal through the modal.
 On 2026-09-20 the acquisition screening spec passed at desktop (1440x1000)
 and mobile (390x844) sizes with real local API responses in disposable SQLite.
 It exercises registration, fixture deal creation, profile switching, market
-validation, unknown diligence, and overflow checks. This focused run does not
-assert that every other spec currently passes or that production data is ready.
+validation, unknown diligence, and overflow checks. A subsequent full run on the
+same date passed all nine configured workflows, including auth, activity display,
+deal creation, and measured empty inventory. This is local SQLite qualification,
+not a claim that production data or PostgreSQL isolation is ready.
 
 ```bash
 PYTHON=.venv/bin/python npx playwright test -c e2e/playwright.config.ts acquisition-screen.spec.ts

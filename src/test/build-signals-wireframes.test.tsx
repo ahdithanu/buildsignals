@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +10,10 @@ import { signalStageFor } from '@/lib/signalStage';
 const login = vi.fn();
 const register = vi.fn();
 const exportSearch = { mutate: vi.fn(), isPending: false };
+
+// Map data/loading and Leaflet interactions have their own focused/browser tests.
+vi.mock('@/components/SignalMapExplorer', () => ({ SignalMapExplorer: () => null }));
+vi.mock('@/components/GeographicMap', () => ({ default: () => null }));
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
   useAcquisitionRadar: () => ({
@@ -75,8 +79,8 @@ describe('Build Signals wireframe screens', () => {
     vi.clearAllMocks();
   });
 
-  it('renders live radar parcels without inferring listing or owner intent', () => {
-    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+  it('renders live radar parcels without inferring listing or owner intent', async () => {
+    await act(async () => { render(<MemoryRouter><AcquisitionMap /></MemoryRouter>); });
 
     expect(screen.getByRole('heading', { name: /ranked parcels near retail shell project/i })).toBeInTheDocument();
     expect(screen.getAllByText('Congress Holdings LLC').length).toBeGreaterThan(0);
