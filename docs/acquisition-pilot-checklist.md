@@ -26,6 +26,9 @@
   but only two of ten permit street addresses matched. City/state corroboration,
   source rights, acreage semantics, and freshness remain unqualified. See
   parcel-reference-resolution.md. Historical intake is still local only.
+  The offline qualification CLI now records input hashes and separate permit /
+  distinct-reference counts, with 24 passing tests. It does not acquire evidence
+  or make the provisional namespace production-eligible.
 - [ ] Verify evidence-backed signal to nearby candidate workflow in that market.
 - [ ] Add structured multifamily and small-bay retail buy-box criteria with
   pass/fail/unknown results, provenance, and missing-diligence reasons.

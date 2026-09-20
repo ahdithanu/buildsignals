@@ -93,6 +93,34 @@ approved namespace. Reuse rights, historical parcel changes, geometry, and
 evidence-backed acceptance remain open. The 2,049 historical permits remain
 local qualification data only.
 
+#### Reproducible offline reports
+
+From the repository root, with authorized local evidence files:
+
+```sh
+.venv/bin/python -m scripts.franklin_parcel_qualification --permits /absolute/path/permits.json --parcels /absolute/path/parcels.json
+```
+
+The permit input is a JSON array with `parcel_id` and `address`; the parcel input
+is a complete ArcGIS response containing `features[].attributes.PARCELID` and
+`SITEADDRESS`. The tool only reads these files and prints a JSON report. It does
+not fetch, change databases, or activate sources. Inputs are limited to 10 MB
+each and 10,000 records each. Failed, truncated, and malformed responses fail
+with exit code 2 and no report rather than generating zero-match statistics.
+
+Reports include UTC measurement time and SHA-256 hashes of the exact input bytes.
+The hashes identify supplied evidence, but do not authenticate its origin or
+establish capture time or freshness. Record those separately with source receipts.
+Counts distinguish evaluated permit rows, distinct supported permit references,
+returned parcel rows, and distinct returned parcel identifiers. Repeated permit
+references remain repeated in the permit-weighted outcome counts. The report
+omits street addresses and unselected fields such as owner names. Full-cohort
+analysis still requires a complete authorized parcel response for the selected
+references; a caller-supplied subset cannot establish county-wide match rates.
+Twenty-four tests cover reporting, exact-byte receipts, malformed evidence,
+bounds, repeated references, and failure handling. Production eligibility remains
+false in every report.
+
 ### Reviewed Acceptance Implemented
 
 `POST /ingestion/permits/{permit_id}/parcel-acceptance` requires strict
