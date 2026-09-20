@@ -4,19 +4,17 @@ Browser-level tests covering the critical user journeys: register → land on
 the dashboard, log out / log back in, bad-password rejection, and creating a
 deal through the modal.
 
-## ⚠️ Status: written but never executed
+## Verification status
 
-These specs were authored against the source (real element ids, button text,
-and select option values read from `src/pages/` and `src/components/`) but
-**have not been run against the app** — the machine they were written on had
-Node 10, and Playwright needs Node 18+. They couldn't even be type-checked
-locally.
+On 2026-09-20 the acquisition screening spec passed at desktop (1440x1000)
+and mobile (390x844) sizes with real local API responses in disposable SQLite.
+It exercises registration, fixture deal creation, profile switching, market
+validation, unknown diligence, and overflow checks. This focused run does not
+assert that every other spec currently passes or that production data is ready.
 
-**On the first real run, budget time to fix a selector or two.** The auth
-spec is the most stable (fixed `#email` / `#password` / `#fullName` ids). The
-deal spec is the most fragile — its Asset Type / Market fields are radix
-`<Select>` components driven via `role="combobox"` + `role="option"`, which
-are the likeliest to need adjustment.
+```bash
+PYTHON=.venv/bin/python npx playwright test -c e2e/playwright.config.ts acquisition-screen.spec.ts
+```
 
 ## Requirements
 
@@ -39,7 +37,7 @@ npx playwright test -c e2e/playwright.config.ts --headed
 npx playwright test -c e2e/playwright.config.ts --debug
 ```
 
-The backend boots against a throwaway `e2e-test.db` (gitignored via `*.db`)
+The backend boots against a throwaway database in a temporary directory
 and raises the auth rate limits so repeated register/login from one IP isn't
 429'd — the same gotcha documented in `loadtest/README.md`.
 

@@ -72,3 +72,15 @@ Market matching requires exact city and state rather than substring matching.
 The existing legacy buy-box matcher is unchanged for compatibility. New criteria
 are a preliminary separate view, not a completed underwriting or source-verification
 workflow. The profile and target market selection are not yet persisted.
+
+### Local browser qualification (2026-09-20)
+
+`e2e/tests/acquisition-screen.spec.ts` passes at 1440x1000 and 390x844 using
+fresh migrated SQLite databases, real local authentication, deal creation, and
+screening API responses (not mocked screening payloads). The checks cover profile
+switching, incomplete state validation, matching and nonmatching target cities,
+no-store responses, explicit unknown occupancy, and no horizontal page overflow.
+Desktop and mobile screenshots were inspected. Fixtures are artificial test
+deals, not ingested projects or proof of market coverage. This closes the initial
+screening panel's local browser verification gap, not the qualified live-record
+signal-to-parcel workflow or PostgreSQL production acceptance.
