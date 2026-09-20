@@ -1,18 +1,16 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Check,
   Download,
   ExternalLink,
   Layers3,
-  MapPin,
-  MousePointer2,
-  Radius,
   Users,
 } from 'lucide-react';
 
 import { Layout } from '@/components/Layout';
 import { MapReadiness } from '@/components/MapReadiness';
+import { SignalMapExplorer } from '@/components/SignalMapExplorer';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +29,7 @@ import { cn } from '@/lib/utils';
 import type { AcquisitionRadarItem } from '@/types/parcel';
 
 const evidenceFilters = ['Shortlisted', 'Owner evidence', 'Held 10+ yrs', 'Tax evidence'];
+const GeographicMap = lazy(() => import('@/components/GeographicMap'));
 
 function acres(item: AcquisitionRadarItem) {
   return item.parcel.land_area_sq_ft == null ? null : item.parcel.land_area_sq_ft / 43_560;
@@ -40,18 +39,6 @@ function formatDate(value: string | null | undefined) {
   if (!value) return 'Not available';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
-}
-
-function pointPosition(items: AcquisitionRadarItem[], item: AcquisitionRadarItem) {
-  const latitudes = items.map((row) => row.parcel.latitude);
-  const longitudes = items.map((row) => row.parcel.longitude);
-  const minLat = Math.min(...latitudes);
-  const maxLat = Math.max(...latitudes);
-  const minLng = Math.min(...longitudes);
-  const maxLng = Math.max(...longitudes);
-  const x = minLng === maxLng ? 50 : 15 + ((item.parcel.longitude - minLng) / (maxLng - minLng)) * 57;
-  const y = minLat === maxLat ? 50 : 75 - ((item.parcel.latitude - minLat) / (maxLat - minLat)) * 50;
-  return { left: `${x}%`, top: `${y}%` };
 }
 
 export default function AcquisitionMap() {
@@ -130,11 +117,12 @@ export default function AcquisitionMap() {
     });
   }
 
-  if (isLoading) return <Layout><LoadingState message="Loading acquisition map..." /></Layout>;
-  if (error) return <Layout><ErrorState message="The acquisition map could not be loaded." onRetry={() => refetch()} /></Layout>;
+  if (isLoading) return <Layout><SignalMapExplorer /><LoadingState message="Loading acquisition map..." /></Layout>;
+  if (error) return <Layout><SignalMapExplorer /><ErrorState message="The acquisition map could not be loaded." onRetry={() => refetch()} /></Layout>;
   if (!items.length) {
     return (
       <Layout>
+        <SignalMapExplorer />
         <EmptyState
           title="No ranked parcels yet"
           description="Run a nearby-parcel search from a geocoded opportunity to populate this workspace."
@@ -147,6 +135,7 @@ export default function AcquisitionMap() {
 
   return (
     <Layout>
+      <SignalMapExplorer />
       <div className="grid min-h-[calc(100vh-48px)] lg:grid-cols-[320px_1fr]">
         <aside className="hidden min-h-0 border-r-2 border-foreground bg-card lg:flex lg:flex-col">
           <div className="border-b-2 border-foreground p-3">
@@ -188,34 +177,23 @@ export default function AcquisitionMap() {
         </aside>
 
         <div className="flex min-w-0 flex-col">
-          <section className="relative h-[300px] shrink-0 overflow-hidden border-b-2 border-foreground bg-secondary md:h-[390px] lg:min-h-[340px] lg:flex-1">
-            <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(hsl(var(--border))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border))_1px,transparent_1px)] [background-size:46px_46px]" />
+          <section className="border-b-2 border-foreground">
             <select
               value={activeSignalId}
               onChange={(event) => { setSelectedSignalId(event.target.value); setSelectedParcelId(''); }}
               aria-label="Connected opportunity"
-              className="absolute left-3 top-3 z-10 h-8 max-w-[55%] border border-foreground bg-card px-2 text-[9px] font-semibold lg:hidden"
+              className="m-3 h-8 max-w-[90%] border border-foreground bg-card px-2 text-xs font-semibold lg:hidden"
             >
               {signals.map((signal) => <option key={signal.id} value={signal.id}>{signal.name}</option>)}
             </select>
 
-            {visibleItems.map((item) => {
-              const position = pointPosition(visibleItems, item);
-              return (
-                <ParcelPoint
-                  key={item.parcel.id}
-                  item={item}
-                  selected={selectedParcel?.parcel.id === item.parcel.id}
-                  style={position}
-                  labelAbove={Number.parseFloat(position.top) > 60}
-                  onClick={() => setSelectedParcelId(item.parcel.id)}
-                />
-              );
-            })}
-
-            <div className="absolute right-3 top-3 flex flex-col gap-1.5">
-              <MapTool icon={Radius} label="Verified coordinates" />
-              <MapTool icon={MousePointer2} label="Select parcels" />
+            <Suspense fallback={<p>Loading parcel map...</p>}>
+              <GeographicMap points={visibleItems.map(item => ({ id: item.parcel.id,
+                title: item.parcel.address || item.parcel.external_parcel_id,
+                latitude: item.parcel.latitude, longitude: item.parcel.longitude, kind: 'parcel' as const,
+              }))} onSelect={setSelectedParcelId} />
+            </Suspense>
+            <div className="p-3">
               <button
                 type="button"
                 onClick={() => setActiveOnly((value) => !value)}
@@ -224,7 +202,7 @@ export default function AcquisitionMap() {
                 <Layers3 className="h-3 w-3" /> Active only
               </button>
             </div>
-            <div className="absolute bottom-3 left-3 max-w-[75%] border border-input bg-card px-2 py-1 text-[9px] text-muted-foreground">
+            <div className="px-3 pb-3 text-xs text-muted-foreground">
               {selectedSignal?.market || 'National'} · {connectedItems.length} ranked parcels · {visibleItems.length} shown
             </div>
           </section>
@@ -343,30 +321,6 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
 
 function Legend({ tone, label }: { tone: string; label: string }) {
   return <div className="flex items-center gap-2"><span className={cn('h-2.5 w-2.5 shrink-0', tone)} /><span>{label}</span></div>;
-}
-
-function MapTool({ icon: Icon, label }: { icon: typeof Radius; label: string }) {
-  return <div className="inline-flex h-8 items-center gap-1.5 border border-foreground bg-card px-2 text-[9px] font-semibold"><Icon className="h-3 w-3" />{label}</div>;
-}
-
-function ParcelPoint({ item, selected, style, labelAbove, onClick }: { item: AcquisitionRadarItem; selected: boolean; style: React.CSSProperties; labelAbove: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={style}
-      aria-label={`Select parcel ${item.parcel.external_parcel_id}`}
-      className={cn('absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 border-2 border-foreground bg-card', item.review_status === 'dismissed' && 'bg-border', selected && 'ring-2 ring-[#1a63c7]')}
-    >
-      <MapPin className="h-3 w-3" />
-      {selected && (
-        <span className={cn('absolute left-5 top-0 w-44 border-2 border-foreground bg-card p-2 text-left text-[9px]', labelAbove && 'bottom-0 top-auto')}>
-          <span className="block truncate font-semibold">{item.parcel.address || item.parcel.external_parcel_id}</span>
-          <span className="mt-1 block text-muted-foreground">{workflowLabel(item.review_status)} · score {Math.round(item.radar_score)}</span>
-        </span>
-      )}
-    </button>
-  );
 }
 
 function ParcelFact({ label, value }: { label: string; value: string }) {
