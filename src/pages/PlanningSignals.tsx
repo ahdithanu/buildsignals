@@ -29,9 +29,11 @@ function stageLabel(stage?: string | null) {
 
 export default function PlanningSignals() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const params = useMemo<PlanningSignalParams>(() => {
+  const recordId = searchParams.get('record_id');
+  const params = useMemo<PlanningSignalParams & { record_id?: string }>(() => {
     const minimumPriority = Number(searchParams.get('minimum_priority'));
     return {
+      ...(recordId ? { record_id: recordId } : {}),
       brand_id: searchParams.get('brand_id') || undefined,
       state: searchParams.get('state') || undefined,
       city: searchParams.get('city') || undefined,
@@ -41,7 +43,7 @@ export default function PlanningSignals() {
         : undefined,
       limit: 100,
     };
-  }, [searchParams]);
+  }, [searchParams, recordId]);
   const { data, isLoading, isFetching, error, refetch } = usePlanningSignals(params);
   const records = data ?? [];
   const hasFilters = !!(params.brand_id || params.state || params.city || params.category || params.minimum_priority);
@@ -84,7 +86,12 @@ export default function PlanningSignals() {
           </Button>
         </header>
 
-        {params.brand_id && (
+        {recordId && <div className="border-b py-3 text-sm">
+          <span>Selected source record</span>
+          <Link className="ml-4 underline" to="/planning">Browse all planning records</Link>
+        </div>}
+
+        {!recordId && params.brand_id && (
           <div className="flex items-center gap-2 border-b border-foreground bg-secondary px-3 py-2 text-[10px]">
             <span className="font-semibold">Company</span>
             <span>{matchedBrand?.name || 'Selected company'}</span>
@@ -99,13 +106,13 @@ export default function PlanningSignals() {
           </div>
         )}
 
-        <form onSubmit={applyFilters} className="grid gap-2 border-b-2 border-foreground py-3 sm:grid-cols-2 lg:grid-cols-[90px_1fr_1fr_150px_auto]">
+        {!recordId && <form onSubmit={applyFilters} className="grid gap-2 border-b-2 border-foreground py-3 sm:grid-cols-2 lg:grid-cols-[90px_1fr_1fr_150px_auto]">
           <FilterInput label="State" name="state" defaultValue={params.state} maxLength={2} placeholder="TX" />
           <FilterInput label="City" name="city" defaultValue={params.city} placeholder="Austin" />
           <FilterInput label="Category" name="category" defaultValue={params.category} placeholder="data_center" />
           <FilterInput label="Minimum priority" name="minimum_priority" defaultValue={params.minimum_priority?.toString()} type="number" min="0" max="100" placeholder="0" />
           <Button type="submit" size="sm" className="self-end">Apply filters</Button>
-        </form>
+        </form>}
 
         {isLoading && <LoadingState message="Loading planning signals..." />}
         {error && <ErrorState message="Planning signals could not be loaded." onRetry={() => refetch()} />}

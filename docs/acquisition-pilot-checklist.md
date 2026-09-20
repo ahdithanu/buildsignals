@@ -47,7 +47,12 @@ Optional two-letter state filtering narrows the query. Permit retirement is
 respected. Null/out-of-range coordinates are omitted; the map uses a conservative
 Web Mercator latitude range of -85 to 85. Records are not unique projects or
 confirmed brand expansions. Evidence IDs and original source links remain visible.
-Planning links currently open the planning workspace, not a record detail page.
+Planning links now open /planning?record_id=... and retrieve the exact tenant-visible
+event through the existing detail endpoint, independently of first-page list
+limits. Its evidence, company matches, and source details use the existing
+planning record presentation. A missing or failed detail request remains an error,
+not a silent fallback to unrelated records. Explicit browsing clears record focus.
+Planning browser-cache keys include organization and user identity.
 
 Leaflet is lazy-loaded. OpenStreetMap raster tiles load only for the visible map,
 with attribution and an origin referrer. There is no bulk fetch or offline cache.

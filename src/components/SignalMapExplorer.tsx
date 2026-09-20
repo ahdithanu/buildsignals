@@ -51,7 +51,7 @@ export function SignalMapExplorer() {
         {record && <div className="space-y-2 break-words py-2 text-sm">
           <h2 className="font-semibold">{record.title}</h2><p>{[record.address, record.city, record.state].filter(Boolean).join(', ')}</p>
           <p>Stage: {record.stage || 'Unknown'}</p><p>Evidence record: {record.raw_record_id}</p>
-          <Link className="underline" to={record.kind === 'permit' ? `/permits/${record.id.slice(7)}` : '/planning'}>Review {record.kind} evidence</Link>
+          <Link className="underline" to={record.kind === 'permit' ? `/permits/${record.id.slice(7)}` : `/planning?record_id=${encodeURIComponent(record.id.slice(9))}`}>Review {record.kind} evidence</Link>
           {record.source_url && /^https?:\/\//i.test(record.source_url) && <a className="ml-4 underline" target="_blank" rel="noopener noreferrer" href={record.source_url}>Original source</a>}
         </div>}
       </>}

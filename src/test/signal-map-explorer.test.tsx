@@ -12,6 +12,13 @@ function show() {
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><SignalMapExplorer /></MemoryRouter></QueryClientProvider>);
 }
 describe('independent signal map', () => {
+  it('deep-links the selected planning evidence instead of the general first page', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ items: [{ id: 'hearing-42', kind: 'planning', title: 'Planning hearing', latitude: 40, longitude: -83, raw_record_id: 'raw42' }], truncated_layers: [], limit_per_layer: 100 });
+    show();
+    await screen.findByText(/1 geocoded source records/);
+    fireEvent.change(screen.getByLabelText('Source record'), { target: { value: 'planning:hearing-42' } });
+    expect(screen.getByRole('link', { name: 'Review planning evidence' })).toHaveAttribute('href', '/planning?record_id=hearing-42');
+  });
   it('shows evidence without saved parcel searches and rejects unsafe source links', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ items: [{ id: 'p1', kind: 'permit', title: 'Expansion filing', latitude: 40, longitude: -83, raw_record_id: 'raw1', source_url: 'javascript:alert(1)' }], truncated_layers: [], limit_per_layer: 100 });
     show();
