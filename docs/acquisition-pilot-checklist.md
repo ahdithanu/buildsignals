@@ -81,6 +81,26 @@ separate source-record geography from saved ranked parcel results.
 
 ## Initial acquisition screening
 
+### Downloadable screening snapshot (2026-09-20)
+
+Opportunity screening now has a download control for editors/admins.
+`POST /deals/{deal_id}/acquisition-screen/export` produces a JSON snapshot using
+the applied profile and target market, current tenant-visible active deal facts,
+criterion pass/fail/unknown results, field-level basis, method version, UTC
+generation time, and explicit unverified-evidence limitations. It does not export
+raw parcel evidence, ownership, or geometry. The download is no-store. Viewer,
+unauthenticated, cross-tenant, and deleted-deal access is rejected. A committed
+audit entry records the actor, method, profile, counts, timestamp, and SHA-256 of
+the exact response bytes before delivery.
+
+This is an export-time snapshot, not persisted screening history or a guarantee
+that facts did not change after the on-screen query. Source-backed underwriting
+and custom criteria remain pending. Verification: 13 focused backend tests,
+three UI tests, and two real-API Playwright workflows at 1440px and 390px pass;
+the browser workflows inspect downloaded content and verify unknowns and market
+selection are retained. TypeScript and focused lint pass. No production release
+or real market records were used in these tests.
+
 GET /deals/{deal_id}/acquisition-screen requires authentication, tenant-scopes
 the active deal, and returns no-store. Profile choices are small_multifamily and
 small_bay_retail. Missing/nonpositive/nonfinite numeric inputs are unknown, not

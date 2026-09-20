@@ -35,6 +35,18 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const occupancy = panel.locator('li').filter({ has: page.getByText('Occupancy', { exact: true }) });
       await expect(occupancy).toContainText('unknown');
       await expect(occupancy).toContainText('Not established');
+      const downloadEvent = page.waitForEvent('download');
+      await panel.getByRole('button', { name: 'Download acquisition screen' }).click();
+      const download = await downloadEvent;
+      expect(download.suggestedFilename()).toBe('acquisition-screen.json');
+      const stream = await download.createReadStream();
+      if (!stream) throw new Error('Acquisition screen download has no content');
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+      const snapshot = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      expect(snapshot.screen.counts).toEqual({ pass: 3, fail: 1, unknown: 14 });
+      expect(snapshot.screen.evidence_verified).toBe(false);
+      expect(snapshot.target_market).toEqual({ city: 'Cleveland', state: 'OH' });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await panel.scrollIntoViewIfNeeded();
       await page.screenshot({ path: `/private/tmp/acquisition-screen-${viewport.width}.png`, fullPage: true });

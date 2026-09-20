@@ -1,4 +1,9 @@
+import hashlib
+import json
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -7,6 +12,7 @@ from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.schemas.buy_box import BuyBoxCreate, BuyBoxResponse
 from app.services.acquisition_screening import screen_acquisition
+from app.services.audit_service import log_change
 from app.services.matching_service import match_deal
 from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query, get_org_id, scope_query
@@ -27,6 +33,40 @@ def acquisition_screen(
         raise HTTPException(status_code=404, detail="Deal not found")
     response.headers["Cache-Control"] = "no-store"
     return screen_acquisition(deal, profile, market_city, market_state)
+
+
+@router.post("/deals/{deal_id}/acquisition-screen/export",
+             dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))])
+def export_acquisition_screen(
+    deal_id: str,
+    profile: str = Query(default="small_multifamily", pattern="^(small_multifamily|small_bay_retail)$"),
+    market_city: str | None = Query(default=None, min_length=1, max_length=100),
+    market_state: str | None = Query(default=None, pattern="^[A-Za-z]{2}$"),
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    screen = acquisition_screen(deal_id, Response(), profile, market_city, market_state, db)
+    snapshot = {
+        "schema_version": "acquisition-screen-export-v1",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "target_market": {"city": market_city, "state": market_state},
+        "screen": screen,
+        "limitations": [
+            "Snapshot of recorded deal facts, not verified source evidence or underwriting.",
+            "Unknown criteria remain unresolved; this is not an investment recommendation.",
+            "Does not establish listing availability, parcel ownership, or market coverage.",
+        ],
+    }
+    content = json.dumps(jsonable_encoder(snapshot), ensure_ascii=True, allow_nan=False, indent=2)
+    log_change(db, "deal", deal_id, "acquisition_screen_export", actor_id=principal["user_id"],
+               new_values={"content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+                           "method_version": screen["method_version"], "profile": profile,
+                           "counts": screen["counts"], "generated_at": snapshot["generated_at"]})
+    db.commit()
+    return Response(content=content, media_type="application/json", headers={
+        "Cache-Control": "no-store",
+        "Content-Disposition": 'attachment; filename="acquisition-screen.json"',
+    })
 
 
 # ── create buy box ──────────────────────────────────────────────────────────

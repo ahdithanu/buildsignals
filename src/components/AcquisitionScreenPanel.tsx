@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Download } from 'lucide-react';
 
 interface Screen {
   status: string;
@@ -11,7 +12,9 @@ interface Screen {
 }
 
 export function AcquisitionScreenPanel({ dealId }: { dealId: string }) {
-  const { organizationId, user } = useAuth();
+  const { organizationId, user, role } = useAuth();
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
   const [profile, setProfile] = useState('small_multifamily');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -21,8 +24,29 @@ export function AcquisitionScreenPanel({ dealId }: { dealId: string }) {
     enabled: !!organizationId && !!user,
     queryFn: () => apiClient.get<Screen>(`/deals/${dealId}/acquisition-screen`, { profile, ...market }),
   });
+  const downloadScreen = async () => {
+    setExporting(true); setExportError(false);
+    try {
+      const params = new URLSearchParams({ profile, ...market });
+      const result = await apiClient.download(`/deals/${dealId}/acquisition-screen/export?${params}`, 'POST');
+      const url = URL.createObjectURL(result.blob);
+      const anchor = document.createElement('a');
+      anchor.href = url; anchor.download = 'acquisition-screen.json';
+      document.body.appendChild(anchor);
+      try { anchor.click(); } finally { anchor.remove(); URL.revokeObjectURL(url); }
+    } catch { setExportError(true); }
+    finally { setExporting(false); }
+  };
   return <section className="border-y py-5" aria-label="Acquisition buy-box screen">
-    <h3 className="mb-3 text-sm font-semibold">Acquisition buy-box screen</h3>
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <h3 className="text-sm font-semibold">Acquisition buy-box screen</h3>
+      {(role === 'admin' || role === 'editor') && <button type="button" className="shrink-0 border p-2"
+        title="Download acquisition screen" aria-label="Download acquisition screen"
+        disabled={exporting || isPending || !!error || !data} onClick={downloadScreen}>
+        <Download size={16} />
+      </button>}
+    </div>
+    {exportError && <p role="alert" className="mb-3 text-sm">Screen export failed. Try downloading again.</p>}
     <label className="block text-sm">Profile
       <select className="my-2 block w-full border bg-background p-2" value={profile} onChange={e => setProfile(e.target.value)}>
         <option value="small_multifamily">Small multifamily</option><option value="small_bay_retail">Small-bay retail</option>
