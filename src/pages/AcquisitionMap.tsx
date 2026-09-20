@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { Layout } from '@/components/Layout';
+import { MapReadiness } from '@/components/MapReadiness';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -139,6 +140,7 @@ export default function AcquisitionMap() {
           description="Run a nearby-parcel search from a geocoded opportunity to populate this workspace."
           action={<Link to="/permit-review" className="border-2 border-foreground px-3 py-2 text-xs font-semibold">Open permit review</Link>}
         />
+        <MapReadiness />
       </Layout>
     );
   }

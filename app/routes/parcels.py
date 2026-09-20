@@ -40,6 +40,7 @@ from app.services.deal_service import deal_to_detail_response
 from app.services.graph_service import relationships_for_entity
 from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
 from app.services.parcel_lineage import get_lineage_event, lineage_events_for_parcel
+from app.services.map_readiness import map_readiness
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,
     create_nearby_parcel_search,
@@ -54,6 +55,12 @@ from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(tags=["nearby parcels"])
+
+
+@router.get("/acquisition-map/readiness", dependencies=[Depends(get_current_user)])
+def get_map_readiness(response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    return map_readiness(db)
 
 
 def _lineage_response(event) -> dict:

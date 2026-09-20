@@ -7,6 +7,8 @@ import AcquisitionMap from '@/pages/AcquisitionMap';
 const refetch = vi.fn();
 let radarState: Record<string, unknown>;
 
+vi.mock('@/components/MapReadiness', () => ({ MapReadiness: () => <div>Workspace diagnostics</div> }));
+
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
   useAcquisitionRadar: () => radarState,
 }));
