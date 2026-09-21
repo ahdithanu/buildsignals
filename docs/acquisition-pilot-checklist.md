@@ -32,8 +32,23 @@ Verification: 12 new schema/authentication/provenance tests and 12 existing
 portability/erasure tests pass; the 11 existing restricted-role PostgreSQL RLS
 regressions also pass after migration. SQLite and PostgreSQL upgrade/downgrade/
 re-upgrade pass. No real property documents were supplied, production sources
-activated, migrations deployed, or paid storage provisioned. Browser intake and
-reviewed evidence-to-criterion linkage remain to be implemented.
+activated, migrations deployed, or paid storage provisioned.
+
+Browser intake is now available in the opportunity's Diligence excerpts section.
+Editors/admins can submit attributed text after affirming storage authorization;
+viewers can read saved excerpts but do not see a submission form. Metadata pages
+are bounded to 20 documents, excerpt bodies load on selection, and query/form
+state is scoped to tenant, user, and deal. Text renders as escaped text, never
+HTML. Failed saves preserve inputs; changing workspace clears them. Source title,
+date, locator, digest, and the unverified/original-file limitation remain visible.
+
+All 279 frontend tests across 60 files pass. Real-local-API Playwright workflows
+pass at 1440px and 390px, verifying required authorization, save/read/reload,
+unchanged screening unknowns, and no horizontal overflow. Mobile form and desktop
+excerpt screenshots were inspected. TypeScript, focused lint, and production
+build pass with the existing large-bundle warning. Fixtures are synthetic text,
+not an actual property package. Reviewed evidence-to-criterion linkage remains
+pending; submitting an excerpt must not itself turn a criterion into a pass.
 
 ### Evidence intake dependency (2026-09-21)
 
