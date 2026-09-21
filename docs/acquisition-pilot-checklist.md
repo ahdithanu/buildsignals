@@ -23,6 +23,13 @@ Focused lint passes. No source activation, production migration, push, or
 deployment occurred. Real-property evidence and county rights remain blocked on
 the previously recorded inputs, not replaced with synthetic inventory.
 
+Browser acceptance now also covers excerpt -> reviewed criterion -> downloaded
+v2 export -> reload -> byte-identical historical download at 1440px and 390px.
+Both real-local-API Playwright cases pass (9.0s). They verify source text, locator,
+digest, inconclusive assessment, explicit truncation metadata, unchanged screening
+counts, and retention after reload. Fixtures remain synthetic and this receipt
+does not close the real-record or production acceptance gates.
+
 ### Reviewed excerpt-to-criterion linkage API (2026-09-21)
 
 Added tenant-scoped, application-append-only `diligence_reviews` records and
@@ -292,6 +299,10 @@ Production diagnostics and any release still require their separate live gates.
   history verified on mobile and desktop.
 - [ ] Add source-backed rent-roll/lease/capex diligence inputs. Current field
   references identify recorded deal inputs, not independently verified documents.
+  Attributed excerpt intake, evidence-bound analyst reviews, and retained export
+  snapshots are implemented and browser-tested. Remaining: authorized real
+  property inputs, verification, and reviewed structured fact application; an
+  analyst's supports/contradicts assessment alone is not a numeric screening fact.
 - [ ] Verify source evidence, project timeline, nearby parcels, saved opportunity,
   and export on mobile and desktop with real qualified records.
 - [ ] Release and measure live inventory, freshness, and source-specific coverage.
