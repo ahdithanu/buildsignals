@@ -37,7 +37,7 @@
   fields against versioned user-requested defaults. Asset configuration and
   retail diligence remain unknown. Field references are traceable inputs, not
   independently verified evidence. Persisted structured criteria now have an API
-  foundation; the creation/selection UI, source-backed rent-roll/lease/capex
+  foundation and selection UI; the creation UI, source-backed rent-roll/lease/capex
   inputs, and saved screening history remain pending.
 - [ ] Verify source evidence, project timeline, nearby parcels, saved opportunity,
   and export on mobile and desktop with real qualified records.
@@ -81,6 +81,24 @@ filters/pagination, and unified signal-to-parcel selection. Two maps currently
 separate source-record geography from saved ranked parcel results.
 
 ## Initial acquisition screening
+
+### Saved criteria selection (2026-09-20 evening)
+
+The opportunity panel now lists structured saved buy boxes from the authenticated
+workspace, excluding legacy unstructured boxes. Selecting one sends buy_box_id
+to screening and export, hides the competing default profile/market controls,
+and retains the selected identifier when list refresh fails rather than silently
+screening against defaults. The list is capped at 200 and labels that limit.
+Browser query keys include organization/user identity; the screening panel
+remounts on organization, user, or deal changes to clear previous selection.
+No localStorage persistence or cross-workspace preferences are introduced.
+
+Five focused UI tests and both real-local-API Playwright workflows pass. The
+browser workflows create a persisted box via API, reload, select it, verify
+custom thresholds, and inspect the downloaded criteria snapshot at 1440px and
+390px with no horizontal overflow. TypeScript and focused lint pass. Browser
+creation/editing, pagination beyond the bounded list, and screening history are
+still pending. This does not qualify real parcel sources or production records.
 
 ### Persisted criteria API foundation (2026-09-20)
 
@@ -162,7 +180,7 @@ Market matching requires exact city and state rather than substring matching.
 The existing legacy buy-box matcher is unchanged for compatibility. New criteria
 are a preliminary separate view, not a completed underwriting or source-verification
 workflow. The panel's profile and target market selection are not yet persisted;
-the optional saved-criteria API above is not yet wired into that panel.
+saved criteria can now be selected in the panel but selection itself resets on reload.
 
 ### Local browser qualification (2026-09-20)
 

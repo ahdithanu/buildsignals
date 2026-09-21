@@ -7,6 +7,7 @@ import { apiClient } from '@/api/client';
 const auth = vi.hoisted(() => ({ role: 'admin' }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ organizationId: 'o', user: { id: 'u' }, role: auth.role }) }));
 vi.mock('@/api/client', () => ({ apiClient: { get: vi.fn(), download: vi.fn() } }));
+vi.mock('@/components/SavedAcquisitionCriteria', () => ({ SavedAcquisitionCriteria: () => null }));
 afterEach(() => { vi.restoreAllMocks(); auth.role = 'admin'; });
 it('shows unknown diligence explicitly rather than a fabricated fit score', async () => {
   vi.mocked(apiClient.get).mockResolvedValue({ status: 'needs_diligence', counts: { pass: 1, fail: 0, unknown: 1 }, criteria: [

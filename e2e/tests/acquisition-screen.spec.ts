@@ -51,6 +51,28 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await panel.scrollIntoViewIfNeeded();
       await page.screenshot({ path: `/private/tmp/acquisition-screen-${viewport.width}.png`, fullPage: true });
+      const savedBox = await page.request.post('http://localhost:8000/v1/buy-box', {
+        headers: { Authorization: `Bearer ${credentials.access_token}` },
+        data: { acquisition_criteria: { version: 1, profile: 'small_multifamily', market_city: 'Columbus', market_state: 'OH',
+          min_price: 1000000, max_price: 3000000, min_size: 20, max_size: 30, min_year_built: 1980 } },
+      });
+      expect(savedBox.ok()).toBeTruthy();
+      const box = await savedBox.json();
+      await page.reload();
+      await expect(panel.getByRole('option', { name: /Columbus.*Multifamily/ })).toBeAttached();
+      await panel.getByLabel('Saved buy box').selectOption(box.id);
+      await expect(panel.getByText('Diligence required: 4 pass, 0 fail, 1 unknown')).toBeVisible();
+      await expect(panel.getByLabel('Target city')).toHaveCount(0);
+      const savedDownloadEvent = page.waitForEvent('download');
+      await panel.getByRole('button', { name: 'Download acquisition screen' }).click();
+      const savedStream = await (await savedDownloadEvent).createReadStream();
+      if (!savedStream) throw new Error('Saved criteria export missing');
+      const savedChunks: Buffer[] = [];
+      for await (const chunk of savedStream) savedChunks.push(Buffer.from(chunk));
+      const savedSnapshot = JSON.parse(Buffer.concat(savedChunks).toString('utf8'));
+      expect(savedSnapshot.screen.buy_box_id).toBe(box.id);
+      expect(savedSnapshot.screen.criteria_snapshot.min_size).toBe(20);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     });
   });
 }
