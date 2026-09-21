@@ -3,6 +3,7 @@ from decimal import Decimal
 from math import isfinite
 
 from app.models.deal import Deal
+from app.schemas.buy_box import AcquisitionCriteria
 
 PROFILES = {
     "small_multifamily": (
@@ -35,11 +36,25 @@ RETAIL_DILIGENCE = (
 
 
 def screen_acquisition(deal: Deal, profile: str, market_city: str | None = None,
-                       market_state: str | None = None) -> dict:
+                       market_state: str | None = None, *,
+                       custom_criteria: AcquisitionCriteria | None = None) -> dict:
+    if custom_criteria is not None:
+        profile = custom_criteria.profile
+        market_city, market_state = custom_criteria.market_city, custom_criteria.market_state
     if profile not in PROFILES:
         raise ValueError("Unsupported acquisition profile")
     criteria = []
     for field, label, lower, upper, target in PROFILES[profile]:
+        if custom_criteria is not None:
+            if field == "asking_price":
+                lower, upper = custom_criteria.min_price, custom_criteria.max_price
+                target = f"${lower:,.0f}-${upper:,.0f}"
+            elif field == "year_built":
+                lower, upper = custom_criteria.min_year_built, None
+                target = f"{lower} or newer"
+            else:
+                lower, upper = custom_criteria.min_size, custom_criteria.max_size
+                target = f"{lower:,}-{upper:,} {'units' if field == 'units' else 'SF'}"
         value = getattr(deal, field)
         valid = (
             isinstance(value, (int, float, Decimal)) and not isinstance(value, bool)
@@ -73,7 +88,7 @@ def screen_acquisition(deal: Deal, profile: str, market_city: str | None = None,
         "reason": "Exact city/state comparison; not a metro-area inference." if market_known
         else "Target market or deal location is incomplete.",
     })
-    diligence = [("asset_type", "Asset configuration", "16–32 unit multifamily")]
+    diligence = [("asset_type", "Asset configuration", "Multifamily building")]
     if profile == "small_bay_retail":
         diligence = [("asset_type", "Asset configuration", "Unanchored or shadow-anchored multi-tenant strip"), *RETAIL_DILIGENCE]
     for key, label, target in diligence:
@@ -81,7 +96,7 @@ def screen_acquisition(deal: Deal, profile: str, market_city: str | None = None,
                          "value": None, "basis": None,
                          "reason": "Requires documented diligence; not inferred from permits or proximity."})
     counts = {state: sum(c["status"] == state for c in criteria) for state in ("pass", "fail", "unknown")}
-    return {"deal_id": deal.id, "profile": profile, "method_version": "acquisition-screen-v2",
+    return {"deal_id": deal.id, "profile": profile, "method_version": "acquisition-screen-v3",
             "criteria": criteria, "counts": counts,
             "status": "outside_buy_box" if counts["fail"] else "needs_diligence" if counts["unknown"] else "fits_recorded_criteria",
             "evidence_verified": False}

@@ -10,7 +10,7 @@ from app.db import get_db
 from app.models.buy_box import BuyBox
 from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
-from app.schemas.buy_box import BuyBoxCreate, BuyBoxResponse
+from app.schemas.buy_box import AcquisitionCriteria, BuyBoxCreate, BuyBoxResponse
 from app.services.acquisition_screening import screen_acquisition
 from app.services.audit_service import log_change
 from app.services.matching_service import match_deal
@@ -27,12 +27,24 @@ def acquisition_screen(
     market_city: str | None = Query(default=None, min_length=1, max_length=100),
     market_state: str | None = Query(default=None, pattern="^[A-Za-z]{2}$"),
     db: Session = Depends(get_db),
+    buy_box_id: str | None = None,
 ):
     deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()
     if deal is None:
         raise HTTPException(status_code=404, detail="Deal not found")
     response.headers["Cache-Control"] = "no-store"
-    return screen_acquisition(deal, profile, market_city, market_state)
+    custom = None
+    if buy_box_id is not None:
+        box = scope_query(db.query(BuyBox), BuyBox).filter(BuyBox.id == buy_box_id).first()
+        if box is None:
+            raise HTTPException(status_code=404, detail="Buy box not found")
+        if box.acquisition_criteria is None:
+            raise HTTPException(status_code=422, detail="Buy box has no structured acquisition criteria")
+        custom = AcquisitionCriteria.model_validate(box.acquisition_criteria)
+    result = screen_acquisition(deal, profile, market_city, market_state, custom_criteria=custom)
+    result["buy_box_id"] = buy_box_id
+    result["criteria_snapshot"] = custom.model_dump() if custom else None
+    return result
 
 
 @router.post("/deals/{deal_id}/acquisition-screen/export",
@@ -44,8 +56,12 @@ def export_acquisition_screen(
     market_state: str | None = Query(default=None, pattern="^[A-Za-z]{2}$"),
     principal: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
+    buy_box_id: str | None = None,
 ):
-    screen = acquisition_screen(deal_id, Response(), profile, market_city, market_state, db)
+    screen = acquisition_screen(deal_id, Response(), profile, market_city, market_state, db, buy_box_id)
+    criteria = screen["criteria_snapshot"]
+    if criteria:
+        market_city, market_state = criteria["market_city"], criteria["market_state"]
     snapshot = {
         "schema_version": "acquisition-screen-export-v1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -60,7 +76,8 @@ def export_acquisition_screen(
     content = json.dumps(jsonable_encoder(snapshot), ensure_ascii=True, allow_nan=False, indent=2)
     log_change(db, "deal", deal_id, "acquisition_screen_export", actor_id=principal["user_id"],
                new_values={"content_sha256": hashlib.sha256(content.encode()).hexdigest(),
-                           "method_version": screen["method_version"], "profile": profile,
+                           "method_version": screen["method_version"], "profile": screen["profile"],
+                           "buy_box_id": buy_box_id,
                            "counts": screen["counts"], "generated_at": snapshot["generated_at"]})
     db.commit()
     return Response(content=content, media_type="application/json", headers={
@@ -77,9 +94,11 @@ def export_acquisition_screen(
     status_code=201,
     dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
 )
-def create_buy_box(payload: BuyBoxCreate, db: Session = Depends(get_db)):
+def create_buy_box(payload: BuyBoxCreate, db: Session = Depends(get_db),
+                   principal: dict = Depends(get_current_user)):
     box = BuyBox(**payload.model_dump())
     box.organization_id = get_org_id()
+    box.user_id = principal["user_id"]
     db.add(box)
     db.commit()
     db.refresh(box)

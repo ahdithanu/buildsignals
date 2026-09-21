@@ -36,8 +36,9 @@
   units/area, vintage, and an explicitly selected city/state compare saved deal
   fields against versioned user-requested defaults. Asset configuration and
   retail diligence remain unknown. Field references are traceable inputs, not
-  independently verified evidence. Still pending: persisted custom criteria,
-  source-backed rent-roll/lease/capex inputs, and saved screening history.
+  independently verified evidence. Persisted structured criteria now have an API
+  foundation; the creation/selection UI, source-backed rent-roll/lease/capex
+  inputs, and saved screening history remain pending.
 - [ ] Verify source evidence, project timeline, nearby parcels, saved opportunity,
   and export on mobile and desktop with real qualified records.
 - [ ] Release and measure live inventory, freshness, and source-specific coverage.
@@ -80,6 +81,30 @@ filters/pagination, and unified signal-to-parcel selection. Two maps currently
 separate source-record geography from saved ranked parcel results.
 
 ## Initial acquisition screening
+
+### Persisted criteria API foundation (2026-09-20)
+
+Migration `20260920_0001` adds nullable structured acquisition criteria to the
+existing tenant-scoped buy_boxes table (existing RLS policy retained). POST
+/buy-box accepts a versioned acquisition_criteria object: profile, city/state,
+price bounds, size bounds (units for multifamily, SF for retail), and minimum
+construction year. Creator user ID and creation time are retained. Validation
+rejects blank cities, nonfinite prices, reversed ranges, invalid profiles, and
+unknown keys. Existing legacy boxes remain readable and unchanged.
+
+GET /deals/{id}/acquisition-screen and POST /deals/{id}/acquisition-screen/export
+accept buy_box_id. Both scope it to the current tenant, use the saved criteria
+instead of caller-supplied profile/market defaults, and return the exact criteria
+snapshot and buy-box identifier. Legacy boxes without structured criteria return
+422 rather than silently applying defaults. Structured boxes are excluded from
+the legacy numeric match-score endpoint: unresolved diligence must not become a
+legacy fit score. Method acquisition-screen-v3 records this criteria behavior.
+
+Thirty-six focused backend tests pass, covering persistence, tenant isolation,
+role restrictions, custom thresholds, legacy behavior, and export snapshots.
+SQLite upgrade/downgrade/re-upgrade passed in a disposable database. PostgreSQL
+migration verification, browser creation/selection, and persisted screening
+history remain pending. No production migration or deployment was performed.
 
 ### Incomplete-input screening (2026-09-20)
 
@@ -136,7 +161,8 @@ diligence yields needs_diligence. No investment score or recommendation is issue
 Market matching requires exact city and state rather than substring matching.
 The existing legacy buy-box matcher is unchanged for compatibility. New criteria
 are a preliminary separate view, not a completed underwriting or source-verification
-workflow. The profile and target market selection are not yet persisted.
+workflow. The panel's profile and target market selection are not yet persisted;
+the optional saved-criteria API above is not yet wired into that panel.
 
 ### Local browser qualification (2026-09-20)
 

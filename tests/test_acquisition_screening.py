@@ -53,7 +53,7 @@ def test_location_trims_and_casefolds_without_changing_identity():
     criterion = next(c for c in result['criteria'] if c['key'] == 'market')
     assert criterion['status'] == 'pass'
     assert criterion['value'] == 'Columbus, oh'
-    assert result['method_version'] == 'acquisition-screen-v2'
+    assert result['method_version'] == 'acquisition-screen-v3'
 
 
 @pytest.mark.parametrize('value', [True, False, '24', '', float('nan'), float('inf'), -1])
