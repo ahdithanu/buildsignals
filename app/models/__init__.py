@@ -37,3 +37,4 @@ from app.models.parcel import (  # noqa
     ParcelFact,
     ParcelRecord,
 )
+from app.models.planning import PlanningCompanyMatch, PlanningRecord  # noqa

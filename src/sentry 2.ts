@@ -14,50 +14,7 @@
  *   VITE_SENTRY_TRACES_SAMPLE_RATE — 0.0 to 1.0, defaults to 0.1
  *   VITE_APP_VERSION               — release tag, defaults to git sha at build time
  */
-
-type SentryOptions = {
-  dsn: string;
-  environment: string;
-  release?: string;
-  tracesSampleRate: number;
-  sendDefaultPii: boolean;
-  integrations: unknown[];
-  beforeSend: (event: {
-    request?: { url?: string };
-    [key: string]: unknown;
-  }) => {
-    request?: { url?: string };
-    [key: string]: unknown;
-  } | null;
-  beforeSendTransaction: (event: {
-    request?: { url?: string };
-    transaction?: string;
-    [key: string]: unknown;
-  }) => {
-    request?: { url?: string };
-    transaction?: string;
-    [key: string]: unknown;
-  } | null;
-  beforeBreadcrumb: (breadcrumb: {
-    data?: Record<string, unknown>;
-    [key: string]: unknown;
-  }) => {
-    data?: Record<string, unknown>;
-    [key: string]: unknown;
-  };
-};
-
-const Sentry = {
-  init(_options: SentryOptions) {
-    return undefined;
-  },
-  captureException(_error: unknown, _context?: { extra?: Record<string, unknown> }) {
-    return undefined;
-  },
-  browserTracingIntegration() {
-    return undefined;
-  },
-};
+import * as Sentry from "@sentry/react";
 
 // Query params that must never reach Sentry. The password-reset token lives
 // in `?token=` and browserTracingIntegration records navigation URLs — so

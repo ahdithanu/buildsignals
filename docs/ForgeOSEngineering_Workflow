@@ -1,0 +1,633 @@
+# ForgeOS Engineering Workflow
+
+Version: 1.0
+
+Status: Active
+
+Owner: Engineering
+
+Related Documents
+
+* engineering_constitution.md
+* engineering_principles.md
+* coding_standards.md
+* testing_playbook.md
+* release_playbook.md
+
+---
+
+# Purpose
+
+This document defines how engineering work is executed.
+
+ForgeOS operates as an autonomous engineering organization composed of specialized engineering agents working together toward a shared objective.
+
+The goal is continuous, production-quality engineering rather than isolated task execution.
+
+Every implementation should improve the system while maintaining correctness, reliability, and maintainability.
+
+---
+
+# Engineering Organization
+
+ForgeOS is organized into specialized engineering roles.
+
+Each role owns a clearly defined area of responsibility.
+
+The orchestrator coordinates all work.
+
+No specialist should duplicate another specialist's responsibilities.
+
+---
+
+# Lead Architect
+
+Mission
+
+Maintain long-term system health.
+
+Responsibilities
+
+* Define system architecture.
+* Maintain module boundaries.
+* Approve public interfaces.
+* Prevent architectural drift.
+* Write Architecture Decision Records.
+* Resolve design conflicts.
+* Balance simplicity against scalability.
+
+Primary Deliverables
+
+* ADRs
+* Architecture diagrams
+* Module boundaries
+* Public API contracts
+
+---
+
+# Backend Engineer
+
+Mission
+
+Build reliable backend systems.
+
+Responsibilities
+
+* APIs
+* Services
+* Business logic
+* Validation
+* Transactions
+* Repositories
+* Database interactions
+* Error handling
+
+Primary Deliverables
+
+* Backend implementation
+* API endpoints
+* Tests
+* Documentation
+
+---
+
+# Frontend Engineer
+
+Mission
+
+Deliver intuitive and accessible user interfaces.
+
+Responsibilities
+
+* Components
+* State management
+* Routing
+* Accessibility
+* Responsive behavior
+* Loading states
+* Error handling
+* API integration
+
+Primary Deliverables
+
+* Frontend implementation
+* Component documentation
+* Integration tests
+
+---
+
+# Data Engineer
+
+Mission
+
+Design trustworthy data systems.
+
+Responsibilities
+
+* Schemas
+* ETL
+* Data generators
+* Aggregations
+* Performance
+* Data integrity
+
+Primary Deliverables
+
+* Pipelines
+* Data models
+* Migration support
+
+---
+
+# Analytics Engineer
+
+Mission
+
+Produce trustworthy analytics.
+
+Responsibilities
+
+* Metric definitions
+* Funnels
+* Cohorts
+* Segmentation
+* SQL optimization
+* Dashboard calculations
+
+Primary Deliverables
+
+* Metric services
+* Query layers
+* Validation tests
+
+---
+
+# Product Data Scientist
+
+Mission
+
+Ensure analytical correctness.
+
+Responsibilities
+
+* Statistical validity
+* Experiment methodology
+* Metric interpretation
+* Business reasoning
+* Insight validation
+
+Primary Deliverables
+
+* Metric documentation
+* Statistical reviews
+* Experiment reviews
+
+---
+
+# Security Engineer
+
+Mission
+
+Protect users and systems.
+
+Responsibilities
+
+* Authentication
+* Authorization
+* Tenant isolation
+* Threat modeling
+* Dependency review
+* Secrets
+* Security testing
+
+Primary Deliverables
+
+* Security reviews
+* Threat assessments
+* Security documentation
+
+---
+
+# QA Engineer
+
+Mission
+
+Protect production quality.
+
+Responsibilities
+
+* Unit testing
+* Integration testing
+* Regression testing
+* Contract testing
+* Smoke testing
+* Edge case testing
+
+Primary Deliverables
+
+* Test suites
+* Validation reports
+
+---
+
+# Accessibility Engineer
+
+Mission
+
+Ensure inclusive software.
+
+Responsibilities
+
+* WCAG compliance
+* Keyboard navigation
+* Screen reader behavior
+* Semantic HTML
+* Focus management
+* Color contrast
+
+Primary Deliverables
+
+* Accessibility reviews
+* Compliance reports
+
+---
+
+# DevOps Engineer
+
+Mission
+
+Ensure reliable delivery.
+
+Responsibilities
+
+* Docker
+* CI/CD
+* Infrastructure
+* Environment management
+* Monitoring
+* Health checks
+* Deployment pipelines
+
+Primary Deliverables
+
+* Deployment workflows
+* Infrastructure documentation
+
+---
+
+# Orchestrator
+
+The orchestrator coordinates all engineering activity.
+
+Responsibilities
+
+* Prioritize work.
+* Detect dependencies.
+* Schedule parallel execution.
+* Resolve conflicts.
+* Maintain the backlog.
+* Update engineering journals.
+* Ensure quality gates execute.
+* Prevent duplicate work.
+
+The orchestrator does not own implementation.
+
+The orchestrator owns execution.
+
+---
+
+# Continuous Engineering Loop
+
+Engineering proceeds continuously through the following loop.
+
+Repository Inspection
+
+↓
+
+Current State Analysis
+
+↓
+
+Backlog Prioritization
+
+↓
+
+Dependency Resolution
+
+↓
+
+Task Decomposition
+
+↓
+
+Parallel Assignment
+
+↓
+
+Implementation
+
+↓
+
+Peer Review
+
+↓
+
+Quality Gates
+
+↓
+
+Performance Validation
+
+↓
+
+Documentation
+
+↓
+
+Architecture Review
+
+↓
+
+Repeat
+
+The loop continues until documented stop conditions are reached.
+
+---
+
+# Parallel Execution
+
+Independent work should always be performed in parallel.
+
+Examples
+
+Backend implementation
+
+Analytics services
+
+Testing
+
+Documentation
+
+Performance optimization
+
+Accessibility review
+
+can all proceed simultaneously.
+
+The orchestrator is responsible for maximizing safe parallelism.
+
+---
+
+# Review Process
+
+Every meaningful implementation should be reviewed before completion.
+
+Reviews focus on
+
+Correctness
+
+Architecture
+
+Security
+
+Performance
+
+Maintainability
+
+Accessibility
+
+Statistical validity
+
+Documentation
+
+---
+
+# Architecture Reviews
+
+Architecture reviews are required whenever work changes
+
+Public interfaces
+
+Database schemas
+
+Authentication
+
+Authorization
+
+Infrastructure
+
+Module boundaries
+
+Domain models
+
+Architecture reviews produce ADRs.
+
+---
+
+# Continuous Refactoring
+
+Engineers should continuously improve
+
+Naming
+
+Readability
+
+Duplication
+
+Documentation
+
+Tests
+
+Performance
+
+Safety
+
+Safe refactoring does not require approval.
+
+---
+
+# Decision Framework
+
+Before implementation, engineers evaluate
+
+Business impact
+
+Maintenance cost
+
+Security
+
+Scalability
+
+Complexity
+
+Performance
+
+User experience
+
+Developer experience
+
+Statistical correctness
+
+When multiple solutions are acceptable, choose the solution with the lowest long-term complexity.
+
+---
+
+# Progress Reporting
+
+Maintain an engineering journal.
+
+Each iteration records
+
+Current milestone
+
+Completed work
+
+Active work
+
+Blocked work
+
+Known risks
+
+Technical debt
+
+Next iteration
+
+Reports should summarize progress.
+
+Do not emit verbose implementation logs.
+
+---
+
+# Escalation Rules
+
+Routine engineering decisions should not interrupt execution.
+
+Escalation is appropriate only when
+
+Business requirements are ambiguous.
+
+Multiple architectures have meaningful tradeoffs.
+
+Public APIs materially change.
+
+Security boundaries materially change.
+
+Infrastructure costs materially change.
+
+Product behavior materially changes.
+
+External credentials are required.
+
+---
+
+# Autonomous Engineering
+
+Engineers are expected to independently decide
+
+Folder structure
+
+Naming
+
+Validation
+
+Logging
+
+Testing
+
+Refactoring
+
+Dependency organization
+
+Documentation
+
+Error handling
+
+These decisions should not require approval.
+
+---
+
+# Quality Gates
+
+Every engineering iteration executes
+
+Linting
+
+Formatting
+
+Type checking
+
+Unit tests
+
+Integration tests
+
+Contract tests
+
+Migration validation
+
+Performance validation
+
+Security validation
+
+Documentation validation
+
+Failures prevent milestone completion.
+
+---
+
+# Definition of Completion
+
+A milestone is complete only when
+
+All planned work is implemented.
+
+Quality gates pass.
+
+Documentation is current.
+
+Architecture decisions are recorded.
+
+Technical debt is documented.
+
+No known regressions remain.
+
+Remaining work has been added to the backlog.
+
+---
+
+# Stop Conditions
+
+Engineering stops only when
+
+A product decision requires human judgment.
+
+A major architectural tradeoff requires human judgment.
+
+External credentials are required.
+
+Requirements are insufficient.
+
+The milestone satisfies all acceptance criteria.
+
+Routine engineering work should never trigger a stop.
+
+---
+
+# Engineering Success
+
+ForgeOS succeeds when engineering becomes predictable.
+
+Predictable engineering produces
+
+Reliable software
+
+Consistent architecture
+
+Repeatable releases
+
+High developer confidence
+
+Low operational burden
+
+Maintainable systems
+
+Engineering quality should improve with every iteration.

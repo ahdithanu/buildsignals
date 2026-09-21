@@ -10,6 +10,7 @@ permit intelligence pipeline.
 - [Nationwide source coverage and state rollout map](./nationwide_source_coverage.md)
 - [Permit ingestion decision log](./permit_ingestion.md)
 - [Nearby parcel discovery](./nearby_parcel_discovery.md)
+- [Planning and meeting intelligence](./planning_intelligence.md)
 - [Source onboarding decisions](./source_onboarding_decisions.md)
 - [Parcel source onboarding decisions](./parcel_source_onboarding_decisions.md)
 
@@ -19,4 +20,3 @@ permit intelligence pipeline.
 - Entity resolution, aliases, evidence, and provenance
 - Official-source coverage by state and rollout priority
 - Nearby-parcel discovery as phase 2 of opportunity expansion
-

@@ -26,7 +26,7 @@ def _utcnow() -> datetime:
 
 
 class BrandProfile(OrgMixin, Base):
-    """A retailer or chain an organization wants to detect in public filings."""
+    """A company or brand an organization wants to detect in public records."""
 
     __tablename__ = "brand_profiles"
     __table_args__ = (

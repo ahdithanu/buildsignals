@@ -59,6 +59,9 @@ class IngestionSource(OrgMixin, Base):
     runs: Mapped[list["IngestionRun"]] = relationship("IngestionRun", back_populates="source")
     raw_records: Mapped[list["RawSourceRecord"]] = relationship("RawSourceRecord", back_populates="source")
     permit_records: Mapped[list["PermitRecord"]] = relationship("PermitRecord", back_populates="source")
+    planning_records: Mapped[list["PlanningRecord"]] = relationship(
+        "PlanningRecord", back_populates="source"
+    )
 
 
 class SourceFieldMapping(OrgMixin, Base):
