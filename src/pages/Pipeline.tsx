@@ -160,7 +160,7 @@ export default function Pipeline() {
                                 </div>
                                 <p className="text-[10px] md:text-xs text-muted-foreground mb-2">{deal.market}</p>
                                 <div className="flex items-center justify-between text-[10px] md:text-xs">
-                                  <span className="text-muted-foreground">{deal.projectedIrr}% IRR</span>
+                                  <span className="text-muted-foreground">{deal.projectedIrr == null ? 'IRR not calculated' : `${deal.projectedIrr}% IRR`}</span>
                                   <StatusBadge status={deal.riskLevel} label={deal.riskLevel} />
                                 </div>
                                 <div className="flex items-center justify-between mt-2 pt-2 border-t text-[10px] md:text-xs text-muted-foreground">

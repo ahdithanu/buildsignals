@@ -20,10 +20,10 @@ export interface Deal {
   market: string;
   assetClass: string;
   askingPrice: number;
-  noi: number;
+  noi: number | null;
   dealScore: number;
-  projectedIrr: number;
-  equityMultiple: number;
+  projectedIrr: number | null;
+  equityMultiple: number | null;
   riskLevel: RiskLevel;
   status: DealStatus;
   source: string;
@@ -44,7 +44,7 @@ export interface Deal {
   lastUpdated: string;
   dueDate: string;
   owner: string;
-  cashOnCash: number;
+  cashOnCash: number | null;
   subscores: DealSubscores | null;
 }
 

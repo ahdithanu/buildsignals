@@ -81,6 +81,21 @@ separate source-record geography from saved ranked parcel results.
 
 ## Initial acquisition screening
 
+### Unknown financial outputs (2026-09-20)
+
+The deal API adapter now preserves missing/nonfinite underwriting outputs as
+null rather than fabricating zero NOI, IRR, equity multiple, or cash-on-cash.
+Deal details, inbox, dashboard, pipeline, and memo summaries display those
+values as Not calculated. Actual finite zero and negative results are retained;
+percentage outputs still convert ratios to percentage points. This changes
+presentation of missing results, not underwriting assumptions or calculations,
+and does not independently verify existing financial outputs.
+
+Verification: 269 frontend tests pass, including 15 new mapping regressions;
+the two real-local-API acquisition workflows pass at desktop/mobile sizes and
+assert four unknown financial metrics. Mobile screenshot inspected. Application
+TypeScript passes; focused lint reports no errors and two existing warnings.
+
 ### Downloadable screening snapshot (2026-09-20)
 
 Opportunity screening now has a download control for editors/admins.

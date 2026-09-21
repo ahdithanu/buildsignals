@@ -17,6 +17,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       expect(created.ok()).toBeTruthy();
       const deal = await created.json();
       await page.goto(`/deal/${deal.id}`);
+      await expect(page.getByText('Not calculated', { exact: true })).toHaveCount(4);
       const panel = page.getByRole('region', { name: 'Acquisition buy-box screen' });
       await expect(panel.getByText('Diligence required: 3 pass, 0 fail, 2 unknown')).toBeVisible();
       const retailResponse = page.waitForResponse(res => res.url().includes('/acquisition-screen?') && res.url().includes('small_bay_retail'));

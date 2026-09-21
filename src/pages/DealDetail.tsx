@@ -163,10 +163,10 @@ export default function DealDetail() {
             {/* Key Metrics */}
             <motion.div {...fadeIn} transition={{ delay: 0.1 }} className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { label: 'Projected IRR', value: `${deal.projectedIrr ?? 0}%` },
-                { label: 'Equity Multiple', value: `${deal.equityMultiple ?? 0}x` },
-                { label: 'Cash on Cash', value: `${deal.cashOnCash ?? 0}%` },
-                { label: 'Est. NOI', value: formatCurrency(deal.noi ?? 0) },
+                { label: 'Projected IRR', value: deal.projectedIrr == null ? 'Not calculated' : `${deal.projectedIrr}%` },
+                { label: 'Equity Multiple', value: deal.equityMultiple == null ? 'Not calculated' : `${deal.equityMultiple}x` },
+                { label: 'Cash on Cash', value: deal.cashOnCash == null ? 'Not calculated' : `${deal.cashOnCash}%` },
+                { label: 'Est. NOI', value: deal.noi == null ? 'Not calculated' : formatCurrency(deal.noi) },
               ].map((m, i) => (
                 <div key={i} className="rounded-xl border bg-card p-3 md:p-4 card-shadow text-center">
                   <p className="text-xs text-muted-foreground">{m.label}</p>
