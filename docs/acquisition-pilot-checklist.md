@@ -29,9 +29,27 @@ Verification: 25 review/excerpt/portability/erasure tests pass, including real J
 authorization, stale/corrupt evidence rejection, actor/evidence retention, paging,
 and unchanged screening unknowns. Twelve restricted-role PostgreSQL isolation
 tests pass, including the new review table's read/write protections. SQLite and
-PostgreSQL migration upgrade/downgrade/re-upgrade pass. Browser review entry and
-criterion-level display remain pending. No production change or real evidence
-qualification occurred.
+PostgreSQL migration upgrade/downgrade/re-upgrade pass. No production change or
+real evidence qualification occurred.
+
+Browser review entry is now available beneath a selected diligence excerpt.
+Editors/admins select a criterion and assessment with a required rationale;
+viewers receive read-only history. Saves bind the exact selected text digest,
+preserve the rationale on failure, and refresh bounded opportunity-wide history.
+Each review displays its criterion, assessment, rationale, source locator, actor,
+time, and expandable exact evidence/hash. Contradicting assessments remain
+separate. Tenant/user/deal/document changes reset form state and query scope.
+These assessments still do not change computed screening results.
+
+Verification: all 281 frontend tests across 61 files pass, including failed-save
+retention, evidence binding, workspace reset, viewer restrictions, and paging.
+Real-local-API Playwright passes at 1440px and 390px with review save/read/reload,
+unchanged screening unknowns, and no horizontal overflow. Both review screenshots
+were inspected. TypeScript, focused lint, and production build pass; the existing
+large-bundle warning remains (main bundle approximately 1.51 MB minified).
+Test excerpts are synthetic, not a qualified real-property package. Structured
+numeric fact extraction/application and independent source verification remain
+unimplemented; source-use and real-property-input dependencies are unchanged.
 
 ### Bounded attributed excerpt intake (2026-09-21)
 
@@ -78,8 +96,9 @@ pass at 1440px and 390px, verifying required authorization, save/read/reload,
 unchanged screening unknowns, and no horizontal overflow. Mobile form and desktop
 excerpt screenshots were inspected. TypeScript, focused lint, and production
 build pass with the existing large-bundle warning. Fixtures are synthetic text,
-not an actual property package. Reviewed evidence-to-criterion linkage remains
-pending; submitting an excerpt must not itself turn a criterion into a pass.
+not an actual property package. Reviewed evidence-to-criterion linkage is now
+available as described above; submitting an excerpt must not itself turn a
+criterion into a pass.
 
 ### Evidence intake dependency (2026-09-21)
 

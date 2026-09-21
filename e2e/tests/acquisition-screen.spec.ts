@@ -110,6 +110,12 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const excerpt = page.getByRole('region', { name: 'Selected diligence excerpt' });
       await expect(excerpt).toContainText('Suite A: annual base rent $24,000.');
       await expect(excerpt).toContainText('SHA-256:');
+      const reviewForm = excerpt.getByRole('form', { name: 'Review selected excerpt' });
+      await expect(reviewForm.getByRole('button', { name: 'Save review' })).toBeDisabled();
+      await reviewForm.getByLabel('Review rationale').fill('One suite does not establish whole-property occupancy.');
+      await reviewForm.getByRole('button', { name: 'Save review' }).click();
+      await expect(excerpt.getByText('Occupancy · inconclusive', { exact: true })).toBeVisible();
+      await excerpt.getByRole('region', { name: 'Diligence criterion reviews' }).screenshot({ path: `/private/tmp/diligence-review-${viewport.width}.png` });
       await expect(panel.getByText('Diligence required: 4 pass, 0 fail, 1 unknown')).toBeVisible();
       await excerpt.screenshot({ path: `/private/tmp/diligence-excerpt-${viewport.width}.png` });
       await excerptForm.screenshot({ path: `/private/tmp/diligence-form-${viewport.width}.png` });
@@ -117,6 +123,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await page.getByText('Diligence excerpts', { exact: true }).click();
       await page.getByRole('button', { name: 'Redacted pilot rent roll' }).click();
       await expect(excerpt).toContainText('Suite A: annual base rent $24,000.');
+      await expect(excerpt.getByText('Occupancy · inconclusive', { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     });
   });

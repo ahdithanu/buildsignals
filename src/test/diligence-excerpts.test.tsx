@@ -7,6 +7,7 @@ import { apiClient } from '@/api/client';
 const auth = vi.hoisted(() => ({ organizationId: 'a', user: { id: 'u' }, role: 'editor' }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/api/client', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }));
+vi.mock('@/components/DiligenceReviews', () => ({ DiligenceReviews: () => null }));
 afterEach(() => { vi.clearAllMocks(); auth.organizationId = 'a'; auth.role = 'editor'; });
 function setup() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

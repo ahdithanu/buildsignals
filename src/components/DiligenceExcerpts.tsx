@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { DiligenceReviews } from './DiligenceReviews';
 
 interface DocumentMetadata { id: string; filename: string; evidence_kind: string | null }
 interface Excerpt { evidence: { source_title: string; source_date: string; locator: string; text: string; text_sha256: string } }
@@ -61,6 +62,7 @@ function ExcerptContent({ dealId }: { dealId: string }) {
           <p className="break-words">{detail.data.evidence.source_date} · {detail.data.evidence.locator}</p>
           <p className="my-2 whitespace-pre-wrap break-words">{detail.data.evidence.text}</p>
           <p className="break-all text-xs text-muted-foreground">SHA-256: {detail.data.evidence.text_sha256}</p>
+          <DiligenceReviews dealId={dealId} documentId={selected} textHash={detail.data.evidence.text_sha256} />
         </section>)}
       {(role === 'admin' || role === 'editor') && <form aria-label="Add diligence excerpt" onSubmit={async e => {
         e.preventDefault(); if (!valid || saving) return;
