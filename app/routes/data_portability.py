@@ -39,6 +39,7 @@ from app.models.deal import Deal
 from app.models.deal_assumptions import DealAssumptions
 from app.models.deal_distribution import DealDistribution
 from app.models.deal_outputs import DealOutputs
+from app.models.diligence_review import DiligenceReview
 from app.models.document import Document
 from app.models.memo import Memo
 from app.models.organization import Organization
@@ -78,6 +79,7 @@ _ORG_SCOPED_MODELS: list[tuple[str, type]] = [
     ("buy_boxes", BuyBox),
     ("deal_distributions", DealDistribution),
     ("acquisition_screen_snapshots", AcquisitionScreenSnapshot),
+    ("diligence_reviews", DiligenceReview),
     ("audit_logs", AuditLog),
 ]
 

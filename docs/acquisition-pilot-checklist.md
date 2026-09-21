@@ -2,6 +2,37 @@
 
 ## Local implementation, not deployed
 
+### Reviewed excerpt-to-criterion linkage API (2026-09-21)
+
+Added tenant-scoped, application-append-only `diligence_reviews` records and
+`POST/GET /deals/{deal_id}/diligence-reviews`. Editors/admins can link an active
+same-deal excerpt to an allowlisted screening criterion with a supports,
+contradicts, or inconclusive assessment and a required rationale. The write checks
+the exact expected text hash and stored text integrity under a document row lock,
+then retains the full attributed excerpt snapshot, actor, criterion, and time.
+Creation is audited in the same transaction. It does not modify prior reviews.
+
+Authenticated readers receive bounded history (20 by default, maximum 100,
+offset pagination plus `has_more`) with no-store. Foreign-tenant, wrong-deal,
+missing-excerpt, and deleted-document writes fail; reviews of soft-deleted
+documents are hidden from ordinary reads. Organization portability and erasure
+include review snapshots. PostgreSQL migration `20260921_0003` enables and forces
+tenant RLS. This is not WORM storage or proof of document authenticity.
+
+An analyst's assessment is not a computed pass/fail and cannot silently clear an
+unknown. Each snapshot explicitly states `independently_verified=false` and
+`changes_screening_result=false`. Conflicting assessments are retained as separate
+reviews, not silently resolved by selecting the latest one. Structured numeric
+fact extraction and application to screening remain separate work.
+
+Verification: 25 review/excerpt/portability/erasure tests pass, including real JWT
+authorization, stale/corrupt evidence rejection, actor/evidence retention, paging,
+and unchanged screening unknowns. Twelve restricted-role PostgreSQL isolation
+tests pass, including the new review table's read/write protections. SQLite and
+PostgreSQL migration upgrade/downgrade/re-upgrade pass. Browser review entry and
+criterion-level display remain pending. No production change or real evidence
+qualification occurred.
+
 ### Bounded attributed excerpt intake (2026-09-21)
 
 Added an additive local API for analyst-provided rent-roll, lease, CAM, and capex

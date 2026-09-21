@@ -252,6 +252,53 @@ def test_acquisition_history_forces_tenant_isolation(pg_session):
     )).all() == []
 
 
+def test_diligence_reviews_force_tenant_isolation(pg_session):
+    from app.models.deal import Deal
+    from app.models.diligence_review import DiligenceReview
+    from app.models.document import Document
+    from app.models.organization import Organization
+
+    policy = pg_session.execute(text(
+        "SELECT relrowsecurity, relforcerowsecurity FROM pg_class "
+        "WHERE oid = 'public.diligence_reviews'::regclass"
+    )).one()
+    assert policy.relrowsecurity and policy.relforcerowsecurity
+    orgs = [str(uuid.uuid4()), str(uuid.uuid4())]
+    rows = []
+    for org in orgs:
+        pg_session.add(Organization(id=org, name='Diligence RLS', slug=org))
+        pg_session.flush()
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        deal = Deal(organization_id=org, name='Fixture')
+        pg_session.add(deal)
+        pg_session.flush()
+        doc = Document(organization_id=org, deal_id=deal.id, filename='Excerpt')
+        pg_session.add(doc)
+        pg_session.flush()
+        row = DiligenceReview(organization_id=org, deal_id=deal.id, document_id=doc.id,
+                              criterion='occupancy', snapshot={'assessment': 'inconclusive'})
+        pg_session.add(row)
+        pg_session.flush()
+        rows.append(row)
+    for org, row in zip(orgs, rows):
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        assert pg_session.execute(select(DiligenceReview.id).where(
+            DiligenceReview.id.in_([r.id for r in rows]),
+        )).scalars().all() == [row.id]
+    pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': orgs[0]})
+    assert pg_session.execute(text("DELETE FROM diligence_reviews WHERE id = :id"), {'id': rows[1].id}).rowcount == 0
+    with pg_session.begin_nested() as savepoint:
+        with pytest.raises(DBAPIError) as error:
+            pg_session.execute(text(
+                "INSERT INTO diligence_reviews (id, organization_id, deal_id, document_id, criterion, snapshot, created_at) "
+                "VALUES (:id, :org, :deal, :doc, 'occupancy', '{}', now())"
+            ), {'id': str(uuid.uuid4()), 'org': orgs[1], 'deal': rows[1].deal_id, 'doc': rows[1].document_id})
+        assert getattr(error.value.orig, 'pgcode', None) == '42501'
+        savepoint.rollback()
+    pg_session.execute(text("SELECT set_config('app.current_org', '', true)"))
+    assert pg_session.execute(select(DiligenceReview.id)).all() == []
+
+
 def test_restored_copy_probe_rolls_back_its_synthetic_records(pg_engine):
     from app.services.recovery_verification import verify_restored_postgres
 

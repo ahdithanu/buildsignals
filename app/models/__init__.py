@@ -8,6 +8,7 @@ from app.models.contact import Contact  # noqa
 from app.models.outreach_activity import OutreachActivity  # noqa
 from app.models.signal import Signal  # noqa
 from app.models.document import Document  # noqa
+from app.models.diligence_review import DiligenceReview  # noqa
 from app.models.memo import Memo  # noqa
 from app.models.pipeline_event import PipelineEvent  # noqa
 from app.models.audit_log import AuditLog  # noqa
