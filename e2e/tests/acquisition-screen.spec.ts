@@ -51,13 +51,26 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await panel.scrollIntoViewIfNeeded();
       await page.screenshot({ path: `/private/tmp/acquisition-screen-${viewport.width}.png`, fullPage: true });
-      const savedBox = await page.request.post('http://localhost:8000/v1/buy-box', {
-        headers: { Authorization: `Bearer ${credentials.access_token}` },
-        data: { acquisition_criteria: { version: 1, profile: 'small_multifamily', market_city: 'Columbus', market_state: 'OH',
-          min_price: 1000000, max_price: 3000000, min_size: 20, max_size: 30, min_year_built: 1980 } },
-      });
+      await panel.getByRole('button', { name: 'New buy box' }).click();
+      const form = panel.getByRole('form', { name: 'New acquisition buy box' });
+      await expect(form.getByRole('button', { name: 'Save buy box' })).toBeDisabled();
+      await form.getByLabel('Asset profile').selectOption('small_bay_retail');
+      await expect(form.getByLabel('Minimum SF')).toHaveValue('8000');
+      await form.getByLabel('Asset profile').selectOption('small_multifamily');
+      await form.getByLabel('Market city').fill('Columbus');
+      await form.getByLabel('Market state').fill('OH');
+      await form.getByLabel('Minimum units').fill('40');
+      await expect(form.getByRole('button', { name: 'Save buy box' })).toBeDisabled();
+      await form.getByLabel('Minimum units').fill('20');
+      await form.getByLabel('Maximum units').fill('30');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+      await form.screenshot({ path: `/private/tmp/acquisition-create-${viewport.width}.png` });
+      const createdBoxResponse = page.waitForResponse(res => res.url().endsWith('/buy-box') && res.request().method() === 'POST');
+      await form.getByRole('button', { name: 'Save buy box' }).click();
+      const savedBox = await createdBoxResponse;
       expect(savedBox.ok()).toBeTruthy();
       const box = await savedBox.json();
+      await expect(panel.getByText('Diligence required: 4 pass, 0 fail, 1 unknown')).toBeVisible();
       await page.reload();
       await expect(panel.getByRole('option', { name: /Columbus.*Multifamily/ })).toBeAttached();
       await panel.getByLabel('Saved buy box').selectOption(box.id);

@@ -37,8 +37,8 @@
   fields against versioned user-requested defaults. Asset configuration and
   retail diligence remain unknown. Field references are traceable inputs, not
   independently verified evidence. Persisted structured criteria now have an API
-  foundation and selection UI; the creation UI, source-backed rent-roll/lease/capex
-  inputs, and saved screening history remain pending.
+  foundation, creation and selection UI. Source-backed rent-roll/lease/capex
+  inputs and saved screening history remain pending.
 - [ ] Verify source evidence, project timeline, nearby parcels, saved opportunity,
   and export on mobile and desktop with real qualified records.
 - [ ] Release and measure live inventory, freshness, and source-specific coverage.
@@ -81,6 +81,25 @@ filters/pagination, and unified signal-to-parcel selection. Two maps currently
 separate source-record geography from saved ranked parcel results.
 
 ## Initial acquisition screening
+
+### Browser buy-box creation (2026-09-20 evening)
+
+Editors/admins can now create structured acquisition buy boxes directly in the
+opportunity screen. The form offers multifamily/retail defaults and custom market,
+price range, units/SF range, and minimum construction year. Required fields,
+finite positive values, integer counts/years, and ordered ranges are checked
+before submission; server validation and role enforcement remain authoritative.
+Failed saves preserve the entered criteria. Successful saves select the persisted
+box and refresh the organization/user-scoped list. Existing boxes are not edited
+or replaced, and submitting is disabled while a request is in flight.
+
+Seven focused UI tests pass. Both real-API desktop/mobile workflows now create
+the box through the UI, validate range errors and profile defaults, reload, select
+the stored box, and inspect its exported snapshot. Form screenshots at 1440px and
+390px were inspected and overflow checks passed. TypeScript and focused lint pass.
+The tests use synthetic local deals, not live inventory. Editing/deleting boxes,
+screening history, PostgreSQL migration qualification, and production release
+remain outstanding.
 
 ### Saved criteria selection (2026-09-20 evening)
 

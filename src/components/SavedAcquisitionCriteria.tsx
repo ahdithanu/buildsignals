@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { CreateAcquisitionCriteria } from './CreateAcquisitionCriteria';
 
 interface SavedBox {
   id: string;
@@ -41,5 +42,6 @@ export function SavedAcquisitionCriteria({ value, onChange }: {
     {query.isPending && <p role="status" className="text-xs">Loading saved buy boxes...</p>}
     {query.isError && <p role="alert" className="text-xs">Saved buy boxes unavailable. <button onClick={() => query.refetch()} className="underline">Retry buy boxes</button></p>}
     {query.data?.length === 200 && <p className="text-xs">Showing the first 200 buy boxes.</p>}
+    <CreateAcquisitionCriteria onCreated={onChange} />
   </div>;
 }
