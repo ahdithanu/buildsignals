@@ -42,6 +42,36 @@ official extract or obtain an authorized query interface and reuse terms.
 
 ## Remaining Gates
 
+### Source-use follow-up (2026-09-20 evening)
+
+Reviewed the official [GIS procedural guide](https://franklincountyauditor.com/AUDR-website/media/Documents/franklin-county-gis-manual.pdf),
+page 5 (printed Products and Services). It describes distribution to private
+firms and the public, but the document is revised December 2009. Search-engine
+recency is not its publication date. This historical distribution statement
+does not establish current automated-access, storage, derived-display, or
+redistribution terms for the live service. The service's
+[item information](https://gis.franklincountyohio.gov/hosting/rest/services/ParcelFeatures/Parcel_Features_WebMercator/MapServer/info/iteminfo)
+still provides no usable license terms. No additional parcel records were
+requested during this review; production remains disabled.
+
+Before production qualification, obtain a current published policy or written
+county clarification covering the following. This is a prepared inquiry, not
+a message sent or a legal determination:
+
+> BuildSignals is evaluating Franklin County parcel data for a commercial
+> development-intelligence application. We propose bounded reads of parcel IDs,
+> site addresses, geometry, land use, and acreage; retained evidence snapshots;
+> and derived nearby-parcel maps and ranked candidates with attribution. We do
+> not propose redistributing a raw county database or treating parcels as listings.
+> Which official endpoint or extract and current terms cover this use? Please
+> confirm attribution, storage/retention, derived display/export, and request-rate
+> requirements. Please also identify the authoritative PARCELID/LOWPARCELID
+> definitions, STATEDAREA units, update timestamps, and historical split/merge data.
+
+This dependency blocks county production activation, not local workflow or
+persisted-screening implementation. Do not repeat the same rights searches on
+each continuation unless a new source or response becomes available.
+
 ### Official extract follow-up (2026-09-20)
 
 Read-only review of the county's published [current extract directory](https://apps.franklincountyauditor.com/GIS_Shapefiles/CurrentExtracts/)
