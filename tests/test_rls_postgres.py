@@ -159,6 +159,49 @@ def test_rls_blocks_writes_with_wrong_org(pg_session):
     pg_session.rollback()
 
 
+def test_structured_buy_boxes_preserve_rls_after_criteria_migration(pg_session):
+    from app.models.buy_box import BuyBox
+    from app.models.organization import Organization
+    from tests.test_acquisition_criteria import CRITERIA
+
+    policy = pg_session.execute(text(
+        "SELECT relrowsecurity, relforcerowsecurity FROM pg_class "
+        "WHERE oid = 'public.buy_boxes'::regclass"
+    )).one()
+    assert policy.relrowsecurity and policy.relforcerowsecurity
+    orgs = [str(uuid.uuid4()), str(uuid.uuid4())]
+    ids = []
+    for org in orgs:
+        pg_session.add(Organization(id=org, name='Criteria RLS fixture', slug=org))
+        pg_session.flush()
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        row = BuyBox(organization_id=org, acquisition_criteria=CRITERIA)
+        pg_session.add(row)
+        pg_session.flush()
+        ids.append(row.id)
+    for org, expected in zip(orgs, ids):
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        visible = pg_session.execute(select(BuyBox.id, BuyBox.acquisition_criteria).where(BuyBox.id.in_(ids))).all()
+        assert len(visible) == 1
+        assert visible[0].id == expected
+        assert visible[0].acquisition_criteria == CRITERIA
+    pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': orgs[0]})
+    updated = pg_session.execute(text(
+        "UPDATE buy_boxes SET acquisition_criteria = '{}' WHERE id = :id"
+    ), {'id': ids[1]})
+    assert updated.rowcount == 0
+    with pg_session.begin_nested() as savepoint:
+        with pytest.raises(DBAPIError) as error:
+            pg_session.execute(text(
+                "INSERT INTO buy_boxes (id, organization_id, acquisition_criteria) "
+                "VALUES (:id, :org, '{}')"
+            ), {'id': str(uuid.uuid4()), 'org': orgs[1]})
+        assert getattr(error.value.orig, 'pgcode', None) == '42501'
+        savepoint.rollback()
+    pg_session.execute(text("SELECT set_config('app.current_org', '', true)"))
+    assert pg_session.execute(select(BuyBox.id).where(BuyBox.id.in_(ids))).all() == []
+
+
 def test_restored_copy_probe_rolls_back_its_synthetic_records(pg_engine):
     from app.services.recovery_verification import verify_restored_postgres
 

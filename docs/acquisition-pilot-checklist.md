@@ -82,6 +82,20 @@ separate source-record geography from saved ranked parcel results.
 
 ## Initial acquisition screening
 
+### PostgreSQL criteria qualification (2026-09-21)
+
+Migration 20260920_0001 now passes upgrade, downgrade, and re-upgrade on a fresh
+disposable PostgreSQL cluster. PostGIS was provisioned by the cluster's test
+administrator; migrations and RLS tests ran as a separate NOSUPERUSER NOBYPASSRLS
+database owner. Ten PostgreSQL security regressions pass, including a new test
+that round-trips structured criteria, asserts ENABLE/FORCE RLS, hides another
+tenant's boxes, prevents cross-tenant updates/inserts, and returns no boxes with
+an empty tenant context. The server used a local Unix socket only and was stopped
+after verification. No production database or account was accessed.
+
+This closes local PostgreSQL migration/isolation qualification for the criteria
+column, not production restore evidence, actual deployment, or real parcel data.
+
 ### Browser buy-box creation (2026-09-20 evening)
 
 Editors/admins can now create structured acquisition buy boxes directly in the
