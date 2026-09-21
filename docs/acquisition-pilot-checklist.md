@@ -2,6 +2,36 @@
 
 ## Local implementation, not deployed
 
+### Evidence intake dependency (2026-09-21)
+
+Inspection of `app/routes/documents.py`, `app/models/document.py`, and
+`app/schemas/document.py` confirms that current document creation records metadata
+only: filename, document type, optional file path, and claimed byte count. It does
+not receive, retain, hash, or parse document bytes. No application object-storage
+or multipart upload implementation was found. A document row is therefore not
+proof that a rent roll, lease, or capex report was ingested, and must not clear
+the screening's source-verification unknowns.
+
+To qualify the first real acquisition example, obtain one authorized, redacted
+property package with its address, dated rent roll, relevant lease/CAM excerpts,
+and available roof/HVAC/parking reports. Missing items must remain unknown; do
+not generate substitute inventory or infer leases from permit descriptions.
+Personal tenant/contact/bank details are unnecessary for this qualification.
+Implementation can continue on bounded evidence intake and provenance, but
+real-document extraction and verification cannot be claimed without the input.
+No document uploads, storage services, or paid commitments were enabled here.
+
+The separate Franklin County dependency remains a current published use policy
+or county clarification covering the proposed access, retention, and derived
+display/export, plus identifier and field semantics. A product-owner approval
+alone is not evidence of third-party data-use rights. The prepared inquiry is in
+`docs/parcel-reference-resolution.md`; it has not been sent by this agent.
+
+These are inputs for real-data acceptance, not proof that all remaining
+engineering work is complete. Production diagnostics and release approval remain
+separate gates. This checkpoint is documentation-only; no new test run or live
+source request was performed.
+
 ### Cross-service acquisition regression (2026-09-21)
 
 The authenticated nearby-parcel promotion test now follows a pre-approval permit's
