@@ -145,6 +145,11 @@ docs/                runbooks and operational docs — see below
 
 ## Documentation
 
+Workspace admins can use **AI Evaluations** at `/admin/evals` to create evidence-based
+test datasets, run checks, compare versions, and enforce regression gates. See
+[AI evaluation platform](docs/ai-evaluation-platform.md) for supported live workflows,
+captured-output evaluation, metric limitations, and deployment instructions.
+
 | Doc | What |
 |---|---|
 | [docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md) | One-time Render provisioning from scratch |
