@@ -8,6 +8,45 @@ from tests.test_acquisition_screen_export import register, reset_limiter  # noqa
 from tests.test_document_evidence import PAYLOAD
 
 
+def test_export_retains_bounded_reviews_without_changing_screen(client, db):
+    headers = register(client, 'review-export@example.com')
+    deal = client.post('/deals', headers=headers, json={'name': 'Export fixture'}).json()
+    base = f"/deals/{deal['id']}"
+    doc_id = client.post(base + '/document-excerpts', headers=headers, json=PAYLOAD).json()['id']
+    evidence = client.get(base + f'/documents/{doc_id}/excerpt', headers=headers).json()['evidence']
+    payload = {'document_id': doc_id, 'expected_text_sha256': evidence['text_sha256'],
+               'criterion': 'occupancy', 'assessment': 'supports',
+               'rationale': 'Synthetic assessment, not verified occupancy.'}
+    for index in range(11):
+        response = client.post(base + '/diligence-reviews', headers=headers,
+                               json={**payload, 'assessment': 'supports' if index % 2 else 'contradicts'})
+        assert response.status_code == 201, response.text
+    exported = client.post(base + '/acquisition-screen/export?profile=small_bay_retail', headers=headers)
+    assert exported.status_code == 200, exported.text
+    result = exported.json()
+    assert result['schema_version'] == 'acquisition-screen-export-v2'
+    reviews = result['diligence_reviews']
+    assert reviews['has_more'] is True
+    assert len(reviews['items']) == reviews['limit'] == 10
+    assert reviews['changes_screening_result'] is False
+    assert {r['snapshot']['assessment'] for r in reviews['items']} == {'supports', 'contradicts'}
+    assert all(r['snapshot']['evidence'] == evidence for r in reviews['items'])
+    assert next(c for c in result['screen']['criteria'] if c['key'] == 'occupancy')['status'] == 'unknown'
+    other_deal = client.post('/deals', headers=headers, json={'name': 'Unrelated'}).json()['id']
+    assert client.post(f'/deals/{other_deal}/acquisition-screen/export', headers=headers).json()['diligence_reviews']['items'] == []
+    other = register(client, 'foreign-review-export@example.com')
+    assert client.post(base + '/acquisition-screen/export', headers=other).status_code == 404
+    row = db.get(DiligenceReview, reviews['items'][0]['id'])
+    row.snapshot = {**row.snapshot, 'evidence': {**evidence, 'text': 'corrupted'}}
+    db.commit()
+    assert client.post(base + '/acquisition-screen/export', headers=headers).status_code == 409
+    history_url = base + '/acquisition-screen/history/' + exported.headers['x-acquisition-snapshot-id']
+    assert client.get(history_url, headers=headers).content == exported.content
+    db.get(Document, doc_id).deleted_at = datetime.now(timezone.utc)
+    db.commit()
+    assert client.post(base + '/acquisition-screen/export', headers=headers).json()['diligence_reviews']['items'] == []
+
+
 def test_review_binds_evidence_actor_and_criterion_without_promoting_unknowns(client, db):
     headers = register(client, 'review-diligence@example.com')
     deal = client.post('/deals', headers=headers, json={'name': 'Review fixture'}).json()

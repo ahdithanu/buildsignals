@@ -11,7 +11,11 @@ from app.models.buy_box import BuyBox
 from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.schemas.buy_box import AcquisitionCriteria, BuyBoxCreate, BuyBoxResponse
-from app.services.acquisition_history import save_screen_snapshot, verified_snapshot_content
+from app.services.acquisition_history import (
+    review_export_context,
+    save_screen_snapshot,
+    verified_snapshot_content,
+)
 from app.services.acquisition_screening import screen_acquisition
 from app.services.audit_service import log_change
 from app.services.matching_service import match_deal
@@ -63,15 +67,21 @@ def export_acquisition_screen(
     criteria = screen["criteria_snapshot"]
     if criteria:
         market_city, market_state = criteria["market_city"], criteria["market_state"]
+    try:
+        reviews = review_export_context(db, deal_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     snapshot = {
-        "schema_version": "acquisition-screen-export-v1",
+        "schema_version": "acquisition-screen-export-v2",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "target_market": {"city": market_city, "state": market_state},
         "screen": screen,
+        "diligence_reviews": reviews,
         "limitations": [
             "Snapshot of recorded deal facts, not verified source evidence or underwriting.",
             "Unknown criteria remain unresolved; this is not an investment recommendation.",
             "Does not establish listing availability, parcel ownership, or market coverage.",
+            "Includes at most ten latest opportunity reviews; assessments do not override screening and may conflict.",
         ],
     }
     content = json.dumps(jsonable_encoder(snapshot), ensure_ascii=True, allow_nan=False, indent=2)

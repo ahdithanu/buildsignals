@@ -2,6 +2,27 @@
 
 ## Local implementation, not deployed
 
+### Evidence-bearing acquisition exports (2026-09-21)
+
+New exports use `acquisition-screen-export-v2` and retain up to ten latest
+opportunity-wide diligence reviews alongside the unchanged computed screen.
+Each includes its exact attributed evidence, digest, criterion, assessment,
+rationale, actor, and timestamp. The bounded context explicitly reports
+`has_more`, ordering, and that reviews do not verify evidence or override scores.
+Conflicting assessments remain separate; they are not resolved by recency.
+Tenant/deal scope and active-document checks exclude unrelated or deleted
+documents. Corrupt reviewed-text digests reject new exports before snapshot or
+audit creation. Existing historical export bytes remain unchanged, including
+when a source document is subsequently hidden; organization erasure still
+removes snapshots. Exported evidence is intentionally a retained historical copy.
+
+Verification: 17 review/export/excerpt tests pass, covering bounded inclusion,
+conflicts, unchanged unknowns, unrelated-deal and foreign-tenant exclusion,
+corruption rejection, exact historical retrieval, and deleted-document exclusion.
+Focused lint passes. No source activation, production migration, push, or
+deployment occurred. Real-property evidence and county rights remain blocked on
+the previously recorded inputs, not replaced with synthetic inventory.
+
 ### Reviewed excerpt-to-criterion linkage API (2026-09-21)
 
 Added tenant-scoped, application-append-only `diligence_reviews` records and
