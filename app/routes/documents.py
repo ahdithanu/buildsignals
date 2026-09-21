@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -6,10 +6,38 @@ from app.models.deal import Deal
 from app.models.document import Document
 from app.models.organization_membership import MemberRole
 from app.schemas.document import DocumentCreate, DocumentResponse
-from app.utils.auth_deps import require_role
+from app.schemas.document_evidence import DocumentExcerptCreate
+from app.services.document_evidence import store_document_excerpt
+from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(tags=["documents"])
+
+
+@router.post("/deals/{deal_id}/document-excerpts", response_model=DocumentResponse, status_code=201,
+             dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))])
+def create_document_excerpt(deal_id: str, payload: DocumentExcerptCreate, response: Response,
+                            principal: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first() is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    doc = store_document_excerpt(db, deal_id, payload, principal["user_id"])
+    db.commit()
+    db.refresh(doc)
+    response.headers["Cache-Control"] = "no-store"
+    return doc
+
+
+@router.get("/deals/{deal_id}/documents/{document_id}/excerpt", dependencies=[Depends(get_current_user)])
+def get_document_excerpt(deal_id: str, document_id: str, response: Response, db: Session = Depends(get_db)):
+    if active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first() is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    doc = active_query(db.query(Document), Document).filter(
+        Document.id == document_id, Document.deal_id == deal_id,
+    ).first()
+    if doc is None or doc.evidence_excerpt is None:
+        raise HTTPException(status_code=404, detail="Document excerpt not found")
+    response.headers["Cache-Control"] = "no-store"
+    return {"document_id": doc.id, "deal_id": deal_id, "evidence": doc.evidence_excerpt}
 
 
 # ── list documents for a deal ────────────────────────────────────────────────

@@ -2,6 +2,39 @@
 
 ## Local implementation, not deployed
 
+### Bounded attributed excerpt intake (2026-09-21)
+
+Added an additive local API for analyst-provided rent-roll, lease, CAM, and capex
+text excerpts. `POST /deals/{deal_id}/document-excerpts` requires authenticated
+editor/admin access to an active tenant-visible deal, a source title and date,
+page/section locator, and an explicit affirmation of authorization to store the
+excerpt. Text is limited to 20,000 characters and 60,000 UTF-8 bytes; blank/null
+text, unknown fields, and caller-provided verification claims are rejected.
+No URLs are fetched and no binary files or scripts are executed.
+
+The exact submitted text is retained with its SHA-256, submission time, actor,
+and attribution in a nullable JSON field on the existing tenant-scoped document
+table. An audit event records the digest and byte count, not the text. Metadata
+responses identify `analyst_provided_excerpt` without returning the excerpt;
+authenticated members retrieve it via
+`GET /deals/{deal_id}/documents/{document_id}/excerpt`, with no-store and active
+deal/document checks. Existing document metadata creation remains compatible.
+Generic organization portability/erasure includes the new field.
+
+This is not original-file upload, independent verification, or automated fact
+extraction. Original-file receipt and independent verification are explicitly
+false. Source-date and authorization are analyst assertions. Screening unknowns
+remain unchanged merely because text was saved. Corrections require another
+record; the API exposes no excerpt-update operation. Database-level immutability
+and reviewed structured fact extraction are not claimed.
+
+Verification: 12 new schema/authentication/provenance tests and 12 existing
+portability/erasure tests pass; the 11 existing restricted-role PostgreSQL RLS
+regressions also pass after migration. SQLite and PostgreSQL upgrade/downgrade/
+re-upgrade pass. No real property documents were supplied, production sources
+activated, migrations deployed, or paid storage provisioned. Browser intake and
+reviewed evidence-to-criterion linkage remain to be implemented.
+
 ### Evidence intake dependency (2026-09-21)
 
 Inspection of `app/routes/documents.py`, `app/models/document.py`, and
