@@ -2,6 +2,37 @@
 
 ## Local implementation, not deployed
 
+### Integrated regression and release-preflight repair (2026-09-21)
+
+The broad backend run initially found nine failures: five onboarding tests and
+four rollout/worker checks. All traced to a stale catalog manifest after local
+commit `c04f8f0`: Columbus site-stage handling added `Approved`, and the commercial
+permit freshness contract corrected `filing_event_at` to `record_updated_at`.
+Reconstructing the catalog before that commit exactly reproduces the checked-in
+manifest. Comparing generated manifests changes only `catalog_fingerprint` and
+`manifest_digest`; hosts, source membership, waves, shards, and candidate scope
+are unchanged.
+
+The local manifest and three local Render digest pins now match those existing
+catalog corrections. No source settings, runtime enrollment, paid service, or
+production environment was changed during this repair. This is a release
+candidate configuration repair, not production activation or release approval.
+The fail-closed guard remains intact; regression tests verify that changed
+freshness settings invalidate a prior manifest even when hosts are unchanged.
+
+Verification: full backend rerun passes 1,162 tests with 12 skips; the final
+focused rollout/onboarding run passes 23 tests, including one further regression
+added after full-suite collection. Ten PostgreSQL RLS tests were verified
+separately as recorded below, not in this SQLite run. Frontend regression passes
+273 tests across 58 files, all nine real-local-API Playwright workflows pass, and
+the production frontend build passes with the existing large-bundle warning.
+Focused lint and whitespace checks pass. These receipts do not validate live
+inventory, county source-use rights, production restoration, or deployment.
+
+Next substantive gates remain qualified parcel evidence and the real acquisition
+workflow, persisted screening history, and source-backed diligence inputs.
+Production diagnostics and any release still require their separate live gates.
+
 - [x] Scope acquisition-radar browser cache by organization and user; defer reads
   until authentication is available. Regression tests verify organization changes,
   same-organization user changes, and logout hide the previous result immediately.
