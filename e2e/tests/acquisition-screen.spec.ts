@@ -103,7 +103,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await excerptForm.getByLabel('Source title').fill('Redacted pilot rent roll');
       await excerptForm.getByLabel('Source date').fill('2026-09-01');
       await excerptForm.getByLabel('Page or section').fill('Page 1, suite A');
-      await excerptForm.getByLabel('Excerpt', { exact: true }).fill('Suite A: annual base rent $24,000.');
+      await excerptForm.getByLabel('Excerpt', { exact: true }).fill('Suite A: annual base rent $24,000. Partial schedule: 800 leased SF of 1,000 SF.');
       await expect(excerptForm.getByRole('button', { name: 'Save excerpt' })).toBeDisabled();
       await excerptForm.getByRole('checkbox').check();
       await excerptForm.getByRole('button', { name: 'Save excerpt' }).click();
@@ -113,8 +113,15 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const reviewForm = excerpt.getByRole('form', { name: 'Review selected excerpt' });
       await expect(reviewForm.getByRole('button', { name: 'Save review' })).toBeDisabled();
       await reviewForm.getByLabel('Review rationale').fill('One suite does not establish whole-property occupancy.');
+      await reviewForm.getByLabel('Record numeric observation').check();
+      await expect(reviewForm.getByRole('button', { name: 'Save review' })).toBeDisabled();
+      await reviewForm.getByLabel('Leased area occupancy (%)').fill('80');
+      await reviewForm.getByLabel('Measurement date').fill('2026-09-01');
+      await reviewForm.getByLabel('Calculation or measurement method').fill('800 leased SF divided by 1000 SF in the partial schedule.');
+      await reviewForm.screenshot({ path: `/private/tmp/diligence-observation-form-${viewport.width}.png` });
       await reviewForm.getByRole('button', { name: 'Save review' }).click();
       await expect(excerpt.getByText('Occupancy · inconclusive', { exact: true })).toBeVisible();
+      await expect(excerpt.getByText('Leased area occupancy (%): 80', { exact: true })).toBeVisible();
       await excerpt.getByRole('region', { name: 'Diligence criterion reviews' }).screenshot({ path: `/private/tmp/diligence-review-${viewport.width}.png` });
       await expect(panel.getByText('Diligence required: 4 pass, 0 fail, 1 unknown')).toBeVisible();
       await excerpt.screenshot({ path: `/private/tmp/diligence-excerpt-${viewport.width}.png` });
@@ -142,7 +149,9 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const review = evidenceSnapshot.diligence_reviews.items[0];
       expect(review.criterion).toBe('occupancy');
       expect(review.snapshot.assessment).toBe('inconclusive');
-      expect(review.snapshot.evidence.text).toBe('Suite A: annual base rent $24,000.');
+      expect(review.snapshot.evidence.text).toBe('Suite A: annual base rent $24,000. Partial schedule: 800 leased SF of 1,000 SF.');
+      expect(review.snapshot.observation).toEqual({ metric: 'leased_area_occupancy_percent', value: 80,
+        as_of: '2026-09-01', scope: 'partial', methodology: '800 leased SF divided by 1000 SF in the partial schedule.' });
       expect(review.snapshot.evidence.locator).toBe('Page 1, suite A');
       expect(review.snapshot.evidence.text_sha256).toMatch(/^[a-f0-9]{64}$/);
       await page.reload();

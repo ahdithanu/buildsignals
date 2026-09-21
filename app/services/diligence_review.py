@@ -22,10 +22,11 @@ def review_excerpt(db: Session, deal_id: str, payload: DiligenceReviewCreate, ac
     if evidence["text_sha256"] != payload.expected_text_sha256:
         raise ValueError("Excerpt changed; reload before reviewing")
     snapshot = {
-        "schema_version": "diligence-review-v1", "assessment": payload.assessment,
+        "schema_version": "diligence-review-v2", "assessment": payload.assessment,
         "rationale": payload.rationale, "evidence": dict(evidence),
         "document_type": doc.doc_type, "independently_verified": False,
         "changes_screening_result": False,
+        "observation": payload.observation.model_dump(mode="json") if payload.observation else None,
     }
     row = DiligenceReview(organization_id=get_org_id(), deal_id=deal_id, document_id=doc.id,
                           reviewer_id=actor_id, criterion=payload.criterion, snapshot=snapshot)

@@ -2,6 +2,34 @@
 
 ## Local implementation, not deployed
 
+### Structured diligence observations (2026-09-21)
+
+Reviews now optionally retain a structured numeric observation in their existing
+tenant-scoped JSON snapshot (`diligence-review-v2`; no new migration). Supported
+metrics are leased-area occupancy percent, largest-tenant base-rent percent,
+restaurant base-rent percent, base-rent-weighted remaining lease years, and bay
+count. Each requires an as-of date, explicit whole-property/partial scope, and
+measurement methodology. Metrics must match the criterion; values must be finite
+JSON numbers, percentages are 0-100, bay counts are whole numbers up to 10,000,
+and lease years are 0-100. Zero remains a recorded observation, not missing data.
+Base-rent shares are not represented as gross-rent shares; leased-area occupancy
+is not economic occupancy. Dates and methodology are analyst assertions.
+
+The browser provides optional measurement entry and displays persisted values,
+scope, date, and method. Failed submissions preserve inputs; criterion/workspace
+changes clear incompatible state. Exact evidence and its hash remain attached.
+Exports retain observations and historical downloads preserve exact bytes.
+These are not independently verified facts and do not change screening results;
+partial observations cannot imply whole-property qualification. Capex condition,
+document verification, conflict adjudication, and explicit application of reviewed
+facts to screening remain open work, not inferred from these measurements.
+
+Verification: 22 focused backend tests, five frontend tests, and two real-local-API
+Playwright workflows pass (1440px and 390px). TypeScript, focused lint, and build
+pass with the existing bundle-size warning. Desktop/mobile form screenshots were
+inspected. Tests use synthetic excerpts, not qualified property inventory. No
+source activation, release, or production change occurred.
+
 ### Integrated backend regression and CLI test isolation (2026-09-21)
 
 A full backend run after the export changes produced 1,175 passes, 14 skips,
