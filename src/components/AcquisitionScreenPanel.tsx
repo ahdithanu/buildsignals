@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Download } from 'lucide-react';
 import { SavedAcquisitionCriteria } from './SavedAcquisitionCriteria';
+import { AcquisitionScreenHistory } from './AcquisitionScreenHistory';
 
 interface Screen {
   status: string;
@@ -18,6 +19,7 @@ export function AcquisitionScreenPanel({ dealId }: { dealId: string }) {
 }
 
 function AcquisitionScreenContent({ dealId }: { dealId: string }) {
+  const queryClient = useQueryClient();
   const { organizationId, user, role } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
@@ -37,6 +39,7 @@ function AcquisitionScreenContent({ dealId }: { dealId: string }) {
     try {
       const params = new URLSearchParams(buyBoxId ? { buy_box_id: buyBoxId } : { profile, ...market });
       const result = await apiClient.download(`/deals/${dealId}/acquisition-screen/export?${params}`, 'POST');
+      void queryClient.invalidateQueries({ queryKey: ['acquisition-screen-history', organizationId, user?.id, dealId] });
       const url = URL.createObjectURL(result.blob);
       const anchor = document.createElement('a');
       anchor.href = url; anchor.download = 'acquisition-screen.json';
@@ -56,6 +59,7 @@ function AcquisitionScreenContent({ dealId }: { dealId: string }) {
     </div>
     {exportError && <p role="alert" className="mb-3 text-sm">Screen export failed. Try downloading again.</p>}
     <SavedAcquisitionCriteria value={buyBoxId} onChange={setBuyBoxId} />
+    <AcquisitionScreenHistory dealId={dealId} />
     {!buyBoxId && <>
     <label className="block text-sm">Profile
       <select className="my-2 block w-full border bg-background p-2" value={profile} onChange={e => setProfile(e.target.value)}>

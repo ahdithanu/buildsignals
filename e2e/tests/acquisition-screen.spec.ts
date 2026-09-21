@@ -48,6 +48,16 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       expect(snapshot.screen.counts).toEqual({ pass: 3, fail: 1, unknown: 14 });
       expect(snapshot.screen.evidence_verified).toBe(false);
       expect(snapshot.target_market).toEqual({ city: 'Cleveland', state: 'OH' });
+      await panel.getByText('Screening history', { exact: true }).click();
+      await expect(panel.getByRole('button', { name: /^Download saved screen/ })).toHaveCount(1);
+      const historyDownload = page.waitForEvent('download');
+      await panel.getByRole('button', { name: /^Download saved screen/ }).click();
+      const historyStream = await (await historyDownload).createReadStream();
+      if (!historyStream) throw new Error('Historical screen download missing');
+      const historyChunks: Buffer[] = [];
+      for await (const chunk of historyStream) historyChunks.push(Buffer.from(chunk));
+      expect(Buffer.concat(historyChunks).equals(Buffer.concat(chunks))).toBeTruthy();
+      await panel.locator('details').screenshot({ path: `/private/tmp/acquisition-history-${viewport.width}.png` });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       await panel.scrollIntoViewIfNeeded();
       await page.screenshot({ path: `/private/tmp/acquisition-screen-${viewport.width}.png`, fullPage: true });
@@ -72,6 +82,8 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const box = await savedBox.json();
       await expect(panel.getByText('Diligence required: 4 pass, 0 fail, 1 unknown')).toBeVisible();
       await page.reload();
+      await panel.getByText('Screening history', { exact: true }).click();
+      await expect(panel.getByRole('button', { name: /^Download saved screen/ })).toHaveCount(1);
       await expect(panel.getByRole('option', { name: /Columbus.*Multifamily/ })).toBeAttached();
       await panel.getByLabel('Saved buy box').selectOption(box.id);
       await expect(panel.getByText('Diligence required: 4 pass, 0 fail, 1 unknown')).toBeVisible();
@@ -85,6 +97,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const savedSnapshot = JSON.parse(Buffer.concat(savedChunks).toString('utf8'));
       expect(savedSnapshot.screen.buy_box_id).toBe(box.id);
       expect(savedSnapshot.screen.criteria_snapshot.min_size).toBe(20);
+      await expect(panel.getByRole('button', { name: /^Download saved screen/ })).toHaveCount(2);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     });
   });

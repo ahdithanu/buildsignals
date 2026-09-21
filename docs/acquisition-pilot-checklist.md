@@ -30,11 +30,24 @@ before the additional portability regression; the final export/history suite has
 three passing tests. Twelve existing portability/erasure tests and eleven real
 PostgreSQL isolation tests pass. Focused lint and whitespace checks pass.
 
-Remaining: connect historical snapshot selection/download to the browser and
-verify that flow at mobile/desktop sizes. The existing export button already
-persists new snapshots, but the browser does not yet list historical ones. No
-production migration or release was performed. Parcel-source qualification and
-source-backed rent-roll, lease, and capex inputs remain separate open gates.
+Browser integration now provides expandable screening history, ten-row pages,
+timestamps, snapshot identifiers, and authenticated downloads of the saved bytes.
+History loads only when expanded; new exports invalidate the current tenant/user/
+deal history. Scope changes reset the panel and suppress delivery of an in-flight
+historical download from the prior scope. Loading, empty, failed-request, and
+download-error states remain distinct. Viewers can retrieve existing snapshots
+without gaining permission to create new ones.
+
+Verification: all 277 frontend tests across 59 files pass, including history
+pagination, error/retry, and tenant-switch download regressions. Two real-local-API
+Playwright workflows pass at 1440px and 390px: exported bytes exactly match the
+historical download, history survives reload, and a second export refreshes the
+open list. Both screenshots were inspected and horizontal overflow checks pass.
+Application TypeScript, focused lint, and production build pass; the existing
+large-bundle warning remains. No production migration or release was performed.
+Parcel-source qualification and source-backed rent-roll, lease, and capex inputs
+remain separate open gates. History is a downloadable snapshot archive, not an
+in-browser underwriting comparison or independently verified acquisition example.
 
 ### Integrated regression and release-preflight repair (2026-09-21)
 
