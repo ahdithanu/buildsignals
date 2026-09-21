@@ -81,6 +81,18 @@ separate source-record geography from saved ranked parcel results.
 
 ## Initial acquisition screening
 
+### Incomplete-input screening (2026-09-20)
+
+Method `acquisition-screen-v2` trims location components before deciding whether
+the target and deal locations are present. Whitespace-only city/state values
+are unknown, never matches or mismatches. Numeric criteria reject booleans,
+strings, and nonfinite/nonpositive values as unknown while retaining support for
+database Decimal prices. Recorded criteria and thresholds are unchanged. The
+method version is retained in downloaded snapshots and export audit receipts.
+Twenty-seven screening/export backend tests pass, including blank locations,
+case/whitespace normalization, unusable numbers, and Decimal prices. This does
+not add source verification or complete persisted custom screening criteria.
+
 ### Unknown financial outputs (2026-09-20)
 
 The deal API adapter now preserves missing/nonfinite underwriting outputs as

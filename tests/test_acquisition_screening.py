@@ -36,6 +36,42 @@ def test_market_does_not_substring_match():
     assert next(c for c in result['criteria'] if c['key'] == 'market')['status'] == 'fail'
 
 
+@pytest.mark.parametrize('deal_city,deal_state,target_city,target_state', [
+    (' ', 'OH', ' ', 'OH'), ('Columbus', ' ', 'Columbus', ' '),
+    ('Columbus', 'OH', '\t', 'OH'), (' ', 'OH', 'Columbus', 'OH'),
+    ('Columbus', None, 'Columbus', 'OH'),
+])
+def test_blank_locations_never_pass_or_fail(deal_city, deal_state, target_city, target_state):
+    result = screen_acquisition(Deal(city=deal_city, state=deal_state), 'small_multifamily', target_city, target_state)
+    criterion = next(c for c in result['criteria'] if c['key'] == 'market')
+    assert criterion['status'] == 'unknown'
+    assert criterion['basis'] is None
+
+
+def test_location_trims_and_casefolds_without_changing_identity():
+    result = screen_acquisition(Deal(city=' Columbus ', state=' oh '), 'small_multifamily', 'columbus ', 'OH')
+    criterion = next(c for c in result['criteria'] if c['key'] == 'market')
+    assert criterion['status'] == 'pass'
+    assert criterion['value'] == 'Columbus, oh'
+    assert result['method_version'] == 'acquisition-screen-v2'
+
+
+@pytest.mark.parametrize('value', [True, False, '24', '', float('nan'), float('inf'), -1])
+def test_unusable_numeric_inputs_are_unknown(value):
+    result = screen_acquisition(Deal(units=value), 'small_multifamily')
+    criterion = result['criteria'][0]
+    assert criterion['status'] == 'unknown'
+    assert criterion['value'] is None
+    assert criterion['basis'] is None
+
+
+def test_decimal_price_remains_supported():
+    from decimal import Decimal
+
+    result = screen_acquisition(Deal(asking_price=Decimal('2000000')), 'small_multifamily')
+    assert next(c for c in result['criteria'] if c['key'] == 'asking_price')['status'] == 'pass'
+
+
 def test_route_requires_auth(client):
     assert client.get('/deals/missing/acquisition-screen').status_code == 401
 

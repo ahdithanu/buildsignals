@@ -1,4 +1,5 @@
 """Versioned user-requested acquisition criteria; not an investment recommendation."""
+from decimal import Decimal
 from math import isfinite
 
 from app.models.deal import Deal
@@ -40,7 +41,10 @@ def screen_acquisition(deal: Deal, profile: str, market_city: str | None = None,
     criteria = []
     for field, label, lower, upper, target in PROFILES[profile]:
         value = getattr(deal, field)
-        valid = value is not None and isfinite(value) and value > 0
+        valid = (
+            isinstance(value, (int, float, Decimal)) and not isinstance(value, bool)
+            and isfinite(value) and value > 0
+        )
         status = "unknown" if not valid else "pass" if value >= lower and (
             upper is None or value <= upper
         ) else "fail"
@@ -51,15 +55,20 @@ def screen_acquisition(deal: Deal, profile: str, market_city: str | None = None,
             "reason": "Stored deal value; independently verify against source documents."
             if valid else "A usable deal value has not been recorded.",
         })
-    market_known = all((market_city, market_state, deal.city, deal.state))
-    market_matches = market_known and deal.city.strip().casefold() == market_city.strip().casefold() and (
-        deal.state.strip().casefold() == market_state.strip().casefold()
+    def clean_location(value):
+        return value.strip() if isinstance(value, str) else ""
+
+    target_city, target_state = clean_location(market_city), clean_location(market_state)
+    deal_city, deal_state = clean_location(deal.city), clean_location(deal.state)
+    market_known = all((target_city, target_state, deal_city, deal_state))
+    market_matches = market_known and deal_city.casefold() == target_city.casefold() and (
+        deal_state.casefold() == target_state.casefold()
     )
     criteria.append({
         "key": "market", "label": "Target market",
-        "target": f"{market_city}, {market_state}" if market_city and market_state else "Select one city and state",
+        "target": f"{target_city}, {target_state}" if target_city and target_state else "Select one city and state",
         "status": ("pass" if market_matches else "fail") if market_known else "unknown",
-        "value": ", ".join(filter(None, (deal.city, deal.state))) or None,
+        "value": ", ".join(filter(None, (deal_city, deal_state))) or None,
         "basis": "deal.city,deal.state" if market_known else None,
         "reason": "Exact city/state comparison; not a metro-area inference." if market_known
         else "Target market or deal location is incomplete.",
@@ -72,7 +81,7 @@ def screen_acquisition(deal: Deal, profile: str, market_city: str | None = None,
                          "value": None, "basis": None,
                          "reason": "Requires documented diligence; not inferred from permits or proximity."})
     counts = {state: sum(c["status"] == state for c in criteria) for state in ("pass", "fail", "unknown")}
-    return {"deal_id": deal.id, "profile": profile, "method_version": "acquisition-screen-v1",
+    return {"deal_id": deal.id, "profile": profile, "method_version": "acquisition-screen-v2",
             "criteria": criteria, "counts": counts,
             "status": "outside_buy_box" if counts["fail"] else "needs_diligence" if counts["unknown"] else "fits_recorded_criteria",
             "evidence_verified": False}
