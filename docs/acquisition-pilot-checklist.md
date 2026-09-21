@@ -2,6 +2,22 @@
 
 ## Local implementation, not deployed
 
+### Integrated backend regression and CLI test isolation (2026-09-21)
+
+A full backend run after the export changes produced 1,175 passes, 14 skips,
+and five admin-CLI setup errors. The CLI tests bypassed the ordinary per-test
+database override and used the configured local application database, whose
+users table lacked `totp_secret_ciphertext`. `create_all` cannot migrate an
+existing table. This was not evidence of a production database failure.
+
+The CLI test fixture now creates a fresh temporary SQLite database per test and
+patches the CLI session factory, including the test assertions' sessions. It no
+longer creates tables or inserts fixture records into the configured application
+database. All five previously failing tests pass on rerun; focused lint passes.
+The other 1,175 passes are from the preceding full run, not a second full-suite
+run. Fourteen skipped tests are not represented as verified checks. No local
+application migration or production modification was performed to mask the error.
+
 ### Evidence-bearing acquisition exports (2026-09-21)
 
 New exports use `acquisition-screen-export-v2` and retain up to ten latest
