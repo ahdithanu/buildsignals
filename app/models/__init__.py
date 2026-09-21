@@ -12,6 +12,7 @@ from app.models.memo import Memo  # noqa
 from app.models.pipeline_event import PipelineEvent  # noqa
 from app.models.audit_log import AuditLog  # noqa
 from app.models.buy_box import BuyBox  # noqa
+from app.models.acquisition_screen import AcquisitionScreenSnapshot  # noqa
 from app.models.deal_distribution import DealDistribution  # noqa
 from app.models.password_reset_token import PasswordResetToken  # noqa
 from app.models.graph import (  # noqa

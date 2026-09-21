@@ -2,6 +2,40 @@
 
 ## Local implementation, not deployed
 
+### Persisted acquisition-screen history API (2026-09-21)
+
+Each successful acquisition-screen export now saves its exact JSON bytes, SHA-256,
+deal, tenant, author, and UTC creation time in `acquisition_screen_snapshots`.
+The snapshot and export audit commit in the same transaction before delivery.
+The export response includes `X-Acquisition-Snapshot-Id`. Historical snapshots
+preserve the criteria, recorded values, unknowns, method version, and limitations
+that were actually exported; subsequent changes to deal facts do not rewrite them.
+There is no backfill from old audit hashes because those cannot recover old facts.
+
+Authenticated tenant members can list metadata at
+`GET /deals/{deal_id}/acquisition-screen/history` (default 20, maximum 100, offset
+pagination with `has_more`) and retrieve the exact document at
+`GET /deals/{deal_id}/acquisition-screen/history/{snapshot_id}`. Both require an
+active deal and use no-store; cross-tenant and deleted-deal requests return 404.
+Corrupted content fails its hash check instead of being returned. Editors/admins
+may create new snapshots through export; viewers may read existing snapshots.
+No application update/delete endpoint exists. This is application-append-only
+history, not database-level WORM storage or independent evidence verification.
+Organization portability and erasure include these rows.
+
+Migration `20260921_0001` enables and forces PostgreSQL tenant RLS and adds a
+tenant/deal/time index. Local SQLite and restricted-role PostgreSQL upgrade,
+downgrade, and re-upgrade pass. Thirty-seven screening/criteria/export tests passed
+before the additional portability regression; the final export/history suite has
+three passing tests. Twelve existing portability/erasure tests and eleven real
+PostgreSQL isolation tests pass. Focused lint and whitespace checks pass.
+
+Remaining: connect historical snapshot selection/download to the browser and
+verify that flow at mobile/desktop sizes. The existing export button already
+persists new snapshots, but the browser does not yet list historical ones. No
+production migration or release was performed. Parcel-source qualification and
+source-backed rent-roll, lease, and capex inputs remain separate open gates.
+
 ### Integrated regression and release-preflight repair (2026-09-21)
 
 The broad backend run initially found nine failures: five onboarding tests and

@@ -1,4 +1,3 @@
-import hashlib
 import json
 from datetime import datetime, timezone
 
@@ -7,10 +6,12 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.models.acquisition_screen import AcquisitionScreenSnapshot
 from app.models.buy_box import BuyBox
 from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.schemas.buy_box import AcquisitionCriteria, BuyBoxCreate, BuyBoxResponse
+from app.services.acquisition_history import save_screen_snapshot, verified_snapshot_content
 from app.services.acquisition_screening import screen_acquisition
 from app.services.audit_service import log_change
 from app.services.matching_service import match_deal
@@ -74,12 +75,51 @@ def export_acquisition_screen(
         ],
     }
     content = json.dumps(jsonable_encoder(snapshot), ensure_ascii=True, allow_nan=False, indent=2)
+    saved = save_screen_snapshot(db, deal_id, principal["user_id"], content)
     log_change(db, "deal", deal_id, "acquisition_screen_export", actor_id=principal["user_id"],
-               new_values={"content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+               new_values={"content_sha256": saved.content_sha256, "snapshot_id": saved.id,
                            "method_version": screen["method_version"], "profile": screen["profile"],
                            "buy_box_id": buy_box_id,
                            "counts": screen["counts"], "generated_at": snapshot["generated_at"]})
     db.commit()
+    return Response(content=content, media_type="application/json", headers={
+        "Cache-Control": "no-store",
+        "X-Acquisition-Snapshot-Id": saved.id,
+        "Content-Disposition": 'attachment; filename="acquisition-screen.json"',
+    })
+
+
+@router.get("/deals/{deal_id}/acquisition-screen/history", dependencies=[Depends(get_current_user)])
+def acquisition_screen_history(
+    deal_id: str, response: Response,
+    skip: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    if active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first() is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    rows = scope_query(db.query(AcquisitionScreenSnapshot), AcquisitionScreenSnapshot).filter(
+        AcquisitionScreenSnapshot.deal_id == deal_id,
+    ).order_by(AcquisitionScreenSnapshot.created_at.desc(), AcquisitionScreenSnapshot.id.desc()).offset(skip).limit(limit + 1).all()
+    response.headers["Cache-Control"] = "no-store"
+    return {"items": [{"id": row.id, "created_at": row.created_at,
+                       "author_id": row.author_id, "content_sha256": row.content_sha256}
+                      for row in rows[:limit]], "has_more": len(rows) > limit}
+
+
+@router.get("/deals/{deal_id}/acquisition-screen/history/{snapshot_id}",
+            dependencies=[Depends(get_current_user)])
+def acquisition_screen_snapshot(deal_id: str, snapshot_id: str, db: Session = Depends(get_db)):
+    if active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first() is None:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    row = scope_query(db.query(AcquisitionScreenSnapshot), AcquisitionScreenSnapshot).filter(
+        AcquisitionScreenSnapshot.deal_id == deal_id, AcquisitionScreenSnapshot.id == snapshot_id,
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    try:
+        content = verified_snapshot_content(row)
+    except ValueError:
+        raise HTTPException(status_code=500, detail="Snapshot integrity check failed") from None
     return Response(content=content, media_type="application/json", headers={
         "Cache-Control": "no-store",
         "Content-Disposition": 'attachment; filename="acquisition-screen.json"',

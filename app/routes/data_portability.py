@@ -31,6 +31,7 @@ from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.models.acquisition_screen import AcquisitionScreenSnapshot
 from app.models.audit_log import AuditLog
 from app.models.buy_box import BuyBox
 from app.models.contact import Contact
@@ -76,6 +77,7 @@ _ORG_SCOPED_MODELS: list[tuple[str, type]] = [
     ("pipeline_events", PipelineEvent),
     ("buy_boxes", BuyBox),
     ("deal_distributions", DealDistribution),
+    ("acquisition_screen_snapshots", AcquisitionScreenSnapshot),
     ("audit_logs", AuditLog),
 ]
 
