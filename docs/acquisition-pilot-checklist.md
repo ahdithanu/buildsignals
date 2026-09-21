@@ -2,6 +2,30 @@
 
 ## Local implementation, not deployed
 
+### Cross-service acquisition regression (2026-09-21)
+
+The authenticated nearby-parcel promotion test now follows a pre-approval permit's
+source and lifecycle evidence, runs the ranked nearby search, shortlists a
+candidate, promotes it into a saved opportunity, reloads its parcel graph, screens
+the saved deal, and retrieves the exact persisted screening export. It explicitly
+asserts that assessor value and nearby retail activity do not establish asking
+price, building area, vintage, asset configuration, occupancy, or lease terms.
+Only the recorded city/state passes; unestablished facts stay unknown.
+
+A second integrated test uses real JWT authentication and persisted membership
+roles, rather than an authentication override, for parcel-reference review.
+Viewers can inspect evidence but cannot accept it; editors can accept, reload the
+permit, and recover both source snapshot IDs, reviewer identity, and verification
+time from the graph relationship. Changing active tenant denies reads and review
+writes. Acceptance does not copy parcel coordinates into the permit.
+
+All 51 nearby-search, parcel-reference/review/audit, and screening-export tests
+pass, as do focused lint and whitespace checks. These are synthetic local
+regressions, not qualified Columbus inventory, source licensing, real-market
+match measurements, or production/browser acceptance. The review fixture has
+distinct permit and parcel evidence; the legacy nearby fixture remains simplified
+and cannot establish source qualification. Real-record workflow gates stay open.
+
 ### Persisted acquisition-screen history API (2026-09-21)
 
 Each successful acquisition-screen export now saves its exact JSON bytes, SHA-256,
@@ -108,15 +132,17 @@ Production diagnostics and any release still require their separate live gates.
   distinct-reference counts, with 24 passing tests. It does not acquire evidence
   or make the provisional namespace production-eligible.
 - [ ] Verify evidence-backed signal to nearby candidate workflow in that market.
-- [ ] Add structured multifamily and small-bay retail buy-box criteria with
+- [x] Add structured multifamily and small-bay retail buy-box criteria with
   pass/fail/unknown results, provenance, and missing-diligence reasons.
   Initial read-only screening is implemented on opportunity details. Price,
   units/area, vintage, and an explicitly selected city/state compare saved deal
   fields against versioned user-requested defaults. Asset configuration and
   retail diligence remain unknown. Field references are traceable inputs, not
   independently verified evidence. Persisted structured criteria now have an API
-  foundation, creation and selection UI. Source-backed rent-roll/lease/capex
-  inputs and saved screening history remain pending.
+  foundation, creation and selection UI, and persisted downloadable screening
+  history verified on mobile and desktop.
+- [ ] Add source-backed rent-roll/lease/capex diligence inputs. Current field
+  references identify recorded deal inputs, not independently verified documents.
 - [ ] Verify source evidence, project timeline, nearby parcels, saved opportunity,
   and export on mobile and desktop with real qualified records.
 - [ ] Release and measure live inventory, freshness, and source-specific coverage.

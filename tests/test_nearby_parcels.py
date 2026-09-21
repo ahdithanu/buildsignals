@@ -825,6 +825,14 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     headers = {"Authorization": f"Bearer {create_access_token(user_id=admin_user.id, org_id=org.id)}"}
 
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path, headers=headers)
+    # Exercise the analyst's evidence and lifecycle reads before selecting land.
+    permit_detail = client.get(f"/ingestion/permits/{match.permit_id}", headers=headers)
+    assert permit_detail.status_code == 200, permit_detail.text
+    permit_body = permit_detail.json()
+    assert permit_body["permit"]["approval_stage"] == "pre_approval"
+    assert permit_body["source_key"] == source_data["key"]
+    assert permit_body["events"]
+    assert all(event["raw_source_record_id"] for event in permit_body["events"])
     source = db.get(IngestionSource, source_data["id"])
     raw = db.query(RawSourceRecord).one()
     _add_parcel(
@@ -879,6 +887,34 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     payload = graph.json()
     assert payload["parcels"]
     assert payload["parcels"][0]["entity"]["display_name"] == "P-PROMOTE"
+
+    # Assessed land value and nearby retail activity are not listing terms or
+    # verified building facts. Promotion must not fill these screening unknowns.
+    saved_id = body["deal"]["id"]
+    saved = client.get(f"/deals/{saved_id}", headers=headers)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["source"] == "nearby_parcel_promotion"
+    screen_url = f"/deals/{saved_id}/acquisition-screen"
+    params = {"profile": "small_bay_retail", "market_city": "Austin", "market_state": "TX"}
+    screened = client.get(screen_url, headers=headers, params=params)
+    assert screened.status_code == 200, screened.text
+    criteria = {row["key"]: row for row in screened.json()["criteria"]}
+    for key in ("asking_price", "sq_ft", "year_built", "asset_type", "occupancy", "leases"):
+        assert criteria[key]["status"] == "unknown"
+        assert criteria[key]["value"] is None
+    assert criteria["market"]["status"] == "pass"
+    assert screened.json()["evidence_verified"] is False
+
+    exported = client.post(screen_url + "/export", headers=headers, params=params)
+    assert exported.status_code == 200, exported.text
+    snapshot_id = exported.headers["x-acquisition-snapshot-id"]
+    history = client.get(screen_url + "/history", headers=headers)
+    assert history.status_code == 200
+    assert history.json()["items"][0]["id"] == snapshot_id
+    archived = client.get(screen_url + f"/history/{snapshot_id}", headers=headers)
+    assert archived.content == exported.content
+    assert archived.json()["screen"]["deal_id"] == saved_id
+    assert db.query(AuditLog).filter_by(entity_id=saved_id, action="acquisition_screen_export").count() == 1
 
 
 def test_search_requires_confirmation_and_enforces_radius(client, db, tmp_path):

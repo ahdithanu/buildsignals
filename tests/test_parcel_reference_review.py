@@ -127,3 +127,52 @@ def test_acceptance_endpoint_enforces_role_and_returns_graph_evidence(client, db
             assert db.query(AuditLog).filter_by(action="parcel_reference_accepted").count() == 0
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_authenticated_review_survives_reload_with_scoped_evidence(client, db):
+    from app.models.organization import Organization
+    from app.models.organization_membership import MemberRole, OrganizationMembership
+    from app.services.security import create_access_token
+
+    permit, parcel, user, payload = setup_review(db)
+    membership = OrganizationMembership(organization_id="default-org", user_id=user.id,
+                                        role=MemberRole.viewer, is_default=True)
+    db.add(membership)
+    db.commit()
+    headers = {"Authorization": "Bearer " + create_access_token(user_id=user.id, org_id="default-org")}
+    url = f"/ingestion/permits/{permit.id}"
+    candidates = client.get(url + "/parcel-candidates", headers=headers,
+                            params={"parcel_source_id": parcel.source_id})
+    assert candidates.status_code == 200, candidates.text
+    assert candidates.json()["status"] == "candidate_requires_review"
+    assert candidates.json()["candidates"][0]["raw_source_record_id"] == payload.expected_parcel_raw_id
+    denied = client.post(url + "/parcel-acceptance", headers=headers, json=payload.model_dump())
+    assert denied.status_code == 403
+    assert db.query(AuditLog).filter_by(action="parcel_reference_accepted").count() == 0
+    membership.role = MemberRole.editor
+    db.commit()
+    accepted = client.post(url + "/parcel-acceptance", headers=headers, json=payload.model_dump())
+    assert accepted.status_code == 200, accepted.text
+    relationship_id = accepted.json()["id"]
+    detail = client.get(url, headers=headers)
+    assert detail.status_code == 200, detail.text
+    relationship = next(row["relationship"] for row in detail.json()["graph_related"]
+                        if row["relationship"]["id"] == relationship_id)
+    assert relationship["last_verified_at"]
+    assert {e["payload"]["raw_source_record_id"] for e in relationship["evidence"]} == {
+        payload.expected_permit_raw_id, payload.expected_parcel_raw_id,
+    }
+    assert all(e["payload"]["actor_id"] == user.id for e in relationship["evidence"])
+    assert detail.json()["permit"]["latitude"] is None
+
+    other_org = str(uuid4())
+    db.add(Organization(id=other_org, name="Other review tenant", slug=other_org))
+    db.flush()
+    db.add(OrganizationMembership(organization_id=other_org, user_id=user.id,
+                                  role=MemberRole.editor, is_default=False))
+    db.commit()
+    other_headers = {"Authorization": "Bearer " + create_access_token(user_id=user.id, org_id=other_org)}
+    assert client.get(url, headers=other_headers).status_code == 404
+    assert client.post(url + "/parcel-acceptance", headers=other_headers,
+                       json=payload.model_dump()).status_code == 404
+    assert db.query(AuditLog).filter_by(action="parcel_reference_accepted").count() == 1
