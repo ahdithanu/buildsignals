@@ -64,6 +64,7 @@ export function Layout({ children }: LayoutProps) {
               <DropdownMenuItem asChild><Link to="/permit-review">Permit review</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/team">Team</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/audit">Audit log</Link></DropdownMenuItem>
+              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/evals">AI Evaluations</Link></DropdownMenuItem>}
               <DropdownMenuItem asChild><Link to="/settings">Settings</Link></DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -100,6 +101,7 @@ export function Layout({ children }: LayoutProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link to="/account">Account</Link></DropdownMenuItem>
+              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/evals">AI Evaluations</Link></DropdownMenuItem>}
               <DropdownMenuItem onSelect={() => void logout()}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

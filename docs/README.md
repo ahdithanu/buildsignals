@@ -16,6 +16,7 @@ permit intelligence pipeline.
 - [Acquisition Radar](./acquisition_radar.md)
 - [Source onboarding decisions](./source_onboarding_decisions.md)
 - [Parcel source onboarding decisions](./parcel_source_onboarding_decisions.md)
+- [Schema reconciliation release gates and maintenance runbook](./runbooks/schema-reconciliation-release.md)
 
 ## What This Covers
 
