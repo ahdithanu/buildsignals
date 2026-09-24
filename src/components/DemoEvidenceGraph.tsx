@@ -1,54 +1,89 @@
 import { useState } from 'react';
-import { ExternalLink } from 'lucide-react';
-import type { GraphRelatedEntity } from '@/types/graph';
+import { useQuery } from '@tanstack/react-query';
+import { ExternalLink, GitBranch, TrendingUp } from 'lucide-react';
+import { apiClient } from '@/api/client';
+import type { GraphEntity, GraphRelatedEntity, GraphRelationship } from '@/types/graph';
 
-type Props = {
-  root: string;
-  related: GraphRelatedEntity[];
-  onParcel: (reference: string) => void;
-};
+type Props = { root: string; rootId?: string; related: GraphRelatedEntity[];
+  onParcel: (reference: string) => void; onPermit: (id: string) => void };
+type Neighbor = { entity: GraphEntity; relationship: GraphRelationship; permit_id: string };
+type Neighbors = { entity: GraphEntity; neighbors: Neighbor[] };
+type Activity = { months: { month: string; filed: number; issued: number }[];
+  stages: Record<string, number>; records_considered: number; limit: number };
+const label = (value: string) => value.replace(/_/g, ' ');
+const percent = (value: number) => `${Math.round(value * 100)}%`;
 
-const positions = [
-  [18, 22], [50, 13], [82, 22], [18, 72], [50, 82], [82, 72],
-] as const;
-
-export function DemoEvidenceGraph({ root, related, onParcel }: Props) {
+export function DemoEvidenceGraph({ root, rootId, related, onParcel, onPermit }: Props) {
   const [focused, setFocused] = useState<string | null>(null);
-  const visible = related.slice(0, positions.length);
-  const active = visible.find(item => item.relationship.id === focused) ?? visible[0];
-  return <section aria-label="Relationship diagram" className="space-y-3">
-    <h3 className="font-semibold">Evidence-linked graph</h3>
-    <p className="text-xs text-muted-foreground">Select a node to inspect its source-field evidence. Lines are reported relationships, not verified ownership or parcel joins.</p>
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(15rem,1fr)]">
-      <div className="relative h-[21rem] min-w-0 overflow-hidden border bg-card sm:h-[24rem]" role="img" aria-label={`Evidence graph for ${root}`}>
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {visible.map((item, index) => <line key={item.relationship.id} x1="50" y1="47" x2={positions[index][0]} y2={positions[index][1]} stroke={active?.relationship.id === item.relationship.id ? 'hsl(var(--primary))' : 'hsl(var(--border))'} strokeWidth="0.7" vectorEffect="non-scaling-stroke" />)}
-        </svg>
-        <div className="absolute left-1/2 top-[47%] flex w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center border-2 border-foreground bg-background p-2 text-center shadow-sm sm:w-36">
-          <span className="text-[10px] uppercase text-muted-foreground">Filing</span><span className="w-full truncate text-xs font-semibold" title={root}>{root}</span>
-        </div>
-        {visible.map((item, index) => <button key={item.relationship.id} type="button"
-          className={`absolute flex h-14 w-[29%] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center border bg-background px-1 text-center shadow-sm sm:h-16 sm:w-[25%] ${active?.relationship.id === item.relationship.id ? 'border-2 border-primary' : 'border-border'}`}
-          style={{ left: `${positions[index][0]}%`, top: `${positions[index][1]}%` }}
-          aria-label={`${item.entity.entity_type.replace(/_/g, ' ')}: ${item.entity.display_name}`}
-          aria-pressed={active?.relationship.id === item.relationship.id} onClick={() => setFocused(item.relationship.id)}>
-          <span className="text-[10px] uppercase text-muted-foreground">{item.entity.entity_type.replace(/_/g, ' ')}</span>
-          <span className="w-full truncate text-xs font-medium" title={item.entity.display_name}>{item.entity.display_name}</span>
-        </button>)}
+  const visible = related.filter(item => item.entity.entity_type !== 'city');
+  const selected = visible.find(item => item.relationship.id === focused) ?? visible[0];
+  const expandable = !!selected && ['company', 'property', 'parcel'].includes(selected.entity.entity_type);
+  const neighbors = useQuery({
+    queryKey: ['demo-graph-neighbors', selected?.entity.id, rootId],
+    queryFn: () => apiClient.get<Neighbors>('/demo/graph-neighbors', { entity_id: selected!.entity.id, exclude_entity_id: rootId }),
+    enabled: expandable,
+  });
+  const activity = useQuery({ queryKey: ['demo-activity'], queryFn: () => apiClient.get<Activity>('/demo/activity') });
+  const largest = Math.max(1, ...(activity.data?.months.map(month => Math.max(month.filed, month.issued)) ?? []));
+  return <section aria-label="Relationship diagram" className="space-y-5">
+    <div><h3 className="flex items-center gap-2 font-semibold"><GitBranch size={17} /> Evidence-linked graph</h3>
+      <p className="mt-1 text-xs text-muted-foreground">Explore two hops from a filing. Shared names and references are investigation leads, not proof of one project, ownership, or a parcel join.</p></div>
+    <div className="grid min-w-0 border-y lg:grid-cols-[minmax(9rem,0.8fr)_minmax(13rem,1.2fr)_minmax(13rem,1.2fr)]">
+      <div className="min-w-0 border-b p-3 lg:border-b-0 lg:border-r">
+        <p className="text-[11px] font-semibold uppercase text-muted-foreground">Selected filing</p>
+        <div className="mt-4 break-all border-l-4 border-primary bg-secondary p-3 text-sm font-semibold">{root}</div>
       </div>
-      <div className="min-w-0 border-t pt-3 text-sm xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0" aria-live="polite">
-        {active ? <>
-          <p className="break-words font-semibold">{active.entity.display_name}</p>
-          <p className="mt-1 text-xs capitalize text-muted-foreground">{active.entity.entity_type.replace(/_/g, ' ')} / {String(active.relationship.attributes?.role || active.relationship.relationship_type).replace(/_/g, ' ')}</p>
-          <p className="mt-3 text-xs">{Math.round(active.relationship.confidence * 100)}% source-field confidence. Verified {new Date(active.relationship.last_verified_at).toLocaleDateString()}.</p>
-          <div className="mt-3 space-y-3 border-t pt-3">{active.relationship.evidence.map(evidence => <div key={evidence.id} className="break-words text-xs">
-            {evidence.excerpt && <p>{evidence.excerpt}</p>}
-            {evidence.source_url && /^https?:\/\//i.test(evidence.source_url) && <a className="mt-1 inline-flex items-center gap-1 underline" href={evidence.source_url} target="_blank" rel="noreferrer">Relationship source <ExternalLink size={12} /></a>}
-          </div>)}</div>
-          {active.entity.entity_type === 'parcel' && <button type="button" className="mt-4 text-xs font-semibold underline" onClick={() => onParcel(active.entity.display_name)}>Inspect this parcel reference</button>}
-        </> : <p className="text-muted-foreground">No relationships were extracted for this filing.</p>}
+      <div className="min-w-0 border-b p-3 lg:border-b-0 lg:border-r">
+        <p className="text-[11px] font-semibold uppercase text-muted-foreground">Reported entities · {visible.length}</p>
+        <div className="mt-2 max-h-72 divide-y overflow-y-auto border-y">
+          {visible.map(item => <button key={item.relationship.id} type="button" aria-pressed={selected?.relationship.id === item.relationship.id}
+            aria-label={`${label(item.entity.entity_type)}: ${item.entity.display_name}`} onClick={() => setFocused(item.relationship.id)}
+            className={`flex w-full min-w-0 items-start justify-between gap-2 px-2 py-3 text-left text-xs hover:bg-secondary ${selected?.relationship.id === item.relationship.id ? 'border-l-4 border-primary bg-secondary' : ''}`}>
+            <span className="min-w-0"><span className="block break-words font-semibold">{item.entity.display_name}</span>
+              <span className="capitalize text-muted-foreground">{label(item.entity.entity_type)} · {label(String(item.relationship.attributes?.role || item.relationship.relationship_type))}</span></span>
+            <span className="shrink-0 tabular-nums text-muted-foreground">{percent(item.relationship.confidence)}</span>
+          </button>)}
+          {!visible.length && <p className="py-3 text-xs text-muted-foreground">No reported relationships.</p>}
+        </div>
+      </div>
+      <div className="min-w-0 p-3">
+        <p className="text-[11px] font-semibold uppercase text-muted-foreground">Other filings through selected entity</p>
+        {neighbors.isLoading && <p className="mt-4 text-xs">Tracing source links...</p>}
+        {neighbors.isError && <p className="mt-4 text-xs" role="alert">Connected filings could not be loaded.</p>}
+        {expandable && neighbors.data && <>
+          <p className="mt-2 text-xs text-muted-foreground">A shared {label(selected.entity.entity_type)} reference; each link has separate evidence.</p>
+          <ul className="mt-2 max-h-72 divide-y overflow-y-auto border-y">{neighbors.data.neighbors.map(item => <li key={item.relationship.id} className="px-2 py-2 text-xs">
+            <button type="button" className="break-all text-left font-semibold underline" onClick={() => onPermit(item.permit_id)}>{item.entity.display_name}</button>
+            <p className="mt-1 text-muted-foreground">{label(item.relationship.relationship_type)} · {percent(item.relationship.confidence)} · {item.relationship.evidence.length} source {item.relationship.evidence.length === 1 ? 'item' : 'items'}</p>
+          </li>)}</ul>
+          {!neighbors.data.neighbors.length && <p className="mt-3 text-xs text-muted-foreground">No other filing appears in this bounded view.</p>}
+          {neighbors.data.neighbors.length >= 12 && <p className="mt-2 text-xs text-muted-foreground">Showing at most 12 linked filings.</p>}
+        </>}
+        {selected && !expandable && <p className="mt-4 text-xs text-muted-foreground">Select a company, property, or parcel reference to inspect shared filing activity.</p>}
       </div>
     </div>
-    {related.length > visible.length && <p className="text-xs text-muted-foreground">Showing {visible.length} of {related.length} immediate relationships.</p>}
+    {selected && <div className="border-t pt-3 text-sm" aria-live="polite">
+      <p className="break-words font-semibold">Why {selected.entity.display_name} is connected</p>
+      <p className="mt-1 text-xs text-muted-foreground">{label(selected.relationship.relationship_type)} · {percent(selected.relationship.confidence)} source-field confidence · Last verified {new Date(selected.relationship.last_verified_at).toLocaleDateString()}</p>
+      <ul className="mt-2 divide-y border-y">{selected.relationship.evidence.map(evidence => <li key={evidence.id} className="break-words py-2 text-xs">
+        <span className="font-medium">{evidence.source_system}</span>{evidence.excerpt && <span> · {evidence.excerpt}</span>}
+        {evidence.source_url && /^https?:\/\//i.test(evidence.source_url) && <a className="ml-2 inline-flex items-center gap-1 underline" href={evidence.source_url} target="_blank" rel="noreferrer">Relationship source <ExternalLink size={12} /></a>}
+      </li>)}</ul>
+      {selected.entity.entity_type === 'parcel' && <button type="button" className="mt-3 text-xs font-semibold underline" onClick={() => onParcel(selected.entity.display_name)}>Inspect this parcel reference</button>}
+    </div>}
+    <div className="border-t pt-4">
+      <h3 className="flex items-center gap-2 font-semibold"><TrendingUp size={17} /> Historical source activity</h3>
+      <p className="mt-1 text-xs text-muted-foreground">Observed filing and issuance dates in this snapshot; not live momentum, a forecast, or verified expansion. One record can have both dates.</p>
+      {activity.isError && <p className="mt-3 text-xs" role="alert">Activity counts are unavailable.</p>}
+      {activity.data && <>
+        <div className="mt-4 flex flex-wrap gap-4 text-xs"><span><span className="mr-1 inline-block h-2 w-2 bg-emerald-600" /> Applications filed</span><span><span className="mr-1 inline-block h-2 w-2 bg-foreground" /> Permits issued</span></div>
+        <div className="mt-3 max-h-72 space-y-3 overflow-y-auto">{activity.data.months.map(month => <div key={month.month} className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2 text-xs">
+          <span className="tabular-nums">{month.month}</span><div className="space-y-1">
+            <div className="flex items-center gap-2"><div className="h-2 bg-emerald-600" style={{ width: `${Math.max(2, month.filed / largest * 100)}%` }} /><span className="tabular-nums">{month.filed}</span></div>
+            <div className="flex items-center gap-2"><div className="h-2 bg-foreground" style={{ width: `${Math.max(2, month.issued / largest * 100)}%` }} /><span className="tabular-nums">{month.issued}</span></div>
+          </div></div>)}</div>
+        <p className="mt-3 text-xs text-muted-foreground">{activity.data.records_considered.toLocaleString()} records considered; {activity.data.stages.pre_approval ?? 0} classified pre-approval and {activity.data.stages.approved ?? 0} approved. Dates and stages come from source records.</p>
+      </>}
+    </div>
   </section>;
 }

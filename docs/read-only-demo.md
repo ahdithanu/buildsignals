@@ -10,7 +10,11 @@ activation, push, merge, or deployment was performed for this implementation.
 Adds one-click entry from the sign-in page into a bounded, read-only product
 workspace. Visitors can navigate Overview, Filings, Graph, Parcels, and Map,
 including historical records, source links, lifecycle evidence, and graph
-relationships without signup or a password. Settings, write controls, exports,
+relationships without signup or a password. The bounded two-hop graph explorer
+traces reported companies, properties, and parcel references to other filings
+with separate source evidence. Its monthly filed/issued chart counts historical
+source dates only; it is not an AI prediction, live trend, or verified corporate
+expansion signal. Settings, write controls, exports,
 and non-demo routes are unavailable. Ordinary customers retain their existing
 application and authentication flow. The login subtitle and site descriptions
 use the requested development-intelligence wording.

@@ -134,6 +134,24 @@ def test_demo_overview_parcel_references_and_map_readiness(client, demo):
     }
 
 
+def test_demo_graph_neighbors_and_activity_are_scoped(client, db, demo):
+    auth = headers(client)
+    activity = client.get("/demo/activity", headers=auth)
+    assert activity.status_code == 200
+    assert activity.json()["records_considered"] == 1
+    assert sum(activity.json()["stages"].values()) == 1
+    assert client.get("/demo/activity").status_code == 401
+
+    company = db.query(GraphEntity).filter(GraphEntity.entity_type == "company").first()
+    assert company is not None
+    related = client.get(f"/demo/graph-neighbors?entity_id={company.id}", headers=auth)
+    assert related.status_code == 200
+    assert related.json()["entity"]["id"] == company.id
+    assert all(item["permit_id"] for item in related.json()["neighbors"])
+    assert client.get("/demo/graph-neighbors?entity_id=not-a-uuid", headers=auth).status_code == 422
+    assert client.get("/demo/graph-neighbors?entity_id=00000000-0000-0000-0000-000000000000", headers=auth).status_code == 404
+
+
 def test_demo_map_only_shows_source_permitted_boundaries(client, db, demo):
     permit = db.query(PermitRecord).first()
     permit.latitude, permit.longitude = 39.9612, -82.9988

@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.graph import GraphEntity, GraphRelationship
+from app.models.graph import GraphEntity, GraphEntityLink, GraphRelationship
+from app.schemas.graph import GraphEntityResponse, GraphRelationshipResponse
 from app.models.ingestion import PermitRecord
 from app.models.parcel import ParcelRecord
 from app.models.permit_geocode import PermitGeocode
@@ -62,6 +64,56 @@ def demo_summary(principal: dict = Depends(get_current_user), db: Session = Depe
             ParcelRecord.latitude.between(-85, 85), ParcelRecord.longitude.between(-180, 180),
         ).count(),
     }
+
+
+@router.get("/activity")
+def demo_activity(principal: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    _require_demo(principal)
+    rows = _permit_query(db).with_entities(
+        PermitRecord.filed_at, PermitRecord.issued_at, PermitRecord.approval_stage,
+    ).limit(5000).all()
+    months: dict[str, dict[str, int]] = {}
+    stages: dict[str, int] = {}
+    for filed_at, issued_at, stage in rows:
+        stages[stage or "unknown"] = stages.get(stage or "unknown", 0) + 1
+        for field, value in (("filed", filed_at), ("issued", issued_at)):
+            if value:
+                month = value.strftime("%Y-%m")
+                bucket = months.setdefault(month, {"filed": 0, "issued": 0})
+                bucket[field] += 1
+    return {"months": [{"month": month, **counts} for month, counts in sorted(months.items())],
+            "stages": stages, "records_considered": len(rows), "limit": 5000}
+
+
+@router.get("/graph-neighbors")
+def demo_graph_neighbors(
+    entity_id: str = Query(min_length=36, max_length=36),
+    exclude_entity_id: str | None = Query(None, min_length=36, max_length=36),
+    principal: dict = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    _require_demo(principal)
+    entity = active_query(db.query(GraphEntity), GraphEntity).filter(GraphEntity.id == entity_id).first()
+    if not entity or entity.entity_type.value not in {"company", "property", "parcel"}:
+        raise HTTPException(status_code=404, detail="Graph entity not available")
+    relationships = active_query(db.query(GraphRelationship), GraphRelationship).options(
+        joinedload(GraphRelationship.evidence),
+    ).filter(
+        GraphRelationship.is_current.is_(True),
+        or_(GraphRelationship.source_entity_id == entity_id, GraphRelationship.target_entity_id == entity_id),
+    ).order_by(GraphRelationship.last_verified_at.desc(), GraphRelationship.id).limit(12).all()
+    other_ids = [r.target_entity_id if r.source_entity_id == entity_id else r.source_entity_id for r in relationships]
+    entities = {row.id: row for row in active_query(db.query(GraphEntity), GraphEntity).filter(
+        GraphEntity.id.in_(other_ids), GraphEntity.entity_type == "permit",
+    ).all()}
+    links = {row.entity_id: row.record_id for row in active_query(db.query(GraphEntityLink), GraphEntityLink).filter(
+        GraphEntityLink.entity_id.in_(entities), GraphEntityLink.record_type == "permit",
+    ).all()}
+    return {"entity": GraphEntityResponse.model_validate(entity), "neighbors": [{
+        "entity": GraphEntityResponse.model_validate(entities[other_id]),
+        "relationship": GraphRelationshipResponse.model_validate(relationship),
+        "permit_id": links.get(other_id),
+    } for relationship, other_id in zip(relationships, other_ids)
+        if other_id in entities and other_id != exclude_entity_id and links.get(other_id)]}
 
 
 @router.get("/parcel-references")

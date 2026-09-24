@@ -83,7 +83,7 @@ export default function DemoWorkspace() {
       {permits.isError && <ErrorState message="Historical filings could not be loaded." onRetry={() => void permits.refetch()} />}
       {permits.isLoading && <LoadingState message="Loading historical permits..." />}
       {permits.data?.length === 0 && <p role="status">Demo records have not been prepared yet.</p>}
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+      <div className={`grid min-w-0 gap-6 ${section === 'graph' ? 'lg:grid-cols-[minmax(14rem,0.75fr)_minmax(0,2fr)]' : 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]'}`}>
         <section className="min-w-0" aria-label="Historical permits">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="font-semibold">Permits</h2>
@@ -120,7 +120,8 @@ export default function DemoWorkspace() {
               <ul className="mt-3 divide-y text-sm">{current.events.map(event => <li className="py-2" key={event.id}>{date(event.occurred_at)}: {event.status || event.event_type}</li>)}</ul>
             </section>
             {section === 'graph' && <DemoEvidenceGraph key={current.permit.id} root={current.permit.permit_number || current.permit.external_record_id}
-              related={current.graph_related} onParcel={value => { setSelectedReference(value); setSection('parcels'); }} />}
+              rootId={current.graph_entity?.id} related={current.graph_related} onParcel={value => { setSelectedReference(value); setSection('parcels'); }}
+              onPermit={setSelected} />}
           </>}
         </section>
       </div>
