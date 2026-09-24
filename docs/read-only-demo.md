@@ -7,12 +7,13 @@ work at `14f17bc`. That base has earlier unreleased work; this branch does not
 authorize publishing those changes. No production setting, migration, source
 activation, push, merge, or deployment was performed for this implementation.
 
-Adds one-click entry from the sign-in page into a bounded, read-only permit
-workspace. Visitors see historical records, source links, lifecycle evidence,
-and evidence-linked graph relationships without signup or a password. Settings,
-write controls, exports, and non-demo routes are unavailable. Ordinary customers
-retain their existing application and authentication flow. The login subtitle
-and site descriptions use the requested development-intelligence wording.
+Adds one-click entry from the sign-in page into a bounded, read-only product
+workspace. Visitors can navigate Overview, Filings, Graph, Parcels, and Map,
+including historical records, source links, lifecycle evidence, and graph
+relationships without signup or a password. Settings, write controls, exports,
+and non-demo routes are unavailable. Ordinary customers retain their existing
+application and authentication flow. The login subtitle and site descriptions
+use the requested development-intelligence wording.
 
 ## Security Boundaries
 
@@ -27,7 +28,8 @@ and site descriptions use the requested development-intelligence wording.
   tokens naming the reserved demo identity/tenant are rejected.
 - Central auth middleware rejects all demo mutations except logout. Reads are
   deny-by-default, with exact audited patterns for profile, summary, bounded
-  permit pages/details and individual graph evidence. New routes are blocked
+  parcel-reference pages, map locations, permit pages/details and individual
+  graph evidence. New routes are blocked
   automatically. Settings, users, invites, API keys, billing, organization
   management, raw data, and export/download endpoints are not in the allowlist.
 - PostgreSQL retains `app.current_org` transaction scoping and existing forced
@@ -98,8 +100,14 @@ pipeline, not a demo-only raw graph insert.
 
 No authoritative parcel geometries, verified nearby candidates, or sale listings
 were fabricated. Parcel reference nodes are explicitly labeled unresolved. There
-are no coordinates in this narrow cohort, so it is not a map/nearby-parcel demo.
-Full nearby acquisition workflows still require a qualified parcel join.
+are no coordinates in this narrow cohort. The Map tab shows measured map
+readiness and a clearly labeled link to the county's separate public parcel
+viewer when it cannot plot source-backed locations. It accepts only valid source
+coordinates and source-policy-permitted parcel polygons when such records are
+admitted to the demo tenant; it does not turn a source parcel ID into a polygon.
+The Parcels tab lists bounded source references and links back to filing evidence.
+Full nearby acquisition workflows still require a qualified parcel source, a
+reviewed permit-to-parcel join, and permitted boundary display.
 
 ## Verification
 
@@ -144,6 +152,15 @@ The optional snapshot-directory run replays all six real cohorts and asserts
 The local preview is available at `http://localhost:8080/login` while its
 development servers are running. Choose **View live demo**. The backend runs on
 loopback port 8000 with disposable test configuration, not production secrets.
+
+The expanded overview, parcel-reference, and map endpoints passed 49 focused
+backend tests. The map test confirms that permitted geometry is returned and
+`parcel_id_only` policy suppresses the same boundary. Full-cohort Playwright
+passed the three demo flows at desktop and mobile widths; a subsequent one-record
+run passed the same three flows after the no-data map treatment. The parcel
+geometry in the backend test is synthetic test input, not demo inventory.
+TypeScript checks and the Vite build passed. The current historical cohort still
+contains zero mapped parcels and zero coordinate-bearing permits.
 
 ## Production Ingestion Audit
 

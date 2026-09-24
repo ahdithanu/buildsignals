@@ -5,8 +5,15 @@ import pytest
 
 from app import config
 from app.models.graph import GraphEntity, GraphRelationship
-from app.models.ingestion import IngestionSource, PermitEvent, PermitRecord, RawSourceRecord
+from app.models.ingestion import (
+    IngestionRun,
+    IngestionSource,
+    PermitEvent,
+    PermitRecord,
+    RawSourceRecord,
+)
 from app.models.organization import Organization
+from app.models.parcel import ParcelRecord
 from app.models.user import User
 from app.services.demo_access import DEMO_ORG_ID, DEMO_USER_ID, demo_read_only
 from app.services.demo_seed import seed_demo
@@ -101,11 +108,71 @@ def test_seed_idempotency_and_evidence(client, db, demo):
     assert client.post("/auth/logout", headers=auth).status_code == 204
 
 
+def test_demo_overview_parcel_references_and_map_readiness(client, demo):
+    auth = headers(client)
+    summary = client.get("/demo/summary", headers=auth).json()
+    assert summary["permit_records"] == 1
+    assert summary["parcel_references"] == 1
+    assert summary["parcel_records"] == 0
+    assert summary["mapped_permits"] == summary["mapped_parcels"] == 0
+    references = client.get("/demo/parcel-references", headers=auth).json()
+    assert len(references) == 1
+    assert references[0]["reference"] == "010066782"
+    assert references[0]["permit_count"] == 1
+    assert references[0]["sample_address"] == "55 E STATE ST"
+    assert client.get("/demo/parcel-references?limit=26", headers=auth).status_code == 422
+    assert client.get("/demo/map", headers=auth).json() == {
+        "permits": [], "parcels": [], "limit_per_layer": 100,
+    }
+
+
+def test_demo_map_only_shows_source_permitted_boundaries(client, db, demo):
+    permit = db.query(PermitRecord).first()
+    permit.latitude, permit.longitude = 39.9612, -82.9988
+    source = IngestionSource(organization_id=DEMO_ORG_ID, key="test-parcel-source",
+                             name="Test parcel source", adapter="test", record_type="parcel",
+                             settings={"export_policy": "derived_parcel_context"}, is_active=False)
+    db.add(source)
+    db.flush()
+    run = IngestionRun(organization_id=DEMO_ORG_ID, source_id=source.id, status="completed")
+    db.add(run)
+    db.flush()
+    raw = RawSourceRecord(organization_id=DEMO_ORG_ID, source_id=source.id, run_id=run.id,
+                          external_record_id="test-1", content_hash="a" * 64, payload={})
+    db.add(raw)
+    db.flush()
+    geometry = {"type": "Polygon", "coordinates": [[
+        [-83.001, 39.960], [-83.000, 39.960], [-83.000, 39.961], [-83.001, 39.960],
+    ]]}
+    parcel = ParcelRecord(organization_id=DEMO_ORG_ID, source_id=source.id,
+                          latest_raw_record_id=raw.id, external_parcel_id="test-1",
+                          latitude=39.9605, longitude=-83.0005,
+                          attributes={"geometry": geometry})
+    db.add(parcel)
+    db.commit()
+    auth = headers(client)
+    mapped = client.get("/demo/map", headers=auth)
+    assert mapped.status_code == 200
+    assert len(mapped.json()["permits"]) == 1
+    assert mapped.json()["parcels"][0]["boundary"] == geometry
+    source.settings = {"export_policy": "parcel_id_only"}
+    db.commit()
+    hidden = client.get("/demo/map", headers=auth)
+    assert hidden.status_code == 200
+    assert hidden.json()["parcels"][0]["boundary"] is None
+
+
 def test_cross_tenant_reads_are_scoped(client, db, demo):
+    auth = headers(client)
     row = db.query(GraphEntity).first()
     row.organization_id = "other-org"
+    permit = db.query(PermitRecord).first()
+    permit.organization_id = "other-org"
     db.commit()
-    assert client.get(f"/graph/entities/{row.id}", headers=headers(client)).status_code == 404
+    assert client.get(f"/graph/entities/{row.id}", headers=auth).status_code == 404
+    assert client.get("/demo/parcel-references", headers=auth).json() == []
+    assert client.get("/demo/map", headers=auth).json()["permits"] == []
+    assert client.get("/demo/summary", headers=auth).json()["parcel_references"] == 0
     other = create_access_token(user_id=DEMO_USER_ID, org_id="other-org", demo=True)
     assert client.get("/demo/summary", headers={"Authorization": f"Bearer {other}"}).status_code == 401
 
