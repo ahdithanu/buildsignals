@@ -89,6 +89,8 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -d dealsignal_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE EXTENSION IF NOT EXISTS postgis;
+          CREATE EXTENSION IF NOT EXISTS postgis_topology;
           CREATE ROLE appuser LOGIN PASSWORD 'app';
           GRANT ALL ON SCHEMA public TO appuser;
           -- Eval RLS tests isolate their fixtures in a disposable schema.

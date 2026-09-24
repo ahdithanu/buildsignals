@@ -1,7 +1,7 @@
 """Real migration/data round trips; never connect to the application database.
 
 TEST_SCHEMA_RECONCILIATION_POSTGRES_URL opts into PostgreSQL using a disposable
-database with PostGIS already provisioned. The role must own its tables and
+database with PostGIS and postgis_topology already provisioned. The role must own its tables and
 have CREATE SCHEMA, but must NOT be superuser/BYPASSRLS. Each test creates and
 removes only a uniquely named schema. SQLite always uses pytest's tmp_path.
 """
@@ -207,6 +207,8 @@ def _schema(engine):
 def test_fresh_head_has_no_model_drift(database):
     url, engine = database
     _alembic(url, "upgrade", "head")
+    with engine.connect() as connection:
+        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == REVISION
     _assert_parity(url)
 
 
@@ -354,3 +356,58 @@ def test_cli_drift_check_still_rejects_unexpected_columns(database):
         connection.exec_driver_sql("ALTER TABLE parcel_records ADD COLUMN unexpected_drift INTEGER")
     result = _alembic(url, "check", succeeds=False)
     assert "unexpected_drift" in result.stdout + result.stderr
+
+
+def _topology_url(database):
+    url, engine = database
+    with engine.connect() as connection:
+        assert connection.execute(sa.text(
+            "SELECT count(*) FROM pg_extension WHERE extname='postgis_topology'"
+        )).scalar_one() == 1, "Provision postgis_topology before running topology drift tests"
+        schema = connection.exec_driver_sql("SELECT current_schema()").scalar_one()
+    return sa.engine.make_url(url).update_query_dict({
+        "options": f"-csearch_path={schema},public,topology",
+    }).render_as_string(hide_password=False)
+
+
+@pytest.mark.parametrize("database", ["postgresql"], indirect=True)
+def test_cli_check_preserves_visible_postgis_topology_relations(database):
+    url = _topology_url(database)
+    _alembic(url, "upgrade", "head")
+    engine = sa.create_engine(url)
+    try:
+        with engine.connect() as connection:
+            assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == REVISION
+            # Reproduce the Docker PostGIS image: extension tables outside the
+            # current schema appear in default-schema reflection as schema=None.
+            visible = set(sa.inspect(connection).get_table_names())
+            assert {"spatial_ref_sys", "layer", "topology"} <= visible
+            for name in ("layer", "topology"):
+                table = sa.Table(name, sa.MetaData(), autoload_with=connection)
+                assert table.schema is None
+        _assert_parity(url)
+        with engine.connect() as connection:
+            assert {"spatial_ref_sys", "layer", "topology"} <= set(
+                sa.inspect(connection).get_table_names()
+            )
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("database", ["postgresql"], indirect=True)
+@pytest.mark.parametrize("name", ["layer", "topology", "spatial_ref_sys"])
+def test_cli_check_rejects_application_tables_shadowing_postgis(database, name):
+    url = _topology_url(database)
+    _alembic(url, "upgrade", "head")
+    engine = sa.create_engine(url)
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(f'CREATE TABLE "{name}" (id INTEGER PRIMARY KEY)')
+            assert connection.execute(sa.text(
+                "SELECT n.nspname = current_schema() FROM pg_class c "
+                "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.oid=to_regclass(:name)"
+            ), {"name": name}).scalar_one()
+        result = _alembic(url, "check", succeeds=False)
+        assert f"Table('{name}'" in result.stdout + result.stderr
+    finally:
+        engine.dispose()
