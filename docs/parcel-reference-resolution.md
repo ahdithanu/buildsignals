@@ -131,6 +131,18 @@ From the repository root, with authorized local evidence files:
 .venv/bin/python -m scripts.franklin_parcel_qualification --permits /absolute/path/permits.json --parcels /absolute/path/parcels.json
 ```
 
+For a larger authorized cohort split into bounded requests, use
+`--batch-manifest /absolute/path/batches.json` instead of `--parcels`. The JSON
+array must contain objects shaped as
+`{"requested_references": ["010-000001"], "response": {"features": [...]}}`.
+Each batch lists at most 100 distinct county-formatted references; the union
+must equal every supported reference in the permit input. Overlapping requests,
+unrequested returned IDs, failed/truncated responses, or missing batches abort
+without a report. The receipt hashes the exact manifest bytes and identifies
+`complete_batch_manifest` as the response mode. This checks the supplied
+request manifest, not the truthfulness or completeness of the upstream service.
+It does not qualify the ID mapping, source rights, or production eligibility.
+
 The permit input is a JSON array with `parcel_id` and `address`; the parcel input
 is a complete ArcGIS response containing `features[].attributes.PARCELID` and
 `SITEADDRESS`. The tool only reads these files and prints a JSON report. It does
@@ -147,8 +159,8 @@ references remain repeated in the permit-weighted outcome counts. The report
 omits street addresses and unselected fields such as owner names. Full-cohort
 analysis still requires a complete authorized parcel response for the selected
 references; a caller-supplied subset cannot establish county-wide match rates.
-Twenty-four tests cover reporting, exact-byte receipts, malformed evidence,
-bounds, repeated references, and failure handling. Production eligibility remains
+Thirty-three tests cover reporting, exact-byte receipts, malformed evidence,
+bounds, repeated references, batch completeness checks, and failure handling. Production eligibility remains
 false in every report.
 
 ### Reviewed Acceptance Implemented

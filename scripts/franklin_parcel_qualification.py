@@ -20,6 +20,47 @@ def county_reference(reference):
     return f"{reference[:3]}-{reference[3:]}"
 
 
+def combine_batches(permits, batches):
+    """Require a complete, disjoint request manifest before cohort measurement."""
+    if not isinstance(permits, list) or len(permits) > MAX_RECORDS:
+        raise ValueError("Permits must be a bounded list")
+    expected = {
+        ref for permit in permits if isinstance(permit, dict)
+        for ref in [county_reference(permit.get("parcel_id"))] if ref
+    }
+    if not isinstance(batches, list) or not batches or len(batches) > MAX_RECORDS:
+        raise ValueError("A bounded batch manifest is required")
+    requested = set()
+    features = []
+    for batch in batches:
+        if not isinstance(batch, dict) or not isinstance(batch.get("requested_references"), list):
+            raise ValueError("Each batch needs requested references")
+        refs = batch["requested_references"]
+        if not refs or len(refs) > 100 or any(
+            not isinstance(ref, str) or not re.fullmatch(r"[0-9]{3}-[0-9]{6}", ref)
+            for ref in refs
+        ):
+            raise ValueError("Invalid bounded batch references")
+        if len(set(refs)) != len(refs) or requested.intersection(refs):
+            raise ValueError("Overlapping or repeated batch references")
+        response = batch.get("response")
+        if (not isinstance(response, dict) or "error" in response or
+                response.get("exceededTransferLimit") not in (None, False)):
+            raise ValueError("Failed or truncated batch")
+        rows = response.get("features")
+        if not isinstance(rows, list) or len(features) + len(rows) > MAX_RECORDS:
+            raise ValueError("Invalid or oversized batch response")
+        for row in rows:
+            attrs = row.get("attributes") if isinstance(row, dict) else None
+            if not isinstance(attrs, dict) or attrs.get("PARCELID") not in refs:
+                raise ValueError("Response contains an unrequested parcel")
+        requested.update(refs)
+        features.extend(rows)
+    if requested != expected:
+        raise ValueError("Batch manifest does not cover the supplied permit references")
+    return {"features": features, "exceededTransferLimit": False}
+
+
 def qualify_sample(permits, response):
     """Compare caller-supplied local evidence; never fetch, mutate, or accept it."""
     if not isinstance(permits, list) or len(permits) > MAX_RECORDS:
@@ -97,17 +138,22 @@ def _read_evidence(path):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--permits", required=True, help="Local JSON array of permit references and addresses")
-    parser.add_argument("--parcels", required=True, help="Local complete ArcGIS JSON response")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--parcels", help="Local complete ArcGIS JSON response")
+    source.add_argument("--batch-manifest", help="Local JSON array of complete bounded request/response batches")
     args = parser.parse_args(argv)
     try:
         permits, permit_hash = _read_evidence(args.permits)
-        response, parcel_hash = _read_evidence(args.parcels)
+        evidence, parcel_hash = _read_evidence(args.parcels or args.batch_manifest)
+        response = combine_batches(permits, evidence) if args.batch_manifest else evidence
         report = qualify_sample(permits, response)
     except (OSError, ValueError) as exc:
         # Do not expose file contents, paths, or raw upstream error messages.
         parser.exit(2, f"Qualification failed: {type(exc).__name__}; check input format, completeness, and limits.\n")
     report["measured_at"] = datetime.now(timezone.utc).isoformat()
-    report["input_sha256"] = {"permits": permit_hash, "parcels": parcel_hash}
+    parcel_key = "batch_manifest" if args.batch_manifest else "parcels"
+    report["input_sha256"] = {"permits": permit_hash, parcel_key: parcel_hash}
+    report["response_mode"] = "complete_batch_manifest" if args.batch_manifest else "single_response"
     print(json.dumps(report, indent=2))
 
 

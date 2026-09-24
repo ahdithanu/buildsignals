@@ -329,7 +329,8 @@ Production diagnostics and any release still require their separate live gates.
   source rights, acreage semantics, and freshness remain unqualified. See
   parcel-reference-resolution.md. Historical intake is still local only.
   The offline qualification CLI now records input hashes and separate permit /
-  distinct-reference counts, with 24 passing tests. It does not acquire evidence
+  distinct-reference counts, and validates complete disjoint bounded batch
+  manifests, with 33 passing tests. It does not acquire evidence
   or make the provisional namespace production-eligible.
 - [ ] Verify evidence-backed signal to nearby candidate workflow in that market.
 - [x] Add structured multifamily and small-bay retail buy-box criteria with

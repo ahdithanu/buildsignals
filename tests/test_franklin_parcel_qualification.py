@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from scripts.franklin_parcel_qualification import county_reference, main, qualify_sample
+from scripts.franklin_parcel_qualification import combine_batches, county_reference, main, qualify_sample
 
 
 @pytest.mark.parametrize("reference", [None, 10066782, "010-066782", "01006678200", " 010066782", "01006678X"])
@@ -115,3 +115,53 @@ def test_input_limits(tmp_path, monkeypatch):
     evidence.write_text("[{}]")
     with pytest.raises(ValueError):
         module._read_evidence(evidence)
+
+
+def test_complete_batch_manifest_measures_repeated_permits_without_double_counting_parcels():
+    permits = [
+        {"parcel_id": "010000001", "address": "ONE ST"},
+        {"parcel_id": "010000001", "address": "ONE ST"},
+        {"parcel_id": "010000002", "address": "TWO ST"},
+    ]
+    batches = [
+        {"requested_references": ["010-000001"], "response": {"features": [
+            {"attributes": {"PARCELID": "010-000001", "SITEADDRESS": "ONE ST"}},
+        ]}},
+        {"requested_references": ["010-000002"], "response": {"features": []}},
+    ]
+    report = qualify_sample(permits, combine_batches(permits, batches))
+    assert report["evaluated_permits"] == 3
+    assert report["distinct_supported_references"] == 2
+    assert report["counts"]["street_match_only"] == 2
+    assert report["counts"]["unmatched"] == 1
+    assert report["production_eligible"] is False
+
+
+@pytest.mark.parametrize("batches", [
+    [],
+    [{"requested_references": ["010-000002"], "response": {"features": []}}],
+    [{"requested_references": ["010-000001"], "response": {"features": [], "exceededTransferLimit": True}}],
+    [{"requested_references": ["010-000001"], "response": {"error": {"code": 403}}}],
+    [{"requested_references": ["010-000001", "010-000001"], "response": {"features": []}}],
+    [{"requested_references": ["010-000001"], "response": {"features": []}},
+     {"requested_references": ["010-000001"], "response": {"features": []}}],
+    [{"requested_references": ["010-000001"], "response": {"features": [
+        {"attributes": {"PARCELID": "010-000002"}},
+    ]}}],
+])
+def test_batch_manifest_rejects_incomplete_or_untrusted_responses(batches):
+    with pytest.raises(ValueError):
+        combine_batches([{"parcel_id": "010000001"}], batches)
+
+
+def test_batch_manifest_cli_receipt(tmp_path, capsys):
+    permits = tmp_path / "permits.json"
+    batches = tmp_path / "batches.json"
+    permits.write_text('[{"parcel_id":"010000001","address":"ONE ST"}]')
+    batches.write_text(json.dumps([{"requested_references": ["010-000001"],
+        "response": {"features": [{"attributes": {"PARCELID": "010-000001",
+        "SITEADDRESS": "ONE ST"}}]}}]))
+    main(["--permits", str(permits), "--batch-manifest", str(batches)])
+    report = json.loads(capsys.readouterr().out)
+    assert report["response_mode"] == "complete_batch_manifest"
+    assert report["input_sha256"]["batch_manifest"] == hashlib.sha256(batches.read_bytes()).hexdigest()
