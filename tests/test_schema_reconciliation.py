@@ -27,6 +27,7 @@ from app.db import Base
 ROOT = Path(__file__).resolve().parents[1]
 PREVIOUS = "20260920_0001"
 REVISION = "20260923_0001"
+HEAD_REVISION = "20260924_0001"
 PG_URL = os.environ.get("TEST_SCHEMA_RECONCILIATION_POSTGRES_URL")
 PATH = ROOT / "alembic/versions/20260923_0001_reconcile_schema.py"
 
@@ -162,6 +163,8 @@ def _snapshot(engine):
         for tenant in ("a", "b"):
             _org(connection, tenant)
             for name, table in Base.metadata.tables.items():
+                if name in {"prompt_template", "prompt_version"}:
+                    continue  # A later registry migration is outside this revision's data snapshot.
                 # Explicit model columns exclude PostGIS's generated centroid.
                 statement = sa.select(table).order_by(*table.primary_key.columns)
                 if "organization_id" in table.c:
@@ -182,6 +185,8 @@ def _schema(engine):
         inspector = sa.inspect(connection)
         result = {"tables": sorted(inspector.get_table_names())}
         for table in Base.metadata.tables:
+            if table in {"prompt_template", "prompt_version"}:
+                continue
             result[table] = (
                 [(c["name"], str(c["type"]), c["nullable"], c["default"])
                  for c in inspector.get_columns(table)],
@@ -208,7 +213,7 @@ def test_fresh_head_has_no_model_drift(database):
     url, engine = database
     _alembic(url, "upgrade", "head")
     with engine.connect() as connection:
-        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == REVISION
+        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD_REVISION
     _assert_parity(url)
 
 
@@ -223,9 +228,8 @@ def test_populated_upgrade_downgrade_reupgrade_preserves_every_row(database):
             )
     original = _snapshot(engine)
     schema = _schema(engine)
-    _alembic(url, "upgrade", "head")
+    _alembic(url, "upgrade", REVISION)
     assert _snapshot(engine) == original
-    _assert_parity(url)
     upgraded = _schema(engine)
     for key in ("rls", "policies", "enums", "triggers"):
         if key in schema:
@@ -233,9 +237,8 @@ def test_populated_upgrade_downgrade_reupgrade_preserves_every_row(database):
     _alembic(url, "downgrade", PREVIOUS)
     assert _snapshot(engine) == original
     assert _schema(engine) == schema
-    _alembic(url, "upgrade", "head")
+    _alembic(url, "upgrade", REVISION)
     assert _snapshot(engine) == original
-    _assert_parity(url)
     with engine.connect() as connection:
         if engine.dialect.name == "sqlite":
             connection.exec_driver_sql("PRAGMA foreign_keys=ON")
@@ -275,7 +278,7 @@ def test_all_null_preflights_fail_without_data_or_schema_changes(database):
                                {"id": "%-b"})
     before = _snapshot(engine)
     schema = _schema(engine)
-    result = _alembic(url, "upgrade", "head", succeeds=False)
+    result = _alembic(url, "upgrade", REVISION, succeeds=False)
     assert "Schema reconciliation preflight failed; no rows were changed" in result.stderr
     for table, columns in migration.REQUIRED.items():
         for column in columns:
@@ -341,7 +344,7 @@ def test_sqlite_orphans_abort_before_rebuild(tmp_path):
             connection.exec_driver_sql("UPDATE contacts SET deal_id='missing-parent' WHERE id='contacts-b'")
         original = _snapshot(engine)
         schema = _schema(engine)
-        result = _alembic(url, "upgrade", "head", succeeds=False)
+        result = _alembic(url, "upgrade", REVISION, succeeds=False)
         assert "SQLite foreign-key violations in contacts" in result.stderr
         assert _snapshot(engine) == original
         assert _schema(engine) == schema
@@ -377,7 +380,7 @@ def test_cli_check_preserves_visible_postgis_topology_relations(database):
     engine = sa.create_engine(url)
     try:
         with engine.connect() as connection:
-            assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == REVISION
+            assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD_REVISION
             # Reproduce the Docker PostGIS image: extension tables outside the
             # current schema appear in default-schema reflection as schema=None.
             visible = set(sa.inspect(connection).get_table_names())

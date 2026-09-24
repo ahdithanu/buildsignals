@@ -12,7 +12,9 @@ revision, and audit history.
 - `prompt_version` contains body text, declared variables, a SHA-256 content
   checksum, author, and timestamps. Versions are append-only through the API;
   SQLite and PostgreSQL triggers prevent direct edits to content/identity
-  columns. Activation changes only the active pointer and activation timestamp.
+  columns and deletion while the tenant exists. Triggers also reject active
+  pointers to absent or cross-tenant versions. Activation changes only the
+  active pointer and activation timestamp.
 - Existing `audit_logs` record create, version-create, activation, and rollback
   actions. Audit entries store version/checksum, not prompt body or preview data.
 - PostgreSQL row-level security and composite tenant foreign keys protect both

@@ -45,6 +45,13 @@ def test_migration_and_immutable_content():
                 body="Hello", variables=[], checksum="a" * 64, created_at=now,
             ))
             conn.execute(PromptVersion.__table__.update().where(PromptVersion.id == "version-a").values(activated_at=now))
+            conn.execute(PromptTemplate.__table__.update().where(PromptTemplate.id == "template-a").values(active_version=1))
+            try:
+                conn.execute(PromptTemplate.__table__.update().where(PromptTemplate.id == "template-a").values(active_version=2))
+            except IntegrityError:
+                pass
+            else:
+                raise AssertionError("Active pointer accepted a missing version")
             try:
                 conn.execute(PromptVersion.__table__.update().where(PromptVersion.id == "version-a").values(body="Changed"))
             except IntegrityError:
@@ -52,6 +59,12 @@ def test_migration_and_immutable_content():
             else:
                 raise AssertionError("Prompt version body was mutable")
             assert conn.execute(sa.select(PromptVersion.body).where(PromptVersion.id == "version-a")).scalar_one() == "Hello"
+            try:
+                conn.execute(PromptVersion.__table__.delete().where(PromptVersion.id == "version-a"))
+            except IntegrityError:
+                pass
+            else:
+                raise AssertionError("Prompt version could be deleted")
             try:
                 conn.execute(PromptVersion.__table__.insert().values(
                     id="cross-org", organization_id="org-b", template_id="template-a", version=2,

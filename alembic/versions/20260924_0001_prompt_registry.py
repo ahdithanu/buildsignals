@@ -81,6 +81,40 @@ def upgrade() -> None:
             "CREATE TRIGGER trg_prompt_version_content_immutable BEFORE UPDATE ON prompt_version "
             "FOR EACH ROW EXECUTE FUNCTION prevent_prompt_version_content_mutation()"
         )
+        op.execute(
+            """CREATE FUNCTION validate_prompt_active_version()
+            RETURNS trigger AS $$
+            BEGIN
+                IF NEW.active_version IS NOT NULL AND NOT EXISTS (
+                    SELECT 1 FROM public.prompt_version
+                    WHERE organization_id = NEW.organization_id
+                      AND template_id = NEW.id AND version = NEW.active_version
+                ) THEN
+                    RAISE EXCEPTION 'active prompt version must belong to this template';
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql SET search_path = pg_catalog, public"""
+        )
+        op.execute(
+            "CREATE TRIGGER trg_prompt_active_version BEFORE INSERT OR UPDATE OF active_version "
+            "ON prompt_template FOR EACH ROW EXECUTE FUNCTION validate_prompt_active_version()"
+        )
+        op.execute(
+            """CREATE FUNCTION prevent_prompt_version_delete()
+            RETURNS trigger AS $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM public.organizations WHERE id = OLD.organization_id) THEN
+                    RETURN OLD;
+                END IF;
+                RAISE EXCEPTION 'prompt versions are immutable';
+            END;
+            $$ LANGUAGE plpgsql SET search_path = pg_catalog, public"""
+        )
+        op.execute(
+            "CREATE TRIGGER trg_prompt_version_no_delete BEFORE DELETE ON prompt_version "
+            "FOR EACH ROW EXECUTE FUNCTION prevent_prompt_version_delete()"
+        )
     elif op.get_bind().dialect.name == "sqlite":
         op.execute(
             """CREATE TRIGGER trg_prompt_version_content_immutable
@@ -97,13 +131,41 @@ def upgrade() -> None:
                 SELECT RAISE(ABORT, 'prompt version content is immutable');
             END"""
         )
+        for action in ("INSERT", "UPDATE OF active_version"):
+            op.execute(
+                f"""CREATE TRIGGER trg_prompt_active_version_{action.split()[0].lower()}
+                BEFORE {action} ON prompt_template
+                WHEN NEW.active_version IS NOT NULL AND NOT EXISTS (
+                    SELECT 1 FROM prompt_version
+                    WHERE organization_id = NEW.organization_id
+                      AND template_id = NEW.id AND version = NEW.active_version
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'active prompt version must belong to this template');
+                END"""
+            )
+        op.execute(
+            """CREATE TRIGGER trg_prompt_version_no_delete
+            BEFORE DELETE ON prompt_version
+            WHEN EXISTS (SELECT 1 FROM organizations WHERE id = OLD.organization_id)
+            BEGIN
+                SELECT RAISE(ABORT, 'prompt versions are immutable');
+            END"""
+        )
 
 
 def downgrade() -> None:
     if op.get_bind().dialect.name == "postgresql":
+        op.execute("DROP TRIGGER IF EXISTS trg_prompt_version_no_delete ON prompt_version")
+        op.execute("DROP FUNCTION IF EXISTS prevent_prompt_version_delete()")
+        op.execute("DROP TRIGGER IF EXISTS trg_prompt_active_version ON prompt_template")
+        op.execute("DROP FUNCTION IF EXISTS validate_prompt_active_version()")
         op.execute("DROP TRIGGER IF EXISTS trg_prompt_version_content_immutable ON prompt_version")
         op.execute("DROP FUNCTION IF EXISTS prevent_prompt_version_content_mutation()")
     elif op.get_bind().dialect.name == "sqlite":
+        op.execute("DROP TRIGGER IF EXISTS trg_prompt_version_no_delete")
+        op.execute("DROP TRIGGER IF EXISTS trg_prompt_active_version_update")
+        op.execute("DROP TRIGGER IF EXISTS trg_prompt_active_version_insert")
         op.execute("DROP TRIGGER IF EXISTS trg_prompt_version_content_immutable")
     op.drop_table("prompt_version")
     op.drop_table("prompt_template")

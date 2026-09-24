@@ -15,7 +15,7 @@ export interface PromptVersion {
   variables: string[];
   checksum: string;
   created_at: string;
-  created_by: string;
+  created_by: string | null;
   activated_at: string | null;
 }
 
@@ -23,7 +23,7 @@ export interface PromptHistoryEvent {
   id: string;
   action: string;
   version: number;
-  actor_id: string;
+  actor_id: string | null;
   created_at: string;
 }
 
