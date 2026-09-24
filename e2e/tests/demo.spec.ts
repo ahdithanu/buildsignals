@@ -21,8 +21,10 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.getByRole('navigation', { name: 'Demo views' }).getByRole('button', { name: 'Graph' }).click();
     await expect(page.getByRole('heading', { name: 'Evidence-linked graph' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Relationship diagram' })).toBeVisible();
+    await expect(page.getByLabel('Connected filing graph')).toBeVisible();
+    await expect(page.getByLabel('Connected filing graph').locator('svg path').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Historical source activity' })).toBeVisible();
-    await expect(page.getByText('Other filings through selected entity')).toBeVisible();
+    await expect(page.getByText('Shared-entity filings')).toBeVisible();
     await expect(page.getByRole('region', { name: 'Relationship diagram' }).getByRole('button').first()).toBeVisible();
     await page.getByRole('region', { name: 'Relationship diagram' }).getByRole('button').first().click();
     await page.screenshot({ path: test.info().outputPath(`graph-${viewport.width}.png`), fullPage: true });

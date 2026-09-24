@@ -107,6 +107,9 @@ export default function DemoWorkspace() {
           {detail.isLoading && <LoadingState message="Loading permit evidence..." />}
           {detail.isError && <ErrorState message="Permit evidence is unavailable." onRetry={() => void detail.refetch()} />}
           {current && <>
+            {section === 'graph' && <DemoEvidenceGraph key={current.permit.id} root={current.permit.permit_number || current.permit.external_record_id}
+              rootId={current.graph_entity?.id} related={current.graph_related} onParcel={value => { setSelectedReference(value); setSection('parcels'); }}
+              onPermit={setSelected} />}
             <div className="border-b pb-4">
               <h2 className="break-words text-lg font-semibold">{current.permit.address || current.permit.external_record_id}</h2>
               <p className="mt-2 break-words text-sm">{current.permit.description || 'No description supplied.'}</p>
@@ -119,9 +122,6 @@ export default function DemoWorkspace() {
               <p className="mt-2 text-xs text-muted-foreground">Current status: {current.permit.status || 'Unknown'}. A source snapshot does not reconstruct every prior status change or prove an opening.</p>
               <ul className="mt-3 divide-y text-sm">{current.events.map(event => <li className="py-2" key={event.id}>{date(event.occurred_at)}: {event.status || event.event_type}</li>)}</ul>
             </section>
-            {section === 'graph' && <DemoEvidenceGraph key={current.permit.id} root={current.permit.permit_number || current.permit.external_record_id}
-              rootId={current.graph_entity?.id} related={current.graph_related} onParcel={value => { setSelectedReference(value); setSection('parcels'); }}
-              onPermit={setSelected} />}
           </>}
         </section>
       </div>

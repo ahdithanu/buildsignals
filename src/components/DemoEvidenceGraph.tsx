@@ -16,7 +16,8 @@ const percent = (value: number) => `${Math.round(value * 100)}%`;
 export function DemoEvidenceGraph({ root, rootId, related, onParcel, onPermit }: Props) {
   const [focused, setFocused] = useState<string | null>(null);
   const visible = related.filter(item => item.entity.entity_type !== 'city');
-  const selected = visible.find(item => item.relationship.id === focused) ?? visible[0];
+  const selected = visible.find(item => item.relationship.id === focused)
+    ?? visible.slice(0, 6).find(item => item.entity.entity_type === 'company') ?? visible[0];
   const expandable = !!selected && ['company', 'property', 'parcel'].includes(selected.entity.entity_type);
   const neighbors = useQuery({
     queryKey: ['demo-graph-neighbors', selected?.entity.id, rootId],
@@ -25,43 +26,55 @@ export function DemoEvidenceGraph({ root, rootId, related, onParcel, onPermit }:
   });
   const activity = useQuery({ queryKey: ['demo-activity'], queryFn: () => apiClient.get<Activity>('/demo/activity') });
   const largest = Math.max(1, ...(activity.data?.months.map(month => Math.max(month.filed, month.issued)) ?? []));
+  const graphEntities = visible.slice(0, 6);
+  const graphNeighbors = neighbors.data?.neighbors.slice(0, 5) ?? [];
+  const entityY = (index: number) => 58 + index * (314 / Math.max(1, graphEntities.length - 1));
+  const neighborY = (index: number) => 64 + index * (304 / Math.max(1, graphNeighbors.length - 1));
   return <section aria-label="Relationship diagram" className="space-y-5">
     <div><h3 className="flex items-center gap-2 font-semibold"><GitBranch size={17} /> Evidence-linked graph</h3>
       <p className="mt-1 text-xs text-muted-foreground">Explore two hops from a filing. Shared names and references are investigation leads, not proof of one project, ownership, or a parcel join.</p></div>
-    <div className="grid min-w-0 border-y lg:grid-cols-[minmax(9rem,0.8fr)_minmax(13rem,1.2fr)_minmax(13rem,1.2fr)]">
-      <div className="min-w-0 border-b p-3 lg:border-b-0 lg:border-r">
-        <p className="text-[11px] font-semibold uppercase text-muted-foreground">Selected filing</p>
-        <div className="mt-4 break-all border-l-4 border-primary bg-secondary p-3 text-sm font-semibold">{root}</div>
-      </div>
-      <div className="min-w-0 border-b p-3 lg:border-b-0 lg:border-r">
-        <p className="text-[11px] font-semibold uppercase text-muted-foreground">Reported entities · {visible.length}</p>
-        <div className="mt-2 max-h-72 divide-y overflow-y-auto border-y">
-          {visible.map(item => <button key={item.relationship.id} type="button" aria-pressed={selected?.relationship.id === item.relationship.id}
-            aria-label={`${label(item.entity.entity_type)}: ${item.entity.display_name}`} onClick={() => setFocused(item.relationship.id)}
-            className={`flex w-full min-w-0 items-start justify-between gap-2 px-2 py-3 text-left text-xs hover:bg-secondary ${selected?.relationship.id === item.relationship.id ? 'border-l-4 border-primary bg-secondary' : ''}`}>
-            <span className="min-w-0"><span className="block break-words font-semibold">{item.entity.display_name}</span>
-              <span className="capitalize text-muted-foreground">{label(item.entity.entity_type)} · {label(String(item.relationship.attributes?.role || item.relationship.relationship_type))}</span></span>
-            <span className="shrink-0 tabular-nums text-muted-foreground">{percent(item.relationship.confidence)}</span>
-          </button>)}
-          {!visible.length && <p className="py-3 text-xs text-muted-foreground">No reported relationships.</p>}
+    <div className="min-w-0 overflow-x-auto border-y bg-zinc-50" aria-label="Connected filing graph">
+      <div className="relative h-[430px] w-[900px]">
+        <div className="absolute left-4 top-3 text-[11px] font-semibold uppercase text-muted-foreground">Filing</div>
+        <div className="absolute left-[32%] top-3 text-[11px] font-semibold uppercase text-muted-foreground">Reported entities</div>
+        <div className="absolute left-[69%] top-3 text-[11px] font-semibold uppercase text-muted-foreground">Shared-entity filings</div>
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 900 430" aria-hidden="true">
+          {graphEntities.map((item, index) => <path key={item.relationship.id}
+            d={`M 180 210 C 235 210, 235 ${entityY(index)}, 285 ${entityY(index)}`}
+            fill="none" stroke={selected?.relationship.id === item.relationship.id ? '#0f766e' : '#a1a1aa'}
+            strokeWidth={selected?.relationship.id === item.relationship.id ? 2.5 : 1.5} />)}
+          {graphNeighbors.map((item, index) => <path key={item.relationship.id}
+            d={`M 465 ${entityY(graphEntities.findIndex(row => row.relationship.id === selected?.relationship.id))} C 525 ${entityY(graphEntities.findIndex(row => row.relationship.id === selected?.relationship.id))}, 525 ${neighborY(index)}, 615 ${neighborY(index)}`}
+            fill="none" stroke="#0f766e" strokeWidth="1.5" />)}
+        </svg>
+        <div className="absolute left-[20px] top-[180px] flex h-[60px] w-[160px] items-center overflow-hidden border-2 border-zinc-900 bg-white px-3 text-xs font-semibold shadow-sm" title={root}>
+          <span className="line-clamp-2 break-all">{root}</span>
         </div>
-      </div>
-      <div className="min-w-0 p-3">
-        <p className="text-[11px] font-semibold uppercase text-muted-foreground">Other filings through selected entity</p>
-        {neighbors.isLoading && <p className="mt-4 text-xs">Tracing source links...</p>}
-        {neighbors.isError && <p className="mt-4 text-xs" role="alert">Connected filings could not be loaded.</p>}
-        {expandable && neighbors.data && <>
-          <p className="mt-2 text-xs text-muted-foreground">A shared {label(selected.entity.entity_type)} reference; each link has separate evidence.</p>
-          <ul className="mt-2 max-h-72 divide-y overflow-y-auto border-y">{neighbors.data.neighbors.map(item => <li key={item.relationship.id} className="px-2 py-2 text-xs">
-            <button type="button" className="break-all text-left font-semibold underline" onClick={() => onPermit(item.permit_id)}>{item.entity.display_name}</button>
-            <p className="mt-1 text-muted-foreground">{label(item.relationship.relationship_type)} · {percent(item.relationship.confidence)} · {item.relationship.evidence.length} source {item.relationship.evidence.length === 1 ? 'item' : 'items'}</p>
-          </li>)}</ul>
-          {!neighbors.data.neighbors.length && <p className="mt-3 text-xs text-muted-foreground">No other filing appears in this bounded view.</p>}
-          {neighbors.data.neighbors.length >= 12 && <p className="mt-2 text-xs text-muted-foreground">Showing at most 12 linked filings.</p>}
-        </>}
-        {selected && !expandable && <p className="mt-4 text-xs text-muted-foreground">Select a company, property, or parcel reference to inspect shared filing activity.</p>}
+        {graphEntities.map((item, index) => <button key={item.relationship.id} type="button"
+          aria-pressed={selected?.relationship.id === item.relationship.id}
+          aria-label={`${label(item.entity.entity_type)}: ${item.entity.display_name}`}
+          onClick={() => setFocused(item.relationship.id)}
+          title={item.entity.display_name}
+          className={`absolute left-[285px] flex h-[58px] w-[180px] -translate-y-1/2 flex-col justify-center overflow-hidden border bg-white px-2 text-left shadow-sm hover:border-teal-700 ${selected?.relationship.id === item.relationship.id ? 'border-2 border-teal-700' : 'border-zinc-300'}`}
+          style={{ top: entityY(index) }}>
+          <span className="text-[10px] uppercase text-muted-foreground">{label(item.entity.entity_type)} · {percent(item.relationship.confidence)}</span>
+          <span className="line-clamp-2 text-xs font-semibold">{item.entity.display_name}</span>
+        </button>)}
+        {graphNeighbors.map((item, index) => <button key={item.relationship.id} type="button"
+          className="absolute left-[615px] flex h-[56px] w-[260px] -translate-y-1/2 flex-col justify-center overflow-hidden border border-teal-700 bg-white px-2 text-left text-xs shadow-sm hover:bg-teal-50"
+          style={{ top: neighborY(index) }} onClick={() => onPermit(item.permit_id)} title={item.entity.display_name}>
+          <span className="text-[10px] uppercase text-muted-foreground">Linked filing · {percent(item.relationship.confidence)}</span>
+          <span className="truncate font-semibold">{item.entity.display_name}</span>
+        </button>)}
+        {selected && !graphNeighbors.length && !neighbors.isLoading && <p className="absolute left-[615px] top-[185px] w-[250px] text-xs text-muted-foreground">
+          No other filing is linked to this reported entity in the bounded view.
+        </p>}
+        {neighbors.isLoading && <p className="absolute left-[615px] top-[185px] text-xs">Tracing source links...</p>}
       </div>
     </div>
+    {visible.length > graphEntities.length && <p className="text-xs text-muted-foreground">Showing {graphEntities.length} of {visible.length} reported entities on the canvas.</p>}
+    {neighbors.data && neighbors.data.neighbors.length > graphNeighbors.length && <p className="text-xs text-muted-foreground">Showing {graphNeighbors.length} of {neighbors.data.neighbors.length} linked filings on the canvas.</p>}
+    {neighbors.isError && <p className="text-xs" role="alert">Connected filings could not be loaded.</p>}
     {selected && <div className="border-t pt-3 text-sm" aria-live="polite">
       <p className="break-words font-semibold">Why {selected.entity.display_name} is connected</p>
       <p className="mt-1 text-xs text-muted-foreground">{label(selected.relationship.relationship_type)} · {percent(selected.relationship.confidence)} source-field confidence · Last verified {new Date(selected.relationship.last_verified_at).toLocaleDateString()}</p>
