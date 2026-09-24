@@ -665,6 +665,26 @@ def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
 
+def replay_permit_snapshot(
+    db: Session, source: IngestionSource, run_id: str, record: dict,
+    captured_at: datetime,
+) -> tuple[PermitRecord, str]:
+    """Offline replay through the same normalization, evidence and graph pipeline."""
+    if source.record_type != "permit":
+        raise ValueError("Only permit snapshots are supported")
+    mappings = [mapping for mapping in source.field_mappings if mapping.is_active]
+    missing = missing_required_source_fields(record, mappings)
+    if missing:
+        raise ValueError(f"Missing required source fields: {missing}")
+    prepared, fields = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(prepared, fields, defaults={
+        **dict((source.settings or {}).get("defaults") or {}),
+        **({"jurisdiction": source.jurisdiction} if source.jurisdiction else {}),
+    })
+    return _persist_permit(db, source, run_id, normalized, record,
+                           captured_at, _normalization_hash(source))
+
+
 def _persist_permit(
     db: Session,
     source: IngestionSource,
@@ -745,6 +765,7 @@ def _persist_permit(
             return permit, "reprocessed"
         permit_entity_id = _record_entity_id(db, "permit", permit.id)
         if permit_entity_id:
+            _project_permit_applicant(db, source, permit, raw, permit_entity_id)
             _reconcile_planning_permit_links(
                 db, permit=permit, permit_entity_id=permit_entity_id
             )
@@ -2102,6 +2123,7 @@ def _project_permit_to_graph(
         permit_entity_id=permit_entity.id,
     )
     _expire_permit_relationships(db, source, permit)
+    _project_permit_applicant(db, source, permit, raw, permit_entity.id)
 
     if not (permit.address or permit.project_name):
         return
@@ -2189,6 +2211,25 @@ def _project_permit_to_graph(
                 "signal_cohort": signal_cohort,
             },
         )
+
+
+def _project_permit_applicant(
+    db: Session, source: IngestionSource, permit: PermitRecord,
+    raw: RawSourceRecord, permit_entity_id: str,
+) -> None:
+    semantics = {mapping.value_semantics for mapping in source.field_mappings
+                 if mapping.is_active and mapping.canonical_field == "applicant_name"}
+    if (not permit.applicant_name or len(permit.applicant_name) > 255
+            or len(semantics) != 1 or not semantics <= {"legal_entity", "business_dba"}):
+        return
+    # Applicant is only the reported filing party, not necessarily owner or retailer.
+    company, _ = resolve_entity(db, GraphEntityCreate(
+        entity_type=GraphEntityType.company, display_name=permit.applicant_name,
+    ))
+    _relate(db, source, permit, raw, permit_entity_id, company.id,
+            GraphRelationshipType.related_to, "permit_applicant",
+            excerpt=f"Applicant reported by source: {permit.applicant_name}"[:1000],
+            attributes={"value_semantics": next(iter(semantics)), "not_verified_expansion": True})
 
 
 def project_permit_to_graph(db: Session, permit: PermitRecord) -> None:

@@ -174,7 +174,11 @@ if IS_PRODUCTION:
 
 # Routes that never require authentication. Matched as exact strings or path
 # prefixes. Keep this list minimal — everything else is authenticated.
+DEMO_ENABLED = _parse_bool(os.getenv("DEMO_ENABLED"), default=False)
+
 PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
+    "/auth/demo",
+    "/v1/auth/demo",
     "/health",
     "/healthz",
     # /metrics does its own METRICS_TOKEN check; exempt it from the global

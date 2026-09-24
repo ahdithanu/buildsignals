@@ -34,6 +34,7 @@ import AuditLog from "./pages/AuditLog";
 import Team from "./pages/Team";
 import Account from "./pages/Account";
 import Login from "./pages/Login";
+import DemoWorkspace from "./pages/DemoWorkspace";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -84,6 +85,7 @@ const App = () => (
             />
 
             {/* Authenticated routes */}
+            <Route path="/demo" element={<RequireAuth><DemoWorkspace /></RequireAuth>} />
             <Route
               path="/"
               element={

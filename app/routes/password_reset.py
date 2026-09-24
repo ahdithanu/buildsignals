@@ -30,6 +30,7 @@ from app.models.password_reset_token import PasswordResetToken
 from app.models.user import User
 from app.services.account_lockout import lockout
 from app.services.audit_service import log_change
+from app.services.demo_access import DEMO_USER_ID
 from app.services.email_service import get_email_service
 from app.services.password_policy import PasswordPolicyError, validate_password
 from app.services.rate_limiter import limiter
@@ -167,7 +168,7 @@ def forgot_password(
 
     # Same response shape whether we send mail or not — *don't* short-circuit
     # before this point in a way an attacker can time.
-    if user and user.is_active:
+    if user and user.is_active and user.id != DEMO_USER_ID:
         plaintext = secrets.token_urlsafe(32)
         row = PasswordResetToken(
             user_id=user.id,
@@ -242,7 +243,7 @@ def reset_password(
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 
     user = db.get(User, row.user_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.id == DEMO_USER_ID:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 
     try:

@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
  *     success (`navigate(from, { replace: true })`).
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isDemo } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -41,6 +41,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
 
+  if (isDemo && location.pathname !== '/demo') {
+    return <Navigate to="/demo" replace />;
+  }
   return <>{children}</>;
 }
 

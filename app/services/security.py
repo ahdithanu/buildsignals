@@ -75,6 +75,7 @@ def dummy_verify() -> None:
 def create_access_token(
     *, user_id: str, org_id: str, token_version: int = 0,
     expires_minutes: Optional[int] = None,
+    demo: bool = False,
 ) -> str:
     """Create a short-lived access JWT, carried in the Authorization header."""
     expire = datetime.now(timezone.utc) + timedelta(
@@ -95,6 +96,8 @@ def create_access_token(
         # today we accept the 15-min window as a documented tradeoff.
         "tv": token_version,
     }
+    if demo:
+        payload.update(demo=True, read_only=True)
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 

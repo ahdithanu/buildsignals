@@ -39,7 +39,7 @@ export default defineConfig({
       cwd: root,
       url: "http://localhost:8000/health",
       reuseExistingServer: false,
-      timeout: 120_000,
+      timeout: process.env.DEMO_TEST_SNAPSHOT_DIR ? 300_000 : 120_000,
     },
     {
       // Frontend dev server.

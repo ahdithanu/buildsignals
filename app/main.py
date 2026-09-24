@@ -38,6 +38,7 @@ from app.routes.data_portability import router as data_portability_router
 from app.routes.deal_intelligence import router as intelligence_router
 from app.routes.deal_summary import router as deal_summary_router
 from app.routes.deals import router as deals_router
+from app.routes.demo import router as demo_router
 from app.routes.distributions import router as distributions_router
 from app.routes.documents import router as documents_router
 from app.routes.graph import opportunity_router as graph_opportunity_router
@@ -126,6 +127,7 @@ app.include_router(buy_box_router, prefix=CURRENT_API_PREFIX)
 app.include_router(distributions_router, prefix=CURRENT_API_PREFIX)
 app.include_router(deal_summary_router, prefix=CURRENT_API_PREFIX)
 app.include_router(auth_router, prefix=CURRENT_API_PREFIX)
+app.include_router(demo_router, prefix=CURRENT_API_PREFIX)
 app.include_router(password_reset_router, prefix=CURRENT_API_PREFIX)
 app.include_router(twofa_router, prefix=CURRENT_API_PREFIX)
 app.include_router(audit_router, prefix=CURRENT_API_PREFIX)

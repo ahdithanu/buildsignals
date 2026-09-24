@@ -533,6 +533,7 @@ def get_permits(
         default=None, pattern=r"^(pre_approval|approved)$"
     ),
     limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0, le=100000),
     db: Session = Depends(get_db),
 ):
     query = active_query(db.query(PermitRecord), PermitRecord).filter(
@@ -546,7 +547,10 @@ def get_permits(
         query = query.filter(PermitRecord.status == status)
     if approval_stage:
         query = query.filter(PermitRecord.approval_stage == approval_stage)
-    return query.order_by(PermitRecord.last_seen_at.desc()).limit(limit).all()
+    from app.services.demo_access import demo_read_only
+    if demo_read_only.get() and limit > 25:
+        raise HTTPException(status_code=403, detail="Demo permits are limited to 25 records per page")
+    return query.order_by(PermitRecord.last_seen_at.desc(), PermitRecord.id).offset(offset).limit(limit).all()
 
 
 @router.get("/permits/{permit_id}", response_model=PermitDetailResponse)

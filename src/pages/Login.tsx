@@ -1,13 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { BuildSignalsLogo } from '@/components/BuildSignalsLogo';
 import { useAuth } from '@/contexts/AuthContext';
+import { authApi } from '@/api/auth';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
+  const [demoEnabled, setDemoEnabled] = useState(false);
+  useEffect(() => {
+    let active = true;
+    authApi.demoAvailability().then(result => {
+      if (active) setDemoEnabled(result.enabled);
+    }).catch(() => { /* Fail closed when availability cannot be checked. */ });
+    return () => { active = false; };
+  }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
@@ -41,7 +50,7 @@ export default function Login() {
         <div className="mt-10 w-full">
           <p className="section-label">Enterprise access</p>
           <h1 className="mt-3 text-2xl font-semibold">Sign in</h1>
-          <p className="mt-1 text-xs text-muted-foreground">Permit, development and ownership intelligence.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Development, ownership and permit intelligence.</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <label className="block">
@@ -89,6 +98,21 @@ export default function Login() {
               {submitting ? 'Signing in...' : 'Sign in'}
               <ArrowRight className="h-4 w-4" />
             </button>
+
+            {demoEnabled && <button type="button" disabled={submitting}
+              className="flex h-11 w-full items-center justify-between border-2 border-foreground px-4 text-xs font-semibold disabled:opacity-50"
+              onClick={async () => {
+                setError(null);
+                setSubmitting(true);
+                try {
+                  await demoLogin();
+                  navigate('/demo', { replace: true });
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Demo is unavailable');
+                } finally { setSubmitting(false); }
+              }}>
+              View live demo <ArrowRight className="h-4 w-4" />
+            </button>}
 
           </form>
         </div>
