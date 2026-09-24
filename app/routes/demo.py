@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.graph import GraphEntity, GraphEntityLink, GraphRelationship
+from app.models.graph import GraphEntity, GraphEntityLink, GraphEntityType, GraphRelationship
 from app.schemas.graph import GraphEntityResponse, GraphRelationshipResponse
 from app.models.ingestion import PermitRecord
 from app.models.parcel import ParcelRecord
@@ -114,6 +114,42 @@ def demo_graph_neighbors(
         "permit_id": links.get(other_id),
     } for relationship, other_id in zip(relationships, other_ids)
         if other_id in entities and other_id != exclude_entity_id and links.get(other_id)]}
+
+
+@router.get("/graph-hubs")
+def demo_graph_hubs(principal: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    _require_demo(principal)
+    rows = active_query(db.query(GraphRelationship), GraphRelationship).join(
+        GraphEntity,
+        (GraphEntity.id == GraphRelationship.target_entity_id)
+        & (GraphEntity.organization_id == GraphRelationship.organization_id),
+    ).join(
+        GraphEntityLink,
+        (GraphEntityLink.entity_id == GraphRelationship.source_entity_id)
+        & (GraphEntityLink.organization_id == GraphRelationship.organization_id),
+    ).join(
+        PermitRecord,
+        (PermitRecord.id == GraphEntityLink.record_id)
+        & (PermitRecord.organization_id == GraphRelationship.organization_id),
+    ).filter(
+        GraphRelationship.is_current.is_(True),
+        GraphEntity.entity_type.in_([GraphEntityType.company, GraphEntityType.property, GraphEntityType.parcel]),
+        GraphEntityLink.record_type == "permit",
+        PermitRecord.is_active.is_(True),
+        GraphRelationship.evidence.any(),
+    ).with_entities(
+        GraphEntity.id, GraphEntity.display_name, GraphEntity.entity_type,
+        func.count(func.distinct(PermitRecord.id)).label("filing_count"),
+        func.min(PermitRecord.id).label("sample_permit_id"),
+    ).group_by(GraphEntity.id, GraphEntity.display_name, GraphEntity.entity_type).having(
+        func.count(func.distinct(PermitRecord.id)) >= 2,
+    ).order_by(
+        func.count(func.distinct(PermitRecord.id)).desc(), GraphEntity.display_name,
+    ).limit(8).all()
+    return [{
+        "entity_id": row.id, "name": row.display_name, "entity_type": row.entity_type.value,
+        "filing_count": row.filing_count, "sample_permit_id": row.sample_permit_id,
+    } for row in rows]
 
 
 @router.get("/parcel-references")

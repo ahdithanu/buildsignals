@@ -150,6 +150,10 @@ def test_demo_graph_neighbors_and_activity_are_scoped(client, db, demo):
     assert all(item["permit_id"] for item in related.json()["neighbors"])
     assert client.get("/demo/graph-neighbors?entity_id=not-a-uuid", headers=auth).status_code == 422
     assert client.get("/demo/graph-neighbors?entity_id=00000000-0000-0000-0000-000000000000", headers=auth).status_code == 404
+    hubs = client.get("/demo/graph-hubs", headers=auth)
+    assert hubs.status_code == 200
+    assert hubs.json() == []
+    assert client.get("/demo/graph-hubs").status_code == 401
 
 
 def test_demo_map_only_shows_source_permitted_boundaries(client, db, demo):
@@ -238,6 +242,7 @@ def test_cross_tenant_reads_are_scoped(client, db, demo):
     permit.organization_id = "other-org"
     db.commit()
     assert client.get(f"/graph/entities/{row.id}", headers=auth).status_code == 404
+    assert client.get(f"/demo/graph-neighbors?entity_id={row.id}", headers=auth).status_code == 404
     assert client.get("/demo/parcel-references", headers=auth).json() == []
     assert client.get("/demo/parcel-filings?reference=010066782", headers=auth).json()["filings"] == []
     assert client.get("/demo/map", headers=auth).json()["permits"] == []

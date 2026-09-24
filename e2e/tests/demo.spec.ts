@@ -19,6 +19,20 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await expect(page.getByText("You're viewing a read-only demo with historical Columbus data.")).toBeVisible();
     await expect(page.getByRole('region', { name: 'Product overview' })).toBeVisible();
     await page.getByRole('navigation', { name: 'Demo views' }).getByRole('button', { name: 'Graph' }).click();
+    await expect(page.getByRole('region', { name: 'Connected activity' })).toBeVisible();
+    if (process.env.DEMO_TEST_SNAPSHOT_DIR) {
+      const firstHub = page.getByRole('region', { name: 'Connected activity' }).getByRole('button').first();
+      await expect(firstHub).toBeVisible();
+      const hubName = await firstHub.locator('span').nth(1).textContent();
+      await firstHub.click();
+      await expect(firstHub).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByLabel('Connected filing graph').getByRole('button', { name: `company: ${hubName}` })).toHaveAttribute('aria-pressed', 'true');
+      const linkedFiling = page.getByLabel('Connected filing graph').getByRole('button', { name: /linked filing/i }).first();
+      await expect(linkedFiling).toBeVisible();
+      await linkedFiling.click();
+      await expect(linkedFiling).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('button', { name: 'Open linked filing' })).toBeVisible();
+    }
     await expect(page.getByRole('heading', { name: 'Evidence-linked graph' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Relationship diagram' })).toBeVisible();
     await expect(page.getByLabel('Connected filing graph')).toBeVisible();

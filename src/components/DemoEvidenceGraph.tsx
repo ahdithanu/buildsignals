@@ -4,7 +4,7 @@ import { ExternalLink, GitBranch, TrendingUp } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import type { GraphEntity, GraphRelatedEntity, GraphRelationship } from '@/types/graph';
 
-type Props = { root: string; rootId?: string; related: GraphRelatedEntity[];
+type Props = { root: string; rootId?: string; focusEntityId?: string | null; related: GraphRelatedEntity[];
   onParcel: (reference: string) => void; onPermit: (id: string) => void };
 type Neighbor = { entity: GraphEntity; relationship: GraphRelationship; permit_id: string };
 type Neighbors = { entity: GraphEntity; neighbors: Neighbor[] };
@@ -13,10 +13,15 @@ type Activity = { months: { month: string; filed: number; issued: number }[];
 const label = (value: string) => value.replace(/_/g, ' ');
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 
-export function DemoEvidenceGraph({ root, rootId, related, onParcel, onPermit }: Props) {
+export function DemoEvidenceGraph({ root, rootId, focusEntityId, related, onParcel, onPermit }: Props) {
   const [focused, setFocused] = useState<string | null>(null);
-  const visible = related.filter(item => item.entity.entity_type !== 'city');
+  const [focusedNeighbor, setFocusedNeighbor] = useState<string | null>(null);
+  const direct = related.filter(item => item.entity.entity_type !== 'city' && (
+    !rootId || item.relationship.source_entity_id === rootId || item.relationship.target_entity_id === rootId
+  ));
+  const visible = direct.filter((item, index) => direct.findIndex(other => other.entity.id === item.entity.id) === index);
   const selected = visible.find(item => item.relationship.id === focused)
+    ?? visible.find(item => item.entity.id === focusEntityId)
     ?? visible.slice(0, 6).find(item => item.entity.entity_type === 'company') ?? visible[0];
   const expandable = !!selected && ['company', 'property', 'parcel'].includes(selected.entity.entity_type);
   const neighbors = useQuery({
@@ -26,8 +31,13 @@ export function DemoEvidenceGraph({ root, rootId, related, onParcel, onPermit }:
   });
   const activity = useQuery({ queryKey: ['demo-activity'], queryFn: () => apiClient.get<Activity>('/demo/activity') });
   const largest = Math.max(1, ...(activity.data?.months.map(month => Math.max(month.filed, month.issued)) ?? []));
-  const graphEntities = visible.slice(0, 6);
+  const firstSix = visible.slice(0, 6);
+  const graphEntities = selected && !firstSix.some(item => item.entity.id === selected.entity.id)
+    ? [selected, ...firstSix.slice(0, 5)] : firstSix;
   const graphNeighbors = neighbors.data?.neighbors.slice(0, 5) ?? [];
+  const inspectedNeighbor = graphNeighbors.find(item => item.relationship.id === focusedNeighbor);
+  const inspectedRelationship = inspectedNeighbor?.relationship ?? selected?.relationship;
+  const inspectedName = inspectedNeighbor?.entity.display_name ?? selected?.entity.display_name;
   const entityY = (index: number) => 58 + index * (314 / Math.max(1, graphEntities.length - 1));
   const neighborY = (index: number) => 64 + index * (304 / Math.max(1, graphNeighbors.length - 1));
   return <section aria-label="Relationship diagram" className="space-y-5">
@@ -53,7 +63,7 @@ export function DemoEvidenceGraph({ root, rootId, related, onParcel, onPermit }:
         {graphEntities.map((item, index) => <button key={item.relationship.id} type="button"
           aria-pressed={selected?.relationship.id === item.relationship.id}
           aria-label={`${label(item.entity.entity_type)}: ${item.entity.display_name}`}
-          onClick={() => setFocused(item.relationship.id)}
+          onClick={() => { setFocused(item.relationship.id); setFocusedNeighbor(null); }}
           title={item.entity.display_name}
           className={`absolute left-[285px] flex h-[58px] w-[180px] -translate-y-1/2 flex-col justify-center overflow-hidden border bg-white px-2 text-left shadow-sm hover:border-teal-700 ${selected?.relationship.id === item.relationship.id ? 'border-2 border-teal-700' : 'border-zinc-300'}`}
           style={{ top: entityY(index) }}>
@@ -61,8 +71,9 @@ export function DemoEvidenceGraph({ root, rootId, related, onParcel, onPermit }:
           <span className="line-clamp-2 text-xs font-semibold">{item.entity.display_name}</span>
         </button>)}
         {graphNeighbors.map((item, index) => <button key={item.relationship.id} type="button"
-          className="absolute left-[615px] flex h-[56px] w-[260px] -translate-y-1/2 flex-col justify-center overflow-hidden border border-teal-700 bg-white px-2 text-left text-xs shadow-sm hover:bg-teal-50"
-          style={{ top: neighborY(index) }} onClick={() => onPermit(item.permit_id)} title={item.entity.display_name}>
+          aria-pressed={inspectedNeighbor?.relationship.id === item.relationship.id}
+          className={`absolute left-[615px] flex h-[56px] w-[260px] -translate-y-1/2 flex-col justify-center overflow-hidden border bg-white px-2 text-left text-xs shadow-sm hover:bg-teal-50 ${inspectedNeighbor?.relationship.id === item.relationship.id ? 'border-2 border-teal-900' : 'border-teal-700'}`}
+          style={{ top: neighborY(index) }} onClick={() => setFocusedNeighbor(item.relationship.id)} title={item.entity.display_name}>
           <span className="text-[10px] uppercase text-muted-foreground">Linked filing · {percent(item.relationship.confidence)}</span>
           <span className="truncate font-semibold">{item.entity.display_name}</span>
         </button>)}
@@ -75,14 +86,15 @@ export function DemoEvidenceGraph({ root, rootId, related, onParcel, onPermit }:
     {visible.length > graphEntities.length && <p className="text-xs text-muted-foreground">Showing {graphEntities.length} of {visible.length} reported entities on the canvas.</p>}
     {neighbors.data && neighbors.data.neighbors.length > graphNeighbors.length && <p className="text-xs text-muted-foreground">Showing {graphNeighbors.length} of {neighbors.data.neighbors.length} linked filings on the canvas.</p>}
     {neighbors.isError && <p className="text-xs" role="alert">Connected filings could not be loaded.</p>}
-    {selected && <div className="border-t pt-3 text-sm" aria-live="polite">
-      <p className="break-words font-semibold">Why {selected.entity.display_name} is connected</p>
-      <p className="mt-1 text-xs text-muted-foreground">{label(selected.relationship.relationship_type)} · {percent(selected.relationship.confidence)} source-field confidence · Last verified {new Date(selected.relationship.last_verified_at).toLocaleDateString()}</p>
-      <ul className="mt-2 divide-y border-y">{selected.relationship.evidence.map(evidence => <li key={evidence.id} className="break-words py-2 text-xs">
+    {inspectedRelationship && <div className="border-t pt-3 text-sm" aria-live="polite">
+      <p className="break-words font-semibold">Why {inspectedName} is connected</p>
+      <p className="mt-1 text-xs text-muted-foreground">{label(inspectedRelationship.relationship_type)} · {percent(inspectedRelationship.confidence)} source-field confidence · Last verified {new Date(inspectedRelationship.last_verified_at).toLocaleDateString()}</p>
+      <ul className="mt-2 divide-y border-y">{inspectedRelationship.evidence.map(evidence => <li key={evidence.id} className="break-words py-2 text-xs">
         <span className="font-medium">{evidence.source_system}</span>{evidence.excerpt && <span> · {evidence.excerpt}</span>}
         {evidence.source_url && /^https?:\/\//i.test(evidence.source_url) && <a className="ml-2 inline-flex items-center gap-1 underline" href={evidence.source_url} target="_blank" rel="noreferrer">Relationship source <ExternalLink size={12} /></a>}
       </li>)}</ul>
-      {selected.entity.entity_type === 'parcel' && <button type="button" className="mt-3 text-xs font-semibold underline" onClick={() => onParcel(selected.entity.display_name)}>Inspect this parcel reference</button>}
+      {inspectedNeighbor && <button type="button" className="mt-3 text-xs font-semibold underline" onClick={() => onPermit(inspectedNeighbor.permit_id)}>Open linked filing</button>}
+      {!inspectedNeighbor && selected?.entity.entity_type === 'parcel' && <button type="button" className="mt-3 text-xs font-semibold underline" onClick={() => onParcel(selected.entity.display_name)}>Inspect this parcel reference</button>}
     </div>}
     <div className="border-t pt-4">
       <h3 className="flex items-center gap-2 font-semibold"><TrendingUp size={17} /> Historical source activity</h3>

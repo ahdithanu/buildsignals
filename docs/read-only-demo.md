@@ -12,7 +12,11 @@ workspace. Visitors can navigate Overview, Filings, Graph, Parcels, and Map,
 including historical records, source links, lifecycle evidence, and graph
 relationships without signup or a password. The bounded two-hop graph explorer
 traces reported companies, properties, and parcel references to other filings
-with separate source evidence. Its monthly filed/issued chart counts historical
+with separate source evidence. The Graph tab starts from a bounded, source-backed
+multi-filing entity where one exists, ranked by distinct filing count; this is
+a shared-reference investigation lead, not a verified project, brand, or owner.
+Canvas edges show only direct relationships from the selected filing. Its monthly
+filed/issued chart counts historical
 source dates only; it is not an AI prediction, live trend, or verified corporate
 expansion signal. Settings, write controls, exports,
 and non-demo routes are unavailable. Ordinary customers retain their existing
