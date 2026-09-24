@@ -74,6 +74,8 @@ def test_migration_and_immutable_content():
                 pass
             else:
                 raise AssertionError("Cross-organization version reference was accepted")
+            conn.execute(sa.text("DELETE FROM organizations WHERE id='org-a'"))
+            assert conn.execute(sa.select(sa.func.count()).select_from(PromptVersion)).scalar_one() == 0
             migration.downgrade()
             assert "prompt_template" not in sa.inspect(conn).get_table_names()
     finally:
