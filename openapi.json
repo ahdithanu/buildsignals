@@ -887,6 +887,39 @@
         "title": "AssumptionsUpdate",
         "type": "object"
       },
+      "AttentionItem": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "href": {
+            "title": "Href",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "level",
+          "summary",
+          "count",
+          "href"
+        ],
+        "title": "AttentionItem",
+        "type": "object"
+      },
       "AuditLogEntry": {
         "description": "One row of the audit trail as the client sees it.\n\n`old_values` / `new_values` are persisted as JSON strings in SQLite\n(TEXT column) \u2014 we decode them here so the frontend can read them\nas objects directly instead of double-parsing.",
         "properties": {
@@ -2885,6 +2918,29 @@
         "title": "CoverageJurisdictionBucket",
         "type": "object"
       },
+      "DailyCounts": {
+        "properties": {
+          "case_errors": {
+            "title": "Case Errors",
+            "type": "integer"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "runs",
+          "case_errors"
+        ],
+        "title": "DailyCounts",
+        "type": "object"
+      },
       "DatasetCreate": {
         "additionalProperties": false,
         "properties": {
@@ -4031,6 +4087,173 @@
           "text"
         ],
         "title": "EvalOutput",
+        "type": "object"
+      },
+      "EvaluationCounts": {
+        "properties": {
+          "avg_latency_ms_known": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Latency Ms Known"
+          },
+          "by_workflow": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowCounts"
+            },
+            "title": "By Workflow",
+            "type": "array"
+          },
+          "case_errors": {
+            "title": "Case Errors",
+            "type": "integer"
+          },
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "cost_reported_results": {
+            "title": "Cost Reported Results",
+            "type": "integer"
+          },
+          "cost_unknown_results": {
+            "title": "Cost Unknown Results",
+            "type": "integer"
+          },
+          "cost_usd_known": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd Known"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/DailyCounts"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "gates_passed": {
+            "title": "Gates Passed",
+            "type": "integer"
+          },
+          "input_tokens_reported_results": {
+            "title": "Input Tokens Reported Results",
+            "type": "integer"
+          },
+          "input_tokens_unknown_results": {
+            "title": "Input Tokens Unknown Results",
+            "type": "integer"
+          },
+          "latency_reported_results": {
+            "title": "Latency Reported Results",
+            "type": "integer"
+          },
+          "latency_unknown_results": {
+            "title": "Latency Unknown Results",
+            "type": "integer"
+          },
+          "live_runs": {
+            "title": "Live Runs",
+            "type": "integer"
+          },
+          "output_tokens_reported_results": {
+            "title": "Output Tokens Reported Results",
+            "type": "integer"
+          },
+          "output_tokens_unknown_results": {
+            "title": "Output Tokens Unknown Results",
+            "type": "integer"
+          },
+          "replay_runs": {
+            "title": "Replay Runs",
+            "type": "integer"
+          },
+          "results": {
+            "title": "Results",
+            "type": "integer"
+          },
+          "running": {
+            "title": "Running",
+            "type": "integer"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "tokens_input_known": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Input Known"
+          },
+          "tokens_output_known": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Output Known"
+          },
+          "tokens_reported_results": {
+            "title": "Tokens Reported Results",
+            "type": "integer"
+          },
+          "tokens_unknown_results": {
+            "title": "Tokens Unknown Results",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs",
+          "completed",
+          "failed",
+          "running",
+          "gates_passed",
+          "live_runs",
+          "replay_runs",
+          "results",
+          "case_errors",
+          "cost_usd_known",
+          "cost_reported_results",
+          "cost_unknown_results",
+          "tokens_input_known",
+          "tokens_output_known",
+          "tokens_reported_results",
+          "tokens_unknown_results",
+          "input_tokens_reported_results",
+          "input_tokens_unknown_results",
+          "output_tokens_reported_results",
+          "output_tokens_unknown_results",
+          "avg_latency_ms_known",
+          "latency_reported_results",
+          "latency_unknown_results",
+          "by_workflow",
+          "daily"
+        ],
+        "title": "EvaluationCounts",
         "type": "object"
       },
       "Evidence": {
@@ -6019,6 +6242,59 @@
           "notes"
         ],
         "title": "IngestionCandidateResponse",
+        "type": "object"
+      },
+      "IngestionCounts": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "integer"
+          },
+          "partial_with_errors": {
+            "title": "Partial With Errors",
+            "type": "integer"
+          },
+          "records_failed": {
+            "title": "Records Failed",
+            "type": "integer"
+          },
+          "records_seen": {
+            "title": "Records Seen",
+            "type": "integer"
+          },
+          "running": {
+            "title": "Running",
+            "type": "integer"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "stalled_runs": {
+            "title": "Stalled Runs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs",
+          "completed",
+          "failed",
+          "partial",
+          "partial_with_errors",
+          "running",
+          "records_seen",
+          "records_failed",
+          "stalled_runs"
+        ],
+        "title": "IngestionCounts",
         "type": "object"
       },
       "IngestionCoverageResponse": {
@@ -8136,6 +8412,53 @@
           "created_at"
         ],
         "title": "NearbyParcelSearchSummary",
+        "type": "object"
+      },
+      "ObservabilityOverview": {
+        "properties": {
+          "attention": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionItem"
+            },
+            "title": "Attention",
+            "type": "array"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "evaluations": {
+            "$ref": "#/components/schemas/EvaluationCounts"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "ingestion": {
+            "$ref": "#/components/schemas/IngestionCounts"
+          },
+          "window_end": {
+            "format": "date-time",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "format": "date-time",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "generated_at",
+          "window_start",
+          "window_end",
+          "days",
+          "evaluations",
+          "ingestion",
+          "attention"
+        ],
+        "title": "ObservabilityOverview",
         "type": "object"
       },
       "ObservedStateCoverage": {
@@ -13448,6 +13771,34 @@
           "code"
         ],
         "title": "VerifyRequest",
+        "type": "object"
+      },
+      "WorkflowCounts": {
+        "properties": {
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "gate_passed": {
+            "title": "Gate Passed",
+            "type": "integer"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "workflow": {
+            "title": "Workflow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflow",
+          "runs",
+          "gate_passed",
+          "failed"
+        ],
+        "title": "WorkflowCounts",
         "type": "object"
       }
     }
@@ -20164,6 +20515,65 @@
         "summary": "Export Search",
         "tags": [
           "nearby parcels"
+        ]
+      }
+    },
+    "/v1/observability/overview": {
+      "get": {
+        "operationId": "overview_v1_observability_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservabilityOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "observability"
         ]
       }
     },
