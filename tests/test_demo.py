@@ -154,6 +154,13 @@ def test_demo_graph_neighbors_and_activity_are_scoped(client, db, demo):
     assert hubs.status_code == 200
     assert hubs.json() == []
     assert client.get("/demo/graph-hubs").status_code == 401
+    parcel = db.query(GraphEntity).filter(GraphEntity.entity_type == "parcel").first()
+    paths = client.get(f"/demo/parcel-paths?entity_id={parcel.id}", headers=auth)
+    assert paths.status_code == 200
+    assert len(paths.json()["paths"]) == 1
+    assert paths.json()["paths"][0]["permit_to_property"]["evidence"]
+    assert paths.json()["paths"][0]["property_to_parcel"]["evidence"]
+    assert client.get("/demo/parcel-paths?entity_id=00000000-0000-0000-0000-000000000000", headers=auth).status_code == 404
 
 
 def test_demo_map_only_shows_source_permitted_boundaries(client, db, demo):
@@ -238,11 +245,14 @@ def test_cross_tenant_reads_are_scoped(client, db, demo):
     auth = headers(client)
     row = db.query(GraphEntity).first()
     row.organization_id = "other-org"
+    parcel = db.query(GraphEntity).filter(GraphEntity.entity_type == "parcel").first()
+    parcel.organization_id = "other-org"
     permit = db.query(PermitRecord).first()
     permit.organization_id = "other-org"
     db.commit()
     assert client.get(f"/graph/entities/{row.id}", headers=auth).status_code == 404
     assert client.get(f"/demo/graph-neighbors?entity_id={row.id}", headers=auth).status_code == 404
+    assert client.get(f"/demo/parcel-paths?entity_id={parcel.id}", headers=auth).status_code == 404
     assert client.get("/demo/parcel-references", headers=auth).json() == []
     assert client.get("/demo/parcel-filings?reference=010066782", headers=auth).json()["filings"] == []
     assert client.get("/demo/map", headers=auth).json()["permits"] == []

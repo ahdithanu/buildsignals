@@ -18,6 +18,7 @@ type Summary = { permit_records: number; graph_entities: number; relationships: 
 type ParcelReference = { reference: string; permit_count: number; sample_permit_id: string; sample_address: string | null };
 type GraphHub = { entity_id: string; name: string; entity_type: 'company' | 'property' | 'parcel';
   filing_count: number; sample_permit_id: string };
+type GraphHubFilter = 'all' | GraphHub['entity_type'];
 type ParcelFilings = { reference: string; total_filings: number; distinct_reported_addresses: number; limit: number; filings: {
   id: string; permit_number: string; address: string | null; description: string | null; status: string | null;
   approval_stage: string | null; filed_at: string | null; source_url: string | null;
@@ -40,6 +41,7 @@ export default function DemoWorkspace() {
   const [selectedReference, setSelectedReference] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedHub, setSelectedHub] = useState<string | null>(null);
+  const [graphHubFilter, setGraphHubFilter] = useState<GraphHubFilter>('all');
   const [selectedMap, setSelectedMap] = useState<string | null>(null);
   const [showFilings, setShowFilings] = useState(true);
   const [showParcels, setShowParcels] = useState(true);
@@ -47,11 +49,12 @@ export default function DemoWorkspace() {
   const permits = useQuery({ queryKey: ['demo-permits', page], queryFn: () => apiClient.get<PermitRecord[]>('/ingestion/permits', { limit: 25, offset: page * 25 }), enabled: isDemo && (section === 'overview' || section === 'permits' || section === 'graph') });
   const references = useQuery({ queryKey: ['demo-parcel-references', parcelPage], queryFn: () => apiClient.get<ParcelReference[]>('/demo/parcel-references', { limit: 20, offset: parcelPage * 20 }), enabled: isDemo && section === 'parcels' });
   const graphHubs = useQuery({ queryKey: ['demo-graph-hubs'], queryFn: () => apiClient.get<GraphHub[]>('/demo/graph-hubs'), enabled: isDemo && section === 'graph' });
+  const visibleHubs = graphHubs.data?.filter(hub => graphHubFilter === 'all' || hub.entity_type === graphHubFilter);
   const reference = selectedReference ?? references.data?.[0]?.reference;
   const parcelFilings = useQuery({ queryKey: ['demo-parcel-filings', reference], queryFn: () => apiClient.get<ParcelFilings>('/demo/parcel-filings', { reference }), enabled: isDemo && section === 'parcels' && !!reference });
   const locations = useQuery({ queryKey: ['demo-map'], queryFn: () => apiClient.get<MapData>('/demo/map'), enabled: isDemo && section === 'map' });
-  const permitId = selected ?? (section === 'graph' ? graphHubs.data?.[0]?.sample_permit_id : undefined) ?? permits.data?.[0]?.id;
-  const focusEntityId = selectedHub ?? (section === 'graph' && !selected ? graphHubs.data?.[0]?.entity_id : null);
+  const permitId = selected ?? (section === 'graph' ? visibleHubs?.[0]?.sample_permit_id : undefined) ?? permits.data?.[0]?.id;
+  const focusEntityId = selectedHub ?? (section === 'graph' && !selected ? visibleHubs?.[0]?.entity_id : null);
   const detail = useQuery({ queryKey: ['demo-permit', permitId], queryFn: () => ingestionApi.permitDetail(permitId!), enabled: isDemo && !!permitId && (section === 'permits' || section === 'graph') });
   const current = detail.data;
   const mapPoints = useMemo(() => [...(showFilings ? locations.data?.permits ?? [] : []), ...(showParcels ? locations.data?.parcels ?? [] : [])], [locations.data, showFilings, showParcels]);
@@ -87,17 +90,23 @@ export default function DemoWorkspace() {
       {(section === 'permits' || section === 'graph') && <>
       {section === 'graph' && <section aria-label="Connected activity" className="border-b pb-4">
         <h2 className="text-sm font-semibold">Connected activity in this snapshot</h2>
-        <p className="mt-1 text-xs text-muted-foreground">Repeated reported entities across filings, ranked by distinct filing count. These are not verified projects, brands, ownership, or sale opportunities.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Repeated reported entities across source records, ranked by linked record count. These are not unique projects or verified brands, ownership, or sale opportunities.</p>
         {graphHubs.isError && <p className="mt-2 text-xs" role="alert">Connected examples could not be loaded.</p>}
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{graphHubs.data?.map(hub => <button key={hub.entity_id} type="button"
+        <div className="mt-3 inline-flex flex-wrap border text-xs" role="group" aria-label="Connected activity type">
+          {([['all', 'All'], ['company', 'Companies'], ['property', 'Properties'], ['parcel', 'Parcel refs']] as const).map(([value, name]) =>
+            <button key={value} type="button" aria-pressed={graphHubFilter === value}
+              className={`border-r px-3 py-2 last:border-r-0 ${graphHubFilter === value ? 'bg-foreground text-background' : 'bg-background'}`}
+              onClick={() => { setGraphHubFilter(value); setSelected(null); setSelectedHub(null); }}>{name}</button>)}
+        </div>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{visibleHubs?.map(hub => <button key={hub.entity_id} type="button"
           aria-pressed={focusEntityId === hub.entity_id}
           onClick={() => { setSelected(hub.sample_permit_id); setSelectedHub(hub.entity_id); }}
           className={`min-w-[10rem] max-w-[15rem] shrink-0 border px-3 py-2 text-left text-xs hover:border-teal-700 ${focusEntityId === hub.entity_id ? 'border-teal-700 bg-teal-50' : 'border-border'}`}>
           <span className="block uppercase text-muted-foreground">{hub.entity_type === 'parcel' ? 'Parcel reference' : hub.entity_type}</span>
           <span className="mt-1 block truncate font-semibold" title={hub.name}>{hub.name}</span>
-          <span className="mt-1 block tabular-nums">{hub.filing_count} linked filings</span>
+          <span className="mt-1 block tabular-nums">{hub.filing_count} linked records</span>
         </button>)}</div>
-        {graphHubs.data?.length === 0 && <p className="mt-2 text-xs text-muted-foreground">No multi-filing entity appears in this snapshot.</p>}
+        {visibleHubs?.length === 0 && <p className="mt-2 text-xs text-muted-foreground">No multi-filing entity appears in this view.</p>}
       </section>}
       {permits.isError && <ErrorState message="Historical filings could not be loaded." onRetry={() => void permits.refetch()} />}
       {permits.isLoading && <LoadingState message="Loading historical permits..." />}

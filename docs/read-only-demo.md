@@ -10,16 +10,21 @@ activation, push, merge, or deployment was performed for this implementation.
 Adds one-click entry from the sign-in page into a bounded, read-only product
 workspace. Visitors can navigate Overview, Filings, Graph, Parcels, and Map,
 including historical records, source links, lifecycle evidence, and graph
-relationships without signup or a password. The bounded two-hop graph explorer
+relationships without signup or a password. The bounded graph explorer
 traces reported companies, properties, and parcel references to other filings
 with separate source evidence. The Graph tab starts from a bounded, source-backed
-multi-filing entity where one exists, ranked by distinct filing count; this is
+multi-record entity where one exists, ranked by linked source-record count; this is
 a shared-reference investigation lead, not a verified project, brand, or owner.
-Canvas edges show only direct relationships from the selected filing. Its monthly
-filed/issued chart counts historical
+The activity selector counts canonical source records, not unique projects.
+Parcel path lists show one representative path per reported number and address
+while retaining both relationship evidence items.
+Canvas edges show direct relationships from the selected filing. Parcel-reference
+mode follows the additional source-backed property-to-parcel edge and lists
+other filing paths through reported properties; it does not assert a qualified
+parcel identity or boundary. The monthly filed/issued chart counts historical
 source dates only; it is not an AI prediction, live trend, or verified corporate
-expansion signal. Settings, write controls, exports,
-and non-demo routes are unavailable. Ordinary customers retain their existing
+expansion signal. Settings, write controls, exports, and non-demo routes are
+unavailable. Ordinary customers retain their existing
 application and authentication flow. The login subtitle and site descriptions
 use the requested development-intelligence wording.
 

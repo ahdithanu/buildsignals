@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import aliased, joinedload
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.graph import GraphEntity, GraphEntityLink, GraphEntityType, GraphRelationship
+from app.models.graph import GraphEntity, GraphEntityLink, GraphEntityType, GraphRelationship, GraphRelationshipType
 from app.schemas.graph import GraphEntityResponse, GraphRelationshipResponse
 from app.models.ingestion import PermitRecord
 from app.models.parcel import ParcelRecord
 from app.models.permit_geocode import PermitGeocode
 from app.services.demo_geocoding import address_hash
 from app.utils.auth_deps import get_current_user
-from app.utils.org_scope import active_query
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(prefix="/demo", tags=["demo"])
 
@@ -119,7 +119,7 @@ def demo_graph_neighbors(
 @router.get("/graph-hubs")
 def demo_graph_hubs(principal: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     _require_demo(principal)
-    rows = active_query(db.query(GraphRelationship), GraphRelationship).join(
+    query = active_query(db.query(GraphRelationship), GraphRelationship).join(
         GraphEntity,
         (GraphEntity.id == GraphRelationship.target_entity_id)
         & (GraphEntity.organization_id == GraphRelationship.organization_id),
@@ -133,11 +133,13 @@ def demo_graph_hubs(principal: dict = Depends(get_current_user), db: Session = D
         & (PermitRecord.organization_id == GraphRelationship.organization_id),
     ).filter(
         GraphRelationship.is_current.is_(True),
-        GraphEntity.entity_type.in_([GraphEntityType.company, GraphEntityType.property, GraphEntityType.parcel]),
         GraphEntityLink.record_type == "permit",
         PermitRecord.is_active.is_(True),
         GraphRelationship.evidence.any(),
-    ).with_entities(
+    )
+    rows = []
+    for entity_type in (GraphEntityType.company, GraphEntityType.property):
+        rows.extend(query.filter(GraphEntity.entity_type == entity_type).with_entities(
         GraphEntity.id, GraphEntity.display_name, GraphEntity.entity_type,
         func.count(func.distinct(PermitRecord.id)).label("filing_count"),
         func.min(PermitRecord.id).label("sample_permit_id"),
@@ -145,11 +147,110 @@ def demo_graph_hubs(principal: dict = Depends(get_current_user), db: Session = D
         func.count(func.distinct(PermitRecord.id)) >= 2,
     ).order_by(
         func.count(func.distinct(PermitRecord.id)).desc(), GraphEntity.display_name,
-    ).limit(8).all()
-    return [{
+    ).limit(5).all())
+    result = [{
         "entity_id": row.id, "name": row.display_name, "entity_type": row.entity_type.value,
         "filing_count": row.filing_count, "sample_permit_id": row.sample_permit_id,
     } for row in rows]
+    references = _permit_query(db).filter(func.trim(PermitRecord.parcel_id) != "").with_entities(
+        PermitRecord.parcel_id.label("reference"),
+        func.count(PermitRecord.id).label("filing_count"),
+        func.min(PermitRecord.id).label("sample_permit_id"),
+    ).group_by(PermitRecord.parcel_id).having(
+        func.count(PermitRecord.id) >= 2,
+    ).order_by(func.count(PermitRecord.id).desc(), PermitRecord.parcel_id).limit(30).all()
+    if references:
+        parcels = active_query(db.query(GraphEntity), GraphEntity).filter(
+            GraphEntity.entity_type == GraphEntityType.parcel,
+            GraphEntity.display_name.in_([row.reference for row in references]),
+        ).all()
+        parcel_by_name = {parcel.display_name: parcel for parcel in parcels}
+        edge_counts = dict(active_query(
+            db.query(GraphRelationship.target_entity_id, func.count(GraphRelationship.id)),
+            GraphRelationship,
+        ).filter(
+            GraphRelationship.target_entity_id.in_([parcel.id for parcel in parcels]),
+            GraphRelationship.relationship_type == GraphRelationshipType.located_on,
+            GraphRelationship.is_current.is_(True),
+            GraphRelationship.evidence.any(),
+        ).group_by(GraphRelationship.target_entity_id).all())
+        for reference in references:
+            parcel = parcel_by_name.get(reference.reference)
+            if parcel and edge_counts.get(parcel.id, 0) >= 2:
+                result.append({
+                    "entity_id": parcel.id, "name": reference.reference, "entity_type": "parcel",
+                    "filing_count": reference.filing_count, "sample_permit_id": reference.sample_permit_id,
+                })
+            if len([item for item in result if item["entity_type"] == "parcel"]) >= 5:
+                break
+    return sorted(result, key=lambda item: (-item["filing_count"], item["name"]))
+
+
+@router.get("/parcel-paths")
+def demo_parcel_paths(
+    entity_id: str = Query(min_length=36, max_length=36),
+    exclude_entity_id: str | None = Query(None, min_length=36, max_length=36),
+    principal: dict = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    _require_demo(principal)
+    parcel = active_query(db.query(GraphEntity), GraphEntity).filter(
+        GraphEntity.id == entity_id, GraphEntity.entity_type == GraphEntityType.parcel,
+    ).first()
+    if not parcel:
+        raise HTTPException(status_code=404, detail="Parcel reference not available")
+    permit_property = aliased(GraphRelationship)
+    property_parcel = aliased(GraphRelationship)
+    property_entity = aliased(GraphEntity)
+    org_id = get_org_id()
+    rows = db.query(permit_property, property_parcel, property_entity, PermitRecord).select_from(
+        property_parcel,
+    ).join(
+        permit_property,
+        (permit_property.target_entity_id == property_parcel.source_entity_id)
+        & (permit_property.organization_id == property_parcel.organization_id),
+    ).join(
+        property_entity,
+        (property_entity.id == property_parcel.source_entity_id)
+        & (property_entity.organization_id == property_parcel.organization_id),
+    ).join(
+        GraphEntityLink,
+        (GraphEntityLink.entity_id == permit_property.source_entity_id)
+        & (GraphEntityLink.organization_id == permit_property.organization_id),
+    ).join(
+        PermitRecord,
+        (PermitRecord.id == GraphEntityLink.record_id)
+        & (PermitRecord.organization_id == permit_property.organization_id),
+    ).filter(
+        property_parcel.organization_id == org_id,
+        property_parcel.target_entity_id == entity_id,
+        property_parcel.relationship_type == GraphRelationshipType.located_on,
+        permit_property.relationship_type == GraphRelationshipType.permit_for,
+        property_parcel.is_current.is_(True),
+        permit_property.is_current.is_(True),
+        property_parcel.evidence.any(),
+        permit_property.evidence.any(),
+        property_entity.entity_type == GraphEntityType.property,
+        GraphEntityLink.record_type == "permit",
+        PermitRecord.is_active.is_(True),
+        permit_property.source_entity_id != exclude_entity_id,
+    ).order_by(PermitRecord.last_seen_at.desc(), PermitRecord.id).limit(60).all()
+    paths = []
+    seen: set[tuple[str, str]] = set()
+    for first, second, property_row, permit in rows:
+        number = permit.permit_number or permit.application_number or permit.external_record_id
+        display_key = (number, permit.address or "")
+        if display_key in seen:
+            continue
+        seen.add(display_key)
+        paths.append({
+            "permit_id": permit.id, "permit_number": number, "address": permit.address,
+            "property": GraphEntityResponse.model_validate(property_row),
+            "permit_to_property": GraphRelationshipResponse.model_validate(first),
+            "property_to_parcel": GraphRelationshipResponse.model_validate(second),
+        })
+        if len(paths) == 12:
+            break
+    return {"parcel": GraphEntityResponse.model_validate(parcel), "paths": paths}
 
 
 @router.get("/parcel-references")

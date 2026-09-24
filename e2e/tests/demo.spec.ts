@@ -21,7 +21,8 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.getByRole('navigation', { name: 'Demo views' }).getByRole('button', { name: 'Graph' }).click();
     await expect(page.getByRole('region', { name: 'Connected activity' })).toBeVisible();
     if (process.env.DEMO_TEST_SNAPSHOT_DIR) {
-      const firstHub = page.getByRole('region', { name: 'Connected activity' }).getByRole('button').first();
+      await page.getByRole('group', { name: 'Connected activity type' }).getByRole('button', { name: 'Companies' }).click();
+      const firstHub = page.getByRole('region', { name: 'Connected activity' }).getByRole('button', { name: /linked records/i }).first();
       await expect(firstHub).toBeVisible();
       const hubName = await firstHub.locator('span').nth(1).textContent();
       await firstHub.click();
@@ -36,14 +37,27 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await expect(page.getByRole('heading', { name: 'Evidence-linked graph' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Relationship diagram' })).toBeVisible();
     await expect(page.getByLabel('Connected filing graph')).toBeVisible();
-    await expect(page.getByLabel('Connected filing graph').locator('svg path').first()).toBeVisible();
+    if (viewport.width >= 1024) {
+      await expect(page.getByTestId('desktop-graph').locator('svg path').first()).toBeVisible();
+      await expect(page.getByText('Shared-entity filings')).toBeVisible();
+    } else {
+      await expect(page.getByTestId('mobile-graph').getByText('Filing', { exact: true })).toBeVisible();
+    }
     await expect(page.getByRole('heading', { name: 'Historical source activity' })).toBeVisible();
-    await expect(page.getByText('Shared-entity filings')).toBeVisible();
     await expect(page.getByRole('region', { name: 'Relationship diagram' }).getByRole('button').first()).toBeVisible();
     await page.getByRole('region', { name: 'Relationship diagram' }).getByRole('button').first().click();
     await page.screenshot({ path: test.info().outputPath(`graph-${viewport.width}.png`), fullPage: true });
     await expect(page.getByRole('link', { name: 'Official filing source' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Historical permits' }).getByRole('listitem').first()).toBeVisible();
+    if (process.env.DEMO_TEST_SNAPSHOT_DIR) {
+      await page.getByRole('group', { name: 'Connected activity type' }).getByRole('button', { name: 'Parcel refs' }).click();
+      const parcelHub = page.getByRole('region', { name: 'Connected activity' }).getByRole('button', { name: /parcel reference/i }).first();
+      await expect(parcelHub).toBeVisible();
+      await expect(page.getByTestId(viewport.width >= 1024 ? 'desktop-graph' : 'mobile-graph').getByText('Unresolved parcel ID')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Other records through this reported parcel ID' })).toBeVisible();
+      await expect(page.getByText(/Via .*source-backed edge items/).first()).toBeVisible();
+      await page.screenshot({ path: test.info().outputPath(`parcel-graph-${viewport.width}.png`), fullPage: true });
+    }
     await page.getByRole('navigation', { name: 'Demo views' }).getByRole('button', { name: 'Parcels' }).click();
     await expect(page.getByRole('region', { name: 'Parcel references' }).getByText(/010066782|\d{9}/).first()).toBeVisible();
     await expect(page.getByRole('list', { name: 'Parcel filing activity chart' }).getByRole('button').first()).toBeVisible();
