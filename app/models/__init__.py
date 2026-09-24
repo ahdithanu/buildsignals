@@ -65,3 +65,4 @@ from app.models.ingestion_onboarding import (  # noqa
 )
 from app.models.buildsignal import BuildSignalPublication, BuildSignalRevision, BuildSignalReview  # noqa: F401
 from app.models.temporal import TemporalEvent, TemporalObservation  # noqa: F401
+from app.models.permit_geocode import PermitGeocode  # noqa: F401

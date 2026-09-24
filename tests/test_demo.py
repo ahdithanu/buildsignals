@@ -14,8 +14,10 @@ from app.models.ingestion import (
 )
 from app.models.organization import Organization
 from app.models.parcel import ParcelRecord
+from app.models.permit_geocode import PermitGeocode
 from app.models.user import User
 from app.services.demo_access import DEMO_ORG_ID, DEMO_USER_ID, demo_read_only
+from app.services.demo_geocoding import request_url, save_match, validated_match
 from app.services.demo_seed import seed_demo
 from app.services.rate_limiter import limiter
 from app.services.security import (
@@ -121,6 +123,12 @@ def test_demo_overview_parcel_references_and_map_readiness(client, demo):
     assert references[0]["permit_count"] == 1
     assert references[0]["sample_address"] == "55 E STATE ST"
     assert client.get("/demo/parcel-references?limit=26", headers=auth).status_code == 422
+    filings = client.get("/demo/parcel-filings?reference=010066782", headers=auth).json()
+    assert filings["total_filings"] == 1
+    assert filings["distinct_reported_addresses"] == 1
+    assert filings["filings"][0]["address"] == "55 E STATE ST"
+    assert client.get("/demo/parcel-filings?reference=missing", headers=auth).json()["filings"] == []
+    assert client.get("/demo/parcel-filings?reference=", headers=auth).status_code == 422
     assert client.get("/demo/map", headers=auth).json() == {
         "permits": [], "parcels": [], "limit_per_layer": 100,
     }
@@ -162,6 +170,48 @@ def test_demo_map_only_shows_source_permitted_boundaries(client, db, demo):
     assert hidden.json()["parcels"][0]["boundary"] is None
 
 
+def test_derived_geocode_is_scoped_attributed_and_invalidated(client, db, demo):
+    permit = db.query(PermitRecord).first()
+    permit.postal_code = "43215"
+    db.commit()
+    response = {"result": {"addressMatches": [{
+        "matchedAddress": "55 E STATE ST, COLUMBUS, OH, 43215",
+        "addressComponents": {"city": "COLUMBUS", "state": "OH", "zip": "43215"},
+        "coordinates": {"x": -82.9987, "y": 39.9603},
+    }]}}
+    assert validated_match(permit, response)
+    assert save_match(db, permit, response, request_url(permit))
+    db.commit()
+    auth = headers(client)
+    summary = client.get("/demo/summary", headers=auth).json()
+    assert summary["mapped_permits"] == summary["derived_geocoded_permits"] == 1
+    assert summary["mapped_filing_locations"] == 1
+    point = client.get("/demo/map", headers=auth).json()["permits"][0]
+    assert point["location_method"] == "census_address_range_estimate"
+    assert point["source_url"].startswith("https://geocoding.geo.census.gov/")
+    assert db.query(PermitGeocode).one().response_hash
+    other = Organization(id="geocode-other-org", name="Other", slug="geocode-other-org")
+    db.add(other)
+    db.flush()
+    geocode = db.query(PermitGeocode).one()
+    geocode.organization_id = other.id
+    db.commit()
+    assert client.get("/demo/map", headers=auth).json()["permits"] == []
+    geocode.organization_id = DEMO_ORG_ID
+    db.commit()
+    permit.address = "57 E STATE ST"
+    db.commit()
+    assert client.get("/demo/map", headers=auth).json()["permits"] == []
+    assert client.get("/demo/summary", headers=auth).json()["mapped_permits"] == 0
+    permit.address = "55 E STATE ST"
+    response["result"]["addressMatches"].append(response["result"]["addressMatches"][0])
+    assert not validated_match(permit, response)
+    response["result"]["addressMatches"] = [response["result"]["addressMatches"][0]]
+    response["result"]["addressMatches"][0]["matchedAddress"] = "57 E STATE ST, COLUMBUS, OH, 43215"
+    assert not validated_match(permit, response)
+    db.rollback()
+
+
 def test_cross_tenant_reads_are_scoped(client, db, demo):
     auth = headers(client)
     row = db.query(GraphEntity).first()
@@ -171,6 +221,7 @@ def test_cross_tenant_reads_are_scoped(client, db, demo):
     db.commit()
     assert client.get(f"/graph/entities/{row.id}", headers=auth).status_code == 404
     assert client.get("/demo/parcel-references", headers=auth).json() == []
+    assert client.get("/demo/parcel-filings?reference=010066782", headers=auth).json()["filings"] == []
     assert client.get("/demo/map", headers=auth).json()["permits"] == []
     assert client.get("/demo/summary", headers=auth).json()["parcel_references"] == 0
     other = create_access_token(user_id=DEMO_USER_ID, org_id="other-org", demo=True)

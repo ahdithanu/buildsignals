@@ -162,6 +162,40 @@ geometry in the backend test is synthetic test input, not demo inventory.
 TypeScript checks and the Vite build passed. The current historical cohort still
 contains zero mapped parcels and zero coordinate-bearing permits.
 
+### Local derived map locations (2026-09-23)
+
+The map now reads tenant-scoped `permit_geocodes` alongside source-provided
+filing coordinates and eligible parcel records. The new table has forced
+PostgreSQL RLS. Address estimates are stored separately from immutable permit
+source snapshots. A geocode is displayed only while its address/city/state/ZIP
+hash still matches the active filing; changed addresses invalidate it. Demo
+read-only API calls never contact a geocoder or write data.
+
+For a **disposable local SQLite demo** already seeded with Columbus data, run
+`alembic upgrade head`, then explicitly run:
+
+```bash
+DATABASE_URL=sqlite:////absolute/path/to/local-demo.db ENVIRONMENT=ci \
+  .venv/bin/python -m scripts.geocode_demo_filings --confirm-local-demo --limit 12
+```
+
+The command is capped at 25 distinct addresses per invocation, sends only
+Columbus/OH addresses with five-digit ZIPs to the [public Census Geocoder](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html),
+accepts a single full street/city/state/ZIP match within a bounded Columbus
+coordinate box, and retains benchmark, match text, request URL, response hash,
+and observation time. It does not activate ingestion or change production. The
+coordinates are Census street-range estimates, **not parcel centroids** or
+verified filing-site points. A local 12-address pass matched seven addresses
+covering 75 filings; five were not plotted. Repeated filings can share one point.
+The map and linked list distinguish source coordinates, Census estimates, and
+parcel centroids. This local result is not production map coverage.
+
+The demo still has **zero qualified parcel records**. Existing parcel ingestion
+and map display accept source coordinates and polygons when the source's export
+policy permits them, but Franklin County source-use rights and Columbus-to-county
+identifier semantics remain open. No county geometry was copied into this demo,
+and no nearby or for-sale claims follow from address geocoding.
+
 ## Production Ingestion Audit
 
 The read-only Render dashboard check still returned the Render login page in the

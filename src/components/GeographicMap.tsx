@@ -8,6 +8,7 @@ export interface GeographicPoint {
   latitude: number;
   longitude: number;
   kind: 'permit' | 'planning' | 'parcel';
+  location_method?: 'source_coordinate' | 'census_address_range_estimate';
 }
 
 export interface GeographicBoundary {
@@ -62,13 +63,23 @@ export default function GeographicMap({ points, boundaries = [], initialCenter, 
       L.polygon(rings as L.LatLngTuple[][], { color: '#0f766e', weight: 2, fillOpacity: 0.22 })
         .bindTooltip(label).on('click', () => selection.current(boundary.id)).addTo(group);
     }
+    const grouped = new Map<string, GeographicPoint[]>();
     for (const point of valid) {
+      const key = `${point.kind}:${point.latitude}:${point.longitude}:${point.location_method || ''}`;
+      grouped.set(key, [...(grouped.get(key) ?? []), point]);
+    }
+    for (const groupPoints of grouped.values()) {
+      const point = groupPoints[0];
       const label = document.createElement('span');
-      label.textContent = point.title;
-      L.circleMarker([point.latitude, point.longitude], {
-        radius: 8, color: point.kind === 'planning' ? '#047857' : point.kind === 'parcel' ? '#9f1239' : '#1d4ed8',
+      label.textContent = groupPoints.length > 1 ? `${groupPoints.length} ${point.kind} records at this coordinate` : point.title;
+      const marker = L.circleMarker([point.latitude, point.longitude], {
+        radius: groupPoints.length > 1 ? 14 : 8,
+        color: point.kind === 'planning' ? '#047857' : point.kind === 'parcel' ? '#9f1239' : point.location_method === 'census_address_range_estimate' ? '#a16207' : '#1d4ed8',
         fillOpacity: 0.8, weight: 2,
-      }).bindTooltip(label).on('click', () => selection.current(point.id)).addTo(group);
+      }).bindPopup(label).on('click', () => selection.current(point.id)).addTo(group);
+      if (groupPoints.length > 1) marker.bindTooltip(String(groupPoints.length), {
+        permanent: true, direction: 'center', className: 'geographic-map-count',
+      });
     }
     if (group.getLayers().length) instance.fitBounds(group.getBounds(), { padding: [35, 35], maxZoom: 14 });
     return () => { group.remove(); };

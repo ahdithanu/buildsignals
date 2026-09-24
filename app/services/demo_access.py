@@ -33,7 +33,7 @@ def demo_path_allowed(method: str, path: str) -> bool:
         return False
     # New endpoints are inaccessible until explicitly audited as side-effect-free.
     return path in {
-        "/auth/me", "/demo/summary", "/demo/parcel-references", "/demo/map",
+        "/auth/me", "/demo/summary", "/demo/parcel-references", "/demo/parcel-filings", "/demo/map",
         "/ingestion/permits",
     } or bool(re.fullmatch(
         r"/(?:ingestion/permits/[a-f0-9-]{36}|graph/entities/[a-f0-9-]{36}(?:/related)?|graph/relationships/[a-f0-9-]{36})",
