@@ -87,6 +87,8 @@ const App = () => (
             />
 
             {/* Authenticated routes */}
+            <Route path="/admin/evals" element={<RequireAuth><Evaluations /></RequireAuth>} />
+            <Route path="/admin/observability" element={<RequireAuth><Observability /></RequireAuth>} />
             <Route
               path="/"
               element={

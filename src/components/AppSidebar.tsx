@@ -43,6 +43,7 @@ const navItems = [
   { title: "Team", url: "/team", icon: Users },
   { title: "Account", url: "/account", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
+  { title: "AI Evaluations", url: "/admin/evals", icon: ShieldCheck, adminOnly: true },
 ];
 
 function initials(name: string | null | undefined): string {
@@ -83,7 +84,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.filter((item) => !item.reviewOnly || role === "admin" || role === "editor").map((item) => (
+              {navItems.filter((item) => (!item.adminOnly || role === "admin") && (!item.reviewOnly || role === "admin" || role === "editor")).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="default">
                     <NavLink

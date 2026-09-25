@@ -53,6 +53,14 @@ tracked companies, applicants, owners, and developers. Property links preserve
 address, parcel identifier, and coordinates so nearby-parcel discovery can run
 once the event has a reliable location.
 
+Planning titles retain their full canonical value (up to 1,000 characters).
+Only the graph display label is shortened to its 255-character limit; source
+evidence is not shortened by this projection. Source-record entities with an
+official source system and ID resolve by that identity, not by similar labels.
+Separate agenda items therefore stay distinct even when their titles, or their
+shortened labels, are identical. Re-ingesting the same source ID remains
+idempotent.
+
 ### Official Cross-Source References
 
 `record_external_references` is the indexed bridge between distinct canonical

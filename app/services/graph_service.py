@@ -256,7 +256,9 @@ def resolve_entity(db: Session, payload: GraphEntityCreate) -> tuple[GraphEntity
     normalized_terms = _normalized_terms(alias_candidates)
     authoritative_record_id = bool(
         payload.entity_type in {
-            GraphEntityType.permit, GraphEntityType.parcel, GraphEntityType.source_record,
+            GraphEntityType.permit,
+            GraphEntityType.parcel,
+            GraphEntityType.source_record,
         }
         and payload.source_system
         and payload.source_id

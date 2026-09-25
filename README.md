@@ -1,4 +1,4 @@
-# DealSignal
+# BuildSignal
 
 Real-estate acquisition intelligence — a multi-tenant platform for sourcing,
 underwriting, and tracking commercial real-estate deals. FastAPI backend,
@@ -145,6 +145,11 @@ docs/                runbooks and operational docs — see below
 
 ## Documentation
 
+Workspace admins can use **AI Evaluations** at `/admin/evals` to create evidence-based
+test datasets, run checks, compare versions, and enforce regression gates. See
+[AI evaluation platform](docs/ai-evaluation-platform.md) for supported live workflows,
+captured-output evaluation, metric limitations, and deployment instructions.
+
 | Doc | What |
 |---|---|
 | [docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md) | One-time Render provisioning from scratch |
@@ -159,6 +164,7 @@ docs/                runbooks and operational docs — see below
 | [docs/slo.md](docs/slo.md) | Service level objectives + error budget |
 | [docs/enterprise_readiness.md](docs/enterprise_readiness.md) | Production readiness checklist (living tracker) |
 | [docs/monitoring.md](docs/monitoring.md) | Dashboards, alerts, uptime setup |
+| [docs/observability-dashboard.md](docs/observability-dashboard.md) | Tenant-scoped evaluation and ingestion health |
 | [docs/staging.md](docs/staging.md) | Staging environment policy |
 | [docs/runbooks/staging-deploy.md](docs/runbooks/staging-deploy.md) | One-time Render staging blueprint setup |
 | [infra/README.md](infra/README.md) | Uptime URL config + staging env hints |

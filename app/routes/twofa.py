@@ -144,6 +144,9 @@ def setup(
         )
     secret = pyotp.random_base32()
     store_secret(user, secret)
+    db.add(user)
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
     otpauth_uri = pyotp.TOTP(secret).provisioning_uri(
         name=user.email, issuer_name="BuildSignals",
     )
@@ -164,9 +167,7 @@ def verify(
     Uses `valid_window=1` to tolerate ~30s of clock skew between the device
     and the server — a single window on either side of the current step.
     """
-    user = _locked_user(db, principal)
-    if user.totp_enabled:
-        raise HTTPException(status_code=409, detail="2FA already enabled")
+    user: User = principal["user"]
     secret = read_secret(user)
     if not secret:
         raise HTTPException(
@@ -208,5 +209,11 @@ def disable(
     user.totp_enabled = False
     user.totp_secret = None
     user.totp_secret_ciphertext = None
-    _commit_change(db, user, principal, "2fa_disabled")
+    db.add(user)
+    db.commit()
+    log_change(
+        db, "user", user.id, "2fa_disabled",
+        actor_id=user.id, organization_id=principal["org_id"],
+    )
+    db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

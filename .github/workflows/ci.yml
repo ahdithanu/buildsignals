@@ -20,6 +20,7 @@ jobs:
       # security even under FORCE RLS, so RLS assertions only mean something
       # as a non-superuser — exactly how the app connects in production.
       TEST_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
+      TEST_EVAL_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
     services:
       postgres:
         # Nearby-parcel migrations require PostGIS (geography centroid + GIST index).
@@ -36,7 +37,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v5

@@ -1,6 +1,6 @@
 """Health check endpoints.
 
-Two flavours, both public:
+Three flavours, all public:
 
 - `/health` is a shallow liveness probe. Returns 200 without touching
   the DB. Used by Render's built-in health checks and by uptime
@@ -12,6 +12,10 @@ Two flavours, both public:
   a dashboard where "is the app really working" matters more than
   "is the process running." Do NOT wire this to Render's restart
   policy — a transient DB error would then restart every worker.
+
+- `/health/ready` checks mapped tables/columns and the Alembic revision
+  without fetching application rows. Returns only a generic status and
+  503 when schema readiness cannot be established.
 """
 from __future__ import annotations
 

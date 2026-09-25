@@ -43,12 +43,14 @@ from app.routes.deal_summary import router as deal_summary_router
 from app.routes.deals import router as deals_router
 from app.routes.distributions import router as distributions_router
 from app.routes.documents import router as documents_router
+from app.routes.evaluations import router as evaluations_router
 from app.routes.graph import opportunity_router as graph_opportunity_router
 from app.routes.graph import router as graph_router
 from app.routes.health import router as health_router
 from app.routes.ingestion import router as ingestion_router
 from app.routes.ingestion_onboarding import router as ingestion_onboarding_router
 from app.routes.memos import router as memos_router
+from app.routes.observability import router as observability_router
 from app.routes.organizations import router as organizations_router
 from app.routes.organizations import switch_router as auth_switch_router
 from app.routes.parcels import router as parcels_router
@@ -136,6 +138,8 @@ app.include_router(activities_router, prefix=CURRENT_API_PREFIX)
 app.include_router(pipeline_router, prefix=CURRENT_API_PREFIX)
 app.include_router(signals_router, prefix=CURRENT_API_PREFIX)
 app.include_router(documents_router, prefix=CURRENT_API_PREFIX)
+app.include_router(evaluations_router, prefix=CURRENT_API_PREFIX)
+app.include_router(observability_router, prefix=CURRENT_API_PREFIX)
 app.include_router(memos_router, prefix=CURRENT_API_PREFIX)
 app.include_router(dashboard_router, prefix=CURRENT_API_PREFIX)
 app.include_router(buy_box_router, prefix=CURRENT_API_PREFIX)
