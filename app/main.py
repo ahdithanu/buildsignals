@@ -47,6 +47,7 @@ from app.routes.health import router as health_router
 from app.routes.ingestion import router as ingestion_router
 from app.routes.ingestion_onboarding import router as ingestion_onboarding_router
 from app.routes.memos import router as memos_router
+from app.routes.observability import router as observability_router
 from app.routes.organizations import router as organizations_router
 from app.routes.organizations import switch_router as auth_switch_router
 from app.routes.parcels import router as parcels_router
