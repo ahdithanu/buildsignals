@@ -17,6 +17,7 @@ jobs:
       # security even under FORCE RLS, so RLS assertions only mean something
       # as a non-superuser — exactly how the app connects in production.
       TEST_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
+      TEST_EVAL_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
     services:
       postgres:
         # Nearby-parcel migrations require PostGIS (geography centroid + GIST index).
@@ -33,7 +34,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -113,6 +114,8 @@ jobs:
           psql -h localhost -U postgres -d dealsignal_test -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE appuser LOGIN PASSWORD 'app';
           GRANT ALL ON SCHEMA public TO appuser;
+          -- Eval RLS tests isolate their fixtures in a disposable schema.
+          GRANT CREATE ON DATABASE dealsignal_test TO appuser;
           SQL
           DATABASE_URL="$TEST_POSTGRES_URL" alembic upgrade head
 

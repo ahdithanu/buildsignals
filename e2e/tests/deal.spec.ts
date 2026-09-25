@@ -4,10 +4,10 @@ import { uniqueEmail, registerAndLogin } from "./helpers";
 /**
  * Create-a-deal happy path through the AddDealModal.
  *
- * ⚠️ MORE FRAGILE than auth.spec — the modal's Asset Type / Market fields are
+ * The modal's Asset Type / Market fields are
  * radix <Select> components (role="combobox" trigger + role="option" items in
  * a portal), which are the most likely selectors to need adjustment on the
- * first real run. The text inputs (#deal-name etc.) are stable.
+ * a styling update. The text inputs (#deal-name etc.) are stable.
  *
  * Selectors read from src/components/AddDealModal.tsx and
  * src/pages/DealInbox.tsx. Asset types: Multifamily/Retail/Industrial/Mixed
@@ -16,16 +16,19 @@ import { uniqueEmail, registerAndLogin } from "./helpers";
 
 test("create a deal and see it in the inbox list", async ({ page }) => {
   await registerAndLogin(page, uniqueEmail());
+  await expect(page.getByRole("region", { name: "Detected activity", exact: true })).toBeVisible();
 
   // Use client-side navigation so the intentionally memory-only access token
   // survives the route change.
   await page.getByRole("link", { name: /deal inbox/i }).click();
   await expect(page).toHaveURL(/\/inbox$/);
+  await expect(page.getByText("No saved deals yet.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Detected activity", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Review permits", exact: true })).toBeVisible();
 
   const dealName = `E2E Deal ${Date.now()}`;
 
-  // Two "Add Deal" triggers exist (header + empty state); either opens the
-  // same modal. Take the first that's visible.
+  // The header keeps manual deal creation available above source activity.
   await page.getByRole("button", { name: /add deal/i }).first().click();
 
   // Modal text inputs — stable ids.
@@ -49,4 +52,5 @@ test("create a deal and see it in the inbox list", async ({ page }) => {
 
   // The new deal should appear in the list.
   await expect(page.getByRole("cell", { name: dealName })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Detected activity", exact: true })).toHaveCount(0);
 });

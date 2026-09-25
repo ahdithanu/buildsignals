@@ -60,6 +60,8 @@ export const queryKeys = {
   ingestion: {
     health: (state?: string | null) => ['ingestion', 'health', state ?? 'all'] as const,
     coverage: ['ingestion', 'coverage'] as const,
+    measuredCoverage: (organizationId: string | null, params: Record<string, unknown>) =>
+      ['ingestion', 'measured-coverage', organizationId, params] as const,
     schedulePlan: (state?: string | null) =>
       ['ingestion', 'schedule-plan', state ?? 'all'] as const,
     hostPolicy: ['ingestion', 'host-policy'] as const,

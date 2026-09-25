@@ -40,12 +40,14 @@ from app.routes.deal_summary import router as deal_summary_router
 from app.routes.deals import router as deals_router
 from app.routes.distributions import router as distributions_router
 from app.routes.documents import router as documents_router
+from app.routes.evaluations import router as evaluations_router
 from app.routes.graph import opportunity_router as graph_opportunity_router
 from app.routes.graph import router as graph_router
 from app.routes.health import router as health_router
 from app.routes.ingestion import router as ingestion_router
 from app.routes.ingestion_onboarding import router as ingestion_onboarding_router
 from app.routes.memos import router as memos_router
+from app.routes.observability import router as observability_router
 from app.routes.organizations import router as organizations_router
 from app.routes.organizations import switch_router as auth_switch_router
 from app.routes.parcels import router as parcels_router
@@ -60,6 +62,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
+# requests fall through to the default-org for backward compatibility.
+app.add_middleware(AuthContextMiddleware)
+
+# Per-IP DoS backstop. Sits outside AuthContext so a hammering client gets
+# rejected before we touch the DB, but inside RequestContext so the 429 still
+# carries an X-Request-ID for tracing. Auth routes have their own tighter
+# limits at the route layer; those still apply on top of this.
+app.add_middleware(GlobalRateLimitMiddleware)
+
+# Wrap early auth/rate-limit responses so browsers can read a 401 and refresh.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOWED_ORIGINS,
@@ -74,16 +87,6 @@ app.add_middleware(
     ],
     max_age=600,
 )
-
-# Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
-# requests fall through to the default-org for backward compatibility.
-app.add_middleware(AuthContextMiddleware)
-
-# Per-IP DoS backstop. Sits outside AuthContext so a hammering client gets
-# rejected before we touch the DB, but inside RequestContext so the 429 still
-# carries an X-Request-ID for tracing. Auth routes have their own tighter
-# limits at the route layer; those still apply on top of this.
-app.add_middleware(GlobalRateLimitMiddleware)
 
 # API versioning: rewrite unversioned inbound paths to /v1/* and stamp
 # Deprecation + Sunset headers on the response. Sits outside AuthContext
@@ -118,6 +121,8 @@ app.include_router(activities_router, prefix=CURRENT_API_PREFIX)
 app.include_router(pipeline_router, prefix=CURRENT_API_PREFIX)
 app.include_router(signals_router, prefix=CURRENT_API_PREFIX)
 app.include_router(documents_router, prefix=CURRENT_API_PREFIX)
+app.include_router(evaluations_router, prefix=CURRENT_API_PREFIX)
+app.include_router(observability_router, prefix=CURRENT_API_PREFIX)
 app.include_router(memos_router, prefix=CURRENT_API_PREFIX)
 app.include_router(dashboard_router, prefix=CURRENT_API_PREFIX)
 app.include_router(buy_box_router, prefix=CURRENT_API_PREFIX)

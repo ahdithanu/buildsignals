@@ -10,7 +10,7 @@ class RegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=255)
     organization_name: Optional[str] = Field(
         None, max_length=255,
-        description="Optional name for a new org. If omitted, user joins default-org.",
+        description="Optional display name for a new isolated workspace. If omitted, a workspace name is generated; existing organizations are never joined implicitly.",
     )
 
 

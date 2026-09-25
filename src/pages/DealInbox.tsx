@@ -5,8 +5,9 @@ import { formatCurrency, stageLabels } from "@/lib/formatters";
 import { useDeals, useCreateDeal } from "@/hooks/useDeals";
 import { dealsApi } from "@/api/deals";
 import { LoadingState, ErrorState, EmptyState } from "@/components/DataStates";
+import { DetectedActivity } from "@/components/DetectedActivity";
 import type { Deal } from "@/types/deal";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Upload, Sparkles, Search, X, ChevronRight, Filter, Loader2, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AddDealModal } from "@/components/AddDealModal";
@@ -157,7 +158,7 @@ export default function DealInbox() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 md:mb-6">
           <div>
             <h2 className="text-lg md:text-xl font-semibold font-display text-foreground">Deal Inbox</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">Triage and manage incoming opportunities</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Saved opportunities</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button className="hidden sm:flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary/80 transition-colors">
@@ -165,7 +166,7 @@ export default function DealInbox() {
             </button>
             <button
               onClick={handleEnrichment}
-              disabled={enriching}
+              disabled={enriching || deals.length === 0}
               className="hidden md:flex items-center gap-2 rounded-lg bg-accent/15 px-3 py-2 text-sm font-medium text-accent-foreground hover:bg-accent/25 transition-colors disabled:opacity-60"
             >
               {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -180,6 +181,17 @@ export default function DealInbox() {
           </div>
         </div>
 
+        {deals.length === 0 ? (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-y py-3 text-sm">
+              <p className="text-muted-foreground">No saved deals yet.</p>
+              <Link to="/signals" className="inline-flex items-center gap-1 font-medium underline">
+                Browse market signals <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <DetectedActivity />
+          </>
+        ) : <>
         {/* Tabs */}
         <div className="flex items-center gap-1 mb-4 border-b overflow-x-auto scrollbar-hide">
           {tabs.map(tab => (
@@ -223,22 +235,7 @@ export default function DealInbox() {
           {/* Table */}
           <div className={`flex-1 rounded-xl border bg-card card-shadow overflow-hidden min-w-0 ${selectedDeal ? 'hidden lg:block lg:max-w-[calc(100%-380px)]' : ''}`}>
             {filtered.length === 0 ? (
-              deals.length === 0 ? (
-                <EmptyState
-                  title="No deals yet"
-                  description="Paste a listing URL or add a deal manually to get started."
-                  action={
-                    <button
-                      onClick={() => setShowAddModal(true)}
-                      className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Add your first deal
-                    </button>
-                  }
-                />
-              ) : (
-                <EmptyState title="No deals match your filters" description="Try adjusting filters or clearing your search." />
-              )
+              <EmptyState title="No deals match your filters" description="Try adjusting filters or clearing your search." />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -337,6 +334,7 @@ export default function DealInbox() {
             )}
           </AnimatePresence>
         </div>
+        </>}
       </div>
       <AddDealModal open={showAddModal} onOpenChange={setShowAddModal} onAdd={handleAddDeal} submitting={createDeal.isPending} />
     </Layout>

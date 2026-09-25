@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SessionQueryProvider } from "@/components/auth/SessionQueryProvider";
 import {
   RedirectIfAuthenticated,
   RequireAuth,
@@ -31,6 +31,8 @@ import AcquisitionRadar from "./pages/AcquisitionRadar";
 import AcquisitionMap from "./pages/AcquisitionMap";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
+import Evaluations from "./pages/Evaluations";
+import Observability from "./pages/Observability";
 import Team from "./pages/Team";
 import Account from "./pages/Account";
 import Login from "./pages/Login";
@@ -40,11 +42,9 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-const queryClient = new QueryClient();
-
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+  <AuthProvider>
+    <SessionQueryProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -86,6 +86,8 @@ const App = () => (
             />
 
             {/* Authenticated routes */}
+            <Route path="/admin/evals" element={<RequireAuth><Evaluations /></RequireAuth>} />
+            <Route path="/admin/observability" element={<RequireAuth><Observability /></RequireAuth>} />
             <Route
               path="/"
               element={
@@ -291,8 +293,8 @@ const App = () => (
           </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+    </SessionQueryProvider>
+  </AuthProvider>
 );
 
 export default App;

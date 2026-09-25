@@ -143,6 +143,12 @@ describe("<NearbyParcelsPanel>", () => {
     expect(screen.getAllByRole("link", { name: /open parcel/i })).toHaveLength(2);
     expect(screen.getByRole("button", { name: /export nearby parcels/i })).toBeEnabled();
 
+    fireEvent.click(screen.getByRole("button", { name: "Broker" }));
+    fireEvent.change(screen.getByRole("slider"), { target: { value: '4' } });
+    expect(screen.getByText("Saved search · Radius 2.00 mi · developer lens")).toBeInTheDocument();
+    expect(screen.getByText("Best developer fit")).toBeInTheDocument();
+    expect(screen.queryByText("Best broker fit")).not.toBeInTheDocument();
+
     authState.role = "viewer";
     rendered.rerender(
       <MemoryRouter>

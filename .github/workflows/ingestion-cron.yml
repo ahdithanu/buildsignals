@@ -78,7 +78,7 @@ jobs:
       INGESTION_STAGE: ${{ github.event.inputs.stage || 'all' }}
       INGESTION_ROLLOUT_WAVE: ${{ github.event.inputs.rollout_wave || vars.INGESTION_ROLLOUT_WAVE || '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:

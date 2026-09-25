@@ -7,6 +7,7 @@ import { usePermitBrandMatches } from '@/hooks/usePermitBrandMatches';
 import { useNearbyParcels } from '@/hooks/useNearbyParcels';
 import { useToast } from '@/hooks/use-toast';
 import { ApiError } from '@/api/client';
+import { safeSourceUrl } from '@/lib/sourceUrl';
 import { ParcelMap, type ParcelMapPoint, type ParcelMapPointTone } from '@/components/ParcelMap';
 import type { NearbyParcelCandidate, ParcelPersona } from '@/types/parcel';
 
@@ -83,7 +84,7 @@ function CandidateRow({
   const reason = candidate.explanation.reasons?.[0];
   const caution = candidate.explanation.cautions?.[0];
   const owner = ownershipName(candidate);
-  const evidence = candidate.facts.find((fact) => fact.source_url);
+  const evidence = candidate.facts.find((fact) => safeSourceUrl(fact.source_url));
   const parcelFacts = [
     candidate.parcel.land_area_sq_ft != null
       ? `${numberFormatter.format(candidate.parcel.land_area_sq_ft)} sq ft`
@@ -144,7 +145,7 @@ function CandidateRow({
             <span>Verified {new Date(candidate.parcel.last_verified_at).toLocaleDateString()}</span>
             {evidence?.source_url && (
               <a
-                href={evidence.source_url}
+                href={safeSourceUrl(evidence.source_url)}
                 target="_blank"
                 rel="noreferrer"
                 title="Open source evidence"
@@ -256,12 +257,13 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
   const [anchorId, setAnchorId] = useState('');
   const [radius, setRadius] = useState(2);
   useEffect(() => {
-    if (!anchorId && anchors[0]) setAnchorId(anchors[0].id);
+    if (!anchors.some(match => match.id === anchorId)) setAnchorId(anchors[0]?.id || '');
   }, [anchorId, anchors]);
 
   const latest = search.data;
   const bestCandidate = latest?.candidates[0];
   const activeAnchor = anchors.find((match) => match.id === anchorId) || anchors[0];
+  const savedAnchor = matches.find(match => match.id === latest?.anchor_brand_match_id);
   const mapPoints: ParcelMapPoint[] = latest?.candidates.map((candidate, index) => ({
     id: candidate.id,
     label: candidate.parcel.address || candidate.parcel.external_parcel_id,
@@ -486,14 +488,14 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
           {activeAnchor && (
             <ParcelMap
               title="Search Map"
-              subtitle={`Radius ${radius.toFixed(2)} mi · ${persona} lens`}
+              subtitle={latest ? `Saved search · Radius ${latest.radius_miles.toFixed(2)} mi · ${latest.persona} lens` : `Radius ${radius.toFixed(2)} mi · ${persona} lens`}
               center={{
-                label: activeAnchor.permit.address || activeAnchor.permit.application_number || 'Signal anchor',
-                latitude: activeAnchor.permit.latitude,
-                longitude: activeAnchor.permit.longitude,
-                subtitle: activeAnchor.brand.name,
+                label: latest ? (savedAnchor?.permit.address || 'Saved search anchor') : (activeAnchor.permit.address || activeAnchor.permit.application_number || 'Signal anchor'),
+                latitude: latest?.anchor_latitude ?? activeAnchor.permit.latitude,
+                longitude: latest?.anchor_longitude ?? activeAnchor.permit.longitude,
+                subtitle: latest ? savedAnchor?.brand.name : activeAnchor.brand.name,
               }}
-              radiusMiles={radius}
+              radiusMiles={latest?.radius_miles ?? radius}
               points={mapPoints}
               emptyLabel="Run a search to plot nearby parcels."
             />
@@ -517,7 +519,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-medium text-foreground">
-                Best {persona} fit
+                Best {latest?.persona ?? persona} fit
               </p>
               <p className="mt-0.5 text-sm text-muted-foreground">
                 {bestCandidate.parcel.address || bestCandidate.parcel.external_parcel_id}

@@ -7,6 +7,7 @@ import { ParcelMap } from '@/components/ParcelMap';
 import { LoadingState, ErrorState, EmptyState } from '@/components/DataStates';
 import { Badge } from '@/components/ui/badge';
 import { useParcelDetail } from '@/hooks/useParcelDetail';
+import { safeSourceUrl } from '@/lib/sourceUrl';
 
 function formatCurrency(value?: number | null) {
   if (value == null) return '—';
@@ -80,7 +81,6 @@ export default function ParcelDetail() {
         next.best_score = hit.score;
         next.best_deal_id = hit.deal_id;
         next.best_deal_name = hit.deal_name;
-        next.closest_distance = hit.distance_miles;
       }
       if (hit.distance_miles < next.closest_distance) {
         next.closest_distance = hit.distance_miles;
@@ -198,8 +198,8 @@ export default function ParcelDetail() {
                           {event.source_key} · observed {formatDate(event.observed_at)} · {Math.round(event.confidence * 100)}% confidence · {event.evidence.length} evidence record{event.evidence.length === 1 ? '' : 's'}
                         </p>
                       </div>
-                      {evidence?.source_url && (
-                        <a href={evidence.source_url} target="_blank" rel="noreferrer" className="rounded-md border px-2 py-1 text-xs text-foreground transition-colors hover:bg-secondary/50">
+                      {safeSourceUrl(evidence?.source_url) && (
+                        <a href={safeSourceUrl(evidence?.source_url)} target="_blank" rel="noopener noreferrer" className="rounded-md border px-2 py-1 text-xs text-foreground transition-colors hover:bg-secondary/50">
                           Open evidence
                         </a>
                       )}
@@ -253,9 +253,9 @@ export default function ParcelDetail() {
                         Confidence {Math.round(fact.confidence * 100)}% · observed {formatDate(fact.observed_at)} · verified {formatDate(fact.last_verified_at)}
                       </p>
                     </div>
-                    {fact.source_url && (
+                    {safeSourceUrl(fact.source_url) && (
                       <a
-                        href={fact.source_url}
+                        href={safeSourceUrl(fact.source_url)}
                         target="_blank"
                         rel="noreferrer"
                         className="rounded-md border px-2 py-1 text-xs text-foreground transition-colors hover:bg-secondary/50"

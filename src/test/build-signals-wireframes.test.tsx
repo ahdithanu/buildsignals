@@ -99,7 +99,9 @@ describe('Build Signals wireframe screens', () => {
     fireEvent.change(screen.getByLabelText(/^password/i), {
       target: { value: 'secret-password' },
     });
-    fireEvent.click(screen.getByRole('checkbox', { name: /keep me signed in/i }));
+    expect(screen.queryByRole('checkbox', { name: /keep me signed in/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /create account/i })).toHaveAttribute('href', '/register');
+    expect(screen.queryByText(/SOC 2|1,412|97%/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
@@ -108,7 +110,24 @@ describe('Build Signals wireframe screens', () => {
         password: 'secret-password',
       });
     });
-    expect(screen.getByRole('checkbox', { name: /keep me signed in/i })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('button', { name: /SSO/i })).not.toBeInTheDocument();
+  });
+
+  it('submits an authenticator code and permits retry after rejection', async () => {
+    login.mockRejectedValueOnce(new Error('Invalid authenticator code'));
+    login.mockResolvedValueOnce(undefined);
+    render(<MemoryRouter><Login /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText(/work email/i), { target: { value: 'alex@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'secret-password' } });
+    const code = screen.getByLabelText('Authenticator code');
+    fireEvent.change(code, { target: { value: '000123' } });
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid authenticator code');
+    expect(login).toHaveBeenLastCalledWith({ email: 'alex@example.com', password: 'secret-password', totp_code: '000123' });
+    fireEvent.change(code, { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+    await waitFor(() => expect(login).toHaveBeenCalledTimes(2));
+    expect(login).toHaveBeenLastCalledWith({ email: 'alex@example.com', password: 'secret-password', totp_code: '123456' });
   });
 
   it('shows account creation as a primary login-page action', () => {

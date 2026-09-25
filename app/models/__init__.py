@@ -61,3 +61,5 @@ from app.models.ingestion_onboarding import (  # noqa
     OrganizationIngestionEnrollment,
     OrganizationIngestionEnrollmentSource,
 )
+from app.models.buildsignal import BuildSignalPublication, BuildSignalRevision, BuildSignalReview  # noqa: F401
+from app.models.evaluation import EvalCase, EvalDataset, EvalMetric, EvalResult, EvalRun  # noqa: F401

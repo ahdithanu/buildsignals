@@ -4,6 +4,10 @@ import { render, screen, within } from "@testing-library/react";
 
 import IngestionOperations from "@/pages/IngestionOperations";
 
+vi.mock("@/hooks/useMeasuredCoverage", () => ({
+  useMeasuredCoverage: () => ({ isPending: true, isFetching: false }),
+}));
+
 vi.mock("@/hooks/useIngestionHealth", () => ({
   useIngestionHealth: vi.fn(),
   useIngestionSchedulePlan: vi.fn(),
@@ -45,6 +49,24 @@ beforeEach(() => {
 });
 
 describe("<IngestionOperations>", () => {
+  it.each([undefined, 'TX'])('explains missing configured sources without inferring catalog or candidate state (%s)', (state) => {
+    vi.mocked(useIngestionHealth).mockReturnValue({
+      data: { sources: [], candidates: [] }, isLoading: false, isFetching: false,
+      error: null, refetch: vi.fn(), canary: { isPending: false }, candidateCanary: { isPending: false },
+    } as unknown as ReturnType<typeof useIngestionHealth>);
+    vi.mocked(useIngestionSchedulePlan).mockReturnValue({ isLoading: false } as ReturnType<typeof useIngestionSchedulePlan>);
+    vi.mocked(usePromoteIngestionCandidate).mockReturnValue({ isPending: false } as ReturnType<typeof usePromoteIngestionCandidate>);
+    render(<MemoryRouter initialEntries={[state ? `/source-health?state=${state}` : '/source-health']}><IngestionOperations /></MemoryRouter>);
+    const health = within(screen.getByRole('region', { name: 'Ingestion source health' }));
+    expect(health.getByText(state ? 'No sources for this state' : 'No sources configured')).toBeInTheDocument();
+    expect(health.getByText(state
+      ? 'No configured sources match this state. Source candidates are listed separately below.'
+      : 'No sources are configured for this organization. An administrator must complete source onboarding before collection can begin.')).toBeInTheDocument();
+    expect(health.getByRole('link', { name: 'Review source candidates' })).toHaveAttribute('href', '#source-candidates');
+    expect(screen.getByRole('region', { name: 'Ingestion candidate queue' })).toHaveAttribute('id', 'source-candidates');
+    expect(screen.queryByText('The source catalog has not been synchronized.')).not.toBeInTheDocument();
+  });
+
   it("shows approved-only source names in the coverage footprint", () => {
     (useIngestionHealth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
@@ -267,7 +289,8 @@ describe("<IngestionOperations>", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Coverage Footprint")).toBeInTheDocument();
+    expect(screen.getByText("Configured Footprint")).toBeInTheDocument();
+    expect(screen.getByText(/not verified imported records or geographic completeness/i)).toBeInTheDocument();
     expect(screen.getByText("Production Activation")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();
     expect(screen.getByText("data.example.gov")).toBeInTheDocument();
@@ -276,8 +299,8 @@ describe("<IngestionOperations>", () => {
       "href",
       "/source-health/sources/source-texas-comptroller-sales-tax-locations",
     );
-    const liveMix = screen.getByLabelText("Live source mix");
-    expect(within(liveMix).getByText("Live Source Mix")).toBeInTheDocument();
+    const liveMix = screen.getByLabelText("Configured source mix");
+    expect(within(liveMix).getByText("Configured Source Mix")).toBeInTheDocument();
     expect(within(liveMix).getByText("approved only")).toBeInTheDocument();
     expect(screen.getByText("State leaders")).toBeInTheDocument();
     expect(screen.getByText("Next activation queue")).toBeInTheDocument();

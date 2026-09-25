@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 from pathlib import Path
 from typing import Mapping
@@ -13,6 +14,7 @@ from .base import (
     ConnectorResponseError,
     FetchEnvelope,
     HttpClient,
+    InvalidCheckpointError,
     RetryingHttpClient,
     checkpoint_offset,
 )
@@ -34,6 +36,7 @@ class CSVConnector(BaseConnector):
         timeout: float = 30.0,
         max_retries: int = 3,
         http_client: HttpClient | None = None,
+        verify_snapshot: bool = False,
     ) -> None:
         super().__init__(page_size=page_size)
         if not str(source):
@@ -44,6 +47,7 @@ class CSVConnector(BaseConnector):
         self.delimiter = delimiter
         self.encoding = encoding
         self.headers = dict(headers or {})
+        self.verify_snapshot = verify_snapshot
         self.http_client = http_client or RetryingHttpClient(
             timeout=timeout, max_retries=max_retries
         )
@@ -51,6 +55,12 @@ class CSVConnector(BaseConnector):
     def fetch(self, checkpoint: Checkpoint | None = None) -> FetchEnvelope:
         offset = checkpoint_offset(checkpoint, key="row_offset")
         text = self._read_text()
+        fingerprint = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if self.verify_snapshot and offset:
+            if checkpoint.get("snapshot_sha256") != fingerprint:
+                raise InvalidCheckpointError(
+                    "CSV snapshot changed or checkpoint lacks a fingerprint; restart from the first page"
+                )
         reader = csv.DictReader(io.StringIO(text, newline=""), dialect=self._dialect(text))
         if not reader.fieldnames:
             raise ConnectorResponseError("CSV source is missing a header row")
@@ -71,12 +81,15 @@ class CSVConnector(BaseConnector):
         next_checkpoint = (
             {"row_offset": offset + len(records)} if has_more else None
         )
+        if next_checkpoint is not None and self.verify_snapshot:
+            next_checkpoint["snapshot_sha256"] = fingerprint
         return FetchEnvelope(
             source=self.source_name,
             records=tuple(records),
             checkpoint=next_checkpoint,
             has_more=has_more,
-            metadata={"source": self.source, "row_offset": offset},
+            metadata={"source": self.source, "row_offset": offset,
+                      "snapshot_sha256": fingerprint},
         )
 
     def _read_text(self) -> str:
