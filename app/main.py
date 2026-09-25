@@ -53,6 +53,7 @@ from app.routes.parcels import router as parcels_router
 from app.routes.password_reset import router as password_reset_router
 from app.routes.pipeline import router as pipeline_router
 from app.routes.planning import router as planning_router
+from app.routes.prompt_registry import router as prompt_registry_router
 from app.routes.signals import router as signals_router
 from app.routes.twofa import router as twofa_router
 
@@ -121,6 +122,7 @@ app.include_router(pipeline_router, prefix=CURRENT_API_PREFIX)
 app.include_router(signals_router, prefix=CURRENT_API_PREFIX)
 app.include_router(documents_router, prefix=CURRENT_API_PREFIX)
 app.include_router(evaluations_router, prefix=CURRENT_API_PREFIX)
+app.include_router(prompt_registry_router, prefix=CURRENT_API_PREFIX)
 app.include_router(memos_router, prefix=CURRENT_API_PREFIX)
 app.include_router(dashboard_router, prefix=CURRENT_API_PREFIX)
 app.include_router(buy_box_router, prefix=CURRENT_API_PREFIX)

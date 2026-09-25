@@ -63,3 +63,4 @@ from app.models.ingestion_onboarding import (  # noqa
 )
 from app.models.buildsignal import BuildSignalPublication, BuildSignalRevision, BuildSignalReview  # noqa: F401
 from app.models.evaluation import EvalCase, EvalDataset, EvalMetric, EvalResult, EvalRun  # noqa: F401
+from app.models.prompt_registry import PromptTemplate, PromptVersion  # noqa: F401
