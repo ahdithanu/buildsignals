@@ -17,6 +17,11 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+function jwt(label: string): string {
+  const subject = label.startsWith("new.") ? "new-user" : "original-user";
+  return `${btoa(JSON.stringify({ alg: "HS256" }))}.${btoa(JSON.stringify({ sub: subject, org_id: "org", sid: subject, sg: 1, bid: "00000000-0000-4000-8000-000000000001", be: 0, jti: label }))}.synthetic`;
+}
+
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
@@ -38,8 +43,13 @@ const sessionChangedError = {
 describe("ApiClient — auth integration", () => {
   beforeEach(() => {
     localStorage.clear();
+    window.dispatchEvent(new StorageEvent("storage", { key: null }));
     setAccessToken(null);
     setUnauthorizedHandler(null);
+    // These unit tests exercise API guards; the real-cookie harness covers the
+    // browser's actual cross-tab Web Locks implementation.
+    vi.stubGlobal("navigator", { locks: { request: async (_name: string, _options: unknown, callback: () => unknown) => callback() } });
+    vi.stubGlobal("crypto", { randomUUID: () => "00000000-0000-4000-8000-000000000001" });
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -70,7 +80,7 @@ describe("ApiClient — auth integration", () => {
   });
 
   it("attaches Authorization header when an access token is set", async () => {
-    setAccessToken("test.jwt.token");
+    setAccessToken(jwt("test.jwt.token"));
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
@@ -83,7 +93,7 @@ describe("ApiClient — auth integration", () => {
 
     const [, init] = fetchMock.mock.calls[0];
     expect((init.headers as Record<string, string>).Authorization).toBe(
-      "Bearer test.jwt.token",
+      `Bearer ${jwt("test.jwt.token")}`,
     );
     // Always sends the refresh cookie along.
     expect(init.credentials).toBe("include");
@@ -106,10 +116,10 @@ describe("ApiClient — auth integration", () => {
     ).toBeUndefined();
   });
 
-  it.each(["new.token", null, "old.token"])(
+  it.each([jwt("new.token"), null, jwt("old.token")])(
     "discards a delayed successful JSON response after an explicit token change to %s",
     async (nextToken) => {
-      setAccessToken("old.token");
+      setAccessToken(jwt("old.token"));
       const pending = deferred<Response>();
       const response = jsonResponse({ private: "old account data" });
       const decode = vi.spyOn(response, "json");
@@ -129,10 +139,10 @@ describe("ApiClient — auth integration", () => {
     },
   );
 
-  it.each(["new.token", null, "old.token"])(
+  it.each([jwt("new.token"), null, jwt("old.token")])(
     "discards JSON decoded after an explicit token change to %s",
     async (nextToken) => {
-      setAccessToken("old.token");
+      setAccessToken(jwt("old.token"));
       const body = deferred<{ private: string }>();
       const response = jsonResponse({});
       const decode = vi.spyOn(response, "json").mockReturnValueOnce(body.promise);
@@ -151,54 +161,54 @@ describe("ApiClient — auth integration", () => {
   );
 
   it("discards a stale no-content mutation response without calling its success callback", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const pending = deferred<Response>();
     vi.stubGlobal("fetch", vi.fn().mockReturnValueOnce(pending.promise));
     const onSuccess = vi.fn();
     const request = new ApiClient("http://api.test").delete("/secure").then(onSuccess);
     const assertion = expect(request).rejects.toMatchObject(sessionChangedError);
 
-    setAccessToken("new.token");
+    setAccessToken(jwt("new.token"));
     pending.resolve(new Response(null, { status: 204 }));
     await assertion;
     expect(onSuccess).not.toHaveBeenCalled();
-    expect(getAccessToken()).toBe("new.token");
+    expect(getAccessToken()).toBe(jwt("new.token"));
   });
 
   it("discards a successful old-session retry after a new login", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const retry = deferred<Response>();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ detail: "Expired" }, 401))
-      .mockResolvedValueOnce(jsonResponse({ access_token: "old.refreshed" }))
+      .mockResolvedValueOnce(jsonResponse({ access_token: jwt("old.refreshed") }))
       .mockReturnValueOnce(retry.promise);
     vi.stubGlobal("fetch", fetchMock);
     const assertion = expect(new ApiClient("http://api.test").get("/secure")).rejects.toMatchObject(sessionChangedError);
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
 
-    setAccessToken("new.token");
+    setAccessToken(jwt("new.token"));
     retry.resolve(jsonResponse({ private: "old account data" }));
     await assertion;
-    expect(getAccessToken()).toBe("new.token");
+    expect(getAccessToken()).toBe(jwt("new.token"));
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("keeps a successful JSON decode valid across same-session silent rotation", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const body = deferred<{ ok: boolean }>();
     const response = jsonResponse({});
     const decode = vi.spyOn(response, "json").mockReturnValueOnce(body.promise);
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response)
       .mockResolvedValueOnce(jsonResponse({ detail: "Expired" }, 401))
-      .mockResolvedValueOnce(jsonResponse({ access_token: "fresh.token" }))
+      .mockResolvedValueOnce(jsonResponse({ access_token: jwt("fresh.token") }))
       .mockResolvedValueOnce(jsonResponse({ ok: true }));
     vi.stubGlobal("fetch", fetchMock);
     const client = new ApiClient("http://api.test");
     const pending = client.get("/secure");
     await vi.waitFor(() => expect(decode).toHaveBeenCalledOnce());
     await client.get("/refresh-needed");
-    expect(getAccessToken()).toBe("fresh.token");
+    expect(getAccessToken()).toBe(jwt("fresh.token"));
 
     body.resolve({ ok: true });
     await expect(pending).resolves.toEqual({ ok: true });
@@ -206,7 +216,7 @@ describe("ApiClient — auth integration", () => {
   });
 
   it("on 401, silently refreshes and retries the original request", async () => {
-    setAccessToken("stale.token");
+    setAccessToken(jwt("stale.token"));
 
     const fetchMock = vi
       .fn()
@@ -220,7 +230,7 @@ describe("ApiClient — auth integration", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            access_token: "fresh.token",
+            access_token: jwt("fresh.token"),
             user_id: "u",
             organization_id: "o",
             role: "admin",
@@ -248,13 +258,13 @@ describe("ApiClient — auth integration", () => {
     // Retry used the new token.
     const [, retryInit] = fetchMock.mock.calls[2];
     expect((retryInit.headers as Record<string, string>).Authorization).toBe(
-      "Bearer fresh.token",
+      `Bearer ${jwt("fresh.token")}`,
     );
-    expect(getAccessToken()).toBe("fresh.token");
+    expect(getAccessToken()).toBe(jwt("fresh.token"));
   });
 
   it("on 401 + refresh failure, clears access token and fires handler", async () => {
-    setAccessToken("stale.token");
+    setAccessToken(jwt("stale.token"));
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
 
@@ -283,7 +293,7 @@ describe("ApiClient — auth integration", () => {
   });
 
   it("deduplicates concurrent refreshes and retries both requests", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const refresh = deferred<Response>();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ detail: "Expired" }, 401))
@@ -295,16 +305,16 @@ describe("ApiClient — auth integration", () => {
     const requests = [client.get("/first"), client.get("/second")];
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
 
-    refresh.resolve(jsonResponse({ access_token: "fresh.token" }));
+    refresh.resolve(jsonResponse({ access_token: jwt("fresh.token") }));
     await expect(Promise.all(requests)).resolves.toEqual([{ ok: true }, { ok: true }]);
     expect(fetchMock).toHaveBeenCalledTimes(5);
     for (const [, init] of fetchMock.mock.calls.slice(3)) {
-      expect(init.headers.Authorization).toBe("Bearer fresh.token");
+      expect(init.headers.Authorization).toBe(`Bearer ${jwt("fresh.token")}`);
     }
   });
 
   it("notifies once when a shared refresh fails", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const refresh = deferred<Response>();
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
@@ -328,23 +338,23 @@ describe("ApiClient — auth integration", () => {
   });
 
   it("treats the legacy token setter as a new session too", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const pending = deferred<Response>();
     const fetchMock = vi.fn().mockReturnValueOnce(pending.promise);
     vi.stubGlobal("fetch", fetchMock);
     const assertion = expect(new ApiClient("http://api.test").get("/secure")).rejects.toMatchObject({ status: 401 });
 
-    setStoredToken("new.token");
+    setStoredToken(jwt("new.token"));
     pending.resolve(jsonResponse({ detail: "Expired" }, 401));
     await assertion;
-    expect(getAccessToken()).toBe("new.token");
+    expect(getAccessToken()).toBe(jwt("new.token"));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["new.token", null, "old.token"])(
+  it.each([jwt("new.token"), null, jwt("old.token")])(
     "does not refresh or replay an old account request after an explicit token change to %s",
     async (nextToken) => {
-      setAccessToken("old.token");
+      setAccessToken(jwt("old.token"));
       const pending = deferred<Response>();
       const handler = vi.fn();
       setUnauthorizedHandler(handler);
@@ -365,7 +375,7 @@ describe("ApiClient — auth integration", () => {
   it.each([200, 401, 500])(
     "ignores an old in-flight refresh completing with %s after a new login",
     async (status) => {
-      setAccessToken("old.token");
+      setAccessToken(jwt("old.token"));
       const refresh = deferred<Response>();
       const handler = vi.fn();
       setUnauthorizedHandler(handler);
@@ -377,17 +387,17 @@ describe("ApiClient — auth integration", () => {
       const assertion = expect(request).rejects.toMatchObject({ status: 401 });
       await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
 
-      setAccessToken("new.account.token");
-      refresh.resolve(jsonResponse({ access_token: "old.account.refreshed" }, status));
+      setAccessToken(jwt("new.account.token"));
+      refresh.resolve(jsonResponse({ access_token: jwt("old.account.refreshed") }, status));
       await assertion;
-      expect(getAccessToken()).toBe("new.account.token");
+      expect(getAccessToken()).toBe(jwt("new.account.token"));
       expect(handler).not.toHaveBeenCalled();
       expect(fetchMock).toHaveBeenCalledTimes(2);
     },
   );
 
   it("does not restore a token when an in-flight refresh completes after logout", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const refresh = deferred<Response>();
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
@@ -400,7 +410,7 @@ describe("ApiClient — auth integration", () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
 
     setAccessToken(null);
-    refresh.resolve(jsonResponse({ access_token: "old.account.refreshed" }));
+    refresh.resolve(jsonResponse({ access_token: jwt("old.account.refreshed") }));
     await assertion;
     expect(getAccessToken()).toBeNull();
     expect(handler).not.toHaveBeenCalled();
@@ -408,34 +418,34 @@ describe("ApiClient — auth integration", () => {
   });
 
   it("does not clear a new login when an old authenticated retry returns 401", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const retry = deferred<Response>();
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ detail: "Expired" }, 401))
-      .mockResolvedValueOnce(jsonResponse({ access_token: "old.refreshed" }))
+      .mockResolvedValueOnce(jsonResponse({ access_token: jwt("old.refreshed") }))
       .mockReturnValueOnce(retry.promise);
     vi.stubGlobal("fetch", fetchMock);
     const request = new ApiClient("http://api.test").get("/secure");
     const assertion = expect(request).rejects.toMatchObject({ status: 401 });
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
 
-    setAccessToken("new.account.token");
+    setAccessToken(jwt("new.account.token"));
     retry.resolve(jsonResponse({ detail: "Revoked" }, 401));
     await assertion;
-    expect(getAccessToken()).toBe("new.account.token");
+    expect(getAccessToken()).toBe(jwt("new.account.token"));
     expect(handler).not.toHaveBeenCalled();
-    expect(fetchMock.mock.calls[2][1].headers.Authorization).toBe("Bearer old.refreshed");
+    expect(fetchMock.mock.calls[2][1].headers.Authorization).toBe(`Bearer ${jwt("old.refreshed")}`);
   });
 
   it("still clears the current session when its authenticated retry returns 401", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const handler = vi.fn();
     setUnauthorizedHandler(handler);
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ detail: "Expired" }, 401))
-      .mockResolvedValueOnce(jsonResponse({ access_token: "fresh.token" }))
+      .mockResolvedValueOnce(jsonResponse({ access_token: jwt("fresh.token") }))
       .mockResolvedValueOnce(jsonResponse({ detail: "Revoked" }, 401));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -448,12 +458,12 @@ describe("ApiClient — auth integration", () => {
   });
 
   it("reuses a same-session refresh for a staggered 401", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const delayed = deferred<Response>();
     const fetchMock = vi.fn()
       .mockReturnValueOnce(delayed.promise)
       .mockResolvedValueOnce(jsonResponse({ detail: "Expired" }, 401))
-      .mockResolvedValueOnce(jsonResponse({ access_token: "fresh.token" }))
+      .mockResolvedValueOnce(jsonResponse({ access_token: jwt("fresh.token") }))
       .mockImplementation(() => Promise.resolve(jsonResponse({ ok: true })));
     vi.stubGlobal("fetch", fetchMock);
     const client = new ApiClient("http://api.test");
@@ -464,19 +474,19 @@ describe("ApiClient — auth integration", () => {
     await expect(oldRequest).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(fetchMock.mock.calls[4][0]).toBe("http://api.test/v1/delayed");
-    expect(fetchMock.mock.calls[4][1].headers.Authorization).toBe("Bearer fresh.token");
+    expect(fetchMock.mock.calls[4][1].headers.Authorization).toBe(`Bearer ${jwt("fresh.token")}`);
   });
 
   it("keeps a new session's refresh deduplicated when an obsolete refresh finishes", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const oldRefresh = deferred<Response>();
     const newRefresh = deferred<Response>();
     const fetchMock = vi.fn().mockImplementation((url: string, init: RequestInit) => {
       if (url.endsWith("/auth/refresh")) {
-        return getAccessToken() === "old.token" ? oldRefresh.promise : newRefresh.promise;
+        return getAccessToken() === jwt("old.token") ? oldRefresh.promise : newRefresh.promise;
       }
       const token = (init.headers as Record<string, string>).Authorization;
-      return Promise.resolve(token === "Bearer new.refreshed"
+      return Promise.resolve(token === `Bearer ${jwt("new.refreshed")}`
         ? jsonResponse({ ok: true })
         : jsonResponse({ detail: "Expired" }, 401));
     });
@@ -486,18 +496,18 @@ describe("ApiClient — auth integration", () => {
     const oldAssertion = expect(oldRequest).rejects.toMatchObject({ status: 401 });
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
 
-    setAccessToken("new.token");
+    setAccessToken(jwt("new.token"));
     const first = client.get("/new-first");
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
-    oldRefresh.resolve(jsonResponse({ access_token: "obsolete.refreshed" }));
+    oldRefresh.resolve(jsonResponse({ access_token: jwt("obsolete.refreshed") }));
     await oldAssertion;
     const second = client.get("/new-second");
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
 
-    newRefresh.resolve(jsonResponse({ access_token: "new.refreshed" }));
+    newRefresh.resolve(jsonResponse({ access_token: jwt("new.refreshed") }));
     await expect(Promise.all([first, second])).resolves.toEqual([{ ok: true }, { ok: true }]);
     expect(fetchMock.mock.calls.filter(([url]) => url.endsWith("/auth/refresh"))).toHaveLength(2);
-    expect(getAccessToken()).toBe("new.refreshed");
+    expect(getAccessToken()).toBe(jwt("new.refreshed"));
   });
 
   it("throws ApiError carrying the status code", async () => {
@@ -542,7 +552,7 @@ describe("ApiClient — auth integration", () => {
   });
 
   it("downloads authenticated files with server export metadata", async () => {
-    setAccessToken("test.jwt.token");
+    setAccessToken(jwt("test.jwt.token"));
     const fetchMock = vi.fn().mockResolvedValue(
       new Response("rank,parcel\n1,P-1\n", {
         status: 200,
@@ -572,14 +582,14 @@ describe("ApiClient — auth integration", () => {
     const [, init] = fetchMock.mock.calls[0];
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).Authorization).toBe(
-      "Bearer test.jwt.token",
+      `Bearer ${jwt("test.jwt.token")}`,
     );
   });
 
-  it.each(["new.token", null, "old.token"])(
+  it.each([jwt("new.token"), null, jwt("old.token")])(
     "discards a delayed successful download after an explicit token change to %s",
     async (nextToken) => {
-      setAccessToken("old.token");
+      setAccessToken(jwt("old.token"));
       const pending = deferred<Response>();
       const response = new Response("old account export", { status: 200 });
       const decode = vi.spyOn(response, "blob");
@@ -602,10 +612,10 @@ describe("ApiClient — auth integration", () => {
     },
   );
 
-  it.each(["new.token", null, "old.token"])(
+  it.each([jwt("new.token"), null, jwt("old.token")])(
     "discards a download decoded after an explicit token change to %s",
     async (nextToken) => {
-      setAccessToken("old.token");
+      setAccessToken(jwt("old.token"));
       const body = deferred<Blob>();
       const response = new Response(null, {
         status: 200,
@@ -630,7 +640,7 @@ describe("ApiClient — auth integration", () => {
   );
 
   it("keeps a successful download decode valid across same-session silent rotation", async () => {
-    setAccessToken("old.token");
+    setAccessToken(jwt("old.token"));
     const body = deferred<Blob>();
     const blob = new Blob(["current account export"]);
     const response = new Response(null, {
@@ -641,14 +651,14 @@ describe("ApiClient — auth integration", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response)
       .mockResolvedValueOnce(jsonResponse({ detail: "Expired" }, 401))
-      .mockResolvedValueOnce(jsonResponse({ access_token: "fresh.token" }))
+      .mockResolvedValueOnce(jsonResponse({ access_token: jwt("fresh.token") }))
       .mockResolvedValueOnce(jsonResponse({ ok: true }));
     vi.stubGlobal("fetch", fetchMock);
     const client = new ApiClient("http://api.test");
     const pending = client.download("/parcel-export");
     await vi.waitFor(() => expect(decode).toHaveBeenCalledOnce());
     await client.get("/refresh-needed");
-    expect(getAccessToken()).toBe("fresh.token");
+    expect(getAccessToken()).toBe(jwt("fresh.token"));
 
     body.resolve(blob);
     await expect(pending).resolves.toEqual({ blob, filename: "current.csv", exportedCount: 2, omittedCount: null });
@@ -656,11 +666,11 @@ describe("ApiClient — auth integration", () => {
   });
 
   it("legacy localStorage token is hoisted into memory then removed", () => {
-    localStorage.setItem(TOKEN_STORAGE_KEY, "legacy.token");
+    localStorage.setItem(TOKEN_STORAGE_KEY, jwt("legacy.token"));
     // First read migrates it out of localStorage.
-    expect(getStoredToken()).toBe("legacy.token");
+    expect(getStoredToken()).toBe(jwt("legacy.token"));
     expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull();
-    expect(getAccessToken()).toBe("legacy.token");
+    expect(getAccessToken()).toBe(jwt("legacy.token"));
   });
 
   it("setStoredToken does not write to localStorage in the cookie era", () => {

@@ -81,6 +81,7 @@ class BrandPermitSummary(BaseModel):
     state: Optional[str]
     jurisdiction: Optional[str]
     permit_type: Optional[str]
+    permit_subtype: Optional[str] = None
     work_class: Optional[str]
     proposed_use: Optional[str]
     valuation: Optional[float]

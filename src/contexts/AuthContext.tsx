@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { authApi } from '@/api/auth';
 import {
+  getAccessToken,
   setAccessToken,
   setUnauthorizedHandler,
 } from '@/api/client';
@@ -25,8 +26,10 @@ interface AuthState {
   login: (data: LoginRequest) => Promise<User>;
   /** Register + persist token. */
   register: (data: RegisterRequest) => Promise<User>;
-  /** Clear token + server-side refresh cookie. */
+  /** Retire local identity and revoke this browser family on the server. */
   logout: () => Promise<void>;
+  /** Retire workspace state before issuing a new browser-family generation. */
+  switchOrganization: (organizationId: string) => Promise<User>;
   /** Refetch /auth/me using the current token. */
   refresh: () => Promise<void>;
 }
@@ -124,18 +127,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [authenticate],
   );
 
+  const switchOrganization = useCallback(
+    (targetOrganizationId: string) => {
+      const credential = getAccessToken();
+      if (!credential) return Promise.reject(new Error('Sign in before switching workspaces.'));
+      return authenticate(() => authApi.switchOrg(targetOrganizationId, credential));
+    },
+    [authenticate],
+  );
+
   const logout = useCallback(async () => {
+    // Retire local state first. The browser coordinator captures this generation
+    // and rejects this logout if a newer identity transition wins the lock.
+    const credential = getAccessToken();
+    reset();
+    const operation = authOperation.current;
+    // Retire private data immediately, but do not present a completed sign-out
+    // before the browser coordinator has dispatched and settled revocation.
+    setIsLoading(true);
     try {
-      // Dispatch with the current credential, then immediately retire it locally.
-      let pending: Promise<void>;
-      try {
-        pending = authApi.logout();
-      } finally {
-        reset();
-      }
-      await pending;
+      await authApi.logout(credential);
     } catch {
       // Network error on logout is fine — we still clear local state.
+    } finally {
+      if (operation === authOperation.current) setIsLoading(false);
     }
   }, [reset]);
 
@@ -149,9 +164,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      switchOrganization,
       refresh,
     }),
-    [user, organizationId, role, isLoading, login, register, logout, refresh],
+    [user, organizationId, role, isLoading, login, register, logout, switchOrganization, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,5 +1,11 @@
 # Security and Coverage Evidence Release
 
+The combined, still-gated release candidate is documented in
+[enterprise-completion-2026-09-10.md](enterprise-completion-2026-09-10.md).
+It includes the MFA account UI, atomic transitions, browser-session protocol and
+the final integrated local acceptance record. Production prerequisites below
+remain outstanding; combining branches does not satisfy them.
+
 ## Scope and Status
 
 Partially released; not a production attestation. The remaining MFA and RLS

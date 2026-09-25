@@ -4,16 +4,10 @@ from uuid import uuid4
 import pyotp
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from app.config import (
-    REFRESH_COOKIE_NAME,
-    REFRESH_COOKIE_PATH,
-    REFRESH_COOKIE_SAMESITE,
-    REFRESH_COOKIE_SECURE,
-    REFRESH_TOKEN_EXPIRE_DAYS,
-)
+from app.config import REFRESH_COOKIE_NAME
 from app.db import get_db
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
@@ -28,8 +22,16 @@ from app.schemas.auth import (
 )
 from app.services.account_lockout import lockout
 from app.services.audit_service import log_change
+from app.services.browser_sessions import (
+    browser_request,
+    issue_browser_session,
+    refresh_binding,
+    revoke_browser_session,
+)
 from app.services.password_policy import PasswordPolicyError, validate_password
 from app.services.rate_limiter import (
+    LOGIN_ACCOUNT_LIMIT,
+    LOGIN_IP_LIMIT,
     LOGIN_LIMIT,
     LOGIN_WINDOW,
     REFRESH_LIMIT,
@@ -40,69 +42,21 @@ from app.services.rate_limiter import (
 )
 from app.services.security import (
     create_access_token,
-    create_refresh_token,
     decode_refresh_token,
     dummy_verify,
     hash_password,
     verify_password,
 )
 from app.utils.auth_deps import get_current_user
+from app.utils.client_address import client_address as _client_ip
 
 
-def _set_refresh_cookie(
-    response: Response, *, user_id: str, org_id: str, token_version: int = 0,
-) -> None:
-    """Attach a rotated refresh JWT to the response as an httpOnly cookie."""
-    refresh = create_refresh_token(
-        user_id=user_id, org_id=org_id, token_version=token_version,
-    )
-    response.set_cookie(
-        key=REFRESH_COOKIE_NAME,
-        value=refresh,
-        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-        path=REFRESH_COOKIE_PATH,
-        httponly=True,
-        secure=REFRESH_COOKIE_SECURE,
-        samesite=REFRESH_COOKIE_SAMESITE,
-    )
-
-
-def _clear_refresh_cookie(response: Response) -> None:
-    response.delete_cookie(
-        key=REFRESH_COOKIE_NAME,
-        path=REFRESH_COOKIE_PATH,
-    )
-
-
-def _refresh_failure(detail: str, *, clear: bool = True) -> JSONResponse:
-    """401 response that also tells the browser to drop the bad cookie.
-
-    We return a JSONResponse instead of `raise HTTPException(...)` because
-    FastAPI's exception handler builds its own response and drops cookies
-    attached to the route's injected `Response` object.
-    """
-    resp = JSONResponse(status_code=401, content={"detail": detail})
-    if clear:
-        _clear_refresh_cookie(resp)
-    return resp
+def _refresh_failure(detail: str) -> JSONResponse:
+    """Fail closed without mutating any potentially newer browser cookie."""
+    # Never clear a cookie from an error response: it may arrive after login.
+    return JSONResponse(status_code=401, content={"detail": detail}, headers={"Cache-Control": "no-store"})
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _client_ip(request: Request) -> str:
-    """Best-effort client IP.
-
-    `request.client.host` is the immediate peer (Render's load balancer).
-    When running behind a trusted proxy, X-Forwarded-For holds the real
-    client. We take the leftmost entry — note that in prod you want to
-    configure uvicorn with --proxy-headers and --forwarded-allow-ips so
-    `request.client.host` is already resolved correctly; this fallback
-    is defensive.
-    """
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        return xff.split(",", 1)[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 def _too_many(detail: str, retry_after: int) -> JSONResponse:
@@ -128,6 +82,7 @@ def register(
     response: Response,
     db: Session = Depends(get_db),
 ):
+    browser_request(request)
     # Per-IP registration throttle. Keyed on IP alone (not email) because
     # the attacker picks the emails — rate-limiting by their choice of key
     # would defeat the purpose.
@@ -136,6 +91,7 @@ def register(
         key=f"register:{ip}",
         limit=REGISTER_LIMIT,
         window_seconds=REGISTER_WINDOW,
+        required=True,
     )
     if not decision.allowed:
         return _too_many(
@@ -199,35 +155,14 @@ def register(
         is_default=True,
     )
     db.add(membership)
-    try:
-        db.commit()
-    except IntegrityError:
-        # Two concurrent registrations with the same email both pass the
-        # check-then-insert above; the unique constraint on users.email lets
-        # exactly one win. The loser lands here — surface the same clean 409
-        # as the pre-check rather than a 500.
-        db.rollback()
-        raise HTTPException(status_code=409, detail="Email already registered")
-
     log_change(
         db, "user", user.id, "register",
         actor_id=user.id, organization_id=org.id,
         new_values={"email": user.email, "role": role.value},
     )
+    result = issue_browser_session(db, request, response, user=user, org_id=org.id, role=role.value)
     db.commit()
-
-    token = create_access_token(
-        user_id=user.id, org_id=org.id, token_version=user.token_version,
-    )
-    _set_refresh_cookie(
-        response, user_id=user.id, org_id=org.id, token_version=user.token_version,
-    )
-    return TokenResponse(
-        access_token=token,
-        user_id=user.id,
-        organization_id=org.id,
-        role=role.value,
-    )
+    return result
 
 
 # ── login ───────────────────────────────────────────────────────────────────
@@ -239,23 +174,22 @@ def login(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    # Two layered checks run in order:
-    #   1. IP-based rate limiter (cheap, kills password-grinders fast).
-    #   2. Per-account lockout (catches distributed spray across many IPs).
-    # Precedence: the IP check runs first, so a single-IP grinder will see
-    # a 429 well before the 423 lockout ever fires. The lockout only
-    # surfaces when the attempts came from many sources.
+    browser_request(request)
+    # Admission budgets run before password hashing. Broad IP/account budgets
+    # cannot be cleared by a racing successful login; failure locks are separate.
     ip = _client_ip(request)
     email_key = payload.email.lower()
     rl_key = f"login:{email_key}:{ip}"
-    decision = limiter.check(
-        key=rl_key, limit=LOGIN_LIMIT, window_seconds=LOGIN_WINDOW,
-    )
-    if not decision.allowed:
-        return _too_many(
-            "Too many login attempts. Try again later.",
-            decision.retry_after,
+    for key, limit in (
+        (f"login:ip:{ip}", LOGIN_IP_LIMIT),
+        (rl_key, LOGIN_LIMIT),
+        (f"login:account:{email_key}", LOGIN_ACCOUNT_LIMIT),
+    ):
+        decision = limiter.check(
+            key=key, limit=limit, window_seconds=LOGIN_WINDOW, required=True,
         )
+        if not decision.allowed:
+            return _too_many("Too many login attempts. Try again later.", decision.retry_after)
 
     # Account-level lockout: distributed password-spray protection.
     locked, retry_after = lockout.is_locked(email_key)
@@ -313,10 +247,9 @@ def login(
                 headers={"X-Auth-Reason": "totp_invalid"},
             )
 
-    # Successful login — clear both the IP bucket and the account
-    # lockout counter so a user who mistyped twice doesn't carry the
-    # failed attempts forward into their next session.
-    limiter.reset(rl_key)
+    # Clear consecutive-failure state, but retain the aggregate admission
+    # budgets that bound parallel attempts and repeated successful logins.
+    limiter.reset(rl_key, required=True)
     lockout.reset(email_key)
 
     # Pick the default membership, or the first one
@@ -329,20 +262,13 @@ def login(
     if not membership:
         raise HTTPException(status_code=403, detail="User has no organization membership")
 
-    token = create_access_token(
-        user_id=user.id, org_id=membership.organization_id,
-        token_version=user.token_version,
-    )
-    _set_refresh_cookie(
-        response, user_id=user.id, org_id=membership.organization_id,
-        token_version=user.token_version,
-    )
-    return TokenResponse(
-        access_token=token,
-        user_id=user.id,
-        organization_id=membership.organization_id,
-        role=membership.role.value,
-    )
+    organization = db.get(Organization, membership.organization_id)
+    if not organization or not organization.is_active:
+        raise HTTPException(status_code=403, detail="Organization is unavailable")
+    result = issue_browser_session(db, request, response, user=user,
+                                   org_id=membership.organization_id, role=membership.role.value)
+    db.commit()
+    return result
 
 
 # ── refresh ─────────────────────────────────────────────────────────────────
@@ -354,19 +280,15 @@ def refresh(
     db: Session = Depends(get_db),
     refresh_cookie: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
 ):
-    """Exchange a valid refresh cookie for a new access token.
-
-    Rotates the refresh cookie on every call: the old refresh token is
-    replaced with a fresh one carrying a new `exp`, so a stolen cookie
-    has a bounded useful lifetime even without a server-side blocklist.
-    Public route (see PUBLIC_PATH_PREFIXES); authentication is via the
-    cookie, not an Authorization header.
-    """
+    """Exchange a revocation-bound cookie without any Set-Cookie side effect."""
+    browser_request(request)
+    response.headers["Cache-Control"] = "no-store"
     ip = _client_ip(request)
     decision = limiter.check(
         key=f"refresh:{ip}",
         limit=REFRESH_LIMIT,
         window_seconds=REFRESH_WINDOW,
+        required=True,
     )
     if not decision.allowed:
         return _too_many(
@@ -376,10 +298,11 @@ def refresh(
 
     if not refresh_cookie:
         # No cookie to clear — just 401.
-        return _refresh_failure("Missing refresh cookie", clear=False)
+        return _refresh_failure("Missing refresh cookie")
     claims = decode_refresh_token(refresh_cookie)
     if not claims:
         return _refresh_failure("Invalid or expired refresh token")
+    binding = refresh_binding(db, request, claims)
 
     user_id = claims.get("sub")
     org_id = claims.get("org_id")
@@ -394,7 +317,7 @@ def refresh(
     # which invalidates every refresh cookie minted before that bump. A claim
     # missing `tv` is treated as version 0 (legacy tokens minted pre-feature).
     cookie_tv = claims.get("tv", 0)
-    if cookie_tv != user.token_version:
+    if type(cookie_tv) is not int or cookie_tv != user.token_version:
         return _refresh_failure("Refresh token revoked")
 
     membership = (
@@ -407,12 +330,12 @@ def refresh(
     )
     if not membership:
         return _refresh_failure("Membership revoked")
+    organization = db.get(Organization, org_id)
+    if not organization or not organization.is_active:
+        return _refresh_failure("Organization is unavailable")
 
     access = create_access_token(
-        user_id=user_id, org_id=org_id, token_version=user.token_version,
-    )
-    _set_refresh_cookie(
-        response, user_id=user_id, org_id=org_id, token_version=user.token_version,
+        user_id=user_id, org_id=org_id, token_version=user.token_version, browser_session=binding,
     )
     return TokenResponse(
         access_token=access,
@@ -425,11 +348,11 @@ def refresh(
 # ── logout ──────────────────────────────────────────────────────────────────
 
 @router.post("/logout", status_code=204)
-def logout(response: Response):
-    """Clear the refresh cookie. Idempotent; safe to call without a session."""
-    _clear_refresh_cookie(response)
-    # Returning None lets FastAPI use the injected `response` (with the
-    # Set-Cookie clearing header) rather than constructing a new 204.
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    """Revoke only this browser family. Never expire a newer login's cookie."""
+    revoke_browser_session(db, request)
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
     return None
 
 
@@ -443,11 +366,9 @@ def logout_all(
 ):
     """Revoke every outstanding refresh token for the current user.
 
-    Bumps `user.token_version`. The next /auth/refresh that arrives with a
-    cookie carrying the old version compares `claims['tv'] != user.token_version`
-    and is rejected with 401. The immediate access token the caller is holding
-    stays valid for the remainder of its 15-minute TTL — that's an accepted
-    tradeoff to avoid a per-request DB lookup on every authenticated call.
+    Bumps `user.token_version`. Both refresh and business-route identity checks
+    reject earlier versions immediately on their next request. No clearing
+    Set-Cookie is sent, so a late response cannot overwrite a newer login.
     """
     user: User = principal["user"]
     user.token_version = (user.token_version or 0) + 1
@@ -459,7 +380,7 @@ def logout_all(
         new_values={"token_version": user.token_version},
     )
     db.commit()
-    _clear_refresh_cookie(response)
+    response.headers["Cache-Control"] = "no-store"
     return None
 
 
@@ -475,6 +396,41 @@ def me(principal: dict = Depends(get_current_user)):
 
 
 # ── delete account (GDPR self-service erasure) ──────────────────────────────
+
+def _lock_account_organizations(db: Session, *, user_id: str) -> tuple[User, set[str]]:
+    org_ids = {
+        row[0] for row in db.query(OrganizationMembership.organization_id)
+        .filter(OrganizationMembership.user_id == user_id).all()
+    }
+    # Same parent-row lock as organization member mutations. Lock ALL current
+    # memberships (not only admins), so a concurrent promotion cannot escape the
+    # check. Deterministic ordering also serializes multi-organization deletions.
+    for org_id in sorted(org_ids):
+        if db.get_bind().dialect.name == "sqlite":
+            db.execute(
+                update(Organization).where(Organization.id == org_id)
+                .values(updated_at=Organization.updated_at)
+            )
+        db.query(Organization).filter(Organization.id == org_id).with_for_update().first()
+
+    # Always take the user lock AFTER organization locks. PostgreSQL FK checks
+    # then prevent a new membership from being inserted during the deletion.
+    user = (
+        db.query(User).filter(User.id == user_id)
+        .with_for_update().populate_existing().first()
+    )
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    current_ids = {
+        row[0] for row in db.query(OrganizationMembership.organization_id)
+        .filter(OrganizationMembership.user_id == user_id).all()
+    }
+    if not current_ids.issubset(org_ids):
+        # Do not acquire additional parents out of order. Retry the whole action
+        # if an invitation committed while the initial locks were being acquired.
+        raise HTTPException(status_code=409, detail="Memberships changed; retry account deletion")
+    return user, current_ids
+
 
 @router.post("/delete-account", status_code=204)
 def delete_account(
@@ -493,7 +449,7 @@ def delete_account(
     rows, buy boxes) have their `created_by`/`actor_id` set NULL — the org's
     data stays, the personal link is severed.
 
-    Guard: a user who is the SOLE admin of an org can't self-delete — that
+    Guard: a user who is the SOLE active admin of an org can't self-delete — that
     would orphan the org with no one able to manage it. They must promote
     another admin (or delete the org) first.
     """
@@ -502,23 +458,33 @@ def delete_account(
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=403, detail="Password is incorrect")
 
-    # Block if the user is the only admin of any org they belong to.
+    verified_hash, verified_version = user.password_hash, user.token_version
+    user, org_ids = _lock_account_organizations(db, user_id=user.id)
+    if user.password_hash != verified_hash or user.token_version != verified_version:
+        raise HTTPException(status_code=401, detail="Credentials changed; sign in again")
+    if principal["org_id"] not in org_ids:
+        raise HTTPException(status_code=403, detail="Organization membership revoked")
+
+    # Re-read roles after acquiring locks; cached membership roles may be stale.
     admin_memberships = (
         db.query(OrganizationMembership)
         .filter(
             OrganizationMembership.user_id == user.id,
             OrganizationMembership.role == MemberRole.admin,
         )
+        .populate_existing()
         .all()
     )
     sole_admin_orgs: list[str] = []
     for m in admin_memberships:
         other_admins = (
             db.query(OrganizationMembership)
+            .join(User, User.id == OrganizationMembership.user_id)
             .filter(
                 OrganizationMembership.organization_id == m.organization_id,
                 OrganizationMembership.role == MemberRole.admin,
                 OrganizationMembership.user_id != user.id,
+                User.is_active.is_(True),
             )
             .count()
         )
@@ -531,7 +497,7 @@ def delete_account(
             detail=(
                 "You are the only admin of: "
                 + ", ".join(sole_admin_orgs)
-                + ". Promote another admin or delete the organization first."
+                + ". Promote another active admin or delete the organization first."
             ),
         )
 
@@ -542,10 +508,11 @@ def delete_account(
         db, "user", user_id, "account_deleted",
         actor_id=user_id, organization_id=principal["org_id"],
     )
-    db.commit()
-
+    # Flush the audit before the user's FK is nulled, but retain every lock
+    # until both audit and deletion commit atomically.
+    db.flush()
     db.delete(user)
     db.commit()
 
-    _clear_refresh_cookie(response)
+    response.headers["Cache-Control"] = "no-store"
     return None

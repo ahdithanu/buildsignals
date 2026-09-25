@@ -18,16 +18,69 @@ from __future__ import annotations
 import pyotp
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.user import User
 from app.services.audit_service import log_change
-from app.services.mfa_secrets import read_secret, store_secret
+from app.services.mfa_secrets import enrollment_ready, read_secret, store_secret
+from app.services.rate_limiter import limiter
 from app.services.security import verify_password
 from app.utils.auth_deps import get_current_user
 
 router = APIRouter(prefix="/auth/2fa", tags=["auth"])
+
+CODE_ATTEMPT_LIMIT = 10
+CODE_ATTEMPT_WINDOW = 15 * 60
+
+
+def _limited_principal(principal: dict = Depends(get_current_user)) -> dict:
+    # Shared across verify/disable, organizations, tokens, and source IPs.
+    decision = limiter.check(
+        key=f"mfa:code:{principal['user_id']}",
+        limit=CODE_ATTEMPT_LIMIT,
+        window_seconds=CODE_ATTEMPT_WINDOW,
+        required=True,
+    )
+    if not decision.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many authenticator attempts. Try again later.",
+            headers={"Retry-After": str(decision.retry_after), "Cache-Control": "no-store"},
+        )
+    return principal
+
+
+def _locked_user(db: Session, principal: dict) -> User:
+    # Authentication may have loaded this row before a competing change committed.
+    with db.no_autoflush:
+        if db.get_bind().dialect.name == "sqlite":
+            db.execute(
+                update(User).where(User.id == principal["user_id"])
+                .values(updated_at=User.updated_at)
+                .execution_options(synchronize_session=False)
+            )
+        user = (
+            db.query(User).filter(User.id == principal["user_id"])
+            .populate_existing().with_for_update().first()
+        )
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    return user
+
+
+def _commit_change(db: Session, user: User, principal: dict, action: str) -> None:
+    try:
+        db.add(user)
+        log_change(
+            db, "user", user.id, action,
+            actor_id=user.id, organization_id=principal["org_id"],
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────
@@ -35,6 +88,11 @@ router = APIRouter(prefix="/auth/2fa", tags=["auth"])
 class SetupResponse(BaseModel):
     secret: str
     otpauth_uri: str
+
+
+class StatusResponse(BaseModel):
+    enabled: bool
+    enrollment_ready: bool
 
 
 class VerifyRequest(BaseModel):
@@ -47,6 +105,19 @@ class DisableRequest(BaseModel):
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────
+
+@router.get("/status", response_model=StatusResponse)
+def authenticator_status(
+    response: Response,
+    principal: dict = Depends(get_current_user),
+):
+    """Report account state independently from enrollment key availability."""
+    response.headers["Cache-Control"] = "no-store"
+    return StatusResponse(
+        enabled=principal["user"].totp_enabled,
+        enrollment_ready=enrollment_ready(),
+    )
+
 
 @router.post("/setup", response_model=SetupResponse)
 def setup(
@@ -65,7 +136,7 @@ def setup(
     wants to restart. Calling it on an *already-enabled* user 400s, so the
     user must /disable first.
     """
-    user: User = principal["user"]
+    user = _locked_user(db, principal)
     if user.totp_enabled:
         raise HTTPException(
             status_code=400,
@@ -79,14 +150,17 @@ def setup(
     otpauth_uri = pyotp.TOTP(secret).provisioning_uri(
         name=user.email, issuer_name="BuildSignals",
     )
-    return SetupResponse(secret=secret, otpauth_uri=otpauth_uri)
+    result = SetupResponse(secret=secret, otpauth_uri=otpauth_uri)
+    _commit_change(db, user, principal, "2fa_setup")
+    response.headers["Cache-Control"] = "no-store"
+    return result
 
 
 @router.post("/verify", status_code=204)
 def verify(
     payload: VerifyRequest,
     db: Session = Depends(get_db),
-    principal: dict = Depends(get_current_user),
+    principal: dict = Depends(_limited_principal),
 ):
     """Confirm the user can generate codes from the secret minted at /setup.
 
@@ -97,19 +171,13 @@ def verify(
     secret = read_secret(user)
     if not secret:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail="2FA setup not initiated. Call /auth/2fa/setup first.",
         )
     if not pyotp.TOTP(secret).verify(payload.code, valid_window=1):
         raise HTTPException(status_code=400, detail="Invalid TOTP code")
     user.totp_enabled = True
-    db.add(user)
-    db.commit()
-    log_change(
-        db, "user", user.id, "2fa_enabled",
-        actor_id=user.id, organization_id=principal["org_id"],
-    )
-    db.commit()
+    _commit_change(db, user, principal, "2fa_enabled")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -117,7 +185,7 @@ def verify(
 def disable(
     payload: DisableRequest,
     db: Session = Depends(get_db),
-    principal: dict = Depends(get_current_user),
+    principal: dict = Depends(_limited_principal),
 ):
     """Turn off 2FA. Requires the current password AND a valid TOTP code.
 
@@ -126,7 +194,9 @@ def disable(
     have a working second factor. On success we drop both `totp_enabled`
     and the secret, so re-enabling means a fresh /setup + /verify pair.
     """
-    user: User = principal["user"]
+    user = _locked_user(db, principal)
+    if not user.totp_enabled:
+        raise HTTPException(status_code=409, detail="2FA is not enabled")
     # We return a generic 401 for either failure so we don't tell an
     # attacker *which* of password / code was wrong.
     if not verify_password(payload.password, user.password_hash):

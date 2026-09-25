@@ -12,6 +12,9 @@ jobs:
       DATABASE_URL: "sqlite:///./ci.db"
       SECRET_KEY: "ci-test-secret-key-not-for-production"
       ENVIRONMENT: "ci"
+      # Tests must never inherit a shared application cache. Redis integration
+      # fixtures start and destroy their own authenticated loopback subprocesses.
+      REDIS_URL: ""
       # RLS + migration-reversibility tests run against real Postgres, as a
       # NON-superuser role. This matters: a superuser bypasses row-level
       # security even under FORCE RLS, so RLS assertions only mean something
@@ -47,6 +50,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest httpx pip-audit pytest-cov ruff
+
+      - name: Install isolated Redis test runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y redis-server
+          echo "REDIS_SERVER_BINARY=$(command -v redis-server)" >> "$GITHUB_ENV"
 
       # Lint: a focused ruleset (pyflakes + import order) — see ruff.toml.
       # Catches real bugs (undefined names, unused imports); this is how the
@@ -112,9 +121,9 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -d dealsignal_test -v ON_ERROR_STOP=1 <<'SQL'
-          CREATE ROLE appuser LOGIN PASSWORD 'app';
+          CREATE ROLE appuser LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS;
           GRANT ALL ON SCHEMA public TO appuser;
-          -- Eval RLS tests isolate their fixtures in a disposable schema.
+          -- Disposable CI only: MFA transaction fixtures create private schemas.
           GRANT CREATE ON DATABASE dealsignal_test TO appuser;
           SQL
           DATABASE_URL="$TEST_POSTGRES_URL" alembic upgrade head

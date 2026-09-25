@@ -1,11 +1,11 @@
 """Tests for refresh-token revocation via /auth/logout-all.
 
 Covers:
-- /auth/logout-all bumps user.token_version and clears the refresh cookie.
+- /auth/logout-all bumps user.token_version without a clearing Set-Cookie.
 - A refresh cookie minted before logout-all is rejected with 401.
 - A fresh login after logout-all still works (the user is not bricked).
 - /auth/logout-all requires authentication.
-- The pre-existing /auth/refresh happy path still rotates and issues a new
+- The pre-existing /auth/refresh happy path still issues a new
   access token (sanity check that we didn't break the non-revoked flow).
 """
 from __future__ import annotations
@@ -49,6 +49,7 @@ def test_logout_all_revokes_outstanding_refresh_cookie(client):
     r = _register(client)
     access = r.json()["access_token"]
     original_refresh = client.cookies.get(REFRESH_COOKIE_NAME)
+    original_epoch = client.browser_epoch
     assert original_refresh is not None
 
     # Sanity: /auth/me works pre-revocation.
@@ -59,15 +60,15 @@ def test_logout_all_revokes_outstanding_refresh_cookie(client):
     out = client.post("/v1/auth/logout-all", headers=_auth_headers(access))
     assert out.status_code == 204, out.text
 
-    # The clearing Set-Cookie should be present on the response.
-    set_cookie = out.headers.get("set-cookie", "")
-    assert REFRESH_COOKIE_NAME in set_cookie
+    # A late response cannot clear a newer browser login's cookie.
+    assert "set-cookie" not in out.headers
+    assert client.get("/v1/auth/me", headers=_auth_headers(access)).status_code == 401
 
     # The TestClient's cookie jar follows Set-Cookie semantics, but to make
     # the assertion airtight we re-attach the captured original cookie and
     # confirm /auth/refresh rejects it.
     client.cookies.set(REFRESH_COOKIE_NAME, original_refresh, path=REFRESH_COOKIE_PATH)
-    refreshed = client.post("/v1/auth/refresh")
+    refreshed = client.post("/v1/auth/refresh", headers={"X-Browser-Epoch": str(original_epoch)})
     assert refreshed.status_code == 401
     assert "revoke" in refreshed.json()["detail"].lower()
 

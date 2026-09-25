@@ -63,6 +63,51 @@ def _seed_log(db, *, org_id, entity_type="deal", action="create",
 
 
 class TestAuditExport:
+    @pytest.mark.parametrize("format", ["csv", "json"])
+    def test_unfiltered_export_is_a_bounded_snapshot_before_export_event(self, client, db, monkeypatch, format):
+        reg = _register(client)
+        before = db.query(AuditLog).filter_by(organization_id=reg["organization_id"]).count()
+        monkeypatch.setattr(audit_routes, "EXPORT_ROW_CAP", before)
+        response = client.post(f"/audit/export?format={format}", headers=_auth(reg["access_token"]))
+        assert response.status_code == 200, response.text
+        rows = response.json() if format == "json" else list(csv.DictReader(io.StringIO(response.text)))
+        assert len(rows) == before
+        assert all(row["action"] != "export" for row in rows)
+        assert response.headers["cache-control"] == "no-store"
+        event = db.query(AuditLog).filter_by(organization_id=reg["organization_id"], action="export").one()
+        assert json.loads(event.new_values)["row_count"] == before
+
+    @pytest.mark.parametrize("format", ["csv", "json"])
+    def test_foreign_actor_profiles_are_not_exported(self, client, db, format):
+        a = _register(client, email="alice@acme.com", org_name="Acme")
+        b = _register(client, email="bob@globex.com", org_name="Globex")
+        _seed_log(db, org_id=a["organization_id"], actor_id=b["user_id"])
+        response = client.post(
+            f"/audit/export?format={format}&entity_type=deal", headers=_auth(a["access_token"]),
+        )
+        assert response.status_code == 200
+        assert "bob@globex.com" not in response.text
+        rows = response.json() if format == "json" else list(csv.DictReader(io.StringIO(response.text)))
+        assert len(rows) == 1
+        assert not rows[0]["actor_email"]
+        assert not rows[0]["actor_name"]
+
+    @pytest.mark.parametrize("value", ["=1+1", "+1+1", "-1+1", "@SUM(1)", "  =1+1", "\tvalue", "\rvalue"])
+    def test_csv_formula_cells_are_neutralized_without_altering_stored_evidence(self, client, db, value):
+        reg = _register(client)
+        actor = db.get(User, reg["user_id"])
+        actor.full_name = value
+        db.commit()
+        entry = _seed_log(db, org_id=reg["organization_id"], actor_id=actor.id, request_id=value)
+        response = client.post("/audit/export?entity_type=deal", headers=_auth(reg["access_token"]))
+        assert response.status_code == 200
+        rows = list(csv.DictReader(io.StringIO(response.text)))
+        assert rows[0]["actor_name"] == "'" + value
+        assert rows[0]["request_id"] == "'" + value
+        db.expire_all()
+        assert db.get(AuditLog, entry.id).request_id == value
+        assert db.get(User, actor.id).full_name == value
+
     def test_csv_export_returns_header_and_rows(self, client, db):
         reg = _register(client)
         org_id = reg["organization_id"]

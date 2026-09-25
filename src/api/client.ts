@@ -1,3 +1,5 @@
+import { assertBrowserScope, browserScope, coordinateCookies, onBrowserSessionInvalidated } from './browserSession';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
@@ -29,6 +31,19 @@ let accessTokenMemory: string | null = null;
 // Explicit token changes mark a new session, even when the token is identical.
 // Silent rotation keeps this generation so concurrent requests can share it.
 let authSession = 0;
+type TokenIdentity = { sub: string; org_id: string; sid?: string; sg?: number; bid?: string; be?: number };
+let tokenIdentity: TokenIdentity | null = null;
+
+function identityOf(token: string | null): TokenIdentity | null {
+  try {
+    const body = JSON.parse(atob(token!.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof body.sub === 'string' && typeof body.org_id === 'string' ? body : null;
+  } catch { return null; }
+}
+
+function sameIdentity(a: TokenIdentity, b: TokenIdentity | null): boolean {
+  return !!b && a.sub === b.sub && a.org_id === b.org_id && a.sid === b.sid && a.sg === b.sg && a.bid === b.bid && a.be === b.be;
+}
 
 export function getAccessToken(): string | null {
   return accessTokenMemory;
@@ -37,6 +52,7 @@ export function getAccessToken(): string | null {
 export function setAccessToken(token: string | null): void {
   authSession += 1;
   accessTokenMemory = token;
+  tokenIdentity = identityOf(token);
 }
 
 /**
@@ -68,6 +84,10 @@ let unauthorizedHandler: (() => void) | null = null;
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
+onBrowserSessionInvalidated(() => {
+  setAccessToken(null);
+  unauthorizedHandler?.();
+});
 
 export class ApiError extends Error {
   status: number;
@@ -141,19 +161,25 @@ async function withRequestDeadline<T>(run: (signal: AbortSignal) => Promise<T>):
 async function attemptRefresh(baseUrl: string, session: number): Promise<string | null> {
   if (session !== authSession) return null;
   if (refreshInFlight?.session === session) return refreshInFlight.promise;
+  const expectedIdentity = tokenIdentity;
   const promise = (async () => {
     try {
-      const body = await withRequestDeadline(async signal => {
+      const body = await coordinateCookies(baseUrl, false, async (headers) => withRequestDeadline(async signal => {
+        assertCurrentSession(session);
         const res = await fetch(`${baseUrl}${API_VERSION_PREFIX}/auth/refresh`, {
           method: 'POST',
           credentials: 'include',
           signal,
+          headers,
         });
         if (!res.ok) return null;
         return await res.json() as { access_token?: string };
-      });
+      }));
       if (!body?.access_token || session !== authSession) return null;
+      const refreshedIdentity = identityOf(body.access_token);
+      if (expectedIdentity && !sameIdentity(expectedIdentity, refreshedIdentity)) return null;
       accessTokenMemory = body.access_token;
+      tokenIdentity = refreshedIdentity;
       return body.access_token;
     } catch {
       return null;
@@ -213,14 +239,35 @@ export class ApiClient {
     withContentType = true,
   ): Promise<T> {
     const session = authSession;
-    const execute = async (signal?: AbortSignal) => {
-      const response = await this.response(endpoint, { ...options, signal }, withContentType);
+    const cookieCommand = options.method === 'POST' && ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout', '/auth/logout-all', '/auth/delete-account', '/auth/switch-org'].includes(endpoint);
+    const scope = browserScope(this.baseUrl);
+    let expectedIdentity;
+    if (cookieCommand && ['/auth/logout', '/auth/logout-all', '/auth/delete-account', '/auth/switch-org'].includes(endpoint)) {
+      const authorization = new Headers(options.headers).get('Authorization');
+      const binding = identityOf(authorization?.replace(/^Bearer /i, '') ?? getAccessToken());
+      if (!binding?.sid || !binding.bid || typeof binding.be !== 'number') {
+        throw new ApiError('Sign in again before changing this browser session.', 401);
+      }
+      expectedIdentity = { id: binding.bid, epoch: binding.be };
+    }
+    const execute = async (signal?: AbortSignal, extraHeaders?: Record<string, string>) => {
+      assertCurrentSession(session);
+      const response = await this.response(endpoint, { ...options, signal,
+        headers: { ...options.headers, ...extraHeaders } }, withContentType);
       assertCurrentSession(session);
       if (response.status === 204) return undefined as T;
       return response.json();
     };
-    const result = await (endpoint.startsWith('/auth/') ? withRequestDeadline(execute) : execute());
+    const result = await (cookieCommand
+      ? coordinateCookies(this.baseUrl, endpoint !== '/auth/refresh', headers => withRequestDeadline(signal => execute(signal, headers)),
+        { expectedIdentity, validate: () => assertCurrentSession(session) })
+      : endpoint.startsWith('/auth/') ? withRequestDeadline(execute) : execute());
     assertCurrentSession(session);
+    if (!cookieCommand) {
+      const current = browserScope(this.baseUrl);
+      if (scope === null && current?.epoch === 0) assertBrowserScope(this.baseUrl, current);
+      else assertBrowserScope(this.baseUrl, scope);
+    }
     return result;
   }
 
@@ -235,12 +282,24 @@ export class ApiClient {
 
     // 401 → attempt silent refresh once, then retry the original request.
     // Skip the retry for /auth/refresh itself so we don't loop.
-    if (response.status === 401 && !endpoint.startsWith('/auth/refresh') && session === authSession) {
+    const anonymousBootstrap = endpoint === '/auth/me' && (!options.method || options.method === 'GET');
+    if (response.status === 401 && (!endpoint.startsWith('/auth/') || anonymousBootstrap) && session === authSession) {
+      if (!anonymousBootstrap && !identityOf(token)) {
+        // An unknown cookie is not authority to replay a business operation.
+        // Anonymous restoration is exclusively an AuthContext /auth/me flow.
+        throw new ApiError('Sign in before retrying this request.', 401);
+      }
       // A sibling request may already have refreshed this same session.
       const newToken = token !== getAccessToken()
         ? getAccessToken()
         : await attemptRefresh(this.baseUrl, session);
       if (newToken && session === authSession) {
+        // An automatic retry must never migrate a request into another account,
+        // workspace, or browser generation, including POST/PATCH/DELETE.
+        const originalIdentity = identityOf(token);
+        if (originalIdentity && !sameIdentity(originalIdentity, identityOf(newToken))) {
+          throw new ApiError('Session identity changed; the request was not retried.', 409);
+        }
         response = await this.doFetch(endpoint, options, withContentType, newToken);
         // If the retry with a fresh token STILL 401s (rotated/revoked token,
         // or an authz-level 401), we're genuinely logged out — don't leave
@@ -291,9 +350,10 @@ export class ApiClient {
     return this.request<T>(url, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, body?: unknown): Promise<T> {
+  async post<T>(endpoint: string, body?: unknown, headers?: HeadersInit): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
+      headers,
       body: body ? JSON.stringify(body) : undefined,
     });
   }
@@ -332,6 +392,7 @@ export class ApiClient {
 
   async download(endpoint: string, method: 'GET' | 'POST' = 'GET'): Promise<DownloadResponse> {
     const session = authSession;
+    const scope = browserScope(this.baseUrl);
     const response = await this.response(endpoint, { method }, false);
     assertCurrentSession(session);
     const disposition = response.headers.get('Content-Disposition');
@@ -344,6 +405,7 @@ export class ApiClient {
     };
     const blob = await response.blob();
     assertCurrentSession(session);
+    assertBrowserScope(this.baseUrl, scope);
     return {
       blob,
       filename,

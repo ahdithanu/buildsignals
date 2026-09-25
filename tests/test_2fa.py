@@ -116,14 +116,14 @@ def test_verify_with_wrong_code_rejects(client, db):
     assert user.totp_enabled is False
 
 
-def test_verify_without_setup_returns_400(client):
+def test_verify_without_setup_returns_409(client):
     body = _register(client)
     r = client.post(
         "/auth/2fa/verify",
         headers=_auth(body["access_token"]),
         json={"code": "123456"},
     )
-    assert r.status_code == 400
+    assert r.status_code == 409
 
 
 # ── login enforcement ─────────────────────────────────────────────────────

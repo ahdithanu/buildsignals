@@ -24,7 +24,7 @@ bcrypt==5.0.0
 # removes the legacy ecdsa/rsa/pyasn1 JWT dependency chain.
 PyJWT==2.13.0
 # Authenticated encryption for separately managed MFA secrets.
-cryptography==50.0.1
+cryptography==50.0.0
 sentry-sdk[fastapi]==2.18.0
 pyotp==2.9.0
 prometheus-client==0.25.0

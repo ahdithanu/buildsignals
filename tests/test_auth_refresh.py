@@ -4,12 +4,12 @@ Covers the security-critical properties of /auth/refresh and /auth/logout:
 
 - Login/register set an httpOnly refresh cookie scoped to the versioned auth path.
 - The refresh cookie is httpOnly (no Set-Cookie without HttpOnly).
-- /auth/refresh returns a new access token AND rotates the cookie.
+- /auth/refresh returns a new access token without mutating the cookie.
 - /auth/refresh with no cookie → 401.
-- /auth/refresh with a tampered cookie → 401 and the bad cookie is cleared.
+- /auth/refresh with a tampered cookie -> 401 without a clearing Set-Cookie.
 - An access token minted for Bearer-auth cannot be used as a refresh token
   (and vice versa) — the typ claim enforces separation.
-- /auth/logout clears the cookie, idempotent.
+- /auth/logout revokes only this browser family, without a clearing cookie.
 """
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ def test_login_sets_refresh_cookie(client):
 # ── Refresh endpoint ──────────────────────────────────────────────────────
 
 
-def test_refresh_rotates_cookie_and_issues_new_access_token(client):
+def test_refresh_keeps_cookie_and_issues_new_access_token(client):
     r1 = _register(client)
     original_access = r1.json()["access_token"]
     original_refresh = client.cookies.get(REFRESH_COOKIE_NAME)
@@ -80,8 +80,8 @@ def test_refresh_rotates_cookie_and_issues_new_access_token(client):
     assert new_access and new_access != original_access
     assert decode_access_token(new_access) is not None
 
-    # Cookie is rotated.
-    assert new_refresh and new_refresh != original_refresh
+    assert new_refresh == original_refresh
+    assert "set-cookie" not in r2.headers
 
 
 def test_refresh_without_cookie_returns_401(client):
@@ -91,14 +91,12 @@ def test_refresh_without_cookie_returns_401(client):
     assert "refresh" in r.json()["detail"].lower()
 
 
-def test_refresh_with_tampered_cookie_returns_401_and_clears_it(client):
+def test_refresh_with_tampered_cookie_returns_401_without_clearing_newer_cookies(client):
     client.cookies.set(REFRESH_COOKIE_NAME, "not.a.valid.jwt", path=REFRESH_COOKIE_PATH)
     r = client.post("/v1/auth/refresh")
     assert r.status_code == 401
 
-    # Server should have sent a clearing Set-Cookie.
-    set_cookie = r.headers.get("set-cookie", "")
-    assert REFRESH_COOKIE_NAME in set_cookie
+    assert "set-cookie" not in r.headers
 
 
 # ── Token typ separation ──────────────────────────────────────────────────
@@ -124,17 +122,15 @@ def test_refresh_endpoint_rejects_access_token_as_cookie(client):
 # ── Logout ────────────────────────────────────────────────────────────────
 
 
-def test_logout_clears_the_refresh_cookie(client):
+def test_logout_revokes_the_refresh_cookie_without_overwriting_the_cookie_jar(client):
     _register(client)
     assert REFRESH_COOKIE_NAME in client.cookies
 
     r = client.post("/v1/auth/logout")
     assert r.status_code == 204
 
-    # The clearing directive should be present even if httpx's jar
-    # representation is quirky — check the header directly.
-    set_cookie = r.headers.get("set-cookie", "")
-    assert REFRESH_COOKIE_NAME in set_cookie
+    assert "set-cookie" not in r.headers
+    assert client.post("/v1/auth/refresh").status_code == 401
 
 
 def test_logout_without_session_is_idempotent(client):

@@ -12,9 +12,10 @@ Posture is governed by `ALLOW_ANONYMOUS` in app.config:
     Public paths are defined in `app.config.PUBLIC_PATH_PREFIXES`
     (/health, /auth/login, /auth/register, /docs, etc.).
 
-For endpoints that require authentication *regardless* of posture, use
-`Depends(get_current_user)` from `app.utils.auth_deps`, which also verifies
-organization membership.
+The application-wide identity dependency verifies current account, organization,
+membership and revocation state after middleware sets tenant context. For
+endpoints that require authentication *regardless* of demo posture, also use
+`Depends(get_current_user)` from `app.utils.auth_deps`.
 """
 from __future__ import annotations
 

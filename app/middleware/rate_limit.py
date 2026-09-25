@@ -17,6 +17,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.services.rate_limiter import limiter
+from app.utils.client_address import client_address as _client_ip
 
 GLOBAL_LIMIT = int(os.environ.get("GLOBAL_RATE_LIMIT", "600"))
 GLOBAL_WINDOW = int(os.environ.get("GLOBAL_RATE_WINDOW_SECONDS", "60"))
@@ -32,14 +33,6 @@ _EXEMPT_PREFIXES = (
     "/v1/auth/refresh",
     "/openapi.json",
 )
-
-
-def _client_ip(request: Request) -> str:
-    """Resolve the originating IP, honoring a single proxy hop."""
-    fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        return fwd.split(",", 1)[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 class GlobalRateLimitMiddleware(BaseHTTPMiddleware):

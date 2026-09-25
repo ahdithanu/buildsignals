@@ -19,14 +19,12 @@ databases:
 
 services:
   # ── Redis / Valkey — shared-state rate limiter ─────────────────────────────
-  # Without this the limiter falls back to per-process buckets (each worker
-  # counts separately). With it, limits are enforced across every instance.
+  # Required for shared authentication budgets and failed-login locks.
   - type: keyvalue
     name: dealsignal-redis
-    plan: free            # 25 MB is plenty for short-TTL rate-limit keys
-    # Rate-limit keys all carry an EXPIRE, so evicting the least-recently-used
-    # under memory pressure is safe.
-    maxmemoryPolicy: allkeys-lru
+    plan: free            # Size and persistence/HA need review before production.
+    # Never evict active security counters. Full capacity fails auth closed.
+    maxmemoryPolicy: noeviction
     ipAllowList: []       # empty = internal-only; not reachable from the internet
 
   # ── Backend API (FastAPI) ──────────────────────────────────────────────────
@@ -40,7 +38,7 @@ services:
     # deploy, so it never ships. Seeding is NOT automatic — run `python seed.py`
     # once via `render shell` against a fresh DB if you want sample data.
     preDeployCommand: alembic upgrade head
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: python -m app.server
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
@@ -69,6 +67,10 @@ services:
       # CORS_ALLOWED_ORIGINS: the frontend origin(s), comma-separated, no '*'.
       #   The app refuses to boot in production if this is empty or contains '*'.
       - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      # Reviewed upstream proxy IPs/CIDRs, not '*'. The launcher refuses to
+      # start without an explicit boundary. Use 'none' only for a direct listener.
+      - key: FORWARDED_ALLOW_IPS
         sync: false
       # APP_BASE_URL: the frontend URL — used to build password-reset links.
       #   Defaults to localhost if unset, which would send broken reset emails.

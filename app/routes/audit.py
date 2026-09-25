@@ -31,13 +31,13 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.audit_log import AuditLog
-from app.models.organization_membership import MemberRole
+from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
 from app.schemas.audit import AuditLogEntry, AuditLogPage
 from app.services.audit_service import log_change
@@ -56,6 +56,24 @@ EXPORT_ROW_CAP = 50_000
 _admin_principal = require_role_strict(MemberRole.admin)
 
 
+def _scoped_audit_query(db: Session, org_id: str):
+    # Keep historical actor IDs, but never resolve live profile data from a
+    # different tenant or from an account no longer in this organization.
+    actor_in_org = (
+        db.query(OrganizationMembership.id)
+        .filter(
+            OrganizationMembership.organization_id == org_id,
+            OrganizationMembership.user_id == User.id,
+        )
+        .exists()
+    )
+    return (
+        db.query(AuditLog, User)
+        .outerjoin(User, (User.id == AuditLog.actor_id) & actor_in_org)
+        .filter(AuditLog.organization_id == org_id)
+    )
+
+
 def _decode_json(raw: Optional[str]) -> Optional[dict]:
     """`old_values`/`new_values` are stored as JSON strings — decode for clients."""
     if not raw:
@@ -71,6 +89,7 @@ def _decode_json(raw: Optional[str]) -> Optional[dict]:
 
 @router.get("", response_model=AuditLogPage)
 def list_audit_logs(
+    response: Response,
     principal: dict = Depends(_admin_principal),
     db: Session = Depends(get_db),
     entity_type: Optional[str] = Query(
@@ -90,10 +109,9 @@ def list_audit_logs(
     deleted deal X" without a second round-trip.
     """
     org_id = principal["org_id"]
+    response.headers["Cache-Control"] = "no-store"
 
-    q = db.query(AuditLog, User).outerjoin(
-        User, User.id == AuditLog.actor_id
-    ).filter(AuditLog.organization_id == org_id)
+    q = _scoped_audit_query(db, org_id)
 
     if entity_type:
         q = q.filter(AuditLog.entity_type == entity_type)
@@ -108,7 +126,7 @@ def list_audit_logs(
     total = q.count()
 
     rows = (
-        q.order_by(AuditLog.created_at.desc())
+        q.order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
         .offset(offset)
         .limit(limit)
         .all()
@@ -161,6 +179,12 @@ def _parse_iso(name: str, raw: Optional[str]) -> Optional[datetime]:
         )
 
 
+def _spreadsheet_safe(value: str) -> str:
+    if value.startswith(("\t", "\r", "\n")) or value.lstrip().startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
+
 @router.post("/export")
 def export_audit_logs(
     principal: dict = Depends(_admin_principal),
@@ -182,11 +206,7 @@ def export_audit_logs(
     since_dt = _parse_iso("since", since)
     until_dt = _parse_iso("until", until)
 
-    q = (
-        db.query(AuditLog, User)
-        .outerjoin(User, User.id == AuditLog.actor_id)
-        .filter(AuditLog.organization_id == org_id)
-    )
+    q = _scoped_audit_query(db, org_id)
     if entity_type:
         q = q.filter(AuditLog.entity_type == entity_type)
     if action:
@@ -198,20 +218,36 @@ def export_audit_logs(
     if until_dt is not None:
         q = q.filter(AuditLog.created_at < until_dt)
 
-    total = q.count()
+    # One bounded snapshot avoids count/read races and database access after
+    # authorization's transaction ends or the streaming dependency is closed.
+    rows = q.order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(EXPORT_ROW_CAP + 1).all()
+    total = len(rows)
     if total > EXPORT_ROW_CAP:
         # 413 Payload Too Large communicates "your request shape is fine but
         # the response would be huge — narrow the filters."
         raise HTTPException(
             status_code=413,
             detail=(
-                f"Export would return {total} rows, exceeding the per-export "
+                f"Export would return more than {EXPORT_ROW_CAP} rows, exceeding the per-export "
                 f"limit of {EXPORT_ROW_CAP}. Apply tighter filters "
                 f"(since/until/entity_type/action/actor_id) and retry."
             ),
         )
 
-    q = q.order_by(AuditLog.created_at.desc())
+    items = [
+        {
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+            "request_id": log.request_id,
+            "actor_email": user.email if user else None,
+            "actor_name": user.full_name if user else None,
+            "entity_type": log.entity_type,
+            "entity_id": log.entity_id,
+            "action": log.action,
+            "old_values": _decode_json(log.old_values) if format == "json" else log.old_values,
+            "new_values": _decode_json(log.new_values) if format == "json" else log.new_values,
+        }
+        for log, user in rows
+    ]
 
     org_short = org_id.split("-")[0] if org_id else "org"
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
@@ -232,27 +268,15 @@ def export_audit_logs(
     db.commit()
 
     if format == "json":
-        items = []
-        for log, user in q.all():
-            items.append({
-                "created_at": log.created_at.isoformat() if log.created_at else None,
-                "request_id": log.request_id,
-                "actor_email": user.email if user else None,
-                "actor_name": user.full_name if user else None,
-                "entity_type": log.entity_type,
-                "entity_id": log.entity_id,
-                "action": log.action,
-                "old_values": _decode_json(log.old_values),
-                "new_values": _decode_json(log.new_values),
-            })
         return JSONResponse(
             content=items,
             headers={
+                "Cache-Control": "no-store",
                 "Content-Disposition": f'attachment; filename="{filename_base}.json"',
             },
         )
 
-    # CSV path — stream row-by-row so we never materialize the full output.
+    # Stream the bounded snapshot; do not reopen a DB cursor after commit.
     def _rows():
         buf = io.StringIO()
         writer = csv.writer(buf)
@@ -260,20 +284,8 @@ def export_audit_logs(
         yield buf.getvalue()
         buf.seek(0); buf.truncate(0)
 
-        # `.yield_per` lets SQLAlchemy stream rows from the cursor rather than
-        # loading them all at once.
-        for log, user in q.yield_per(500):
-            writer.writerow([
-                log.created_at.isoformat() if log.created_at else "",
-                log.request_id or "",
-                (user.email if user else "") or "",
-                (user.full_name if user else "") or "",
-                log.entity_type or "",
-                log.entity_id or "",
-                log.action or "",
-                log.old_values or "",
-                log.new_values or "",
-            ])
+        for item in items:
+            writer.writerow([_spreadsheet_safe(item[column] or "") for column in _EXPORT_COLUMNS])
             yield buf.getvalue()
             buf.seek(0); buf.truncate(0)
 
@@ -281,6 +293,7 @@ def export_audit_logs(
         _rows(),
         media_type="text/csv",
         headers={
+            "Cache-Control": "no-store",
             "Content-Disposition": f'attachment; filename="{filename_base}.csv"',
         },
     )

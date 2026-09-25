@@ -16,6 +16,48 @@ from app.db import Base, get_db
 from app.main import app
 
 
+class BrowserTestClient(TestClient):
+    """Model the new browser protocol for route tests; real cookies use E2E."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.browser_id = str(uuid.uuid4())
+        self.browser_epoch = 0
+        self.browser_access_token = None
+
+    def request(self, method, url, **kwargs):
+        from urllib.parse import urlsplit
+
+        path = urlsplit(str(url)).path
+        headers = dict(kwargs.pop("headers", {}) or {})
+        if path.startswith(("/auth/", "/v1/auth/")):
+            if path.endswith("/register") and not any(key.lower() == "x-browser-id" for key in headers):
+                # Most route tests register independent actors and then compare
+                # their tokens. Model a fresh browser for each actor, not several
+                # simultaneous identities in one browser. Same-browser protocol
+                # tests explicitly supply a fixed X-Browser-Id.
+                self.browser_id = str(uuid.uuid4())
+                self.browser_epoch = 0
+                self.cookies.clear()
+                self.browser_access_token = None
+            if method.upper() == "POST" and path.rsplit("/", 1)[-1] in {
+                "login", "register", "logout", "logout-all", "delete-account", "switch-org",
+            }:
+                self.browser_epoch += 1
+            headers = {"X-Browser-Protocol": "1", "X-Browser-Id": self.browser_id,
+                       "X-Browser-Epoch": str(self.browser_epoch), **headers}
+            if path.endswith("/logout") and self.browser_access_token and not any(key.lower() == "authorization" for key in headers):
+                headers["Authorization"] = f"Bearer {self.browser_access_token}"
+            # Exercise the canonical cookie path; separate versioning tests
+            # cover deprecated aliases without pretending their cookie path works.
+            if path.startswith("/auth/"):
+                url = str(url).replace("/auth/", "/v1/auth/", 1)
+        result = super().request(method, url, headers=headers, **kwargs)
+        if method.upper() == "POST" and path.rsplit("/", 1)[-1] in {"register", "login", "switch-org", "refresh"} and result.status_code in (200, 201):
+            self.browser_access_token = result.json()["access_token"]
+        return result
+
+
 @pytest.fixture()
 def client(tmp_path):
     """FastAPI TestClient with isolated DB per test."""
@@ -37,7 +79,7 @@ def client(tmp_path):
 
     app.dependency_overrides[get_db] = _override
 
-    with TestClient(app) as c:
+    with BrowserTestClient(app) as c:
         yield c
 
     app.dependency_overrides.clear()

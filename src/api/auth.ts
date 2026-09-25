@@ -20,10 +20,12 @@ export const authApi = {
 
   refresh: () => apiClient.post<TokenResponse>('/auth/refresh'),
 
-  logout: () => apiClient.post<void>('/auth/logout'),
+  logout: (credential?: string | null) => apiClient.post<void>('/auth/logout', undefined,
+    credential ? { Authorization: `Bearer ${credential}` } : undefined),
 
-  switchOrg: (organizationId: string) =>
-    apiClient.post<TokenResponse>('/auth/switch-org', { organization_id: organizationId }),
+  switchOrg: (organizationId: string, credential?: string | null) =>
+    apiClient.post<TokenResponse>('/auth/switch-org', { organization_id: organizationId },
+      credential ? { Authorization: `Bearer ${credential}` } : undefined),
 
   myOrganizations: () =>
     apiClient.get<MyOrganizationItem[]>('/organizations/me'),

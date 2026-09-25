@@ -224,6 +224,7 @@ def normalize_permit(
         raise ValueError(f"Unknown approval stage: {approval_stage!r}")
 
     unmapped = {key: value for key, value in record.items() if key not in mapped_source_fields}
+    _preserve_oversized_parcel_reference(values, unmapped)
     return NormalizedPermit(
         source_record_id=source_id,
         values=values,
@@ -343,12 +344,28 @@ def normalize_planning_record(
         raise ValueError("Planning record coordinates are invalid")
 
     unmapped = {key: value for key, value in record.items() if key not in mapped_source_fields}
+    _preserve_oversized_parcel_reference(values, unmapped)
     return NormalizedPlanningRecord(
         source_record_id=source_id,
         values=values,
         unmapped=unmapped,
         fingerprint=record_fingerprint(record),
     )
+
+
+def _preserve_oversized_parcel_reference(
+    values: dict[str, Any], unmapped: dict[str, Any],
+) -> None:
+    # A long source reference can describe an assemblage, not one parcel.
+    # Keep the evidence without truncating it into a false parcel identity.
+    reference = values.get("parcel_id")
+    if isinstance(reference, str) and len(reference) > 255:
+        values["parcel_id"] = None
+        unmapped["_unresolved_parcel_reference"] = {
+            "value": reference,
+            "reason": "exceeds_single_parcel_id_limit",
+            "max_length": 255,
+        }
 
 
 def prepare_mapped_record(

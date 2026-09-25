@@ -1,10 +1,11 @@
-// Serve the built app with the release CSP and exercise login at two viewport sizes.
+// Serve the built app with the release CSP and exercise login and measured inventory.
 const { chromium } = require('@playwright/test');
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
+const { gzipSync } = require('node:zlib');
 const root = path.resolve(__dirname, '..');
 const artifacts = process.env.BROWSER_POLICY_ARTIFACT_DIR || path.join(os.tmpdir(), 'buildsignals-browser-policy');
 fs.mkdirSync(artifacts, { recursive: true });
@@ -31,11 +32,20 @@ const server = http.createServer((request, response) => {
     browser = await chromium.launch();
     for (const width of [390, 768, 1440]) {
       const context = await browser.newContext({ viewport: { width, height: 900 } });
+      // Later API routes are synthetic; everything else must stay on loopback.
+      await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1'
+        ? route.continue() : route.abort('blockedbyclient'));
       let submitted;
       let inventoryMode = false;
       let signedIn = false;
       let measurementFails = false;
       const measurements = [];
+      const loginScripts = new Set();
+      context.on('request', request => {
+        if (!inventoryMode && request.resourceType() === 'script' && request.url().startsWith(origin + '/assets/')) {
+          loginScripts.add(new URL(request.url()).pathname);
+        }
+      });
       await context.route('https://buildsignals-api.onrender.com/**', async route => {
         const url = new URL(route.request().url());
         let status = 401;
@@ -45,7 +55,11 @@ const server = http.createServer((request, response) => {
           if (inventoryMode) {
             signedIn = true;
             status = 200;
-            body = { access_token: 'synthetic-browser-only-token', token_type: 'bearer', user_id: 'synthetic-user', organization_id: 'synthetic-org', role: 'admin' };
+            const requestHeaders = route.request().headers();
+            const claims = { sub: 'synthetic-user', org_id: 'synthetic-org', sid: 'synthetic-session', sg: 1,
+              bid: requestHeaders['x-browser-id'], be: Number(requestHeaders['x-browser-epoch']) };
+            const token = `${Buffer.from('{"alg":"HS256"}').toString('base64url')}.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.synthetic-not-a-real-signature`;
+            body = { access_token: token, token_type: 'bearer', user_id: 'synthetic-user', organization_id: 'synthetic-org', role: 'admin' };
           }
         } else if (inventoryMode && signedIn && url.pathname.endsWith('/auth/me')) {
           status = 200;
@@ -76,7 +90,7 @@ const server = http.createServer((request, response) => {
         }
         await route.fulfill({ status: route.request().method() === 'OPTIONS' ? 204 : status,
           headers: { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true',
-            'Access-Control-Allow-Headers': 'content-type,authorization', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' },
+            'Access-Control-Allow-Headers': 'content-type,authorization,x-browser-id,x-browser-epoch,x-browser-protocol', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' },
           contentType: 'application/json', body: route.request().method() === 'OPTIONS' ? '' : JSON.stringify(body) });
       });
       await context.addInitScript(() => {
@@ -91,6 +105,10 @@ const server = http.createServer((request, response) => {
       await page.getByRole('button', { name: /^sign in$/i }).click();
       await page.getByRole('alert').filter({ hasText: 'Invalid authenticator code' }).waitFor();
       assert.equal(submitted.totp_code, '000123');
+      assert.equal([...loginScripts].some(file => /\/(DealDetail|Pipeline|Underwriting|CartesianChart|MarketSignals|IngestionOperations)-/.test(file)), false,
+        'Login must not eagerly download workspace screens');
+      const loginGzipBytes = [...loginScripts].reduce((total, file) => total + gzipSync(fs.readFileSync(path.join(root, 'dist', file))).length, 0);
+      assert.ok(loginGzipBytes > 0 && loginGzipBytes <= 180 * 1024, `Login JavaScript budget exceeded: ${loginGzipBytes} gzip bytes`);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.deepEqual(await page.evaluate(() => window.policyViolations), []);
       await page.screenshot({ path: path.join(artifacts, `buildsignals-csp-login-${width}.png`) });
@@ -127,9 +145,20 @@ const server = http.createServer((request, response) => {
       await panel.getByRole('button', { name: 'Retry measurement' }).click();
       await panel.getByText('100 stored records', { exact: true }).waitFor();
       assert.deepEqual(await page.evaluate(() => window.policyViolations), []);
+      await context.route('**/Settings-*.js', route => route.abort());
+      await page.goto(origin + '/settings');
+      await page.getByText('Something went wrong', { exact: true }).waitFor();
+      assert.equal(await page.getByText('Engineering has been notified.', { exact: false }).count(), 0);
+      await context.unroute('**/Settings-*.js');
+      await page.getByRole('button', { name: 'Reload page', exact: true }).click();
+      await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
+      assert.equal(await page.getByText('Something went wrong', { exact: true }).count(), 0);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      assert.deepEqual(await page.evaluate(() => window.policyViolations), []);
+      await page.screenshot({ path: path.join(artifacts, `buildsignals-chunk-recovery-${width}.png`) });
       await context.close();
     }
-    console.log('PASS: built login and measured inventory at 390px/768px/1440px, strict CSP compatibility, TOTP payload, authenticated redirect, bounded paging, filters, retry, no overflow, inline script blocked. API responses are synthetic, not production evidence.');
+    console.log('PASS: built login and measured inventory at 390px/768px/1440px, login JavaScript <=180KiB gzip without eager workspace screens, strict CSP compatibility, TOTP payload, authenticated redirect, bounded paging, filters, retry, failed chunk reload recovery, no overflow, inline script blocked. API responses are synthetic, not production evidence.');
   } finally {
     if (browser) await browser.close();
     await new Promise(resolve => server.close(resolve));

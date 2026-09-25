@@ -543,6 +543,118 @@
         "title": "ApprovedOnlyCoverageSourceResponse",
         "type": "object"
       },
+      "AssessmentSourcePrecondition": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/AssessmentSourceVersion"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "1",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "evidence"
+        ],
+        "title": "AssessmentSourcePrecondition",
+        "type": "object"
+      },
+      "AssessmentSourceVersion": {
+        "additionalProperties": false,
+        "description": "Bounded optimistic comparison of source facts already exposed by the graph API.",
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "content_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "relationship_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Relationship Id",
+            "type": "string"
+          },
+          "relationship_is_current": {
+            "title": "Relationship Is Current",
+            "type": "boolean"
+          },
+          "relationship_last_verified_at": {
+            "format": "date-time",
+            "title": "Relationship Last Verified At",
+            "type": "string"
+          },
+          "relationship_updated_at": {
+            "format": "date-time",
+            "title": "Relationship Updated At",
+            "type": "string"
+          },
+          "source_entity_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Source Entity Id",
+            "type": "string"
+          },
+          "target_entity_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Target Entity Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "relationship_id",
+          "content_sha256",
+          "observed_at",
+          "created_at",
+          "confidence",
+          "source_entity_id",
+          "target_entity_id",
+          "relationship_updated_at",
+          "relationship_last_verified_at",
+          "relationship_is_current"
+        ],
+        "title": "AssessmentSourceVersion",
+        "type": "object"
+      },
       "AssumptionsResponse": {
         "properties": {
           "cap_rate_market": {
@@ -1869,6 +1981,16 @@
             "title": "Investment Thesis",
             "type": "string"
           },
+          "source_precondition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentSourcePrecondition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "thesis_confidence": {
             "$ref": "#/components/schemas/ConfidenceAssessment"
           }
@@ -1959,6 +2081,16 @@
           "signal_id": {
             "title": "Signal Id",
             "type": "string"
+          },
+          "source_precondition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentSourcePrecondition"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "const": "draft",
@@ -13508,6 +13640,24 @@
         "title": "StateRolloutItem",
         "type": "object"
       },
+      "StatusResponse": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "enrollment_ready": {
+            "title": "Enrollment Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "enrollment_ready"
+        ],
+        "title": "StatusResponse",
+        "type": "object"
+      },
       "SwitchOrgRequest": {
         "properties": {
           "organization_id": {
@@ -13812,6 +13962,24 @@
     "/health": {
       "get": {
         "operationId": "health_check_health_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -13820,6 +13988,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Health Check",
@@ -13828,9 +14006,28 @@
         ]
       }
     },
-    "/health/deep": {
+    "/health/auth-protection": {
       "get": {
-        "operationId": "health_check_deep_health_deep_get",
+        "description": "Dependency readiness, not a restart probe or an authentication bypass.",
+        "operationId": "authentication_protection_health_health_auth_protection_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -13839,6 +14036,63 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Authentication Protection Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/deep": {
+      "get": {
+        "operationId": "health_check_deep_health_deep_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Health Check Deep",
@@ -14026,6 +14280,22 @@
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -14750,6 +15020,56 @@
         ]
       }
     },
+    "/v1/auth/2fa/status": {
+      "get": {
+        "description": "Report account state independently from enrollment key availability.",
+        "operationId": "authenticator_status_v1_auth_2fa_status_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Authenticator Status",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/v1/auth/2fa/verify": {
       "post": {
         "description": "Confirm the user can generate codes from the secret minted at /setup.\n\nUses `valid_window=1` to tolerate ~30s of clock skew between the device\nand the server \u2014 a single window on either side of the current step.",
@@ -14805,7 +15125,7 @@
     },
     "/v1/auth/delete-account": {
       "post": {
-        "description": "Permanently delete the caller's own account (GDPR right to erasure).\n\nRequires re-entering the current password. Irreversible.\n\nThe user row holds the personal data (email, name, password hash, 2FA\nsecret); deleting it is the erasure. FKs handle the rest: memberships and\npassword-reset tokens cascade away, and authored records (deals, audit\nrows, buy boxes) have their `created_by`/`actor_id` set NULL \u2014 the org's\ndata stays, the personal link is severed.\n\nGuard: a user who is the SOLE admin of an org can't self-delete \u2014 that\nwould orphan the org with no one able to manage it. They must promote\nanother admin (or delete the org) first.",
+        "description": "Permanently delete the caller's own account (GDPR right to erasure).\n\nRequires re-entering the current password. Irreversible.\n\nThe user row holds the personal data (email, name, password hash, 2FA\nsecret); deleting it is the erasure. FKs handle the rest: memberships and\npassword-reset tokens cascade away, and authored records (deals, audit\nrows, buy boxes) have their `created_by`/`actor_id` set NULL \u2014 the org's\ndata stays, the personal link is severed.\n\nGuard: a user who is the SOLE active admin of an org can't self-delete \u2014 that\nwould orphan the org with no one able to manage it. They must promote\nanother admin (or delete the org) first.",
         "operationId": "delete_account_v1_auth_delete_account_post",
         "parameters": [
           {
@@ -14859,6 +15179,24 @@
     "/v1/auth/login": {
       "post": {
         "operationId": "login_v1_auth_login_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -14899,11 +15237,39 @@
     },
     "/v1/auth/logout": {
       "post": {
-        "description": "Clear the refresh cookie. Idempotent; safe to call without a session.",
+        "description": "Revoke only this browser family. Never expire a newer login's cookie.",
         "operationId": "logout_v1_auth_logout_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Logout",
@@ -14914,7 +15280,7 @@
     },
     "/v1/auth/logout-all": {
       "post": {
-        "description": "Revoke every outstanding refresh token for the current user.\n\nBumps `user.token_version`. The next /auth/refresh that arrives with a\ncookie carrying the old version compares `claims['tv'] != user.token_version`\nand is rejected with 401. The immediate access token the caller is holding\nstays valid for the remainder of its 15-minute TTL \u2014 that's an accepted\ntradeoff to avoid a per-request DB lookup on every authenticated call.",
+        "description": "Revoke every outstanding refresh token for the current user.\n\nBumps `user.token_version`. Both refresh and business-route identity checks\nreject earlier versions immediately on their next request. No clearing\nSet-Cookie is sent, so a late response cannot overwrite a newer login.",
         "operationId": "logout_all_v1_auth_logout_all_post",
         "parameters": [
           {
@@ -15008,6 +15374,24 @@
       "post": {
         "description": "Kick off a password reset by emailing a one-time link.\n\nAlways returns 204. The response is identical whether or not the\nemail matches a known account \u2014 this is the whole point of the\nendpoint from a security standpoint.",
         "operationId": "forgot_password_v1_auth_password_forgot_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -15043,6 +15427,24 @@
       "post": {
         "description": "Burn a reset token and set a new password.",
         "operationId": "reset_password_v1_auth_password_reset_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -15076,9 +15478,25 @@
     },
     "/v1/auth/refresh": {
       "post": {
-        "description": "Exchange a valid refresh cookie for a new access token.\n\nRotates the refresh cookie on every call: the old refresh token is\nreplaced with a fresh one carrying a new `exp`, so a stolen cookie\nhas a bounded useful lifetime even without a server-side blocklist.\nPublic route (see PUBLIC_PATH_PREFIXES); authentication is via the\ncookie, not an Authorization header.",
+        "description": "Exchange a revocation-bound cookie without any Set-Cookie side effect.",
         "operationId": "refresh_v1_auth_refresh_post",
         "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
           {
             "in": "cookie",
             "name": "ds_refresh",
@@ -15127,6 +15545,24 @@
     "/v1/auth/register": {
       "post": {
         "operationId": "register_v1_auth_register_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -15167,7 +15603,7 @@
     },
     "/v1/auth/switch-org": {
       "post": {
-        "description": "Issue a new JWT scoped to a different org the user belongs to.",
+        "description": "Rotate this browser family into another active member workspace.",
         "operationId": "switch_org_v1_auth_switch_org_post",
         "parameters": [
           {
@@ -15263,6 +15699,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -15300,6 +15752,24 @@
     "/v1/brands": {
       "get": {
         "operationId": "get_brands_v1_brands_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -15314,6 +15784,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Get Brands",
@@ -15347,6 +15827,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -15899,6 +16395,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -16118,6 +16630,22 @@
               "title": "Deal Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -16249,6 +16777,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -16360,6 +16904,22 @@
             "schema": {
               "title": "Deal Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -16491,6 +17051,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -16711,6 +17287,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -16942,6 +17534,22 @@
               "title": "Deal Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -16983,6 +17591,22 @@
             "schema": {
               "title": "Deal Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -17074,6 +17698,22 @@
             "schema": {
               "title": "Deal Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -17264,6 +17904,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -17376,6 +18032,22 @@
               "title": "Deal Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -17429,6 +18101,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -17684,6 +18372,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -18455,6 +19159,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -18557,6 +19277,22 @@
             "schema": {
               "title": "Entity Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -18692,6 +19428,22 @@
               "title": "Minimum Score",
               "type": "number"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -18737,6 +19489,22 @@
             "schema": {
               "title": "Entity Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -18804,6 +19572,22 @@
               "minimum": 1,
               "title": "Max Depth",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -19005,6 +19789,22 @@
               "title": "Relationship Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -19122,6 +19922,22 @@
                 }
               ],
               "title": "State"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -19360,6 +20176,24 @@
     "/v1/ingestion/coverage": {
       "get": {
         "operationId": "get_ingestion_coverage_v1_ingestion_coverage_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -19370,6 +20204,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Get Ingestion Coverage",
@@ -19492,6 +20336,22 @@
                 }
               ],
               "title": "State"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -19823,6 +20683,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -19869,6 +20745,22 @@
               "title": "Permit Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -19902,6 +20794,24 @@
     "/v1/ingestion/reliability-summary": {
       "get": {
         "operationId": "get_ingestion_reliability_summary_v1_ingestion_reliability_summary_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -19912,6 +20822,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Get Ingestion Reliability Summary",
@@ -19950,6 +20870,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -20095,6 +21031,24 @@
     "/v1/ingestion/sources": {
       "get": {
         "operationId": "get_sources_v1_ingestion_sources_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -20109,6 +21063,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Get Sources",
@@ -20322,6 +21286,22 @@
               "title": "Source Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -20431,6 +21411,22 @@
             "schema": {
               "title": "Search Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -20589,6 +21585,22 @@
               "title": "Opportunity Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -20741,7 +21753,7 @@
     },
     "/v1/organizations/{org_id}/export": {
       "get": {
-        "description": "Return every tenant-scoped row for `org_id` as a downloadable JSON blob.\n\nAdmin-only. The `{org_id}` must match the caller's active org \u2014 admins\ncannot cross-export by guessing another org's id, even one they belong\nto under a different membership.",
+        "description": "Return the registered tenant-scoped tables as one downloadable JSON blob.\n\nAdmin-only. The `{org_id}` must match the caller's active org \u2014 admins\ncannot cross-export by guessing another org's id, even one they belong\nto under a different membership. The row cap covers the organization,\nmembership/profile pairs (two rows each), and all exported table rows.\nOverflow returns 413, never a partial or paginated download.",
         "operationId": "export_organization_data_v1_organizations__org_id__export_get",
         "parameters": [
           {
@@ -21085,6 +22097,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -21130,6 +22158,22 @@
             "schema": {
               "title": "Case Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -21511,6 +22555,22 @@
               "title": "Event Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -21552,6 +22612,22 @@
             "schema": {
               "title": "Parcel Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -21712,6 +22788,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -21825,6 +22917,22 @@
             "schema": {
               "title": "Match Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -22089,6 +23197,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -22134,6 +23258,22 @@
             "schema": {
               "title": "Record Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],
@@ -22190,6 +23330,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
             }
           }
         ],

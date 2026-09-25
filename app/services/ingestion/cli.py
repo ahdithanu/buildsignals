@@ -14,6 +14,13 @@ from app.config import ENVIRONMENT
 from app.db import SessionLocal
 from app.models.ingestion import IngestionSource
 from app.models.organization import Organization
+from app.models.organization_membership import MemberRole, OrganizationMembership
+from app.models.user import User
+from app.schemas.ingestion_onboarding import (
+    IngestionEnrollmentResponse,
+    IngestionOnboardingRequest,
+)
+from app.services.audit_service import log_change
 from app.services.brand_intelligence import (
     backfill_brand_matches_batch,
     load_brand_catalog,
@@ -35,6 +42,13 @@ from app.services.ingestion.health import (
     validate_source_canary,
 )
 from app.services.ingestion.host_policy import audit_ingestion_hosts, candidate_host_policy_entries
+from app.services.ingestion.onboarding import (
+    ONBOARDING_RECORD_TYPES,
+    ONBOARDING_ROLLOUT_WAVES,
+    activate_ingestion_onboarding,
+    build_ingestion_onboarding_plan,
+    get_ingestion_enrollment,
+)
 from app.services.ingestion.promotion import prepare_promotion_manifest
 from app.services.ingestion.rollout import (
     DEFAULT_ROLLOUT_MANIFEST_PATH,
@@ -176,6 +190,53 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=("markdown", "json"), default="markdown"
     )
     source_request.add_argument("--output", type=Path)
+
+    onboarding = subcommands.add_parser(
+        "onboarding", help="Plan or activate customer ingestion without fetching"
+    )
+    onboarding_commands = onboarding.add_subparsers(
+        dest="onboarding_command", required=True
+    )
+    for command in ("plan", "activate"):
+        onboarding_command = onboarding_commands.add_parser(
+            command,
+            help=(
+                "Preview reviewed catalog coverage without writes"
+                if command == "plan"
+                else "Persist reviewed catalog enrollment without fetching"
+            ),
+        )
+        onboarding_command.add_argument(
+            "--organization", required=True, help="Organization ID or slug"
+        )
+        onboarding_command.add_argument(
+            "--coverage-mode", choices=("nationwide", "selected_states"),
+            default="nationwide",
+        )
+        onboarding_command.add_argument(
+            "--region", action="append", dest="regions",
+            help="US state name/code or DC for selected_states coverage (repeatable)",
+        )
+        onboarding_command.add_argument(
+            "--record-type", action="append", dest="record_types",
+            choices=ONBOARDING_RECORD_TYPES,
+            help="Record type to enroll (repeatable; defaults to all three)",
+        )
+        onboarding_command.add_argument(
+            "--rollout-wave", action="append", dest="rollout_waves",
+            type=int, choices=ONBOARDING_ROLLOUT_WAVES,
+            help="Reviewed wave to enroll (repeatable; defaults to all four)",
+        )
+        onboarding_command.add_argument(
+            "--shard-count", type=int, default=4,
+            choices=range(1, 129), metavar="1..128",
+        )
+        if command == "activate":
+            onboarding_command.add_argument(
+                "--actor-user-id", required=True,
+                help="Existing active admin user ID in the selected organization",
+            )
+            onboarding_command.add_argument("--dry-run", action="store_true")
 
     brands = subcommands.add_parser("brands", help="Manage company intelligence")
     brand_commands = brands.add_subparsers(dest="brand_command", required=True)
@@ -647,6 +708,94 @@ def _report_health(db, sources: list[IngestionSource], *, as_json: bool = False)
     return 2 if statuses & {"critical", "unknown"} else 1 if "degraded" in statuses else 0
 
 
+def _run_onboarding(db, args, organization_id: str) -> int:
+    payload = IngestionOnboardingRequest(
+        coverage_mode=args.coverage_mode,
+        state_codes=args.regions or [],
+        record_types=args.record_types or list(ONBOARDING_RECORD_TYPES),
+        rollout_waves=args.rollout_waves or list(ONBOARDING_ROLLOUT_WAVES),
+        shard_count=args.shard_count,
+    )
+    scope = {
+        "coverage_mode": payload.coverage_mode,
+        "regions": payload.state_codes,
+        "record_types": payload.record_types,
+        "rollout_waves": payload.rollout_waves,
+        "shard_count": payload.shard_count,
+    }
+    if args.onboarding_command == "activate":
+        actor = db.query(User).join(OrganizationMembership).filter(
+            User.id == args.actor_user_id,
+            User.is_active.is_(True),
+            OrganizationMembership.organization_id == organization_id,
+            OrganizationMembership.role == MemberRole.admin,
+        ).one_or_none()
+        if actor is None:
+            raise ValueError("--actor-user-id must be an active admin of the selected organization")
+
+    entries = load_catalog()
+    plan = build_ingestion_onboarding_plan(entries, **scope)
+    manifest = require_current_rollout_manifest(
+        entries, candidates=load_candidate_catalog()
+    )
+    _enforce_rollout_manifest_attestation(manifest)
+    report = {
+        "organization_id": organization_id,
+        "catalog_manifest_digest": manifest.manifest_digest,
+        "plan": asdict(plan),
+        "dry_run": True,
+    }
+    if args.onboarding_command == "plan":
+        db.rollback()
+    else:
+        existing = get_ingestion_enrollment(db)
+        activation = activate_ingestion_onboarding(
+            db,
+            **scope,
+            enabled=payload.enabled,
+            entries=entries,
+            organization_id=organization_id,
+            created_by=args.actor_user_id,
+            dry_run=args.dry_run,
+        )
+        report.update({
+            "plan": asdict(activation.plan),
+            "enrollment": (
+                IngestionEnrollmentResponse.model_validate(
+                    activation.enrollment
+                ).model_dump(mode="json", exclude={"sources"})
+                if activation.enrollment is not None else None
+            ),
+            "catalog_created": activation.catalog_created,
+            "catalog_updated": activation.catalog_updated,
+            "catalog_unchanged": activation.catalog_unchanged,
+            "enrollment_sources_created": activation.enrollment_sources_created,
+            "enrollment_sources_updated": activation.enrollment_sources_updated,
+            "enrollment_sources_unchanged": activation.enrollment_sources_unchanged,
+            "enrollment_sources_removed": activation.enrollment_sources_removed,
+            "dry_run": activation.dry_run,
+        })
+        if args.dry_run:
+            db.rollback()
+        else:
+            log_change(
+                db,
+                "ingestion_enrollment",
+                organization_id,
+                "updated" if existing is not None else "created",
+                actor_id=args.actor_user_id,
+                organization_id=organization_id,
+                new_values={
+                    **payload.model_dump(),
+                    "source_count": activation.plan.source_count,
+                    "missing_regions": activation.plan.missing_regions,
+                },
+            )
+            db.commit()
+    print(json.dumps(report, sort_keys=True))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "dispatch-enrollments":
@@ -872,15 +1021,24 @@ def main(argv: list[str] | None = None) -> int:
     db = SessionLocal()
     token = None
     try:
-        organization = db.query(Organization).filter(
+        organization_query = db.query(Organization).filter(
             or_(Organization.id == args.organization, Organization.slug == args.organization),
             Organization.is_active.is_(True),
-        ).first()
+        )
+        organization = (
+            organization_query.one_or_none()
+            if args.command == "onboarding" else organization_query.first()
+        )
         if organization is None:
             raise ValueError(f"Active organization not found: {args.organization}")
         organization_id = organization.id
         db.rollback()
-        token = set_current_context(RequestContext(organization_id, SYSTEM_USER_ID))
+        token = set_current_context(RequestContext(
+            organization_id, getattr(args, "actor_user_id", None) or SYSTEM_USER_ID
+        ))
+
+        if args.command == "onboarding":
+            return _run_onboarding(db, args, organization_id)
 
         if args.command == "catalog":
             result = sync_catalog(db, load_catalog(args.path), dry_run=args.dry_run)

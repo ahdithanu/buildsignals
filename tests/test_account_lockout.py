@@ -15,11 +15,14 @@ STRONG_PW = "CorrectHorseBattery42"
 
 
 @pytest.fixture(autouse=True)
-def _reset_state():
+def _reset_state(monkeypatch):
     """Both the rate limiter and the lockout store are process-global —
     bleed between tests would either falsely 429 us or falsely 423 us."""
     limiter.clear()
     lockout.clear()
+    # Model the trusted ASGI proxy boundary for distributed-source route tests.
+    # Production code must not accept these raw headers itself.
+    monkeypatch.setattr("app.routes.auth._client_ip", lambda request: request.headers.get("x-forwarded-for", "testclient"))
     yield
     limiter.clear()
     lockout.clear()

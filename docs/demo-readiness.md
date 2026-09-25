@@ -1,5 +1,9 @@
 # Demo readiness, September 9, 2026
 
+Follow-up: [September 10 workflow acceptance](enterprise-completion-2026-09-10.md)
+adds multi-entity authoring, event dates, paginated histories and real settings.
+The older counts and follow-on list below are retained as historical context.
+
 Deployment is on hold by request. Local completion is not a claim that the public
 website or production ingestion has been updated.
 
