@@ -900,8 +900,8 @@ export default function IngestionOperations() {
                   </div>
                   <span className="text-[11px] text-muted-foreground">{coverage.rollout_queue?.length} states</span>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {coverage.rollout_queue?.slice(0, 12).map((item) => (
+                <div className="mt-3 grid max-h-[28rem] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                  {coverage.rollout_queue?.map((item) => (
                     <Link
                       key={item.state}
                       to={`/source-health?state=${item.state}`}

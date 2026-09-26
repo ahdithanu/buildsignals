@@ -2,6 +2,16 @@
 
 ## Local implementation, not deployed
 
+### Full regional rollout visibility (2026-09-26)
+
+The Source Health product page now renders the complete 50-state rollout queue
+instead of only the first twelve state chips. Each state links back into the
+state-filtered source/candidate worklist and preserves the catalog distinction:
+configured/candidate regional coverage is not measured live inventory, record
+freshness, or geographic completeness.
+
+Verification: four focused Source Health frontend tests pass.
+
 ### Reviewed diligence observations on screening (2026-09-26)
 
 Acquisition screens and exported snapshots now include recent reviewed numeric

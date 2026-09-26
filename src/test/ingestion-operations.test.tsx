@@ -182,6 +182,30 @@ describe("<IngestionOperations>", () => {
               next_action: "add_retailer_opening_source",
               next_action_label: "Add retailer-opening source",
             },
+            ...Array.from({ length: 12 }, (_, index) => ({
+              state: `T${index}`,
+              rollout_cluster: 2,
+              rollout_label: "Follow-on test states",
+              coverage_status: "candidate" as const,
+              live_sources: 0,
+              candidate_sources: 1,
+              jurisdiction_count: 1,
+              priority_score: 50 - index,
+              next_action: "run_candidate_canary",
+              next_action_label: `Run candidate canary ${index}`,
+            })),
+            {
+              state: "MS",
+              rollout_cluster: 3,
+              rollout_label: "Mississippi and Gulf Coast",
+              coverage_status: "candidate",
+              live_sources: 0,
+              candidate_sources: 2,
+              jurisdiction_count: 2,
+              priority_score: 80,
+              next_action: "resolve_candidate_blocker",
+              next_action_label: "Resolve candidate blocker",
+            },
           ],
           candidate_only_state_count: 1,
           candidate_only_states: ["TX"],
@@ -307,6 +331,8 @@ describe("<IngestionOperations>", () => {
     expect(screen.getByText("50-state rollout queue")).toBeInTheDocument();
     expect(screen.getByText("TX · Cluster 1")).toBeInTheDocument();
     expect(screen.getByText("Add retailer-opening source")).toBeInTheDocument();
+    expect(screen.getByText("MS · Cluster 3")).toBeInTheDocument();
+    expect(screen.getByText("Resolve candidate blocker")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Austin Plan Review Cases/i })).toHaveAttribute(
       "href",
       "/source-health/sources/source-1",
