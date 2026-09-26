@@ -36,7 +36,7 @@ const server = http.createServer((request, response) => {
       let signedIn = false;
       let measurementFails = false;
       const measurements = [];
-      await context.route('https://buildsignals-api.onrender.com/**', async route => {
+      const handleApiRoute = async route => {
         const url = new URL(route.request().url());
         let status = 401;
         let body = { detail: 'Invalid authenticator code' };
@@ -78,7 +78,9 @@ const server = http.createServer((request, response) => {
           headers: { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true',
             'Access-Control-Allow-Headers': 'content-type,authorization', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' },
           contentType: 'application/json', body: route.request().method() === 'OPTIONS' ? '' : JSON.stringify(body) });
-      });
+      };
+      await context.route(`${origin}/v1/**`, handleApiRoute);
+      await context.route('https://buildsignals-api.onrender.com/**', handleApiRoute);
       await context.addInitScript(() => {
         window.policyViolations = [];
         document.addEventListener('securitypolicyviolation', event => window.policyViolations.push(event.effectiveDirective));
