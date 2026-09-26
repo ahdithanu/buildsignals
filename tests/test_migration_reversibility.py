@@ -146,8 +146,10 @@ def test_mfa_downgrade_refuses_to_destroy_ciphertext(tmp_path):
     try:
         with engine.begin() as connection:
             connection.execute(text(
-                "INSERT INTO users (id,email,full_name,password_hash,totp_secret_ciphertext) "
-                "VALUES ('guard','guard@example.test','Guard','unused','ciphertext-fixture')"
+                "INSERT INTO users (id,email,full_name,password_hash,totp_secret_ciphertext,"
+                "created_at,updated_at) VALUES "
+                "('guard','guard@example.test','Guard','unused','ciphertext-fixture',"
+                "'2026-09-01 12:00:00','2026-09-01 12:00:00')"
             ))
         down = _alembic("downgrade", "20260908_0001", db_url=db_url)
         assert down.returncode != 0
@@ -167,8 +169,9 @@ def test_raw_observation_migration_backfills_existing_versions(tmp_path):
     engine = create_engine(db_url, future=True)
     with engine.begin() as connection:
         connection.execute(text(
-            "INSERT INTO organizations (id, name, slug) "
-            "VALUES ('default-org', 'Default', 'default')"
+            "INSERT INTO organizations (id, name, slug, created_at, updated_at) "
+            "VALUES ('default-org', 'Default', 'default', "
+            "'2026-08-08 12:00:00', '2026-08-08 12:00:00')"
         ))
         connection.execute(text(
             "INSERT INTO ingestion_sources "

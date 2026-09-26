@@ -279,11 +279,12 @@ services:
   - type: web
     name: dealsignal-frontend
     runtime: static
-    # `npm install` (not `npm ci`) until package-lock.json is regenerated on a
-    # Node 18+ machine — the lock is currently behind package.json.
-    buildCommand: npm install && npm run build
+    # Deploy the same locked dependency tree verified by CI.
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
+      - key: NODE_VERSION
+        value: "22.23.3"
       # VITE_* vars are baked into the bundle AT BUILD TIME. Changing one needs
       # a rebuild, not just a restart. Set these in the dashboard on first apply.
       # VITE_API_BASE_URL MUST point at the API service URL — without it the

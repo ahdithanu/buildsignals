@@ -1,15 +1,7 @@
 name: frontend
 
-# Frontend checks: lint, type-check, unit tests (vitest), and production
-# build. This is the gate the backend-only ci.yml never provided — it's why
-# frontend dependabot bumps could merge "green" without anything actually
-# exercising the frontend.
-#
-# ⚠️ Authored but not run locally (the authoring env was Node 10; this needs
-# 18+). Starts as pull_request + manual so it can be confirmed green before
-# gating direct pushes to main — run it once from the Actions tab, and if the
-# first run surfaces PRE-EXISTING lint/type debt, fix the debt rather than
-# reverting the gate. Then add `push: { branches: [main] }` below.
+# Frontend release gates include production and development dependency audits,
+# lint, type-check, unit tests, production build, and browser policy checks.
 on:
   workflow_dispatch:
   push:
@@ -39,11 +31,14 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
 
       - name: Install deps
         run: npm ci --no-audit --no-fund
+
+      - name: Dependency vulnerability gate
+        run: npm audit --audit-level=moderate
 
       # Ordered cheapest → most expensive so a fast failure surfaces first.
       - name: Lint

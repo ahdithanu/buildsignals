@@ -39,11 +39,13 @@ def verify_restored_postgres(engine) -> dict:
             deals = [str(uuid4()), str(uuid4())]
             for org, deal in zip(orgs, deals):
                 connection.execute(text(
-                    "INSERT INTO public.organizations(id,name,slug) VALUES (:id,'Recovery probe',:id)"
+                    "INSERT INTO public.organizations(id,name,slug,created_at,updated_at) "
+                    "VALUES (:id,'Recovery probe',:id,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"
                 ), {"id": org})
                 connection.execute(text("SELECT set_config('app.current_org', :org, true)"), {"org": org})
                 connection.execute(text(
-                    "INSERT INTO public.deals(id,name,organization_id,status) VALUES (:id,'Recovery probe',:org,'new')"
+                    "INSERT INTO public.deals(id,name,organization_id,status,created_at,updated_at) "
+                    "VALUES (:id,'Recovery probe',:org,'new',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"
                 ), {"id": deal, "org": org})
             for org, allowed in zip(orgs, deals):
                 connection.execute(text("SELECT set_config('app.current_org', :org, true)"), {"org": org})
@@ -57,7 +59,8 @@ def verify_restored_postgres(engine) -> dict:
             savepoint = connection.begin_nested()
             try:
                 connection.execute(text(
-                    "INSERT INTO public.deals(id,name,organization_id,status) VALUES (:id,'Denied probe',:org,'new')"
+                    "INSERT INTO public.deals(id,name,organization_id,status,created_at,updated_at) "
+                    "VALUES (:id,'Denied probe',:org,'new',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"
                 ), {"id": str(uuid4()), "org": orgs[1]})
             except DBAPIError as exc:
                 rejected = getattr(exc.orig, "pgcode", None) == "42501"
