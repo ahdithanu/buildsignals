@@ -32,6 +32,55 @@ def review_export_context(db: Session, deal_id: str) -> dict:
             "changes_screening_result": False, "independently_verified": False}
 
 
+def reviewed_observations_context(db: Session, deal_id: str) -> dict:
+    """Recent reviewed measurements, exposed as context without scoring impact."""
+    limit = 25
+    rows = scope_query(db.query(DiligenceReview), DiligenceReview).join(
+        Document, Document.id == DiligenceReview.document_id,
+    ).filter(
+        DiligenceReview.deal_id == deal_id, Document.deal_id == deal_id,
+        Document.organization_id == get_org_id(), Document.deleted_at.is_(None),
+    ).order_by(DiligenceReview.created_at.desc(), DiligenceReview.id.desc()).limit(limit + 1).all()
+    items = []
+    by_criterion: dict[str, list[dict]] = {}
+    for row in rows[:limit]:
+        snapshot = row.snapshot if isinstance(row.snapshot, dict) else {}
+        observation = snapshot.get("observation")
+        evidence = snapshot.get("evidence", {})
+        text = evidence.get("text")
+        if not isinstance(observation, dict):
+            continue
+        if not isinstance(text, str) or hashlib.sha256(text.encode()).hexdigest() != evidence.get("text_sha256"):
+            raise ValueError("Reviewed evidence integrity check failed")
+        item = {
+            "review_id": row.id,
+            "document_id": row.document_id,
+            "criterion": row.criterion,
+            "assessment": snapshot.get("assessment"),
+            "created_at": row.created_at,
+            "observation": observation,
+            "evidence": {
+                "text_sha256": evidence.get("text_sha256"),
+                "source_url": evidence.get("source_url"),
+                "submitted_by": evidence.get("submitted_by"),
+            },
+            "independently_verified": False,
+            "changes_screening_result": False,
+        }
+        items.append(item)
+        by_criterion.setdefault(row.criterion, []).append(item)
+    return {
+        "items": items,
+        "by_criterion": by_criterion,
+        "limit": limit,
+        "has_more": len(rows) > limit,
+        "order": "created_at_desc_id_desc",
+        "scope": "opportunity",
+        "changes_screening_result": False,
+        "independently_verified": False,
+    }
+
+
 def save_screen_snapshot(db: Session, deal_id: str, author_id: str, content: str):
     row = AcquisitionScreenSnapshot(
         organization_id=get_org_id(), deal_id=deal_id, author_id=author_id,

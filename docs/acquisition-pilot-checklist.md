@@ -2,6 +2,21 @@
 
 ## Local implementation, not deployed
 
+### Reviewed diligence observations on screening (2026-09-26)
+
+Acquisition screens and exported snapshots now include recent reviewed numeric
+diligence observations on the matching criterion and in an opportunity-wide
+`reviewed_observations` context. The response preserves the evidence digest
+check before exposing the observation, scopes records to the active tenant/deal,
+and omits deleted documents. These observations are explicitly contextual:
+`changes_screening_result=false`, `independently_verified=false`, and the
+criterion status remains unchanged until a future source-backed verification
+step converts a reviewed observation into an accepted underwriting fact.
+
+Verification: 45 focused backend tests pass across diligence observations,
+diligence reviews, and acquisition screening. No migration, source activation,
+production change, push, merge, or deployment occurred.
+
 ### Structured diligence observations (2026-09-21)
 
 Reviews now optionally retain a structured numeric observation in their existing

@@ -13,6 +13,7 @@ from app.models.organization_membership import MemberRole
 from app.schemas.buy_box import AcquisitionCriteria, BuyBoxCreate, BuyBoxResponse
 from app.services.acquisition_history import (
     review_export_context,
+    reviewed_observations_context,
     save_screen_snapshot,
     verified_snapshot_content,
 )
@@ -47,6 +48,18 @@ def acquisition_screen(
             raise HTTPException(status_code=422, detail="Buy box has no structured acquisition criteria")
         custom = AcquisitionCriteria.model_validate(box.acquisition_criteria)
     result = screen_acquisition(deal, profile, market_city, market_state, custom_criteria=custom)
+    try:
+        observations = reviewed_observations_context(db, deal_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    for criterion in result["criteria"]:
+        criterion["reviewed_observations"] = observations["by_criterion"].get(criterion["key"], [])
+        if criterion["reviewed_observations"] and criterion["status"] == "unknown":
+            criterion["reason"] = (
+                f"{criterion['reason']} Reviewed observations are available but remain "
+                "unverified and do not change screening status."
+            )
+    result["reviewed_observations"] = observations
     result["buy_box_id"] = buy_box_id
     result["criteria_snapshot"] = custom.model_dump() if custom else None
     return result

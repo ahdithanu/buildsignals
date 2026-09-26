@@ -63,8 +63,18 @@ def test_observation_survives_review_and_export_without_overriding_unknown(clien
     reviews = client.get(base + '/diligence-reviews', headers=headers).json()['items']
     assert len(reviews) == 1
     assert reviews[0]['snapshot'] == snapshot
+    screened = client.get(base + '/acquisition-screen?profile=small_bay_retail', headers=headers)
+    assert screened.status_code == 200, screened.text
+    occupancy = next(c for c in screened.json()['criteria'] if c['key'] == 'occupancy')
+    assert occupancy['status'] == 'unknown'
+    assert occupancy['reviewed_observations'][0]['observation'] == OBSERVATION
+    assert occupancy['reviewed_observations'][0]['changes_screening_result'] is False
+    assert 'unverified and do not change screening status' in occupancy['reason']
+    assert screened.json()['reviewed_observations']['items'][0]['criterion'] == 'occupancy'
     exported = client.post(base + '/acquisition-screen/export?profile=small_bay_retail', headers=headers)
     assert exported.status_code == 200, exported.text
     result = exported.json()
     assert result['diligence_reviews']['items'][0]['snapshot']['observation'] == OBSERVATION
-    assert next(c for c in result['screen']['criteria'] if c['key'] == 'occupancy')['status'] == 'unknown'
+    exported_occupancy = next(c for c in result['screen']['criteria'] if c['key'] == 'occupancy')
+    assert exported_occupancy['status'] == 'unknown'
+    assert exported_occupancy['reviewed_observations'][0]['observation'] == OBSERVATION
