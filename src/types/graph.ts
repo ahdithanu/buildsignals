@@ -59,7 +59,9 @@ export interface GraphEvidence {
   source_url?: string | null;
   evidence_type?: string | null;
   excerpt?: string | null;
+  observed_at?: string | null;
   confidence: number;
+  payload?: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -69,9 +71,30 @@ export interface GraphRelationship {
   confidence: number;
   source_system?: string | null;
   source_id?: string | null;
+  attributes?: Record<string, unknown> | null;
+  is_current?: boolean;
+  valid_from?: string;
+  valid_to?: string | null;
+  updated_at?: string;
   created_at: string;
   last_verified_at: string;
+  verification_due_at?: string;
+  verification_status?: 'fresh' | 'due' | 'stale' | 'historical';
   evidence: GraphEvidence[];
+}
+
+export interface GraphRelationshipVerificationInput {
+  sourceSystem: string;
+  sourceId?: string;
+  sourceUrl?: string;
+  excerpt?: string;
+  reason: string;
+  confidence?: number;
+  verificationIntervalDays: number;
+}
+
+export interface GraphRelationshipReviewQueueItem extends GraphRelationshipDetail {
+  review_reasons: string[];
 }
 
 export interface GraphRelatedEntity {
@@ -82,6 +105,12 @@ export interface GraphRelatedEntity {
 
 export interface GraphEntityDetail extends GraphEntity {
   aliases: string[];
+  source_identities?: {
+    source_system: string;
+    source_id: string;
+    confidence: number;
+    last_verified_at: string;
+  }[];
   links: {
     record_type: string;
     record_id: string;
@@ -91,6 +120,31 @@ export interface GraphEntityDetail extends GraphEntity {
 
 export interface GraphEntitySearchResult extends GraphEntity {
   aliases: string[];
+}
+
+export interface GraphEntityMergeCandidate {
+  entity: GraphEntity;
+  score: number;
+  reasons: string[];
+}
+
+export interface GraphEntityMergeResult {
+  merge_id: string;
+  merged_entity_id: string;
+  survivor: GraphEntity;
+  aliases_moved: number;
+  source_identities_moved: number;
+  links_moved: number;
+  relationships_rewired: number;
+  relationships_collapsed: number;
+  evidence_moved: number;
+  created_at: string;
+}
+
+export interface GraphRelationshipDetail {
+  relationship: GraphRelationship;
+  source_entity: GraphEntity;
+  target_entity: GraphEntity;
 }
 
 export interface GraphPath {

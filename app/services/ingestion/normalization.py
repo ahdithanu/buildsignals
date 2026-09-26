@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -76,6 +77,43 @@ PARCEL_CANONICAL_FIELDS = {
     "vacancy_indicator",
     "source_url",
     "observed_at",
+    "lineage_event_id",
+    "lineage_event_type",
+    "lineage_predecessor_ids",
+    "lineage_successor_ids",
+    "lineage_observed_at",
+    "lineage_confidence",
+    "lineage_excerpt",
+}
+
+PLANNING_CANONICAL_FIELDS = {
+    "source_record_id",
+    "reference_number",
+    "event_type",
+    "stage",
+    "title",
+    "summary",
+    "evidence_excerpt",
+    "agenda_item_number",
+    "meeting_name",
+    "governing_body",
+    "project_name",
+    "address",
+    "city",
+    "state",
+    "postal_code",
+    "parcel_id",
+    "jurisdiction",
+    "applicant_name",
+    "owner_name",
+    "developer_name",
+    "latitude",
+    "longitude",
+    "meeting_at",
+    "published_at",
+    "decision_at",
+    "source_url",
+    "confidence",
 }
 
 DATE_FIELDS = {
@@ -89,7 +127,7 @@ DATE_FIELDS = {
 DECIMAL_FIELDS = {"valuation", "latitude", "longitude"}
 INTEGER_FIELDS = {"square_feet", "units"}
 PERMIT_TEXT_FIELDS = CANONICAL_FIELDS - DATE_FIELDS - DECIMAL_FIELDS - INTEGER_FIELDS
-PARCEL_DATE_FIELDS = {"last_sale_date", "observed_at"}
+PARCEL_DATE_FIELDS = {"last_sale_date", "observed_at", "lineage_observed_at"}
 PARCEL_DECIMAL_FIELDS = {
     "latitude",
     "longitude",
@@ -99,11 +137,18 @@ PARCEL_DECIMAL_FIELDS = {
     "improvement_value",
     "total_assessed_value",
     "last_sale_price",
+    "lineage_confidence",
 }
+PARCEL_LIST_FIELDS = {"lineage_predecessor_ids", "lineage_successor_ids"}
 PARCEL_TEXT_FIELDS = PARCEL_CANONICAL_FIELDS - PARCEL_DATE_FIELDS - PARCEL_DECIMAL_FIELDS - {
     "tax_delinquent",
     "vacancy_indicator",
-}
+} - PARCEL_LIST_FIELDS
+PLANNING_DATE_FIELDS = {"meeting_at", "published_at", "decision_at"}
+PLANNING_DECIMAL_FIELDS = {"latitude", "longitude", "confidence"}
+PLANNING_TEXT_FIELDS = (
+    PLANNING_CANONICAL_FIELDS - PLANNING_DATE_FIELDS - PLANNING_DECIMAL_FIELDS
+)
 APPROVAL_STAGES = {"pre_approval", "approved"}
 BLANKISH_NUMERIC_MARKERS = {"unknown", "n/a", "na", "none", "null"}
 
@@ -118,6 +163,14 @@ class NormalizedPermit:
 
 @dataclass(frozen=True)
 class NormalizedParcel:
+    source_record_id: str
+    values: dict[str, Any]
+    unmapped: dict[str, Any]
+    fingerprint: str
+
+
+@dataclass(frozen=True)
+class NormalizedPlanningRecord:
     source_record_id: str
     values: dict[str, Any]
     unmapped: dict[str, Any]
@@ -199,7 +252,9 @@ def normalize_parcel(
             continue
         if canonical_field in PARCEL_DATE_FIELDS and str(raw_value).strip() in {"0", "0.0"}:
             continue
-        if canonical_field in PARCEL_DATE_FIELDS:
+        if canonical_field in PARCEL_LIST_FIELDS:
+            values[canonical_field] = raw_value
+        elif canonical_field in PARCEL_DATE_FIELDS:
             values[canonical_field] = _parse_datetime(raw_value)
         elif canonical_field in PARCEL_DECIMAL_FIELDS:
             if _is_blankish_numeric(raw_value):
@@ -229,6 +284,66 @@ def normalize_parcel(
 
     unmapped = {key: value for key, value in record.items() if key not in mapped_source_fields}
     return NormalizedParcel(
+        source_record_id=source_id,
+        values=values,
+        unmapped=unmapped,
+        fingerprint=record_fingerprint(record),
+    )
+
+
+def normalize_planning_record(
+    record: Mapping[str, Any],
+    field_mapping: Mapping[str, str],
+    *,
+    defaults: Optional[Mapping[str, Any]] = None,
+) -> NormalizedPlanningRecord:
+    """Map an agenda, minutes, hearing, or staff-review row into one vocabulary."""
+    invalid = set(field_mapping.values()) - PLANNING_CANONICAL_FIELDS
+    if invalid:
+        raise ValueError(f"Unknown canonical planning fields: {sorted(invalid)}")
+
+    values = dict(defaults or {})
+    mapped_source_fields: set[str] = set()
+    for source_field, canonical_field in field_mapping.items():
+        mapped_source_fields.add(source_field)
+        raw_value = record.get(source_field)
+        if raw_value is None or raw_value == "":
+            continue
+        if canonical_field in PLANNING_DATE_FIELDS:
+            values[canonical_field] = _parse_datetime(raw_value)
+        elif canonical_field in PLANNING_DECIMAL_FIELDS:
+            if _is_blankish_numeric(raw_value):
+                continue
+            values[canonical_field] = float(_parse_decimal(raw_value))
+        elif canonical_field in PLANNING_TEXT_FIELDS:
+            values[canonical_field] = " ".join(str(raw_value).strip().split())
+        else:
+            values[canonical_field] = raw_value
+
+    source_id = values.get("source_record_id")
+    if source_id is None or str(source_id).strip() == "":
+        raise ValueError("Source planning record does not contain a stable identifier")
+    source_id = str(source_id).strip()
+    values["source_record_id"] = source_id
+    if not values.get("event_type"):
+        values["event_type"] = "planning_item"
+    if not values.get("title"):
+        raise ValueError("Source planning record does not contain a title")
+    confidence = float(values.get("confidence", 1.0))
+    if not 0 <= confidence <= 1:
+        raise ValueError("Planning record confidence must be between 0 and 1")
+    values["confidence"] = confidence
+    latitude = values.get("latitude")
+    longitude = values.get("longitude")
+    if (latitude is None) != (longitude is None):
+        raise ValueError("Planning record latitude and longitude must be supplied together")
+    if latitude is not None and not (
+        -90 <= float(latitude) <= 90 and -180 <= float(longitude) <= 180
+    ):
+        raise ValueError("Planning record coordinates are invalid")
+
+    unmapped = {key: value for key, value in record.items() if key not in mapped_source_fields}
+    return NormalizedPlanningRecord(
         source_record_id=source_id,
         values=values,
         unmapped=unmapped,
@@ -303,6 +418,22 @@ def prepare_mapped_record(
                 ),
                 None,
             )
+        elif transform == "regex_extract":
+            input_field = options.get("source_field", source_field)
+            pattern = options.get("pattern")
+            group = options.get("group", 1)
+            if not isinstance(input_field, str) or not input_field:
+                raise ValueError("regex_extract source_field must be a field name")
+            if not isinstance(pattern, str) or not pattern or len(pattern) > 500:
+                raise ValueError("regex_extract requires a pattern up to 500 characters")
+            if isinstance(group, bool) or not isinstance(group, (int, str)):
+                raise ValueError("regex_extract group must be an integer or named group")
+            raw_value = record.get(input_field)
+            match = re.search(pattern, str(raw_value)) if raw_value is not None else None
+            try:
+                value = match.group(group) if match else None
+            except (IndexError, KeyError) as exc:
+                raise ValueError("regex_extract group does not exist in pattern") from exc
         elif transform == "value_map":
             input_field = str(options.get("field", source_field))
             values = options.get("values")

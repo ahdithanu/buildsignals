@@ -1,6 +1,6 @@
 """Health check endpoints.
 
-Two flavours, both public:
+Three flavours, all public:
 
 - `/health` is a shallow liveness probe. Returns 200 without touching
   the DB. Used by Render's built-in health checks and by uptime
@@ -12,6 +12,10 @@ Two flavours, both public:
   a dashboard where "is the app really working" matters more than
   "is the process running." Do NOT wire this to Render's restart
   policy — a transient DB error would then restart every worker.
+
+- `/health/ready` checks mapped tables/columns and the Alembic revision
+  without fetching application rows. Returns only a generic status and
+  503 when schema readiness cannot be established.
 """
 from __future__ import annotations
 
@@ -23,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from app import metrics
 from app.db import get_db
+from app.services.database_readiness import is_database_ready
 
 router = APIRouter(tags=["health"])
 
@@ -45,6 +50,16 @@ def health_check_deep(db: Session = Depends(get_db)):
             content={"status": "degraded", "db": type(exc).__name__},
         )
     return {"status": "ok", "db": "ok"}
+
+
+@router.get("/health/ready")
+def health_check_ready(db: Session = Depends(get_db)):
+    ready = is_database_ready(db)
+    return JSONResponse(
+        status_code=200 if ready else 503,
+        content={"status": "ready" if ready else "not_ready"},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/metrics")

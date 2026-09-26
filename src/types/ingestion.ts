@@ -30,6 +30,13 @@ export interface SourceHealth {
   ingestion_age_hours?: number | null;
   source_watermark_at?: string | null;
   source_lag_hours?: number | null;
+  collection_sla_hours?: number;
+  collection_sla_configured?: boolean;
+  freshness_sla_hours?: number;
+  freshness_sla_configured?: boolean;
+  freshness_semantics?: 'record_updated_at' | 'dataset_refreshed_at' | 'filing_event_at' | 'ingestion_observed_at' | 'unclassified_source_timestamp';
+  freshness_label?: string;
+  source_watermark_enforced?: boolean;
   terminal_runs: number;
   unhealthy_runs: number;
   run_failure_rate?: number | null;
@@ -186,6 +193,21 @@ export interface StateCoverageBucket {
   retailer_opening_sources: number;
   pre_approval_sources: number;
   approved_only_sources: number;
+  priority_score: number;
+  priority_reasons: string[];
+}
+
+export interface StateRolloutItem {
+  state: string;
+  rollout_cluster: number;
+  rollout_label: string;
+  coverage_status: 'live' | 'candidate' | 'uncovered';
+  live_sources: number;
+  candidate_sources: number;
+  jurisdiction_count: number;
+  priority_score: number;
+  next_action: string;
+  next_action_label: string;
 }
 
 export interface RetailerOpeningCoverageSource {
@@ -220,12 +242,82 @@ export interface IngestionCoverage {
   top_jurisdictions: CoverageJurisdictionBucket[];
   state_buckets: StateCoverageBucket[];
   activation_queue: StateCoverageBucket[];
+  rollout_queue?: StateRolloutItem[];
   candidate_only_state_count: number;
   candidate_only_states: string[];
+  researched_state_count: number;
+  unresearched_state_count: number;
+  researched_states: string[];
+  unresearched_states: string[];
   covered_state_count: number;
   missing_state_count: number;
   covered_states: string[];
   missing_states: string[];
+}
+
+export interface SourceSchedulePlanItem {
+  source_id: string;
+  source_key: string;
+  source_name: string;
+  jurisdiction?: string | null;
+  due: boolean;
+  due_reason: string;
+  interval_minutes: number;
+  retry_interval_minutes: number;
+  collection_sla_hours: number;
+  max_pages_per_run: number;
+  priority: number;
+  schedule_mode: 'automatic' | 'manual';
+  shard_index: number;
+  active_run: boolean;
+  stale_run: boolean;
+  latest_status?: string | null;
+  last_terminal_at?: string | null;
+  due_at?: string | null;
+  overdue_minutes: number;
+}
+
+export interface SourceSchedulePlan {
+  as_of: string;
+  shard_count: number;
+  shard_index: number;
+  total_source_count: number;
+  catalog_source_count: number;
+  unsynced_source_count: number;
+  unsynced_source_keys: string[];
+  catalog_synced: boolean;
+  shard_source_count: number;
+  automatic_source_count: number;
+  due_source_count: number;
+  active_source_count: number;
+  items: SourceSchedulePlanItem[];
+}
+
+export interface IngestionHostPolicy {
+  ready: boolean;
+  coverage_ready: boolean;
+  policy_digest: string;
+  executor_name?: string | null;
+  executor_verified: boolean;
+  source_count: number;
+  required_host_count: number;
+  configured_host_count: number;
+  required_hosts: string[];
+  configured_hosts: string[];
+  missing_hosts: string[];
+  unused_hosts: string[];
+  unsafe_sources: Array<{
+    source_key: string;
+    url: string;
+    reason: string;
+  }>;
+  requirements: Array<{
+    source_key: string;
+    source_name: string;
+    jurisdiction?: string | null;
+    host: string;
+    purpose: string;
+  }>;
 }
 
 export interface ReliabilityWatchlistItem {
@@ -261,7 +353,9 @@ export interface IngestionCandidate {
   blocker_summary: string;
   early_warning_value: string;
   candidate_source_fields: string[];
+  production_page_size?: number | null;
   can_run_canary: boolean;
+  catalog_backed: boolean;
   last_canary_at?: string | null;
   last_canary_ok?: boolean | null;
   last_canary_records_valid?: number | null;
@@ -280,4 +374,48 @@ export interface PermitDetail {
   brand_matches: PermitBrandMatch[];
   graph_entity?: GraphEntityDetail | null;
   graph_related: GraphRelatedEntity[];
+}
+
+export type CoverageRecordType = 'parcel' | 'permit' | 'planning';
+
+export interface MeasuredCoverageParams {
+  record_type: CoverageRecordType;
+  freshness_hours: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ObservedStateCoverage {
+  state: string | null;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  unknown_source_date_records: number;
+  future_source_date_records: number;
+  recent_source_date_records: number;
+  newest_seen_at: string | null;
+  newest_source_date: string | null;
+  observed_jurisdiction_count: number;
+  min_latitude: number | null;
+  max_latitude: number | null;
+  min_longitude: number | null;
+  max_longitude: number | null;
+}
+
+export interface MeasuredSourceCoverage {
+  source_id: string;
+  source_key: string;
+  configured_active: boolean;
+  configured_jurisdiction: string | null;
+  stored_records: number;
+  observed_states: ObservedStateCoverage[];
+}
+
+export interface MeasuredCoverage extends MeasuredCoverageParams {
+  measured_at: string;
+  scope: string;
+  count_semantics: string;
+  has_more: boolean;
+  sources: MeasuredSourceCoverage[];
+  warnings: string[];
 }

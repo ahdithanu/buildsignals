@@ -65,3 +65,35 @@ def test_wildcard_cors_rejected_in_production():
     r = _import_config({**_PROD_BASE, "CORS_ALLOWED_ORIGINS": "*"})
     assert r.returncode != 0
     assert "RuntimeError" in r.stderr
+
+
+# ── ENVIRONMENT validation (keystone guard) ─────────────────────────────────
+
+def test_unknown_environment_rejected():
+    # A typo like "prod" must crash loudly, not silently leave IS_PRODUCTION
+    # False and disable every guard that branches on ENVIRONMENT.
+    r = _import_config({"ENVIRONMENT": "prod"})
+    assert r.returncode != 0
+    assert "RuntimeError" in r.stderr and "ENVIRONMENT" in r.stderr
+
+
+def test_ci_environment_imports_clean():
+    # CI runs with ENVIRONMENT=ci (see .github/workflows/ci.yml); it must stay a
+    # recognized (non-deployed) environment or the whole suite fails to import.
+    r = _import_config({"ENVIRONMENT": "ci"})
+    assert r.returncode == 0, r.stderr
+
+
+def test_staging_rejects_explicit_anonymous():
+    # Staging is a deployed environment → fail-closed. ALLOW_ANONYMOUS=true is
+    # rejected (previously staging silently allowed anonymous mutations).
+    r = _import_config({"ENVIRONMENT": "staging", "ALLOW_ANONYMOUS": "true"})
+    assert r.returncode != 0
+    assert "RuntimeError" in r.stderr and "ALLOW_ANONYMOUS" in r.stderr
+
+
+def test_staging_imports_clean_and_fail_closed_by_default():
+    # Without the flag, staging imports fine (prod-only guards don't apply) and
+    # defaults to no anonymous access.
+    r = _import_config({"ENVIRONMENT": "staging"})
+    assert r.returncode == 0, r.stderr

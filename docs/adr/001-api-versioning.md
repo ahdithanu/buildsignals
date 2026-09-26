@@ -1,6 +1,6 @@
 # ADR 001: Versioned API prefix with transparent unversioned rewrite
 
-**Status:** Accepted  
+**Status:** Accepted
 **Date:** 2026-07-29
 
 ## Context

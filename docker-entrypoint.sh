@@ -5,12 +5,17 @@
 #   serve    (default) — start the API
 #   migrate            — run `alembic upgrade head` and exit; run this as a
 #                        ONE-OFF task before cutting traffic to a new image
+#   ingest             — plan and run due catalog sources; for scheduled tasks / cron
 set -e
 
 case "${1:-serve}" in
   migrate)
     echo "[entrypoint] running alembic upgrade head"
     exec alembic upgrade head
+    ;;
+  ingest)
+    echo "[entrypoint] running cadence-aware ingestion"
+    exec ./scripts/daily-ingestion.sh
     ;;
   serve)
     # Honor $PORT (App Runner/ECS inject it); default 8000.

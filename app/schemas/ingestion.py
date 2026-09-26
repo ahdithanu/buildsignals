@@ -13,6 +13,7 @@ from app.schemas.graph import GraphEntityDetailResponse, GraphRelatedEntityRespo
 class FieldMappingCreate(BaseModel):
     source_field: str = Field(min_length=1, max_length=255)
     canonical_field: str = Field(min_length=1, max_length=255)
+    value_semantics: Literal["unknown", "business_dba", "legal_entity", "person"] = "unknown"
     transform: Optional[str] = Field(default=None, max_length=100)
     transform_options: Optional[dict[str, Any]] = None
     default_value: Optional[dict[str, Any]] = None
@@ -120,6 +121,19 @@ class SourceHealthResponse(BaseModel):
     ingestion_age_hours: Optional[float]
     source_watermark_at: Optional[datetime]
     source_lag_hours: Optional[float]
+    collection_sla_hours: float = 36.0
+    collection_sla_configured: bool = False
+    freshness_sla_hours: float = 36.0
+    freshness_sla_configured: bool = False
+    freshness_semantics: Literal[
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+        "ingestion_observed_at",
+        "unclassified_source_timestamp",
+    ] = "ingestion_observed_at"
+    freshness_label: str = "Collection observed"
+    source_watermark_enforced: bool = False
     terminal_runs: int
     unhealthy_runs: int
     run_failure_rate: Optional[float]
@@ -136,7 +150,7 @@ class IngestionCandidateResponse(BaseModel):
     key: str
     name: str
     adapter: str
-    record_type: Literal["permit", "parcel"]
+    record_type: Literal["permit", "parcel", "planning"]
     jurisdiction: str
     base_url: str
     official_landing_page: str
@@ -152,7 +166,9 @@ class IngestionCandidateResponse(BaseModel):
     blocker_summary: str
     early_warning_value: str
     candidate_source_fields: list[str]
+    production_page_size: Optional[int] = None
     can_run_canary: bool = False
+    catalog_backed: bool = False
     last_canary_at: Optional[datetime] = None
     last_canary_ok: Optional[bool] = None
     last_canary_records_valid: Optional[int] = None
@@ -226,6 +242,21 @@ class StateCoverageBucket(BaseModel):
     retailer_opening_sources: int
     pre_approval_sources: int
     approved_only_sources: int
+    priority_score: int
+    priority_reasons: list[str]
+
+
+class StateRolloutItem(BaseModel):
+    state: str
+    rollout_cluster: int
+    rollout_label: str
+    coverage_status: str
+    live_sources: int
+    candidate_sources: int
+    jurisdiction_count: int
+    priority_score: int
+    next_action: str
+    next_action_label: str
 
 
 class RetailerOpeningCoverageSourceResponse(BaseModel):
@@ -259,12 +290,86 @@ class IngestionCoverageResponse(BaseModel):
     top_jurisdictions: list[CoverageJurisdictionBucket]
     state_buckets: list[StateCoverageBucket]
     activation_queue: list[StateCoverageBucket]
+    rollout_queue: list[StateRolloutItem]
     candidate_only_state_count: int
     candidate_only_states: list[str]
+    researched_state_count: int
+    unresearched_state_count: int
+    researched_states: list[str]
+    unresearched_states: list[str]
     covered_state_count: int
     missing_state_count: int
     covered_states: list[str]
     missing_states: list[str]
+
+
+class SourceSchedulePlanItemResponse(BaseModel):
+    source_id: str
+    source_key: str
+    source_name: str
+    jurisdiction: Optional[str] = None
+    due: bool
+    due_reason: str
+    interval_minutes: int
+    retry_interval_minutes: int
+    collection_sla_hours: float
+    max_pages_per_run: int
+    priority: int
+    schedule_mode: str
+    shard_index: int
+    active_run: bool
+    stale_run: bool
+    latest_status: Optional[str] = None
+    last_terminal_at: Optional[datetime] = None
+    due_at: Optional[datetime] = None
+    overdue_minutes: int
+
+
+class SourceSchedulePlanResponse(BaseModel):
+    as_of: datetime
+    shard_count: int
+    shard_index: int
+    total_source_count: int
+    catalog_source_count: int
+    unsynced_source_count: int
+    unsynced_source_keys: list[str]
+    catalog_synced: bool
+    shard_source_count: int
+    automatic_source_count: int
+    due_source_count: int
+    active_source_count: int
+    items: list[SourceSchedulePlanItemResponse]
+
+
+class SourceHostRequirementResponse(BaseModel):
+    source_key: str
+    source_name: str
+    jurisdiction: Optional[str] = None
+    host: str
+    purpose: str
+
+
+class UnsafeSourceUrlResponse(BaseModel):
+    source_key: str
+    url: str
+    reason: str
+
+
+class IngestionHostPolicyResponse(BaseModel):
+    ready: bool
+    coverage_ready: bool
+    policy_digest: str
+    executor_name: Optional[str] = None
+    executor_verified: bool
+    source_count: int
+    required_host_count: int
+    configured_host_count: int
+    required_hosts: list[str]
+    configured_hosts: list[str]
+    missing_hosts: list[str]
+    unused_hosts: list[str]
+    unsafe_sources: list[UnsafeSourceUrlResponse]
+    requirements: list[SourceHostRequirementResponse]
 
 
 class IngestionRunResponse(BaseModel):

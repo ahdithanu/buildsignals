@@ -92,6 +92,7 @@ After the API service goes green, run the automated script:
 BASE=https://api.dealsignal.com ./scripts/smoke-test.sh
 # With auth (requires a seeded smoke user in the vault):
 BASE=https://api.dealsignal.com \
+  REQUIRE_AUTH_SMOKE=true \
   SMOKE_EMAIL=smoke@dealsignal.com \
   SMOKE_PASSWORD='<from vault>' \
   FRONTEND=https://app.dealsignal.com \
@@ -106,6 +107,7 @@ BASE=https://api.dealsignal.com     # adjust per environment
 # Basic aliveness + version
 curl -sf $BASE/health | jq .        # shallow liveness — no DB check
 curl -sf $BASE/health/deep | jq .   # exercises the DB; 503 if Postgres is unreachable
+curl -sf $BASE/health/ready | jq .  # schema and migration revision must support this release
 curl -sf $BASE/openapi.json | jq '.info.version'
 
 # Login round-trip — proves DB, JWT, and cookie wiring are healthy
@@ -117,8 +119,17 @@ curl -sf -X POST $BASE/v1/auth/login \
 grep ds_refresh /tmp/c.txt   # refresh cookie present (path /v1/auth)
 ```
 
-Frontend smoke: open `https://app.dealsignal.com`, log in, load `/deals`.
-First page should render with data within 3 seconds.
+Frontend smoke: open the configured production frontend and sign in to the
+intended pilot organization. Verify Planning and Brands load, then inspect a
+real imported record and its source evidence. Complete nearby-parcel review,
+save, and export. An empty HTTP 200 list proves endpoint availability, not
+working ingestion or pilot readiness. Record inventory counts, source dates,
+coverage limits, and any blocked steps before describing the release as ready.
+
+Keep Render's restart/liveness probe on `/health`; use `/health/ready` for the
+release gate, not a restart loop. The API service must have the reviewed
+`alembic upgrade head` pre-deploy command configured separately from its serve
+command. Confirm a usable recovery point before applying pending migrations.
 
 If any of the above fail, decide rollback vs forward-fix from the table
 below before investigating further — a broken production is worse than

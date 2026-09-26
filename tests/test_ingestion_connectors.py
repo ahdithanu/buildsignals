@@ -8,15 +8,19 @@ import pytest
 
 from app.services.ingestion.connectors import (
     ArcGISConnector,
+    CivicPlusNewsFlashConnector,
     CKANConnector,
+    ConnectorRequestError,
     CSVConnector,
     InvalidCheckpointError,
     JSONArrayConnector,
     OpenDataSoftConnector,
     RetryingHttpClient,
+    RSSConnector,
     SocrataConnector,
     build_connector,
 )
+from app.services.ingestion.connectors import factory as connector_factory
 
 
 class FakeHttpClient:
@@ -134,6 +138,141 @@ def test_json_array_connector_rejects_arrays_above_configured_limit():
 
     with pytest.raises(Exception, match="configured max_records is 2"):
         connector.fetch()
+
+
+def test_rss_connector_parses_and_pages_public_notices():
+    feed = """<?xml version="1.0"?>
+    <rss version="2.0"><channel>
+      <item><guid>notice-1</guid><title>Notice of Application</title>
+        <link>https://example.test/1</link><pubDate>Fri, 31 Jul 2026 15:07:37 -0800</pubDate>
+        <description>Site plan review</description></item>
+      <item><guid>notice-2</guid><title>Public Hearing</title>
+        <link>https://example.test/2</link><pubDate>Thu, 30 Jul 2026 10:00:00 -0800</pubDate>
+        <description>Legislative hearing</description></item>
+    </channel></rss>"""
+    http = FakeHttpClient([feed, feed])
+    connector = RSSConnector(
+        "https://example.test/notices.rss",
+        page_size=1,
+        headers={"User-Agent": "PublicFeedClient/1.0"},
+        http_client=http,
+    )
+
+    first, second = list(connector.iter_pages())
+
+    assert first.records[0]["guid"] == "notice-1"
+    assert first.records[0]["published_at"] == "Fri, 31 Jul 2026 15:07:37 -0800"
+    assert first.checkpoint == {"offset": 1}
+    assert second.records[0]["guid"] == "notice-2"
+    assert second.has_more is False
+    assert http.calls[0][2] == {
+        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
+        "User-Agent": "PublicFeedClient/1.0",
+    }
+
+
+def test_rss_connector_rejects_non_feed_xml_and_document_types():
+    connector = RSSConnector(
+        "https://example.test/notices.rss",
+        http_client=FakeHttpClient(["<html><body>not a feed</body></html>"]),
+    )
+    with pytest.raises(Exception, match="not an RSS or Atom feed"):
+        connector.fetch()
+
+    connector = RSSConnector(
+        "https://example.test/notices.rss",
+        http_client=FakeHttpClient(["<!DOCTYPE rss><rss><channel /></rss>"]),
+    )
+    with pytest.raises(Exception, match="document type declarations"):
+        connector.fetch()
+
+
+def test_rss_factory_passes_public_headers():
+    connector = build_connector("rss", {
+        "endpoint": "https://example.test/notices.rss",
+        "page_size": 25,
+        "headers": {"User-Agent": "Mozilla/5.0"},
+    })
+
+    assert isinstance(connector, RSSConnector)
+    assert connector.page_size == 25
+    assert connector.headers["User-Agent"] == "Mozilla/5.0"
+
+
+def test_civicplus_newsflash_parses_pages_and_suppresses_contacts():
+    archive = """
+    <div id="articles-category-30">
+      <ul>
+        <li id="list-articles-category-30-2618">
+          <a class="article-title-link" href="/m/newsflash/Home/Detail/2618">
+            ZC-26-05 (906 N. LBJ Drive)
+          </a>
+          <div class="article-preview"><p>A zoning application was submitted by
+            Acme LLC. Call 5123938230 or email planner@example.gov.</p>
+            <ul><li>Public hearing pending</li></ul></div>
+          <div class="fst-italic text-body-secondary">
+            Posted on August 12, 2026 | Last Updated on August 13, 2026
+          </div>
+        </li>
+        <li id="list-articles-category-30-2617">
+          <a class="article-title-link" href="/m/newsflash/Home/Detail/2617">ZC-26-07</a>
+          <div class="article-preview">Business park application.</div>
+          <div class="fst-italic text-body-secondary">Posted on August 11, 2026</div>
+        </li>
+      </ul>
+    </div>
+    """
+    http = FakeHttpClient([archive, archive])
+    connector = CivicPlusNewsFlashConnector(
+        "https://example.gov/m/newsflash",
+        category_id=30,
+        page_size=1,
+        http_client=http,
+    )
+
+    first, second = list(connector.iter_pages())
+
+    assert first.records[0] == {
+        "article_id": "2618",
+        "title": "ZC-26-05 (906 N. LBJ Drive)",
+        "link": "https://example.gov/m/newsflash/Home/Detail/2618",
+        "published_at": "August 12, 2026",
+        "description": (
+            "A zoning application was submitted by Acme LLC. "
+            "Call [phone suppressed] or email [email suppressed]. Public hearing pending"
+        ),
+    }
+    assert first.checkpoint == {"offset": 1}
+    assert second.records[0]["article_id"] == "2617"
+    assert second.has_more is False
+    assert http.calls[0][1] == {"cat": 30}
+    assert http.calls[0][2]["Accept"] == "text/html,application/xhtml+xml"
+
+
+def test_civicplus_newsflash_rejects_unexpected_category_markup():
+    connector = CivicPlusNewsFlashConnector(
+        "https://example.gov/m/newsflash",
+        category_id=30,
+        http_client=FakeHttpClient(['<div id="articles-category-31"></div>']),
+    )
+
+    with pytest.raises(Exception, match="did not contain category 30"):
+        connector.fetch()
+
+
+def test_civicplus_newsflash_factory_builds_bounded_connector():
+    connector = build_connector("civicplus_newsflash", {
+        "endpoint": "https://example.gov/m/newsflash",
+        "category_id": 30,
+        "page_size": 10,
+        "max_records": 100,
+        "max_description_chars": 500,
+    })
+
+    assert isinstance(connector, CivicPlusNewsFlashConnector)
+    assert connector.category_id == 30
+    assert connector.page_size == 10
+    assert connector.max_description_chars == 500
 
 
 def test_opendatasoft_returns_flattened_checkpointed_pages():
@@ -331,6 +470,32 @@ def test_arcgis_preserves_requested_polygon_centroid():
     assert http.calls[0][1]["outSR"] == 4326
 
 
+def test_arcgis_keyset_collapses_repeated_publisher_cursor_rows():
+    http = FakeHttpClient([{
+        "features": [
+            {"attributes": {"OBJECTID": 7, "permit": "P-7", "mailing": "one"}},
+            {"attributes": {"OBJECTID": 7, "permit": "P-7", "mailing": "two"}},
+            {"attributes": {"OBJECTID": 8, "permit": "P-8", "mailing": "three"}},
+        ],
+        "exceededTransferLimit": True,
+    }])
+    connector = ArcGISConnector(
+        "https://example.test/FeatureServer/0",
+        page_size=3,
+        keyset_field="OBJECTID",
+        http_client=http,
+    )
+
+    page = connector.fetch_page()
+
+    assert page.records == (
+        {"OBJECTID": 7, "permit": "P-7", "mailing": "one"},
+        {"OBJECTID": 8, "permit": "P-8", "mailing": "three"},
+    )
+    assert page.next_checkpoint == {"keyset": {"OBJECTID": 8}}
+    assert page.has_more is True
+
+
 def test_arcgis_passes_configured_public_headers():
     http = FakeHttpClient([{"features": []}])
     connector = ArcGISConnector(
@@ -355,6 +520,23 @@ def test_arcgis_factory_passes_centroid_configuration():
     assert connector.query == {"outSR": 4326}
 
 
+def test_staging_requires_an_ingestion_host_allowlist(monkeypatch):
+    monkeypatch.setattr(connector_factory, "ENVIRONMENT", "staging")
+    monkeypatch.delenv("INGESTION_ALLOWED_HOSTS", raising=False)
+
+    with pytest.raises(ValueError, match="staging and production"):
+        connector_factory._production_allowed_hosts()
+
+
+def test_staging_normalizes_the_ingestion_host_allowlist(monkeypatch):
+    monkeypatch.setattr(connector_factory, "ENVIRONMENT", "staging")
+    monkeypatch.setenv("INGESTION_ALLOWED_HOSTS", " DATA.EXAMPLE.COM,api.example.com ")
+
+    assert connector_factory._production_allowed_hosts() == frozenset({
+        "data.example.com", "api.example.com",
+    })
+
+
 def test_arcgis_factory_passes_public_headers():
     connector = build_connector("arcgis", {
         "endpoint": "https://example.test/FeatureServer/0/query",
@@ -370,12 +552,152 @@ def test_arcgis_factory_rejects_invalid_public_headers():
             "endpoint": "https://example.test/FeatureServer/0/query",
             "headers": ["User-Agent"],
         })
-
     with pytest.raises(ValueError, match="'headers' keys and values"):
         build_connector("arcgis", {
             "endpoint": "https://example.test/FeatureServer/0/query",
             "headers": {"User-Agent": ""},
         })
+
+
+@pytest.mark.parametrize("header", ["Host", "Proxy-Authorization", "Connection"])
+def test_factory_rejects_headers_that_can_change_request_routing(header):
+    with pytest.raises(ValueError, match="Connector header is not allowed"):
+        build_connector("arcgis", {
+            "endpoint": "https://example.test/FeatureServer/0/query",
+            "headers": {header: "attacker.example"},
+        })
+
+
+def test_factory_rejects_header_control_characters():
+    with pytest.raises(ValueError, match="control characters"):
+        build_connector("arcgis", {
+            "endpoint": "https://example.test/FeatureServer/0/query",
+            "headers": {"X-Source": "trusted\r\nHost: attacker.example"},
+        })
+
+
+def test_deployed_http_client_rejects_non_public_dns(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [
+            (2, 1, 6, "", ("169.254.169.254", 443)),
+        ],
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({"metadata.example.test"}))
+
+    with pytest.raises(ConnectorRequestError, match="non-public address"):
+        client._validate_url("https://metadata.example.test/data")
+
+
+def test_deployed_http_client_accepts_exact_public_dns(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [
+            (2, 1, 6, "", ("8.8.8.8", 443)),
+        ],
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({"data.example.test"}))
+
+    client._validate_url("https://data.example.test/data")
+
+
+def test_deployed_http_client_pins_validated_address(monkeypatch):
+    connections = []
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [
+            (2, 1, 6, "", ("8.8.8.8", 443)),
+        ],
+    )
+
+    class Response:
+        status = 200
+        reason = "OK"
+        headers = Message()
+
+        @staticmethod
+        def read():
+            return b'{"ok": true}'
+
+    class Connection:
+        def __init__(self, host, connect_address, **kwargs):
+            connections.append((host, connect_address, kwargs))
+
+        def request(self, method, target, headers):
+            assert (method, target) == ("GET", "/data")
+
+        @staticmethod
+        def getresponse():
+            return Response()
+
+        @staticmethod
+        def close():
+            return None
+
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base._PinnedHTTPSConnection",
+        Connection,
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({"data.example.test"}))
+
+    assert client.get_json("https://data.example.test/data") == {"ok": True}
+    assert connections[0][0:2] == ("data.example.test", "8.8.8.8")
+
+
+def test_deployed_http_client_rejects_cross_host_redirects(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: [(2, 1, 6, "", ("8.8.8.8", 443))],
+    )
+
+    class Response:
+        status = 302
+        reason = "Found"
+        headers = Message()
+        headers["Location"] = "https://other.example.test/data"
+
+        @staticmethod
+        def read():
+            return b""
+
+    class Connection:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def request(self, *_args, **_kwargs):
+            pass
+
+        @staticmethod
+        def getresponse():
+            return Response()
+
+        @staticmethod
+        def close():
+            return None
+
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base._PinnedHTTPSConnection",
+        Connection,
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({
+        "data.example.test", "other.example.test",
+    }))
+
+    with pytest.raises(ConnectorRequestError, match="cross-host redirects"):
+        client.get_json("https://data.example.test/data")
+
+
+def test_deployed_http_client_rejects_plain_http_before_dns(monkeypatch):
+    dns = []
+    monkeypatch.setattr(
+        "app.services.ingestion.connectors.base.socket.getaddrinfo",
+        lambda *_args, **_kwargs: dns.append(True),
+    )
+    client = RetryingHttpClient(allowed_hosts=frozenset({"data.example.test"}))
+
+    with pytest.raises(ConnectorRequestError, match="must use HTTPS"):
+        client._validate_url("http://data.example.test/data")
+    assert dns == []
 
 
 def test_arcgis_keyset_paginates_without_shifting_offsets():

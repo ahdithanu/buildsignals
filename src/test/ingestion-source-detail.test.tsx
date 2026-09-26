@@ -36,6 +36,12 @@ describe("<IngestionSourceDetail>", () => {
           last_run_at: "2026-07-23T12:00:00Z",
           last_success_at: "2026-07-22T12:00:00Z",
           ingestion_age_hours: 24,
+          source_lag_hours: 30,
+          freshness_sla_hours: 24,
+          freshness_sla_configured: true,
+          freshness_semantics: "filing_event_at",
+          freshness_label: "Latest filing event",
+          source_watermark_enforced: false,
           terminal_runs: 2,
           unhealthy_runs: 1,
           run_failure_rate: 0.5,
@@ -103,6 +109,9 @@ describe("<IngestionSourceDetail>", () => {
     );
     expect(screen.getByText("Heartbeat stale")).toBeInTheDocument();
     expect(screen.getByText("Cursor stalled")).toBeInTheDocument();
+    expect(screen.getByText("Latest filing event")).toBeInTheDocument();
+    expect(screen.getByText("30 hours · activity only")).toBeInTheDocument();
+    expect(screen.getByText("24 hours")).toBeInTheDocument();
     expect(screen.getByText("Recent Runs")).toBeInTheDocument();
     expect(screen.getByText("Recent Permits")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "BP-1" })).toHaveAttribute("href", "/permits/permit-1");

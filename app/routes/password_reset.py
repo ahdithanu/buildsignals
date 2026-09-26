@@ -103,7 +103,7 @@ def _app_base_url() -> str:
 def _render_email(reset_url: str) -> tuple[str, str]:
     """Return (text, html) bodies for the reset email."""
     text = (
-        "You (or someone using your email) asked to reset your DealSignal "
+        "You (or someone using your email) asked to reset your BuildSignals "
         "password.\n\n"
         f"Open this link to choose a new password — it expires in 1 hour:\n\n"
         f"{reset_url}\n\n"
@@ -111,7 +111,7 @@ def _render_email(reset_url: str) -> tuple[str, str]:
         "password won't change.\n"
     )
     html = f"""\
-<p>You (or someone using your email) asked to reset your DealSignal password.</p>
+<p>You (or someone using your email) asked to reset your BuildSignals password.</p>
 <p>
   <a href="{reset_url}">Choose a new password</a> &mdash; the link expires in 1 hour.
 </p>
@@ -194,7 +194,7 @@ def forgot_password(
         # the user could recover from by re-requesting.
         get_email_service().send(
             to=user.email,
-            subject="Reset your DealSignal password",
+            subject="Reset your BuildSignals password",
             html=html,
             text=text,
         )

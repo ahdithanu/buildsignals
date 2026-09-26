@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { Analytics } from "@vercel/analytics/react";
 import App from "./App.tsx";
 import "./index.css";
 import { initSentry } from "./sentry";
@@ -7,4 +8,9 @@ import { initSentry } from "./sentry";
 // in App / its imports. No-op when VITE_SENTRY_DSN is unset (dev, tests).
 initSentry();
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <>
+    <App />
+    <Analytics />
+  </>,
+);

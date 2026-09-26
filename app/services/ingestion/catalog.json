@@ -7,9 +7,15 @@
     "jurisdiction": "Austin, TX",
     "base_url": "https://data.austintexas.gov/resource/3syk-w9eu.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.austintexas.gov/d/3syk-w9eu",
       "license": "City of Austin Open Data Terms of Use",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["project_id", "description", "permit_location", "status_current"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "approved_only",
@@ -54,9 +60,15 @@
     "jurisdiction": "Seattle, WA",
     "base_url": "https://data.seattle.gov/resource/76t5-zqzr.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.seattle.gov/d/76t5-zqzr",
       "license": "Public Domain",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["permitnum", "description", "originaladdress1", "statuscurrent"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "pre_approval_and_approved",
@@ -109,6 +121,10 @@
       "rights_basis": "City of Seattle Open Data metadata lists the SDCI Land Use Permits dataset as Public Domain. Narrow admission uses non-residential and multifamily Master Use Permit lifecycle rows for early land-use, zoning, SEPA, design-review, subdivision, shoreline, and development-site intelligence, with portal links as evidence. It supplements Seattle building permits and street-use notices; raw source replacement exports and terminal canceled/withdrawn/expired rows are excluded from active opportunity ingestion.",
       "attribution_required": false,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": [":id", "permitnum", "description", "statuscurrent", "originaladdress1"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -186,6 +202,10 @@
       "rights_basis": "Admitted as a narrow Seattle SDOT public-comment and recent-decision street-use signal; it supplements building permits for early public-space, curb, cafe, and street-use indicators and does not replace SDCI permit lifecycle coverage",
       "attribution_required": false,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["application_number", "application_type", "address"],
       "reconciliation_mode": "periodic_full",
@@ -233,6 +253,10 @@
       "rights_basis": "Narrow admission supports structured SEPA/NEPA register metadata for statewide environmental pre-approval context; Ecology states the register contains submitted SEPA/NEPA documents searchable and downloadable by the public, while document bodies, archaeological-sensitive locations, personal contact details, raw document resale, and unrestricted source replacement exports remain excluded",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["separegisterid", "sepanumber", "documenttypecode"],
       "reconciliation_mode": "periodic_full",
@@ -279,7 +303,7 @@
       {"source_field": "siteparcelnumber", "canonical_field": "parcel_id"},
       {"source_field": "sitelatitudedecimal", "canonical_field": "latitude"},
       {"source_field": "sitelongitudedecimal", "canonical_field": "longitude"},
-      {"source_field": "applicantname", "canonical_field": "applicant_name"},
+      {"source_field": "applicantname", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "publisheddate", "canonical_field": "filed_at"},
       {"source_field": "leadagencyissuedate", "canonical_field": "status_updated_at"},
       {"source_field": "separegisterlink", "canonical_field": "source_url", "transform": "object_path", "transform_options": {"path": ["url"]}}
@@ -299,6 +323,10 @@
       "rights_basis": "Narrow admission supports derived unincorporated Pierce County permit and development context with county attribution, no county endorsement, source/disclaimer notices, no raw bulk resale, and no unrestricted API passthrough; the layer contains applications and permits reviewed in PALS Plus across building, development engineering, environmental, fire prevention, land use, and sewer workflows",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "applicationNumber", "applicationType", "applicationStatus"],
       "reconciliation_mode": "periodic_full",
@@ -374,6 +402,10 @@
       "rights_basis": "City of Bellingham Planning and Community Development publishes the Development Dashboard and backing public ArcGIS web map for development projects and permits in application, issued, and finaled status. The item metadata provides City of Bellingham attribution and no-warranty/user-risk terms rather than a broad raw-data resale license. Narrow production admission keeps public non-residential permit identity, application/approval/issue/final/expiration dates, public work description, parcel APN, zoning, valuation, floor area, dashboard lifecycle bucket, and point location as attributed value-added development intelligence with currentness checks, no raw source-replacement resale, and owner/applicant mailing/contact fields suppressed.",
       "attribution_required": true,
       "refresh_frequency": "weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 240,
       "canary_required_fields": ["OBJECTID", "PERMIT_NO", "PERMIT_CLASS", "APPLIED", "STATUS", "SITE_ADDR", "SITE_APN", "Query_Result", "geometry"],
       "reconciliation_mode": "weekly_recent_snapshot_with_periodic_full_snapshot",
@@ -469,9 +501,15 @@
     "jurisdiction": "Chicago, IL",
     "base_url": "https://data.cityofchicago.org/resource/ydr8-5enu.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.cityofchicago.org/d/ydr8-5enu",
       "license": "City of Chicago Data Portal Terms of Use",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["id", "work_description", "street_name", "permit_status"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "approved_only",
@@ -511,9 +549,15 @@
     "jurisdiction": "New York City, NY",
     "base_url": "https://data.cityofnewyork.us/resource/rbx6-tga4.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.cityofnewyork.us/d/rbx6-tga4",
       "license": "NYC Open Data Terms of Use",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["tracking_number", "job_description", "house_no", "permit_status"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "approved_only",
@@ -540,7 +584,7 @@
       {"source_field": "zip_code", "canonical_field": "postal_code"},
       {"source_field": "bbl", "canonical_field": "parcel_id"},
       {"source_field": "owner_business_name", "canonical_field": "owner_name", "transform": "first_nonempty", "transform_options": {"fields": ["owner_business_name", "owner_name"]}},
-      {"source_field": "applicant_business_name", "canonical_field": "applicant_name", "transform": "first_nonempty", "transform_options": {"fields": ["applicant_business_name", "applicant_first_name"]}},
+      {"source_field": "applicant_business_name", "canonical_field": "applicant_name", "value_semantics": "unknown", "transform": "first_nonempty", "transform_options": {"fields": ["applicant_business_name", "applicant_first_name"]}},
       {"source_field": "estimated_job_costs", "canonical_field": "valuation"},
       {"source_field": "latitude", "canonical_field": "latitude"},
       {"source_field": "longitude", "canonical_field": "longitude"}
@@ -554,9 +598,15 @@
     "jurisdiction": "Austin, TX",
     "base_url": "https://data.austintexas.gov/resource/n8ck-xkda.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.austintexas.gov/d/n8ck-xkda",
       "license": "Public Domain U.S. Government",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["folderrsn", "project_name", "folder_description", "status_current"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "pre_approval_and_approved",
@@ -581,7 +631,7 @@
       {"source_field": "folder_description", "canonical_field": "description"},
       {"source_field": "status_current", "canonical_field": "status"},
       {"source_field": "status_date", "canonical_field": "status_updated_at"},
-      {"source_field": "applicant_organization_name", "canonical_field": "applicant_name", "transform": "first_nonempty", "transform_options": {"fields": ["applicant_organization_name", "applicant_full_name"]}},
+      {"source_field": "applicant_organization_name", "canonical_field": "applicant_name", "value_semantics": "unknown", "transform": "first_nonempty", "transform_options": {"fields": ["applicant_organization_name", "applicant_full_name"]}},
       {"source_field": "owner_organization_name", "canonical_field": "owner_name", "transform": "first_nonempty", "transform_options": {"fields": ["owner_organization_name", "owner_full_name"]}},
       {"source_field": "appraisal_id", "canonical_field": "parcel_id"},
       {"source_field": "applied_date", "canonical_field": "filed_at"},
@@ -605,7 +655,12 @@
       "official_landing_page": "https://data.cityofnewyork.us/d/w9ak-ipjd",
       "license": "NYC Open Data Terms of Use",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_field": "current_status_date",
+      "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 96,
       "canary_freshness_probe": {
         "sample_size": 5,
@@ -684,7 +739,7 @@
       {"source_field": "postcode", "canonical_field": "postal_code"},
       {"source_field": "bbl", "canonical_field": "parcel_id"},
       {"source_field": "owner_s_business_name", "canonical_field": "owner_name"},
-      {"source_field": "applicant_business_name", "canonical_field": "applicant_name"},
+      {"source_field": "applicant_business_name", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "initial_cost", "canonical_field": "valuation"},
       {"source_field": "total_construction_floor_area", "canonical_field": "square_feet"},
       {"source_field": "proposed_dwelling_units", "canonical_field": "units"},
@@ -703,9 +758,15 @@
     "jurisdiction": "Austin, TX",
     "base_url": "https://data.austintexas.gov/resource/mavg-96ck.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.austintexas.gov/d/mavg-96ck",
       "license": "Public Domain",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["folderrsn", "case_name", "proposed_land_use", "status", "application_start_date"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "pre_approval_and_approved",
@@ -767,7 +828,7 @@
       {"source_field": "zip_code", "canonical_field": "postal_code"},
       {"source_field": "tcad_id", "canonical_field": "parcel_id"},
       {"source_field": "owner_organization_name", "canonical_field": "owner_name", "transform": "first_nonempty", "transform_options": {"fields": ["owner_organization_name", "owner_fullname"]}},
-      {"source_field": "applicant_organization_name", "canonical_field": "applicant_name", "transform": "first_nonempty", "transform_options": {"fields": ["applicant_organization_name", "applicant_fullname"]}},
+      {"source_field": "applicant_organization_name", "canonical_field": "applicant_name", "value_semantics": "unknown", "transform": "first_nonempty", "transform_options": {"fields": ["applicant_organization_name", "applicant_fullname"]}},
       {"source_field": "latitude", "canonical_field": "latitude"},
       {"source_field": "longitude", "canonical_field": "longitude"},
       {"source_field": "application_start_date", "canonical_field": "filed_at"},
@@ -784,9 +845,15 @@
     "jurisdiction": "New York City, NY",
     "base_url": "https://data.cityofnewyork.us/resource/ic3t-wcy2.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.cityofnewyork.us/d/ic3t-wcy2",
       "license": "NYC Open Data Terms of Use",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["job_s1_no", "job_description", "house__", "job_status_descrp"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "pre_approval_and_approved",
@@ -813,7 +880,7 @@
       {"source_field": "borough", "canonical_field": "city"},
       {"source_field": "bbl", "canonical_field": "parcel_id"},
       {"source_field": "owner_s_business_name", "canonical_field": "owner_name", "transform": "first_nonempty", "transform_options": {"fields": ["owner_s_business_name", "owner_s_last_name"]}},
-      {"source_field": "applicant_s_last_name", "canonical_field": "applicant_name", "transform": "join_fields", "transform_options": {"fields": ["applicant_s_first_name", "applicant_s_last_name"], "separator": " "}},
+      {"source_field": "applicant_s_last_name", "canonical_field": "applicant_name", "value_semantics": "person", "transform": "join_fields", "transform_options": {"fields": ["applicant_s_first_name", "applicant_s_last_name"], "separator": " "}},
       {"source_field": "initial_cost", "canonical_field": "valuation"},
       {"source_field": "total_construction_floor_area", "canonical_field": "square_feet"},
       {"source_field": "proposed_dwelling_units", "canonical_field": "units"},
@@ -834,9 +901,15 @@
     "jurisdiction": "New Orleans, LA",
     "base_url": "https://data.nola.gov/resource/72f9-bi28.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.nola.gov/d/72f9-bi28",
       "license": "Creative Commons CC0 1.0 Universal (Public Domain Dedication)",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": [":id", "permitnum", "description", "originaladdress1", "statuscurrent"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "pre_approval_and_approved",
@@ -895,6 +968,10 @@
       "rights_basis": "East Baton Rouge Parish publishes the Building Permits dataset through its official open data portal with Public Domain metadata and Permits and Inspections attribution. The dataset is described as construction and occupancy permits issued in East Baton Rouge Parish. Production use is admitted as approved/issued confirmation only, retaining public permit identity, commercial designation, project text, dates, parties, address, valuation, square footage, and coordinates as evidence-backed permit intelligence with attribution and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily_or_weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["permitid", "permitnumber", "permittype", "creationdate", "issueddate"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -939,7 +1016,7 @@
       {"source_field": "state1", "canonical_field": "state"},
       {"source_field": "zip", "canonical_field": "postal_code"},
       {"source_field": "ownername", "canonical_field": "owner_name"},
-      {"source_field": "applicantname", "canonical_field": "applicant_name"},
+      {"source_field": "applicantname", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "contractorname", "canonical_field": "contractor_name"},
       {"source_field": "projectvalue", "canonical_field": "valuation"},
       {"source_field": "squarefootage", "canonical_field": "square_feet"},
@@ -955,24 +1032,37 @@
     "adapter": "socrata",
     "record_type": "permit",
     "jurisdiction": "San Francisco, CA",
-    "base_url": "https://data.sfgov.org/resource/f2jc-ivnc.json",
+    "base_url": "https://data.sfgov.org/resource/i98e-djp9.json",
     "settings": {
-      "official_landing_page": "https://data.sfgov.org/d/f2jc-ivnc",
+      "official_landing_page": "https://data.sfgov.org/d/i98e-djp9",
       "license": "Open Data Commons Public Domain Dedication and License",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["permit_number", "description", "street_name", "status", "data_loaded_at"],
       "freshness_field": "data_loaded_at",
+      "freshness_semantics": "dataset_refreshed_at",
       "freshness_sla_hours": 36,
+      "canary_freshness_probe": {
+        "sample_size": 3,
+        "connector": {
+          "keyset_fields": null,
+          "order_by": "data_loaded_at DESC, record_id DESC"
+        }
+      },
       "reconciliation_mode": "keyset_incremental_with_periodic_full",
       "signal_stage": "pre_approval_and_approved",
       "connector": {
         "page_size": 500,
-        "keyset_fields": ["data_loaded_at", "record_id"]
+        "keyset_fields": ["data_loaded_at", "record_id"],
+        "query": {"$where": "primary_address_flag = 'Y'"}
       },
       "defaults": {
         "city": "San Francisco",
         "state": "CA",
-        "source_url": "https://data.sfgov.org/d/f2jc-ivnc"
+        "source_url": "https://data.sfgov.org/d/i98e-djp9"
       }
     },
     "field_mappings": [
@@ -1012,6 +1102,10 @@
       "rights_basis": "San Francisco Planning Department publishes this Accela-derived non-project and child-record dataset as Public Domain U.S. Government work with Planning Department attribution. The source is updated nightly and covers supplemental planning applications required to review development projects. Narrow production admission keeps entitlement/review record identity, type, status, project/address text, parcel block/lot, open/close dates, applicant organization, and PIM evidence URL for derived pre-approval retailer/development intelligence, with attribution, currentness/no-endorsement/no-warranty caveats, and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "nightly",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 48,
       "canary_required_fields": ["record_id", "record_type", "record_status", "open_date"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -1076,7 +1170,7 @@
       {"source_field": "description", "canonical_field": "description"},
       {"source_field": "project_address", "canonical_field": "address"},
       {"source_field": "__parcel_id", "canonical_field": "parcel_id", "transform": "join_fields", "transform_options": {"fields": ["block", "lot"], "separator": "-"}},
-      {"source_field": "applicant_org", "canonical_field": "applicant_name"},
+      {"source_field": "applicant_org", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "open_date", "canonical_field": "filed_at", "transform": "date", "transform_options": {"max_future_hours": 48}},
       {"source_field": "__approved_at", "canonical_field": "approved_at", "transform": "conditional_map", "transform_options": {"cases": [{"field": "record_status", "operator": "in", "values": ["Approved", "Closed - Approved", "Closed - Issued", "Closed - CEQA Clearance Issued"], "value_field": "close_date"}]}},
       {"source_field": "pim_link", "canonical_field": "source_url", "transform": "object_path", "transform_options": {"path": ["url"]}}
@@ -1097,6 +1191,10 @@
       "attribution_required": true,
       "share_alike_review_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["unique_id", "permit_tracking_id", "type_permit", "received_date"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -1180,9 +1278,15 @@
     "jurisdiction": "Boulder, CO",
     "base_url": "https://services.arcgis.com/ePKBjXrBZ2vEEgWd/arcgis/rest/services/Construction_Permits/FeatureServer/0/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://open-data.bouldercolorado.gov/datasets/e3ff6248e4a547bcba31025d2c5c9fee",
       "license": "Creative Commons CC0 1.0 Universal (Public Domain Dedication)",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["PermitID", "PermitNum", "Description", "OriginalAddress", "StatusCurrent"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "pre_approval_and_approved",
@@ -1212,9 +1316,9 @@
       {"source_field": "OriginalZip", "canonical_field": "postal_code"},
       {"source_field": "COBPIN", "canonical_field": "parcel_id", "transform": "first_nonempty", "transform_options": {"fields": ["COBPIN", "BOCOPIN", "BOCOTAX"]}},
       {"source_field": "EstProjectCost", "canonical_field": "valuation"},
-      {"source_field": "AppliedDate", "canonical_field": "filed_at", "transform": "unix_milliseconds"},
-      {"source_field": "IssuedDate", "canonical_field": "issued_at", "transform": "unix_milliseconds"},
-      {"source_field": "CompletedDate", "canonical_field": "completed_at", "transform": "unix_milliseconds"}
+      {"source_field": "AppliedDate", "canonical_field": "filed_at", "transform": "date", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "IssuedDate", "canonical_field": "issued_at", "transform": "date", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "CompletedDate", "canonical_field": "completed_at", "transform": "date", "transform_options": {"max_future_hours": 48}}
     ]
   },
   {
@@ -1231,7 +1335,12 @@
       "rights_basis": "San Jose's Development Data page links to the Planning Permits Map, and the city Open Data page says published datasets are available in machine-readable format under an open license that allows reuse and redistribution. Narrow admission stores attributed planning/development lifecycle facts and suppresses staff/editor fields, notes, and raw source-replacement exports.",
       "attribution_required": true,
       "refresh_frequency": "as_needed_with_daily_canary",
+      "collection_interval_minutes": 525600,
+      "collection_sla_hours": 8760,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "manual",
       "freshness_field": "LASTUPDATE",
+      "freshness_semantics": "record_updated_at",
       "freshness_sla_hours": 720,
       "canary_freshness_probe": {
         "sample_size": 5,
@@ -1307,7 +1416,7 @@
       {"source_field": "__project_name", "canonical_field": "project_name", "transform": "first_nonempty", "transform_options": {"fields": ["FOLDERNAME", "FOLDERDESC"]}},
       {"source_field": "ADDRESS", "canonical_field": "address"},
       {"source_field": "APN", "canonical_field": "parcel_id"},
-      {"source_field": "APPLICANT", "canonical_field": "applicant_name"},
+      {"source_field": "APPLICANT", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "OWNERNAME", "canonical_field": "owner_name"},
       {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}},
       {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}},
@@ -1325,12 +1434,18 @@
     "jurisdiction": "Denver, CO",
     "base_url": "https://services1.arcgis.com/zdB7qR0BtYrg0Xpl/arcgis/rest/services/ODC_DEV_COMMERCIALCONSTPERMIT_P/FeatureServer/317/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=00050dc30e0d4b3794fd2e16bd244c27",
       "license": "Creative Commons Attribution 3.0 United States (CC BY 3.0 US)",
       "license_url": "https://creativecommons.org/licenses/by/3.0/us/",
       "rights_basis": "Denver Open Data Catalog permits reuse under CC BY 3.0; this source is confirmation-only because the official bulk layer publishes issued/paid permits",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["GLOBALID", "PERMIT_NUM", "ADDRESS", "DATE_ISSUED"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "approved_only",
@@ -1371,12 +1486,18 @@
     "jurisdiction": "Denver, CO",
     "base_url": "https://services1.arcgis.com/zdB7qR0BtYrg0Xpl/arcgis/rest/services/ODC_DEV_RESIDENTIALCONSTPERMIT_P/FeatureServer/316/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=00050dc30e0d4b3794fd2e16bd244c27",
       "license": "Creative Commons Attribution 3.0 United States (CC BY 3.0 US)",
       "license_url": "https://creativecommons.org/licenses/by/3.0/us/",
       "rights_basis": "Denver Open Data Catalog permits reuse under CC BY 3.0; this source is confirmation-only because the official bulk layer publishes issued/paid permits",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["GLOBALID", "PERMIT_NUM", "ADDRESS", "DATE_ISSUED"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "approved_only",
@@ -1417,12 +1538,18 @@
     "jurisdiction": "Denver, CO",
     "base_url": "https://services1.arcgis.com/zdB7qR0BtYrg0Xpl/arcgis/rest/services/ODC_DEV_DEMOLITIONPERMIT_P/FeatureServer/318/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=00050dc30e0d4b3794fd2e16bd244c27",
       "license": "Creative Commons Attribution 3.0 United States (CC BY 3.0 US)",
       "license_url": "https://creativecommons.org/licenses/by/3.0/us/",
       "rights_basis": "Denver Open Data Catalog permits reuse under CC BY 3.0; this source is confirmation-only because the official bulk layer publishes issued/paid permits",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["GLOBALID", "PERMIT_NUM", "ADDRESS", "DATE_ISSUED"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "approved_only",
@@ -1463,12 +1590,18 @@
     "jurisdiction": "Somerville, MA",
     "base_url": "https://data.somervillema.gov/resource/nneb-s3f7.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.somervillema.gov/d/nneb-s3f7",
       "license": "Open Data Commons Open Database License (ODbL) 1.0",
       "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
       "attribution_required": true,
       "share_alike_review_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["application_id", "status", "project_description_or_business_name", "application_address", "application_date"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "pre_approval_and_approved",
@@ -1498,7 +1631,7 @@
       {"source_field": "status", "canonical_field": "status"},
       {"source_field": "application_address", "canonical_field": "address"},
       {"source_field": "parcel_number", "canonical_field": "parcel_id"},
-      {"source_field": "applicant_company_name", "canonical_field": "applicant_name"},
+      {"source_field": "applicant_company_name", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "contractor_company", "canonical_field": "contractor_name", "transform": "first_nonempty", "transform_options": {"fields": ["contractor_company", "contractor_name"]}},
       {"source_field": "estimated_construction_cost", "canonical_field": "valuation"},
       {"source_field": "application_latitude", "canonical_field": "latitude"},
@@ -1517,11 +1650,17 @@
     "jurisdiction": "San Diego, CA",
     "base_url": "https://seshat.datasd.org/development_permits/approvals_created_2026_datasd.csv",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.sandiego.gov/datasets/development-permits/",
       "license": "Open Data Commons Public Domain Dedication and License (PDDL) 1.0",
       "license_url": "https://opendefinition.org/licenses/odc-pddl/",
       "rights_basis": "City of San Diego DataSD links the approvals dataset to ODC PDDL and publishes daily CSV downloads for created, active, issued, closed, and all approvals",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["APPROVAL_ID", "APPROVAL_STATUS", "PROJECT_TITLE", "GIS_ADDRESS", "APPROVAL_CREATE_DATE"],
       "reconciliation_mode": "daily_current_year_snapshot",
       "signal_stage": "pre_approval_and_approved",
@@ -1548,7 +1687,7 @@
       {"source_field": "APPROVAL_STATUS", "canonical_field": "status"},
       {"source_field": "GIS_ADDRESS", "canonical_field": "address"},
       {"source_field": "GIS_APN", "canonical_field": "parcel_id"},
-      {"source_field": "APPROVAL_PERMIT_HOLDER", "canonical_field": "applicant_name"},
+      {"source_field": "APPROVAL_PERMIT_HOLDER", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "APPROVAL_VALUATION", "canonical_field": "valuation"},
       {"source_field": "APPROVAL_FLOOR_AREA", "canonical_field": "square_feet"},
       {"source_field": "GIS_LATITUDE", "canonical_field": "latitude"},
@@ -1567,12 +1706,18 @@
     "jurisdiction": "Cleveland, OH",
     "base_url": "https://services3.arcgis.com/dty2kHktVXHrqO8i/arcgis/rest/services/Building_Permit_Application_Tasks/FeatureServer/0/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.clevelandohio.gov/api/search/v1/collections/all/items/cea944491b6042418cd316b1b5ea281b",
       "license": "Open Data Commons Open Database License (ODbL) 1.0",
       "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
       "attribution_required": true,
       "share_alike_review_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["PERMIT_ID", "PERMIT_ISSUED", "WORK_DESCRIPTION", "PRIMARY_ADDRESS", "FILE_DATE"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "pre_approval_and_approved",
@@ -1622,6 +1767,10 @@
       "rights_basis": "City of Cincinnati publishes the Building Permits dataset through its official open-data portal with official provenance and Public Domain licensing. Narrow admission stores derived commercial permit lifecycle facts, source links, and evidence fields for early retailer/tenant detection; broad residential and personal-contact fields are not fetched.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 48,
       "canary_required_fields": [":id", "permitnum", "statuscurrent", "originaladdress1", "applieddate"],
       "reconciliation_mode": "daily_recent_snapshot_with_monthly_full_snapshot",
@@ -1695,16 +1844,22 @@
     "jurisdiction": "Portland, OR",
     "base_url": "https://www.portlandmaps.com/arcgis/rest/services/Public/BDS_Permit/FeatureServer/22/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.portlandmaps.com/arcgis/rest/services/Public/BDS_Permit/FeatureServer/22",
       "license": "Open Data Commons Public Domain Dedication and License (PDDL) 1.0",
       "license_url": "https://opendatacommons.org/licenses/pddl/1-0/",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["FOLDERKEY", "APPLICATION", "DESCRIPTION", "STATUS", "CREATEDATE"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "pre_approval_and_approved",
       "connector": {
         "page_size": 4000,
-        "where": "TYPE IN ('CO','RS','SD','LU','DR','PC')",
+        "where": "FOLDERTYPE IN ('CO','RS','SD','LU','DR','PC')",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID"
       },
@@ -1745,11 +1900,17 @@
     "jurisdiction": "Pittsburgh, PA",
     "base_url": "https://data.wprdc.org/api/3/action/datastore_search",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.wprdc.org/dataset/pli-permits",
       "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
       "license_url": "https://creativecommons.org/licenses/by/4.0/",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["permit_id", "work_description", "address", "status", "issue_date"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "approved_only",
@@ -1792,11 +1953,17 @@
     "jurisdiction": "Milwaukee, WI",
     "base_url": "https://data.milwaukee.gov/api/3/action/datastore_search",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.milwaukee.gov/dataset/buildingpermits",
       "license": "Creative Commons Attribution",
       "license_url": "https://opendefinition.org/licenses/cc-by/",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["Record ID", "Permit Type", "Status", "Address", "Date Issued"],
       "reconciliation_mode": "monthly_full_snapshot",
       "signal_stage": "approved_only",
@@ -1839,12 +2006,18 @@
     "jurisdiction": "Minneapolis, MN",
     "base_url": "https://services.arcgis.com/afSMGVsC7QlRK1kZ/arcgis/rest/services/CCS_Permits/FeatureServer/0/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=91d7cc54f31a45b0982fca5117f16a0f",
       "license": "City of Minneapolis open data copyright waiver",
       "license_url": "https://www.minneapolismn.gov/government/charter-and-code-of-ordinances/city-policies/open-data-policy/",
       "rights_basis": "City item metadata and open-data policy waive copyright and related rights to the extent possible under law; preserve attribution, disclaimers, and named-party minimization",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["OBJECTID", "permitNumber", "permitType", "status", "Display"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "pre_approval_and_approved",
@@ -1881,7 +2054,7 @@
       {"source_field": "Longitude", "canonical_field": "longitude"},
       {"source_field": "issueDate", "canonical_field": "issued_at", "transform": "unix_milliseconds"},
       {"source_field": "completeDate", "canonical_field": "completed_at", "transform": "unix_milliseconds"},
-      {"source_field": "applicantName", "canonical_field": "applicant_name"},
+      {"source_field": "applicantName", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "__contractor_name", "canonical_field": "contractor_name", "transform": "first_nonempty", "transform_options": {"fields": ["applicantName"]}},
       {"source_field": "fullName", "canonical_field": "owner_name"}
     ]
@@ -1894,12 +2067,18 @@
     "jurisdiction": "St. Louis, MO",
     "base_url": "https://www.stlcitypermits.com/API/Occupancy/GetCommercialOccupancyInspections",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.stlouis-mo.gov/data/datasets/dataset.cfm?id=110",
       "license": "City of St. Louis public open data",
       "license_url": "https://dynamic.stlouis-mo.gov/opendata/terms.cfm",
       "rights_basis": "Official City of St. Louis open-data dataset and API; retain attribution, source links, and public-record caveats",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["OccupancyApplicationID", "PermitType", "ApplicationDate", "ProjectAddress", "CurrentResult"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "pre_approval_and_approved",
@@ -1939,12 +2118,18 @@
     "jurisdiction": "Louisville / Jefferson County, KY",
     "base_url": "https://services1.arcgis.com/79kfd2K6fskCAkyg/arcgis/rest/services/active_construction_permits/FeatureServer/0/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://www.arcgis.com/home/item.html?id=0251a88cefdc4ab3a0d85943074e6d7b",
       "license": "ODC Public Domain Dedication and License (PDDL) 1.0",
       "license_url": "https://louisville-metro-opendata-lojic.hub.arcgis.com/pages/terms-of-use-and-license",
       "rights_basis": "Louisville Metro open-data terms use ODC PDDL, permitting sharing, use, products/services, and adaptation; source/version/modification notice retained",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["ObjectId", "PERMIT_NUMBER", "PERMIT_TYPE", "PERMIT_STATUS", "ISSUE_DATE", "ADDRESS"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "approved_only",
@@ -1995,9 +2180,15 @@
     "jurisdiction": "Montgomery County, MD",
     "base_url": "https://data.montgomerycountymd.gov/resource/7ate-xrxm.json",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://data.montgomerycountymd.gov/d/7ate-xrxm",
       "license": "Public Domain",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["permitno", "description", "status", "issueddate"],
       "reconciliation_mode": "periodic_full",
       "signal_stage": "approved_only",
@@ -2046,6 +2237,10 @@
       "rights_basis": "Maryland Open Data lists the MD iMAP Maryland Property Data Parcel Points dataset as Public Domain and permits distribution with metadata preservation and State acknowledgment for derived data. Narrow production admission uses the official Planning/SDAT parcel points as a statewide parcel-proximity spine. Owner-name assets that require a separate user license agreement remain excluded.",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 1488,
       "canary_required_fields": ["OBJECTID", "JURSCODE", "ACCTID", "ADDRESS", "SDATDATE", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot_with_release_checks",
@@ -2108,10 +2303,16 @@
     "jurisdiction": "Henderson, NV",
     "base_url": "https://maps.cityofhenderson.com/arcgis/rest/services/public/OpenDevPermits/MapServer/2/query",
     "settings": {
+      "freshness_sla_hours": 36,
+      "freshness_semantics": "ingestion_observed_at",
       "official_landing_page": "https://maps.cityofhenderson.com/arcgis/rest/services/public/OpenDevPermits/MapServer/2",
       "license": "Public Domain under City of Henderson Open Data Policy",
       "license_url": "https://www.cityofhenderson.com/home/showpublisheddocument/4341/637477667739530000",
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["GISHISTORYQUEUEID", "CASENUMBER", "DESCRIPTION", "STATUS", "APPLICATIONDATE"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "pre_approval_and_approved",
@@ -2160,6 +2361,10 @@
       "rights_basis": "Narrow admission is limited to statewide Act 250 large-development context, evidence links, and value-added opportunity scoring; it is not canonical municipal permit coverage and raw feed resale/export remains excluded",
       "attribution_required": true,
       "refresh_frequency": "weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 240,
       "canary_required_fields": ["ProjectID", "AppNum", "ProjectName", "Status"],
       "reconciliation_mode": "weekly_full_snapshot",
@@ -2207,6 +2412,10 @@
       "rights_basis": "Narrow admission is limited to approved/issued commercial construction confirmation and value-added opportunity context; raw feed resale, bulk replacement export, and unsupported pre-approval lifecycle claims remain excluded",
       "attribution_required": true,
       "refresh_frequency": "weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 240,
       "canary_required_fields": ["GlobalID", "OBJECTID", "PermitNo", "UseType", "IssuedDate"],
       "reconciliation_mode": "weekly_full_snapshot",
@@ -2266,6 +2475,10 @@
       "rights_basis": "Narrow admission supports derived permit intelligence, retailer/entity detection, evidence links, and opportunity scoring with City of Fayetteville attribution; raw feed resale, bulk replacement exports, and unrestricted redistribution remain excluded",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "PERMITNUMBER", "PM_TYPE", "PM_STATUS"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -2322,6 +2535,10 @@
       "rights_basis": "Narrow admission supports current commercial permit/development lifecycle intelligence with City of Fort Worth attribution; raw feed resale, bulk replacement exports, and unrestricted redistribution remain excluded",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["CAPID", "Permit_No", "Permit_Type", "Current_Status"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -2380,6 +2597,10 @@
       "rights_basis": "Texas Comptroller of Public Accounts publishes all permitted sales tax locations and local sales tax responsibility through the official Texas Open Data portal with Public Domain metadata. The production slice is admitted as approved-only retailer/opening intelligence, not construction pre-approval, retaining active Texas outlet identity, location name, taxpayer name, address, city/state/ZIP, county, NAICS, permit date, first-sale date, and out-of-business date as evidence-backed commercial activity context with attribution and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily_or_weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["tp_number", "loc_number", "loc_name", "permit_date"],
       "reconciliation_mode": "daily_recent_snapshot_with_periodic_full",
@@ -2427,7 +2648,7 @@
       {"source_field": "__description", "canonical_field": "description", "transform": "join_fields", "transform_options": {"fields": ["loc_name", "tp_name", "naics"], "separator": " | "}},
       {"source_field": "naics", "canonical_field": "permit_subtype"},
       {"source_field": "tp_name", "canonical_field": "owner_name"},
-      {"source_field": "__applicant_name", "canonical_field": "applicant_name", "transform": "first_nonempty", "transform_options": {"fields": ["tp_name"]}},
+      {"source_field": "__applicant_name", "canonical_field": "applicant_name", "value_semantics": "legal_entity", "transform": "first_nonempty", "transform_options": {"fields": ["tp_name"]}},
       {"source_field": "__address", "canonical_field": "address", "transform": "join_fields", "transform_options": {"fields": ["address_number", "address_text"], "separator": " "}},
       {"source_field": "__city", "canonical_field": "city", "transform": "first_nonempty", "transform_options": {"fields": ["juris_city", "loc_city"]}},
       {"source_field": "loc_state", "canonical_field": "state"},
@@ -2449,6 +2670,10 @@
       "rights_basis": "Narrow admission supports commercial active-permit intelligence with Charleston attribution, source links, and no raw-feed resale/export",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "PERMIT_NUMBER", "PERMIT_TYPE", "PERMIT_STATUS"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -2500,6 +2725,10 @@
       "rights_basis": "Narrow admission supports TRC site-plan/subdivision intelligence with Charleston attribution, source links, and no raw-feed resale/export",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "PLAN_TYPE", "PLAN_STATUS"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -2550,6 +2779,10 @@
       "rights_basis": "Admitted as a City of Provo-attributed early-warning building-permit lifecycle feed with personal contact minimization and no raw source resale",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "xxClient_BP_Applications_View_PermitNumber", "xxClient_BP_Applications_View_Status"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -2604,6 +2837,10 @@
       "rights_basis": "Admitted as a City of Provo-attributed early-warning planning/site-plan feed with personal contact minimization and no raw source resale",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "xxClient_Planning_Application_View_PermitNumber", "xxClient_Planning_Application_View_StatusDescription"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -2657,6 +2894,10 @@
       "rights_basis": "Narrow admission supports statewide environmental/development application context with Maine DEP attribution; not a municipal building-permit replacement and no confidential application material beyond the public table",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "GIS_OBJECTID", "ATS_NUMBER", "STATUS", "RECEIVED_DATE"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -2687,7 +2928,7 @@
       {"source_field": "PROJECT_DESCRIPTION", "canonical_field": "description"},
       {"source_field": "TOWN", "canonical_field": "city"},
       {"source_field": "__parcel_id", "canonical_field": "parcel_id", "transform": "join_fields", "transform_options": {"fields": ["TAX_MAP_MAP_NUMBER", "TAX_MAP_LOT_NUMBER"], "separator": "-"}},
-      {"source_field": "__applicant_name", "canonical_field": "applicant_name", "transform": "first_nonempty", "transform_options": {"fields": ["APPLICANT_NAME"]}},
+      {"source_field": "__applicant_name", "canonical_field": "applicant_name", "value_semantics": "unknown", "transform": "first_nonempty", "transform_options": {"fields": ["APPLICANT_NAME"]}},
       {"source_field": "WATERBODY_NAME", "canonical_field": "proposed_use"},
       {"source_field": "RECEIVED_DATE", "canonical_field": "filed_at"},
       {"source_field": "ACCEPTED_DATE", "canonical_field": "approved_at"},
@@ -2708,6 +2949,10 @@
       "rights_basis": "Narrow admission supports derived development and opportunity context with City of Bismarck attribution; the official page says open development project information is updated regularly and describes pre-approval review statuses, while fees, internal editor/audit fields, legal descriptions, raw geometry export, and bulk source replacement resale remain excluded",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["ObjectId", "PROJECT_NO", "PROJECTTYPE", "STATUS"],
       "reconciliation_mode": "periodic_full",
@@ -2774,7 +3019,7 @@
       {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
       {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
       {"source_field": "OWNER_NAME", "canonical_field": "owner_name"},
-      {"source_field": "APPLICANT_NAME", "canonical_field": "applicant_name"},
+      {"source_field": "APPLICANT_NAME", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "DEVELOPER_NAME", "canonical_field": "developer_name"},
       {"source_field": "CONTRACTOR_NAME", "canonical_field": "contractor_name"},
       {"source_field": "Link", "canonical_field": "source_url"}
@@ -2794,6 +3039,10 @@
       "rights_basis": "Narrow admission supports derived development and opportunity context with City of Lincoln / Lancaster County attribution; the official PATS page describes formally submitted planning applications and notes currentness/completeness caveats, while raw geometry, shape metrics, bulk source replacement resale, and internal workflow exports remain excluded",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "APPNUM", "SUBTYPE", "STATUS"],
       "reconciliation_mode": "periodic_full",
@@ -2858,6 +3107,10 @@
       "rights_basis": "Delaware Open Data metadata marks the DNREC Storm Water Notices of Intent dataset as Public Domain. Admit as a statewide pre-approval environmental-development signal because records describe planned construction activities seeking NPDES construction stormwater coverage; preserve raw NOI status and do not infer final land-development approval from a stormwater NOI alone.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["permitnumber", "projectname", "datereceived", "permitstatuscode"],
       "reconciliation_mode": "periodic_full",
@@ -2874,7 +3127,8 @@
       "export_policy": "public_domain_with_attribution_preserve_raw_noi_status",
       "connector": {
         "page_size": 100,
-        "order_by": "datereceived DESC, permitnumber ASC"
+        "order_by": "datereceived DESC, permitnumber ASC",
+        "query": {"$where": "datereceived IS NOT NULL"}
       },
       "defaults": {
         "state": "DE",
@@ -2914,6 +3168,10 @@
       "rights_basis": "Delaware Open Data metadata marks the FirstMap endpoint catalog as Public Domain. Narrow admission uses only parcel PIN, acreage, county, update date, polygon geometry, and server centroid for derived nearby-parcel context; county owner, mailing, valuation, sale, zoning, and raw assessor feeds remain excluded until source-specific rights are cleared.",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "PIN", "COUNTY", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -2971,6 +3229,10 @@
       "rights_basis": "Delaware Open Data metadata marks the DNREC Permitted Septic Systems dataset as Public Domain. Admit narrowly as statewide environmental infrastructure and site-readiness context with application, approval, denial, withdrawal, expiration, abandonment, and construction-report dates; preserve raw septic permit status and do not treat every row as a new building or land-development approval.",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["permitnumber", "taxparcelnumbers", "permitstatus"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -3038,6 +3300,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery, scoring, and customer display with VGIN/Commonwealth attribution. The official ArcGIS layer is public, queryable, supports pagination, GeoJSON/PBF, geometry, and returned centroids; Virginia's Open Data Portal describes API access for building applications. Owner, mailing, raw assessor, valuation, sale, legal-description, and bulk parcel replacement exports remain excluded unless locality/source-specific rights are confirmed.",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "VGIN_QPID", "LOCALITY", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -3086,22 +3352,26 @@
   },
   {
     "key": "fairfax_county_va_development_tracker_site_records",
-    "name": "Fairfax County DevelopmentTracker Site Construction Records",
+    "name": "Fairfax County Approved Site Records",
     "adapter": "arcgis",
     "record_type": "permit",
     "jurisdiction": "Fairfax County, VA",
-    "base_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/DevelopmentTracker/MapServer/2/query",
+    "base_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/PLUSApprovedSiteRecords/FeatureServer/0/query",
     "settings": {
-      "official_landing_page": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/DevelopmentTracker/MapServer",
-      "license": "Fairfax County Land Development Services public DevelopmentTracker ArcGIS layer",
-      "license_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/DevelopmentTracker/MapServer/2",
-      "rights_basis": "Narrow admission supports derived permit/development and opportunity context with Fairfax County / Land Development Services attribution. Layer metadata states the data is publicly available, updated nightly from PLUS accepted records, and used to provide public access to approved plans. Suppress inspector/user/workflow fields, raw document exports, and bulk source replacement resale.",
+      "official_landing_page": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/PLUSApprovedSiteRecords/FeatureServer/0",
+      "license": "Fairfax County Land Development Services public approved site-record layer",
+      "license_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/PLUSApprovedSiteRecords/FeatureServer/0",
+      "rights_basis": "Narrow admission supports derived approved development and opportunity context with Fairfax County / Land Development Services attribution. Layer metadata states the data is publicly available, updated nightly from PLUS records, and used to provide public access to approved plans. Suppress inspector/user/workflow fields, raw document exports, and bulk source replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "RECORDID", "RECORD_STATUS"],
       "reconciliation_mode": "periodic_full",
-      "signal_stage": "pre_approval_and_approved",
+      "signal_stage": "approved_only",
       "field_allowlist": [
         "OBJECTID", "GlobalID", "RECORDID", "APPTYPEALIAS",
         "PROJECT_NAME", "PARCEL_ID", "SUPERVISOR_DISTRICT",
@@ -3135,7 +3405,7 @@
         "county": "Fairfax",
         "state": "VA",
         "jurisdiction": "Fairfax County",
-        "source_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/DevelopmentTracker/MapServer/2"
+        "source_url": "https://www.fairfaxcounty.gov/gispub1/rest/services/LDS/PLUSApprovedSiteRecords/FeatureServer/0"
       }
     },
     "field_mappings": [
@@ -3176,6 +3446,10 @@
       "rights_basis": "Norfolk Open Data metadata marks the Permits and Inspections dataset as Public Domain and says the dataset is updated daily. Admit a distinct permit-level slice for derived permit, retailer/tenant-improvement, and opportunity context; inspection rows are intentionally excluded from the first catalog query to avoid duplicating one permit across multiple inspections.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["ftpuser", "permit_address", "permit_status"],
       "reconciliation_mode": "periodic_full",
@@ -3250,6 +3524,10 @@
       "rights_basis": "Narrow admission supports derived planning/use context with Norfolk Department of City Planning attribution. The public FeatureServer is queryable, supports Extract, and describes conditional uses requiring special review before being deemed appropriate in a zoning district. The admitted slice is approved/effective conditional-use context, not a complete pending application queue; suppress editor fields, free-text notes, and raw PDF/document resale.",
       "attribution_required": true,
       "refresh_frequency": "weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["OBJECTID", "TYPE", "ADDRESS"],
       "reconciliation_mode": "periodic_full",
@@ -3289,7 +3567,7 @@
       {"source_field": "LATEST_CLOSING_HOUR", "canonical_field": "work_class"},
       {"source_field": "__status", "canonical_field": "status", "transform": "presence_map", "transform_options": {"field": "EXPIRATION_DATE", "present": "Effective with expiration", "missing": "Effective"}},
       {"source_field": "__description", "canonical_field": "description", "transform": "join_fields", "transform_options": {"fields": ["TYPE", "ENTERTAINMENT_TYPE", "LATEST_CLOSING_HOUR"], "separator": " - "}},
-      {"source_field": "APPLICANT", "canonical_field": "applicant_name"},
+      {"source_field": "APPLICANT", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "__project_name", "canonical_field": "project_name", "transform": "first_nonempty", "transform_options": {"fields": ["APPLICANT", "TYPE"]}},
       {"source_field": "ADDRESS", "canonical_field": "address"},
       {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}},
@@ -3313,6 +3591,10 @@
       "rights_basis": "Narrow admission supports derived permit and opportunity context with City of Virginia Beach attribution and the required modified-source disclaimer. The public ArcGIS item says the dataset includes building permit application activity, location, and current status, and its terms explicitly discuss applications using the supplied data. Suppress public user IDs, raw source replacement exports, and contact-heavy work-description fragments; use GPIN/address to connect with parcel context because the service is a table without geometry.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 96,
       "canary_required_fields": ["PermitNumber", "PermitType", "Status", "ApplicationDate"],
       "reconciliation_mode": "periodic_full",
@@ -3375,6 +3657,10 @@
       "rights_basis": "Narrow admission supports derived development, retailer/chain, and opportunity context with City of Lynchburg GIS Office attribution. The public OpenData layer exposes TRAKiT development-project records including Board of Zoning Appeals, conditional use permit applications, Design Review Board, historic preservation, rezonings, site plan reviews, subdivisions, and right-of-way vacation. The spatial layer warns it is not inclusive because of join conflicts, so use it as geocoded evidence and retain the tabular source as a future completeness cross-check. Suppress contacts, owner/mailing fields, raw table extracts, and source replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 96,
       "canary_required_fields": ["OBJECTID", "RecordNo", "Type", "Status"],
       "reconciliation_mode": "periodic_full",
@@ -3437,6 +3723,10 @@
       "rights_basis": "Data.gov lists the District of Columbia Department of Buildings Building Permits in 2026 dataset with a CC BY 4.0 license, and District Data terms allow commercial reuse unless otherwise noted with required attribution and no endorsement. Narrow admission stores construction permit lifecycle facts for early-warning and confirmation context while suppressing raw editor/user metadata and filtering out inactive/cancelled/revoked/expired rows.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 48,
       "canary_required_fields": ["OBJECTID", "PERMIT_ID", "APPLICATION_STATUS_NAME", "FULL_ADDRESS", "LASTMODIFIEDDATE"],
       "canary_stage_probes": [
@@ -3499,7 +3789,7 @@
       {"source_field": "STATE", "canonical_field": "state"},
       {"source_field": "ZIPCODE", "canonical_field": "postal_code"},
       {"source_field": "SSL", "canonical_field": "parcel_id"},
-      {"source_field": "PERMIT_APPLICANT", "canonical_field": "applicant_name"},
+      {"source_field": "PERMIT_APPLICANT", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "OWNER_NAME", "canonical_field": "owner_name"},
       {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}},
       {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}},
@@ -3521,7 +3811,12 @@
       "rights_basis": "The District Data terms state that District Data Catalog facts are public domain and made available under CC0 unless otherwise noted, allowing commercial copying, modification, and distribution without permission; Data.gov metadata for Basic Business Licenses lists public access with Creative Commons Attribution. Narrow admission stores derived retailer, restaurant, grocery, hotel, service-retail, and food-establishment opening context with attribution, source links, and no raw source-replacement export.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_field": "DATAREFRESHEDON",
+      "freshness_semantics": "dataset_refreshed_at",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "CUSTOMERNUMBER", "LICENSESTATUS", "PREMISEADDRESS", "DATAREFRESHEDON"],
       "reconciliation_mode": "daily_recent_snapshot_with_monthly_full_snapshot",
@@ -3531,9 +3826,9 @@
       "opening_signal_date_field": "INITIALISSUEDATE",
       "field_allowlist": [
         "OBJECTID", "CUSTOMERNUMBER", "LICENSESTATUS", "LICENSETYPE",
-        "LICENSESUBTYPE", "LICENSESTATUSDATE", "LICENSESTARTDATE",
-        "LICENSEENDDATE", "INITIALISSUEDATE", "PRIMARYACTIVITY",
-        "BUSINESSACTIVITY", "PREMISEADDRESS", "PREMISEINDC",
+        "LICENSESTATUSDATE", "LICENSESTARTDATE", "LICENSEENDDATE",
+        "INITIALISSUEDATE", "BUSINESSACTIVITY", "PRIMARYACTIVITYFLAG",
+        "CATEGORYSERVICETYPE", "PREMISEADDRESS", "PREMISEINDC",
         "ENTITYNAME", "ENTITYTRADENAME", "ENTITYTYPE", "DATAREFRESHEDON",
         "WARD", "ANC", "NEIGHBORHOODCLUSTER",
         "BUSINESSIMPROVEMENTDISTRICT", "MAR_ID", "SSL", "LATITUDE",
@@ -3549,8 +3844,8 @@
       ],
       "connector": {
         "page_size": 1000,
-        "where": "CUSTOMERNUMBER IS NOT NULL AND PREMISEINDC = 'Y' AND PREMISEADDRESS IS NOT NULL AND LICENSESTATUS = 'Active' AND (BUSINESSACTIVITY IN ('Restaurant','Grocery Store','Food Products','Delicatessen','Gasoline Dealer','Auto Wash','Caterers') OR PRIMARYACTIVITY IN ('Restaurant','Grocery Store','Food Products','Hotel','Inn And Motel','Auto Wash','Gasoline Dealer','Delicatessen'))",
-        "out_fields": "OBJECTID,CUSTOMERNUMBER,LICENSESTATUS,LICENSETYPE,LICENSESUBTYPE,LICENSESTATUSDATE,LICENSESTARTDATE,LICENSEENDDATE,INITIALISSUEDATE,PRIMARYACTIVITY,BUSINESSACTIVITY,PREMISEADDRESS,PREMISEINDC,ENTITYNAME,ENTITYTRADENAME,ENTITYTYPE,DATAREFRESHEDON,WARD,ANC,NEIGHBORHOODCLUSTER,BUSINESSIMPROVEMENTDISTRICT,MAR_ID,SSL,LATITUDE,LONGITUDE",
+        "where": "CUSTOMERNUMBER IS NOT NULL AND PREMISEINDC = 'Yes' AND PREMISEADDRESS IS NOT NULL AND LICENSESTATUS = 'Active' AND BUSINESSACTIVITY IN ('Restaurant','Grocery Store','Food Products','Delicatessen','Gasoline Dealer','Auto Wash','Caterers')",
+        "out_fields": "OBJECTID,CUSTOMERNUMBER,LICENSESTATUS,LICENSETYPE,LICENSESTATUSDATE,LICENSESTARTDATE,LICENSEENDDATE,INITIALISSUEDATE,BUSINESSACTIVITY,PRIMARYACTIVITYFLAG,CATEGORYSERVICETYPE,PREMISEADDRESS,PREMISEINDC,ENTITYNAME,ENTITYTRADENAME,ENTITYTYPE,DATAREFRESHEDON,WARD,ANC,NEIGHBORHOODCLUSTER,BUSINESSIMPROVEMENTDISTRICT,MAR_ID,SSL,LATITUDE,LONGITUDE",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
         "include_geometry": false
@@ -3567,15 +3862,15 @@
     "field_mappings": [
       {"source_field": "__source_record_id", "canonical_field": "source_record_id", "transform": "join_fields", "transform_options": {"fields": ["CUSTOMERNUMBER", "OBJECTID"], "separator": ":"}, "is_required": true},
       {"source_field": "CUSTOMERNUMBER", "canonical_field": "permit_number"},
-      {"source_field": "LICENSESUBTYPE", "canonical_field": "permit_subtype"},
+      {"source_field": "LICENSETYPE", "canonical_field": "permit_subtype"},
       {"source_field": "BUSINESSACTIVITY", "canonical_field": "work_class"},
-      {"source_field": "PRIMARYACTIVITY", "canonical_field": "proposed_use"},
+      {"source_field": "CATEGORYSERVICETYPE", "canonical_field": "proposed_use"},
       {"source_field": "LICENSESTATUS", "canonical_field": "status"},
-      {"source_field": "__description", "canonical_field": "description", "transform": "join_fields", "transform_options": {"fields": ["ENTITYTRADENAME", "ENTITYNAME", "LICENSESUBTYPE", "PRIMARYACTIVITY", "BUSINESSACTIVITY"], "separator": " | "}},
+      {"source_field": "__description", "canonical_field": "description", "transform": "join_fields", "transform_options": {"fields": ["ENTITYTRADENAME", "ENTITYNAME", "LICENSETYPE", "CATEGORYSERVICETYPE", "BUSINESSACTIVITY"], "separator": " | "}},
       {"source_field": "__project_name", "canonical_field": "project_name", "transform": "first_nonempty", "transform_options": {"fields": ["ENTITYTRADENAME", "ENTITYNAME"]}},
       {"source_field": "PREMISEADDRESS", "canonical_field": "address"},
       {"source_field": "SSL", "canonical_field": "parcel_id"},
-      {"source_field": "ENTITYNAME", "canonical_field": "applicant_name"},
+      {"source_field": "ENTITYNAME", "canonical_field": "applicant_name", "value_semantics": "legal_entity"},
       {"source_field": "LATITUDE", "canonical_field": "latitude"},
       {"source_field": "LONGITUDE", "canonical_field": "longitude"},
       {"source_field": "INITIALISSUEDATE", "canonical_field": "approved_at", "transform": "unix_milliseconds"},
@@ -3598,6 +3893,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery, scoring, enrichment, and customer display with District of Columbia attribution. DC open-data terms place catalog data in the public domain or commercial-compatible open licenses unless otherwise noted. The admitted slice uses public parcel identity, situs, owner/mailing context, assessment, sale, land-use/vacancy indicators, and service centroids; tax-balance fields, deed/instrument internals, mortgage company, raw polygon export, and bulk source-replacement exports remain excluded.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 96,
       "canary_required_fields": ["OBJECTID", "SSL", "PREMISEADD", "OWNERNAME", "LANDAREA", "centroid"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -3669,6 +3968,10 @@
       "rights_basis": "MassGIS states its public GIS data is public domain and can be used by anyone for any purpose, with requested source credit to MassGIS, Commonwealth of Massachusetts EOTSS. Narrow production admission uses the statewide Level 3 tax parcel FeatureServer as a value-added nearby-parcel spine; recorded deeds and surveys remain authoritative boundary/title evidence, and raw polygon source-replacement export is not exposed.",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 1488,
       "canary_required_fields": ["OBJECTID", "GlobalID", "TOWN_ID", "MAP_PAR_ID", "SITE_ADDR", "OWNER1", "TOTAL_VAL", "centroid"],
       "reconciliation_mode": "monthly_full_snapshot_with_release_checks",
@@ -3736,6 +4039,10 @@
       "license_url": "https://cityofnewyork.github.io/opendatatsm/publicpolicies.html",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["bbl", "address", "ownername", "lotarea", "assesstot", "version"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -3783,6 +4090,10 @@
       "rights_basis": "Narrow admission is limited to internal storage and customer display of derived nearby-parcel geometry/situs facts with SanGIS/SANDAG attribution; owner, value, transfer, sale, raw source export, and unrestricted redistribution remain excluded",
       "attribution_required": true,
       "refresh_frequency": "weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["objectid", "apn", "geometry"],
       "reconciliation_mode": "weekly_full_snapshot",
       "signal_stage": "parcel_context",
@@ -3844,6 +4155,10 @@
       "rights_basis": "Narrow admission is limited to LOJIC open parcel geometry, parcel IDs, parcel type, and zoning/situs enrichment; PVA owner, value, tax, sale, photos, sketches, and detailed characteristics remain excluded pending written permission",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["OBJECTID", "LRSN", "PARCELID", "geometry"],
       "reconciliation_mode": "daily_full_snapshot",
       "signal_stage": "parcel_context",
@@ -3894,6 +4209,10 @@
       "rights_basis": "Narrow admission supports value-added nearby-parcel discovery, scoring, enrichment, and customer display with VCGI attribution; raw statewide parcel/source-file resale, bulk replacement exports, and non-value-added redistribution remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -3961,6 +4280,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel proximity, scoring, and customer display with RI/RIGIS/DEM/town attribution; raw parcel extracts, raw geometry dumps, owner/value/sale enrichment, bulk replacement exports, and non-value-added resale remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "TownCode", "PlatLot", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4018,6 +4341,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery, scoring, and customer display with NH DRA/NH GRANIT attribution; raw statewide extracts, bulk geometry dumps, direct non-value-added resale, and city owner/value/sale enrichment remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["objectid", "nh_gis_id", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4075,6 +4402,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery, scoring, and customer display with Montgomery attribution; owner/mailing, value, deed/sale facts, raw parcel extracts, bulk geometry dumps, and direct non-value-added resale remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "ParcelNo", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4137,6 +4468,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery, scoring, and customer display with Arkansas GIS Office attribution; owner/value/legal/CAMA fields, raw statewide extracts, bulk geometry dumps, and direct non-value-added resale remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["objectid", "parcelid", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4198,6 +4533,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery, scoring, and customer display with Collin CAD attribution; first slice suppresses owner, valuation, deed, legal-description, improvement-detail, raw extract, and bulk polygon export fields pending UX/privacy review",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 96,
       "canary_required_fields": ["OBJECTID", "PROP_ID", "geometry"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -4275,6 +4614,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery in Comptroller-maintained counties with Tennessee Comptroller attribution; Davidson, Hamilton, Knox, Montgomery, Rutherford, Shelby, Williamson, Chester, and Hickman require local-source authorization before metro production use",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "GISLINK", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4324,20 +4667,24 @@
     "adapter": "arcgis",
     "record_type": "parcel",
     "jurisdiction": "Greenville County, SC",
-    "base_url": "https://www.gcgis.org/arcgis/rest/services/GreenvilleJS/Map_Layers_JS/MapServer/52/query",
+    "base_url": "https://citygis.greenvillesc.gov/arcgis/rest/services/GeneralData/GeneralData_WGS84/MapServer/2/query",
     "settings": {
-      "official_landing_page": "https://www.gcgis.org/arcgis/rest/services/GreenvilleJS/Map_Layers_JS/MapServer/52",
+      "official_landing_page": "https://citygis.greenvillesc.gov/arcgis/rest/services/GeneralData/GeneralData_WGS84/MapServer/2",
       "license": "Greenville County GIS public access; derived nearby-parcel context only",
-      "rights_basis": "Narrow admission supports derived nearby-parcel discovery with Greenville County attribution; owner, mailing, value, tax, sale, deed, raw county extract, and bulk geometry export fields remain excluded",
+      "rights_basis": "Narrow admission supports derived nearby-parcel discovery from the City of Greenville public parcel layer, which covers the city and a two-mile buffer and is refreshed weekly from Greenville County GIS. Owner, mailing, value, tax, sale, deed, raw county extract, and bulk geometry export fields remain excluded.",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "PIN", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
       "signal_stage": "parcel_context",
       "field_allowlist": [
         "OBJECTID", "PIN", "STRNUM", "LOCATE", "JURIS", "DIST", "MKTAREA",
-        "LANDUSE", "PROPTYPE", "IMPROVED", "SUBDIV", "TACRES", "geometry"
+        "LANDUSE", "SUBDIV", "TACRES", "geometry"
       ],
       "suppressed_fields": [
         "OWNAM1", "OWNAM2", "STREET", "CITY", "STATE", "ZIP5", "NAMECO",
@@ -4349,9 +4696,9 @@
       "export_policy": "derived_nearby_parcel_context_only_no_raw_greenville_county_sc_resale",
       "max_snapshot_retirement_fraction": 0.02,
       "connector": {
-        "page_size": 200,
+        "page_size": 25,
         "where": "PIN IS NOT NULL AND PIN <> ''",
-        "out_fields": "OBJECTID,PIN,STRNUM,LOCATE,JURIS,DIST,MKTAREA,LANDUSE,PROPTYPE,IMPROVED,SUBDIV,TACRES",
+        "out_fields": "OBJECTID,PIN,STRNUM,LOCATE,JURIS,DIST,MKTAREA,LANDUSE,SUBDIV,TACRES",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
         "include_geometry": true,
@@ -4361,7 +4708,7 @@
         "county": "Greenville",
         "state": "SC",
         "jurisdiction": "Greenville County",
-        "source_url": "https://www.gcgis.org/arcgis/rest/services/GreenvilleJS/Map_Layers_JS/MapServer/52"
+        "source_url": "https://citygis.greenvillesc.gov/arcgis/rest/services/GeneralData/GeneralData_WGS84/MapServer/2"
       }
     },
     "field_mappings": [
@@ -4371,7 +4718,7 @@
       {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
       {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
       {"source_field": "TACRES", "canonical_field": "land_area_sq_ft", "transform": "multiply", "transform_options": {"factor": 43560}},
-      {"source_field": "__land_use", "canonical_field": "land_use", "transform": "first_nonempty", "transform_options": {"fields": ["PROPTYPE", "LANDUSE", "IMPROVED"]}},
+      {"source_field": "__land_use", "canonical_field": "land_use", "transform": "first_nonempty", "transform_options": {"fields": ["LANDUSE"]}},
       {"source_field": "JURIS", "canonical_field": "zoning_code"}
     ]
   },
@@ -4389,6 +4736,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery with Sedgwick County/SCGIS attribution; owner, situs/mailing address lists, assessed value, sale facts, legal descriptions, raw parcel extracts, and bulk geometry export remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "PIN", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4450,6 +4801,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery with State of Utah/SGID attribution; owner names, mailing addresses, sale facts, county paid assessor products, raw bulk extracts, and replacement parcel exports remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "PARCEL_ID", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4511,6 +4866,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery, opportunity context, and customer display/API output with City of Sioux Falls attribution, license link, retrieval date, change notice, and public-record disclaimer; standalone raw parcel resale, raw geometry export, legal-description export, and sale-history claims remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "TAG", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4578,6 +4937,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery for Fargo, West Fargo, and Cass County with Cass County GIS attribution; the official GIS FAQ says digital data downloads are free and tax/assessment data is refreshed nightly, while owner mailing fields, legal descriptions, raw parcel extracts, sale claims, and bulk geometry resale remain excluded from customer exports by policy",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "GISPIN", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4643,6 +5006,10 @@
       "rights_basis": "Narrow admission supports derived nearby-parcel discovery with Maine GeoLibrary/MaineIT GIS attribution; owner table joins, raw parcel extracts, bulk geometry exports, stale unchecked municipal ownership facts, and assessor resale products remain excluded",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["OBJECTID", "STATE_ID", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4702,6 +5069,10 @@
       "rights_basis": "ArcGIS item for Parcels w/ Owner Information & Assessed Values permits use of data provided by download, map, or service and requires acknowledgement of City of Indianapolis/Marion County, IN; sale evidence is not admitted",
       "attribution_required": true,
       "refresh_frequency": "weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["OBJECTID", "STATEPARCELNUMBER", "FULLOWNERNAME", "FULL_STNAME", "ASSESSORYEAR_TOTALAV", "geometry"],
       "reconciliation_mode": "weekly_full_snapshot",
       "signal_stage": "parcel_context",
@@ -4755,6 +5126,10 @@
       "rights_basis": "Hennepin County and MetroGIS document the county parcel data as free/open geospatial data; retain Hennepin attribution and source disclaimers",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 744,
       "canary_required_fields": ["OBJECTID", "PID", "OWNER_NM", "HOUSE_NO", "STREET_NM", "MKT_VAL_TOT", "LAT", "LON", "geometry"],
       "reconciliation_mode": "monthly_full_snapshot",
@@ -4810,6 +5185,10 @@
       "rights_basis": "City open-data terms provide government-produced machine-readable datasets free of charge; retain attribution, public-record caveats, and avoid owner-name reverse search or raw source resale without rights recheck",
       "attribution_required": true,
       "refresh_frequency": "weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 192,
       "canary_required_fields": ["OBJECTID", "ParcelId", "SITEADDR", "OwnerName", "AsdTotal", "geometry"],
       "reconciliation_mode": "weekly_full_snapshot",
@@ -4866,6 +5245,10 @@
       "rights_basis": "Allegheny County GIS publishes parcel polygons through its official OPENDATA ArcGIS service and the PA open-data catalog lists the county GIS open-data portal under Public Domain. Narrow production admission keeps parcel PIN, map/block/lot, municipality code, acreage-derived land area, source modification date, GUID, and derived centroid for nearby-parcel discovery in the Pittsburgh market. The richer WPRDC property-assessment table remains a future enrichment join until full PIN/PARID coverage is verified; owner/contact fields are already excluded from WPRDC by ordinance, and this geometry source still excludes raw polygon and source-replacement exports.",
       "attribution_required": true,
       "refresh_frequency": "weekly_or_monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 8760,
       "canary_required_fields": ["OBJECTID", "PIN", "MAPBLOCKLOT", "CALCACREAGE", "geometry"],
       "reconciliation_mode": "guarded_full_snapshot",
@@ -4921,6 +5304,10 @@
       "rights_basis": "WPRDC publishes the Allegheny County Property Assessments table under CC0 and documents the API version as the monthly, query-friendly parcel-assessment table. Narrow production admission keeps public parcel identity, situs, municipality, assessed value, land area, sale, and observed-date context for nearby-parcel discovery while excluding owner and contact information required by Ordinance 3478-07 and avoiding raw source-replacement exports.",
       "attribution_required": false,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "canary_required_fields": ["PARID", "PROPERTYADDRESS", "PROPERTYCITY", "COUNTYTOTAL", "SALEDATE", "ASOFDATE"],
       "reconciliation_mode": "monthly_full_snapshot",
       "signal_stage": "parcel_context",
@@ -4962,6 +5349,10 @@
       "license_url": "https://data.colorado.gov/Government/Denver-Parcels/tsdg-z9uy",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["SCHEDNUM", "OWNER_NAME", "SITUS_ADDRESS_LINE1", "LAND_AREA", "APPRAISED_TOTAL_VALUE"],
       "reconciliation_mode": "daily_full_snapshot",
@@ -5015,6 +5406,10 @@
       "rights_basis": "Colorado's public parcel composite is published by the Governor's Office of Information Technology GIS Team from county, regional, and local government sources. Colorado's open-data posture supports use, modification, and sharing with disclaimers, but the parcel service notice says resale of this data is strictly forbidden. Narrow production admission keeps parcel identity, county, situs context, acreage-derived land area, generalized zoning/use, update date, source URL, and derived centroid for nearby-parcel discovery while excluding owner, legal, sale, value, raw polygon export, and source-replacement downloads.",
       "attribution_required": true,
       "refresh_frequency": "annual_or_irregular",
+      "collection_interval_minutes": 525600,
+      "collection_sla_hours": 8760,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 8760,
       "canary_required_fields": ["OBJECTID", "countyName", "countyFips", "parcel_id", "dateReceived", "geometry"],
       "reconciliation_mode": "guarded_full_snapshot",
@@ -5078,6 +5473,10 @@
       "rights_basis": "NJGIN is the official New Jersey Geographic Information Network and describes itself as a statewide authoritative geospatial content sharing network. The NJGIN parcels page publishes streaming and download access for Statewide Parcels joined with MOD-IV, states the statewide composite is maintained by NJOGIS, and notes owner names are redacted from hosted parcels and tax-list products under Daniel's Law. The item metadata lists access constraints as none and use constraints as attribution plus non-survey, no-legal-boundary, currentness, and accuracy disclaimers. Narrow production admission keeps parcel identity, municipality/county, property class, situs address, acreage-derived land area, land/use text, publication/update dates, GUID, and derived centroid for nearby-parcel discovery while excluding owner, value, deed, sale, raw polygon export, and source-replacement downloads.",
       "attribution_required": true,
       "refresh_frequency": "periodic",
+      "collection_interval_minutes": 525600,
+      "collection_sla_hours": 8760,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 8760,
       "canary_required_fields": ["OBJECTID", "PIN_NODUP", "PAMS_PIN", "COUNTY", "MUN_NAME", "PROP_LOC", "PCL_PBDATE", "geometry"],
       "reconciliation_mode": "guarded_full_snapshot",
@@ -5142,6 +5541,10 @@
       "rights_basis": "Florida DEP publishes the ERP from PA layer as an official statewide ArcGIS public-record layer. Florida Chapter 119, Florida AGO 2003-42, and Microdecisions v. Skinner support commercial reuse of public GIS records. This narrow source stores derived environmental-resource application context and source evidence for commercial/development projects; it does not replace municipal building-permit feeds.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "APP_NO", "PROJ_NAME", "RCVD_DATE", "AGENCY_ACT"],
       "reconciliation_mode": "daily_recent_snapshot_with_monthly_full_snapshot",
@@ -5161,7 +5564,7 @@
       ],
       "connector": {
         "page_size": 100,
-        "where": "APP_NO IS NOT NULL AND (PROJ_NAME LIKE '%COMMERCIAL%' OR PROJ_NAME LIKE '%RETAIL%' OR PROJ_NAME LIKE '%RESTAURANT%' OR PROJ_NAME LIKE '%WAREHOUSE%' OR PROJ_NAME LIKE '%INDUSTRIAL%' OR PROJ_NAME LIKE '%APARTMENT%' OR PROJ_NAME LIKE '%MULTI%' OR PROJ_NAME LIKE '%HOTEL%' OR PROJ_NAME LIKE '%MEDICAL%' OR PROJ_NAME LIKE '%SUBDIVISION%' OR PROJ_NAME LIKE '%SHOPPING%' OR PROJ_NAME LIKE '%PLAZA%' OR SITE_NAME LIKE '%COMMERCIAL%' OR SITE_NAME LIKE '%RETAIL%' OR SITE_NAME LIKE '%RESTAURANT%' OR SITE_NAME LIKE '%WAREHOUSE%' OR SITE_NAME LIKE '%INDUSTRIAL%' OR SITE_NAME LIKE '%APARTMENT%' OR SITE_NAME LIKE '%MULTI%' OR SITE_NAME LIKE '%HOTEL%' OR SITE_NAME LIKE '%MEDICAL%' OR SITE_NAME LIKE '%SUBDIVISION%' OR SITE_NAME LIKE '%SHOPPING%' OR SITE_NAME LIKE '%PLAZA%' OR PROJ_DESC LIKE '%COMMERCIAL%' OR PROJ_DESC LIKE '%RETAIL%' OR PROJ_DESC LIKE '%RESTAURANT%' OR PROJ_DESC LIKE '%WAREHOUSE%' OR PROJ_DESC LIKE '%INDUSTRIAL%' OR PROJ_DESC LIKE '%APARTMENT%' OR PROJ_DESC LIKE '%MULTI%' OR PROJ_DESC LIKE '%HOTEL%' OR PROJ_DESC LIKE '%MEDICAL%' OR PROJ_DESC LIKE '%SUBDIVISION%' OR PROJ_DESC LIKE '%SHOPPING%' OR PROJ_DESC LIKE '%PLAZA%')",
+        "where": "APP_NO IS NOT NULL AND (PROJ_NAME LIKE '%COMMERCIAL%' OR PROJ_NAME LIKE '%RETAIL%' OR PROJ_NAME LIKE '%RESTAURANT%' OR PROJ_NAME LIKE '%WAREHOUSE%' OR PROJ_NAME LIKE '%INDUSTRIAL%' OR PROJ_NAME LIKE '%APARTMENT%' OR PROJ_NAME LIKE '%MULTI%' OR PROJ_NAME LIKE '%HOTEL%' OR PROJ_NAME LIKE '%MEDICAL%' OR PROJ_NAME LIKE '%SUBDIVISION%' OR PROJ_NAME LIKE '%SHOPPING%' OR PROJ_NAME LIKE '%PLAZA%' OR SITE_NAME LIKE '%COMMERCIAL%' OR SITE_NAME LIKE '%RETAIL%' OR SITE_NAME LIKE '%RESTAURANT%' OR SITE_NAME LIKE '%WAREHOUSE%' OR SITE_NAME LIKE '%INDUSTRIAL%' OR SITE_NAME LIKE '%APARTMENT%' OR SITE_NAME LIKE '%MULTI%' OR SITE_NAME LIKE '%HOTEL%' OR SITE_NAME LIKE '%MEDICAL%' OR SITE_NAME LIKE '%SUBDIVISION%' OR SITE_NAME LIKE '%SHOPPING%' OR SITE_NAME LIKE '%PLAZA%' OR PROJ_DESC LIKE '%COMMERCIAL%' OR PROJ_DESC LIKE '%RETAIL%' OR PROJ_DESC LIKE '%WAREHOUSE%' OR PROJ_DESC LIKE '%SHOPPING%')",
         "out_fields": "OBJECTID,TEMP_ID,APP_NO,SITE_ID,PROJ_NO,PROJ_NAME,SITE_NAME,COMPANY,ADDRESS,CITY,ZIP5,ZIP4,PER_TYPE,PER_SUB,PER_DESC,COUNTY_ID,OFFICE,DISTRICT,PROGRAM,RCVD_DATE,AGENCY_ACT,ACT_DATE,EXPIR_DATE,COMP_DATE,PROJ_DESC,DOCUMENTS,REPORTS",
         "order_by_fields": "OBJECTID DESC",
         "include_geometry": true,
@@ -5191,7 +5594,7 @@
       {"source_field": "CITY", "canonical_field": "city"},
       {"source_field": "ZIP5", "canonical_field": "postal_code"},
       {"source_field": "SITE_ID", "canonical_field": "parcel_id"},
-      {"source_field": "COMPANY", "canonical_field": "applicant_name"},
+      {"source_field": "COMPANY", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}},
       {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}},
       {"source_field": "__record_url", "canonical_field": "source_url", "transform": "first_nonempty", "transform_options": {"fields": ["DOCUMENTS", "REPORTS"]}}
@@ -5211,6 +5614,10 @@
       "rights_basis": "Miami-Dade's official WASD ArcGIS layer exposes unincorporated permit/process records as public county GIS records. Florida Chapter 119, Florida AGO 2003-42, and Microdecisions v. Skinner support commercial reuse and prohibit county GIS licensing restrictions on public-record redistribution. Narrow admission stores derived permit/process facts and source evidence while suppressing raw source-replacement exports and unstable municipal session links.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "BLDPRCNO", "BLDPRCSTAT", "EFFECTIVE", "PROJDESC"],
       "reconciliation_mode": "daily_recent_snapshot_with_monthly_full_snapshot",
@@ -5276,6 +5683,10 @@
       "rights_basis": "Florida Chapter 119, Florida AGO 2003-42, and Microdecisions v. Skinner support commercial reuse and redistribution of property appraiser GIS public records. Narrow statewide admission uses FDOR/GIO cadastral 2025 as a parcel-proximity spine with Florida county property-appraiser attribution; county-specific sources remain preferred when richer or fresher admitted feeds exist. The source is not title, zoning, or complete sale-history evidence.",
       "attribution_required": true,
       "refresh_frequency": "annual_with_midyear_maintenance",
+      "collection_interval_minutes": 259200,
+      "collection_sla_hours": 4320,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 9600,
       "canary_required_fields": ["OBJECTID", "STATE_PAR_", "PARCEL_ID", "OWN_NAME", "PHY_ADDR1", "DOR_UC", "JV", "centroid"],
       "reconciliation_mode": "annual_full_snapshot_with_midyear_release_checks",
@@ -5349,6 +5760,10 @@
       "rights_basis": "Microdecisions v. Skinner and Florida public-records law prohibit restricting commercial reuse of these county GIS public records",
       "attribution_required": true,
       "refresh_frequency": "weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 240,
       "canary_required_fields": ["FOLIO", "TRUE_OWNER1", "TRUE_SITE_ADDR", "DOR_DESC", "LOT_SIZE", "ASSESSMENT_YEAR_PRI"],
       "reconciliation_mode": "weekly_full_snapshot",
@@ -5404,6 +5819,10 @@
       "rights_basis": "Microdecisions v. Skinner, Florida AGO 2003-42, and Florida Statute 119.01",
       "attribution_required": true,
       "refresh_frequency": "nightly",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["PARCEL", "NAME1", "SITUS", "TOTAL_MKT", "DOR_CODE", "LATITUDE", "LONGITUDE"],
       "reconciliation_mode": "nightly_full_snapshot",
@@ -5457,6 +5876,10 @@
       "rights_basis": "Microdecisions v. Skinner, Florida AGO 2003-42, and Florida Statute 119",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["FOLIO", "OWNER", "SITE_ADDR", "DOR_C", "JUST", "LAND"],
       "reconciliation_mode": "daily_full_snapshot_with_hcpa_bulk_manifest",
@@ -5468,6 +5891,10 @@
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
         "include_centroid": true,
+        "headers": {
+          "Referer": "https://www.tampa.gov/",
+          "User-Agent": "Mozilla/5.0"
+        },
         "query": {"outSR": 4326}
       },
       "defaults": {
@@ -5511,6 +5938,10 @@
       "rights_basis": "Microdecisions v. Skinner and Florida AGO 2003-42 permit commercial reuse of county property-appraiser GIS public records",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 960,
       "canary_required_fields": ["RE_NOSPACE", "LNAMEOWNER", "STREET_NO", "LONGNAME", "PUSE", "TOT_LND_VA"],
       "reconciliation_mode": "monthly_full_snapshot_with_property_appraiser_bulk",
@@ -5561,6 +5992,10 @@
       "rights_basis": "Florida AGO 2003-42 and Microdecisions v. Skinner permit commercial reuse of county parcel GIS public records",
       "attribution_required": true,
       "refresh_frequency": "annual_with_release_checks",
+      "collection_interval_minutes": 525600,
+      "collection_sla_hours": 8760,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 9600,
       "canary_required_fields": ["CO_NO", "PARCEL_ID", "OWN_NAME", "PHY_ADDR1", "DOR_UC", "JV", "LND_VAL"],
       "reconciliation_mode": "immutable_dor_release_with_broward_geometry_reconciliation",
@@ -5615,6 +6050,10 @@
       "rights_basis": "Florida AGO 2003-42 and Microdecisions v. Skinner permit commercial reuse of county property-appraiser records",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 36,
       "canary_required_fields": ["PARCELID", "NAME", "PROP_ADRSTR", "DOR_CD", "TOT_ACREAGE", "TOTALVAL"],
       "reconciliation_mode": "daily_full_snapshot_with_property_appraiser_bulk",
@@ -5667,6 +6106,10 @@
       "rights_basis": "Town of Cary's open-data catalog marks the Developments dataset as CC0 and describes it as site and subdivision plans that are under review, recently approved, or actively being constructed. Narrow admission uses development application identity, status, public project/use descriptions, public record links, geometry-derived location, and scale fields for evidence-backed pre-approval and approved opportunity context.",
       "attribution_required": false,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 48,
       "canary_required_fields": ["ApplicationNumber", "ApplicationName", "Status", "ApplicationDate"],
       "reconciliation_mode": "daily_incremental_with_monthly_full_snapshot",
@@ -5733,6 +6176,10 @@
       "rights_basis": "Data.gov metadata for Town of Cary Building Permit Applications marks the dataset public and CC0. The dataset is BLDS-style permit-application data where rows represent applications rather than individual permits, so this source is used as evidence-backed application context and downstream permit confirmation, not as a complete municipal permit ledger.",
       "attribution_required": false,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 48,
       "canary_required_fields": ["permitnum", "description", "statuscurrent", "applieddate"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -5810,6 +6257,10 @@
       "rights_basis": "City of Raleigh publishes the Development Plans layer as public authoritative open data and describes it as all submitted development plans that are approved or under review, including preliminary subdivisions and administrative site reviews, with daily updates. Narrow admission keeps public plan identity, project/developer/location/status/date/scale fields and point geometry for value-added development-intelligence context, with attribution, currentness, schema-change, no-warranty, and no raw source-replacement resale controls.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["OBJECTID", "plan_number", "status", "submitted", "plan_name"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -5895,6 +6346,10 @@
       "rights_basis": "Charlotte-Mecklenburg Planning publishes the Rezonings layer through the official City of Charlotte ArcGIS service for public land-development research. Charlotte open-data guidance supports public machine-readable reuse and redistribution, while legal notices provide standard as-is, no-warranty, and no-endorsement caveats. Narrow production admission keeps public petition identity, petitioner, zoning request, proposed use, lifecycle dates/status, official petition URL, and derived centroid location as value-added development intelligence with attribution and no raw GIS/source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily_or_weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["OBJECTID", "Petition", "Petitioner", "Received", "Status"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -5948,7 +6403,7 @@
       {"source_field": "__approval_stage", "canonical_field": "approval_stage", "transform": "conditional_map", "transform_options": {"cases": [{"field": "Approved", "operator": "present", "value": "approved"}], "default": "pre_approval"}},
       {"source_field": "Type", "canonical_field": "permit_subtype"},
       {"source_field": "Petitioner", "canonical_field": "developer_name"},
-      {"source_field": "__applicant_name", "canonical_field": "applicant_name", "transform": "first_nonempty", "transform_options": {"fields": ["Petitioner"]}},
+      {"source_field": "__applicant_name", "canonical_field": "applicant_name", "value_semantics": "unknown", "transform": "first_nonempty", "transform_options": {"fields": ["Petitioner"]}},
       {"source_field": "__proposed_use", "canonical_field": "proposed_use", "transform": "join_fields", "transform_options": {"fields": ["Propluse", "ReqZone"], "separator": " | "}},
       {"source_field": "Received", "canonical_field": "filed_at", "transform": "unix_milliseconds"},
       {"source_field": "Approved", "canonical_field": "approved_at", "transform": "unix_milliseconds"},
@@ -5972,6 +6427,10 @@
       "rights_basis": "New Hanover County publishes and shares GIS data and REST services through its official data page for public retrieval and economic-development transparency, with standard privacy/use notices placing responsibility on users and no warranty. Narrow production admission keeps public commercial site-plan identity, lifecycle status, application/completion/expiration dates, project/description, applicant/owner organization text, zoning, parcel ID, and derived location as value-added development intelligence with county attribution, retrieval timestamp, no raw source-replacement resale, and no raw polygon export.",
       "attribution_required": true,
       "refresh_frequency": "daily_or_weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["OBJECTID", "PLPLANID", "PLAN_NUMBER", "PLAN_TYPE", "PLAN_STATUS", "APPLY_DATE", "PID", "geometry"],
       "reconciliation_mode": "daily_recent_snapshot_with_periodic_full_snapshot",
@@ -6040,7 +6499,7 @@
       {"source_field": "WORK_CLASS", "canonical_field": "work_class"},
       {"source_field": "PLAN_STATUS", "canonical_field": "status"},
       {"source_field": "__approval_stage", "canonical_field": "approval_stage", "transform": "conditional_map", "transform_options": {"cases": [{"field": "PLAN_STATUS", "operator": "in", "values": ["Approved", "Approved with Conditions"], "value": "approved"}], "default": "pre_approval"}},
-      {"source_field": "Applicant", "canonical_field": "applicant_name"},
+      {"source_field": "Applicant", "canonical_field": "applicant_name", "value_semantics": "unknown"},
       {"source_field": "OWNER", "canonical_field": "owner_name"},
       {"source_field": "GENERAL_CONTRACTOR", "canonical_field": "contractor_name"},
       {"source_field": "__proposed_use", "canonical_field": "proposed_use", "transform": "join_fields", "transform_options": {"fields": ["PLAN_TYPE", "MAIN_ZONE"], "separator": " | "}},
@@ -6068,11 +6527,38 @@
       "rights_basis": "City of Madison publishes Current Planning Projects through the official Planning Division map and describes the records as active Land Use or Subdivision applications. Madison policy states website data is public information generally available for copying and distribution unless specifically exempted, with standard as-is, no-warranty, discontinuance, and no-endorsement terms. Narrow production admission keeps public project identity, submitted/review status, parcel, address, applicant organization, owner name, project and Legistar evidence URLs, and derived location as value-added development intelligence with attribution and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily_or_weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["ESRI_OID", "RECORD_RecordID", "RECORD_Status", "DATES_SubmittedDate", "PROJECT_ProjectAlias"],
       "reconciliation_mode": "daily_recent_snapshot",
       "signal_stage": "pre_approval_and_approved",
       "export_policy": "derived_project_context_only_no_raw_geometry_export",
+      "external_reference_extractors": [
+        {
+          "source_field": "ASI_LU_PInf_LndUseLegURL",
+          "namespace": "legistar:madison:legislation",
+          "transform": "url_query_parameter",
+          "parameter": "ID",
+          "allowed_hosts": ["madison.legistar.com"]
+        },
+        {
+          "source_field": "ASI_LU_PInf_ReZonLegURL",
+          "namespace": "legistar:madison:legislation",
+          "transform": "url_query_parameter",
+          "parameter": "ID",
+          "allowed_hosts": ["madison.legistar.com"]
+        },
+        {
+          "source_field": "ASI_LU_PInf_UDCLegURL",
+          "namespace": "legistar:madison:legislation",
+          "transform": "url_query_parameter",
+          "parameter": "ID",
+          "allowed_hosts": ["madison.legistar.com"]
+        }
+      ],
       "field_allowlist": [
         "ESRI_OID", "ID", "RECORD_RecordID", "PROJECT_ProjectAlias",
         "RECORD_Status", "DATES_SubmittedDate", "DATES_Circulated",
@@ -6135,7 +6621,7 @@
       {"source_field": "__approval_stage", "canonical_field": "approval_stage", "transform": "conditional_map", "transform_options": {"cases": [{"field": "RECORD_Status", "operator": "in", "values": ["Approved, Under Final Review", "Approved, Final Review Pending", "Final Approval Granted"], "value": "approved"}], "default": "pre_approval"}},
       {"source_field": "Requests", "canonical_field": "permit_subtype"},
       {"source_field": "CONTACT_RespParty_OrgName", "canonical_field": "developer_name"},
-      {"source_field": "__applicant_name", "canonical_field": "applicant_name", "transform": "first_nonempty", "transform_options": {"fields": ["CONTACT_RespParty_OrgName"]}},
+      {"source_field": "__applicant_name", "canonical_field": "applicant_name", "value_semantics": "unknown", "transform": "first_nonempty", "transform_options": {"fields": ["CONTACT_RespParty_OrgName"]}},
       {"source_field": "APO_OWNER_Full_Name", "canonical_field": "owner_name"},
       {"source_field": "APO_ADDRESS_PARTIAL_LINE", "canonical_field": "address"},
       {"source_field": "APO_PARCEL_NUMBER", "canonical_field": "parcel_id"},
@@ -6161,6 +6647,10 @@
       "rights_basis": "City of Orlando's official Socrata metadata describes Permit Applications as records received and processed into the economic development information system and updated daily. Dataset metadata does not publish a specific license string, so narrow production admission uses public permit/application identity, milestone dates, commercial plan-review status, project name, address, parcel, contractor company, cost, square footage, neighborhood, and point geometry as value-added permit intelligence with Orlando attribution, retrieval-date/currentness caveats, no endorsement, no warranty, and no raw source-replacement resale until final legal review.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["permit_number", "application_status", "processed_date", "permit_address"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -6256,6 +6746,10 @@
       "rights_basis": "City of Mesa publishes the Development Services Permit Submittals and Resubmittals Logged In dataset through its official Data Hub, with metadata describing entries of permit applications entered into Accela from customer submission. Mesa open-data guidance permits commercial and non-commercial use with City attribution and no-warranty/currentness disclaimers. Narrow production admission keeps commercial submittal identity, record/application number, workflow status, tenant/project description, dates, address, and coordinates as derived permit intelligence with attribution and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily_or_weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["row_number", "record_id", "record_type", "record_status", "submittal_date"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -6344,6 +6838,10 @@
       "rights_basis": "City of Tempe publishes the Building Permits ArcGIS layer through official open-data metadata on data.gov with public access and CC BY 4.0 licensing. The layer includes pending and approved Accela building-permit records. Narrow production admission keeps public permit identity, commercial/tenant/development status, project text, permit class/type, dates, address, contractor company/license, valuation, square footage, zone, and coordinates as value-added permit intelligence with City of Tempe attribution, change/currentness notice, no endorsement, and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily_or_weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["OBJECTID", "PermitNum", "StatusCurrent", "OriginalAddress1", "StatusDateDtm"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -6433,6 +6931,10 @@
       "rights_basis": "City of Greensboro's open-data policy places datasets published on the Open Data Portal into the public domain with no restrictions or requirements on use, and the official BuildingPermits_MS ArcGIS service is described by Greensboro GIS as the building-permit dashboard source from January 2011 to present. Narrow production admission keeps public commercial permit identity, plan-review number, lifecycle status, application/issue/final dates, project/work/use descriptions, contractor/owner business text, address, valuation, square footage, zoning, city address key, and WGS84 point geometry as value-added permit intelligence with City of Greensboro attribution, retrieval timestamp, no-warranty/currentness notice, no endorsement, and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily_or_weekly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["OBJECTID", "PermitNum", "BP_ENTRY_DATE", "StatusCurrent", "FullAddress"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -6522,6 +7024,10 @@
       "rights_basis": "Wake County publishes Building Permits as official public data through data.gov and ArcGIS Hub with public access, nightly geocoding, BLDS-style fields where appropriate, and CC BY 4.0 licensing. Narrow production admission keeps public commercial building permit identity, lifecycle status, dates, description, permit/work/use fields, valuation, square footage, contractor business text, parcel PIN, district, Tyler EnerGov evidence link, and source-provided lon/lat as value-added permit intelligence with Wake County attribution, change/currentness notice, no endorsement, and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "nightly",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 96,
       "canary_required_fields": ["OBJECTID", "PERMIT_NUMBER", "PERMIT_STATUS", "APPLICATION_DATE", "DESCRIPTION", "PIN"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -6607,6 +7113,10 @@
       "rights_basis": "Wake County parcel catalog declares CC BY 4.0, permitting commercial sharing, adaptation, and redistribution with attribution, license link, and change notice",
       "attribution_required": true,
       "refresh_frequency": "nightly",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["PIN_NUM", "OWNER", "SITE_ADDRESS", "TOTAL_VALUE_ASSD", "CALC_AREA"],
       "reconciliation_mode": "nightly_full_snapshot",
@@ -6659,6 +7169,10 @@
       "rights_basis": "Cook County open-data policy supports free, machine-readable public data access. This narrow admission uses the Assessor's current-year parcel universe as a value-added nearby-parcel context spine with parcel identity, centroids, local geography, economic districts, environmental flags, and access scores. Address, owner, value, and deed enrichment are reserved for separately reviewed first-party joins; raw bulk source-replacement exports remain excluded.",
       "attribution_required": true,
       "refresh_frequency": "bi-weekly",
+      "collection_interval_minutes": 20160,
+      "collection_sla_hours": 336,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 720,
       "canary_required_fields": ["pin", "pin10", "row_id", "year", "lat", "lon"],
       "reconciliation_mode": "semi_monthly_full_snapshot",
@@ -6724,8 +7238,13 @@
       "rights_basis": "Data.gov and the City of Los Angeles Open Data portal publish this LADBS submitted-permit dataset as an official public API/bulk resource. Narrow production admission uses current commercial submitted-through-issued building-permit rows as value-added permit intelligence with City attribution and no raw source-replacement resale. Applicant and contractor names are not exposed in this normalized feed, so retailer/chain detection depends on work description, use, address, APN, zoning, valuation, and later graph enrichment.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 96,
       "freshness_field_candidate": "refresh_time",
+      "freshness_semantics": "dataset_refreshed_at",
       "freshness_enforcement_hold": "Live publisher refresh_time observed on 2026-07-18 was 2026-07-12, exceeding the configured 96-hour SLA; keep refresh_time selected and required, but do not enforce it as freshness_field until the publisher currentness stabilizes.",
       "canary_required_fields": ["permit_nbr", "primary_address", "permit_sub_type", "status_desc", "submitted_date", "refresh_time"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -6795,6 +7314,10 @@
       "rights_basis": "NYC Open Data FAQ states there are no restrictions on use of Open Data, and NYC Open Data identifies submitting agencies as authoritative sources subject to standard no-warranty terms. Narrow production admission uses DOHMH restaurant permit-applicant rows with the 1900-01-01 inspection-date sentinel as early restaurant and chain-opening evidence before inspection/grade activity. Phone and post-approval inspection/grade fields are suppressed from this source slice.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": [":id", "camis", "dba", "inspection_date", "record_date"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -6855,6 +7378,10 @@
       "rights_basis": "The official City of Sacramento applied building permits current-year table is published through the city's open data program from Building Division permit activity and exposes public ArcGIS query access. Sacramento's open-data policy supports access, download, machine retrieval, indexing, reuse, and derivative works, but the ArcGIS item has blank licenseInfo and city terms reserve dataset-specific rights where indicated. Narrow production admission uses only commercial application number, status, parcel, address, project name, work description, valuation, square footage, and contractor fields as value-added internal permit intelligence with City of Sacramento attribution, retrieval-date/currentness caveats, no endorsement, no warranty, and no raw source-replacement resale until legal approval.",
       "attribution_required": true,
       "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 744,
       "canary_required_fields": ["OBJECTID", "Application", "Rpt_Status", "Current_Status", "Address"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -6932,6 +7459,10 @@
       "rights_basis": "Metro Nashville's official open-data item describes Planning Department Development Applications as details and status of all applications submitted to the Metropolitan Planning Commission for review, sourced from the public Development Tracker. The public FeatureServer supports query and extract access and is attributed to the Nashville Planning Department, but item licenseInfo is blank. Narrow production admission uses planning case identity, application type, project name/scope, location, parcels, acreage, zoning, status/action dates, and point geometry as value-added development intelligence with Metro Nashville / Nashville Planning Department attribution, retrieval-date/currentness caveats, no endorsement, no warranty, and no raw source-replacement resale until rights review clears broader use.",
       "attribution_required": true,
       "refresh_frequency": "regularly",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 168,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["OBJECTID", "MPCNUM", "PROJECT_DESC", "PSTAT", "DATE_ACCEPTED", "geometry"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -7010,6 +7541,10 @@
       "rights_basis": "The official Boston Planning Department/BPDA Article 80 FeatureServer describes development-review projects maintained by Planning GIS and updated daily. Analyze Boston's default open-data posture uses the Open Data Commons Public Domain Dedication and License for broad reuse. Narrow production admission uses Article 80 project identity, status, project/use description, address, filed/approval dates, public project URL, cost, square footage, and point coordinates as value-added development intelligence with City of Boston/Boston Planning Department attribution, retrieval-date/currentness caveats, no endorsement, no warranty, and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 96,
       "canary_required_fields": ["objectid", "project_id", "project__project_name", "project_status", "last_filed_date"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -7088,7 +7623,12 @@
       "rights_basis": "The official City of Hartford open data dataset is published as Building Permits 20200101 to Current and carries CC0 1.0 metadata. Narrow production admission stores commercial permit lifecycle facts, address, parcel id, valuation, and description as value-added development intelligence with Hartford attribution, retrieval timestamp, currentness notice, and no raw source-replacement export.",
       "attribution_required": true,
       "refresh_frequency": "nightly_source_with_daily_canary",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_field": "DATE_OPENED",
+      "freshness_semantics": "filing_event_at",
       "freshness_sla_hours": 720,
       "canary_freshness_probe": {
         "sample_size": 5,
@@ -7180,7 +7720,12 @@
       "rights_basis": "The official OpenData Buffalo dataset is published by the City of Buffalo / Office of Strategic Planning, lists Hansen 8 as the source system, declares daily automated updates, and carries Public Domain U.S. Government metadata. Narrow production admission keeps public planning/zoning approval identity, application/building keys, review type, result, result date, address, parcel id, neighborhood, and point geometry as value-added development intelligence with City of Buffalo attribution, retrieval timestamp, currentness notice, no endorsement, and no raw source-replacement resale. Denied and truly pending applications are not published in this dataset, so this source is positive planning-approval context rather than a complete application funnel.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_field": "resultdttm",
+      "freshness_semantics": "filing_event_at",
       "freshness_sla_hours": 168,
       "canary_required_fields": ["uniqueid", "reviewtype", "result", "resultdttm", "address", "prclid"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -7271,7 +7816,12 @@
       "rights_basis": "The official NY Open Data dataset is published by the New York State Liquor Authority and exposes current pending license applications through the public Socrata API. Dataset metadata does not specify a license, so narrow production admission stores derived pending-license/opening context with SLA attribution, retrieval-date/currentness caveats, no endorsement, no warranty, and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_field": "received_date",
+      "freshness_semantics": "filing_event_at",
       "freshness_sla_hours": 96,
       "canary_freshness_probe": {
         "sample_size": 5,
@@ -7309,6 +7859,8 @@
       "reconciliation_mode": "daily_pending_snapshot",
       "signal_stage": "pre_approval_and_approved",
       "export_policy": "derived_pending_license_opening_context_only_no_raw_sla_source_export",
+      "retailer_opening_signal": true,
+      "opening_signal_date_field": "received_date",
       "field_allowlist": [
         "application_id", "premises_county", "type", "class",
         "description", "legalname", "dba", "actual_address_of_premises",
@@ -7347,7 +7899,7 @@
       {"source_field": "city", "canonical_field": "city"},
       {"source_field": "state_name", "canonical_field": "state"},
       {"source_field": "zip_code", "canonical_field": "postal_code"},
-      {"source_field": "legalname", "canonical_field": "applicant_name"},
+      {"source_field": "legalname", "canonical_field": "applicant_name", "value_semantics": "legal_entity"},
       {"source_field": "received_date", "canonical_field": "filed_at"},
       {"source_field": "__status_updated_at", "canonical_field": "status_updated_at", "transform": "first_nonempty", "transform_options": {"fields": ["received_date"]}},
       {"source_field": "georeference", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"path": ["coordinates", 0]}},
@@ -7368,6 +7920,10 @@
       "rights_basis": "City of Detroit publishes the BSEED building permits layer as public feature-service data and the item page states no special restrictions or limitations on using the item's content. Narrow production admission keeps issued building permit identity, submitted and issued dates, work description, permit and construction types, use context, zoning, valuation, and unit counts as value-added confirmation intelligence with Detroit attribution, retrieval-date/currentness caveats, and no raw source-replacement resale.",
       "attribution_required": true,
       "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
       "freshness_sla_hours": 72,
       "canary_required_fields": ["record_id", "address", "issued_date", "work_description"],
       "reconciliation_mode": "daily_recent_snapshot",
@@ -7375,7 +7931,7 @@
       "connector": {
         "page_size": 1000,
         "where": "record_id IS NOT NULL AND address IS NOT NULL AND issued_date IS NOT NULL",
-        "out_fields": "record_id,address,submitted_date,issued_date,work_description,permit_type,construction_type,current_use_type,proposed_use_type,num_units,amt_permit_cost,amt_estimated_contractor_cost,amt_estimated_department_cost",
+        "out_fields": "ObjectId,record_id,address,submitted_date,issued_date,work_description,permit_type,construction_type,current_use_type,proposed_use_type,num_units,amt_permit_cost,amt_estimated_contractor_cost,amt_estimated_department_cost",
         "order_by_fields": "ObjectId ASC",
         "keyset_field": "ObjectId",
         "query": {
@@ -7405,6 +7961,1208 @@
       {"source_field": "proposed_use_type", "canonical_field": "proposed_use"},
       {"source_field": "num_units", "canonical_field": "units"},
       {"source_field": "__valuation", "canonical_field": "valuation", "transform": "first_nonempty", "transform_options": {"fields": ["amt_permit_cost", "amt_estimated_contractor_cost", "amt_estimated_department_cost"]}}
+    ]
+  },
+  {
+    "key": "washington_state_lcb_local_authority_letters",
+    "name": "Washington State LCB Local Authority Letters",
+    "adapter": "socrata",
+    "record_type": "permit",
+    "jurisdiction": "Washington State",
+    "base_url": "https://data.wa.gov/resource/vgcw-qfjm.json",
+    "settings": {
+      "connector": {
+        "page_size": 500,
+        "order_by": "applicationdate DESC",
+        "query": {
+          "$select": "license,ubi,applicationdate,countyname,cityname,l_a_type,licenseename,tradename,streetaddress,city,state,zipcode,privdesc01,privdesc02,privdesc03,la_posted_date,systemdate,location"
+        }
+      },
+      "defaults": {
+        "state": "WA",
+        "approval_stage": "pre_approval",
+        "permit_type": "local_authority_letter",
+        "jurisdiction": "Washington State",
+        "source_url": "https://data.wa.gov/Public-Safety/Local-Authority-Letters/vgcw-qfjm"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "reconciliation_mode": "daily_rolling_window_incremental",
+      "freshness_field": "systemdate",
+      "freshness_semantics": "record_updated_at",
+      "freshness_sla_hours": 168,
+      "retailer_opening_signal": true,
+      "opening_signal_date_field": "applicationdate",
+      "field_allowlist": [
+        "license",
+        "ubi",
+        "applicationdate",
+        "countyname",
+        "cityname",
+        "l_a_type",
+        "licenseename",
+        "tradename",
+        "streetaddress",
+        "city",
+        "state",
+        "zipcode",
+        "privdesc01",
+        "privdesc02",
+        "privdesc03",
+        "la_posted_date",
+        "systemdate",
+        "location"
+      ],
+      "suppressed_fields": [
+        "designatedsignee",
+        "dayphone",
+        "applicants",
+        "mailaddress",
+        "mailcity",
+        "mailstate",
+        "mailzip",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_retailer_opening_context_only_no_raw_source_export",
+      "official_landing_page": "https://data.wa.gov/Public-Safety/Local-Authority-Letters/vgcw-qfjm",
+      "license": "Public Domain",
+      "candidate_canary_completed_on": "2026-08-01",
+      "rights_basis": "Washington State LCB publishes Local Authority Letters through Data.WA with Public Domain metadata. Production stores a privacy-restricted field slice as derived retailer-opening intelligence and does not export the raw source feed.",
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "attribution_required": false
+    },
+    "is_active": true,
+    "field_mappings": [
+      {
+        "source_field": "license",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "license"
+          ]
+        }
+      },
+      {
+        "source_field": "applicationdate",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "la_posted_date",
+        "canonical_field": "status_updated_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "l_a_type",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "licenseename",
+        "canonical_field": "owner_name"
+      },
+      {
+        "source_field": "tradename",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "streetaddress",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "city",
+        "canonical_field": "city"
+      },
+      {
+        "source_field": "zipcode",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "privdesc01",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "location",
+        "canonical_field": "longitude",
+        "transform": "object_path",
+        "transform_options": {
+          "path": [
+            "longitude"
+          ]
+        }
+      },
+      {
+        "source_field": "__latitude",
+        "canonical_field": "latitude",
+        "transform": "object_path",
+        "transform_options": {
+          "source_field": "location",
+          "path": [
+            "latitude"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "key": "everett_wa_planning_application_notices",
+    "name": "Everett Planning Application Notices",
+    "adapter": "rss",
+    "record_type": "permit",
+    "jurisdiction": "Everett, WA",
+    "base_url": "https://www.everettwa.gov/RSSFeed.aspx?ModID=1&CID=Everett-Planning-Public-Notices-37",
+    "settings": {
+      "connector": {
+        "page_size": 100,
+        "max_records": 1000,
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public RSS reader)"
+        }
+      },
+      "defaults": {
+        "city": "Everett",
+        "state": "WA",
+        "jurisdiction": "Everett",
+        "permit_type": "planning_application_notice",
+        "approval_stage": "pre_approval"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "reconciliation_mode": "rss_recent_window",
+      "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 336,
+      "record_filters": [
+        {
+          "field": "title",
+          "values": [
+            "Notice of Application",
+            "Notice of Application and Public Hearing"
+          ]
+        }
+      ],
+      "field_allowlist": [
+        "guid",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ],
+      "suppressed_fields": [
+        "enclosure",
+        "linked_document_body",
+        "applicant_contact",
+        "planner_contact",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_planning_notice_context_only_no_raw_document_export",
+      "official_landing_page": "https://www.everettwa.gov/CivicAlerts.aspx?CID=37",
+      "license": "Official public notice feed",
+      "candidate_canary_completed_on": "2026-08-01",
+      "rights_basis": "The City of Everett publishes an official Planning Public Notices RSS feed for public syndication. Production retains only application-stage notice metadata and official evidence links, without fetching linked documents, enclosures, or contact details.",
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "attribution_required": true
+    },
+    "is_active": true,
+    "field_mappings": [
+      {
+        "source_field": "guid",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "source_field": "link",
+          "pattern": "(?i)(rev(?:ii|iii)\\d{2}-\\d+)"
+        }
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "description",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "link",
+        "canonical_field": "source_url"
+      },
+      {
+        "source_field": "__project_name",
+        "canonical_field": "project_name",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "description",
+            "title"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "key": "columbus_oh_site_engineering_applications",
+    "name": "Columbus Site Engineering Applications",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Columbus, OH",
+    "base_url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+    "settings": {
+      "official_landing_page": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=be5e75e4c59e467faf29b6cd99c39113",
+      "license": "Creative Commons CC0 1.0 Universal",
+      "rights_basis": "The City of Columbus Department of Building and Zoning Services publishes the Site Engineering application under CC0. Production retains application identity, project, site, parcel, organization, lifecycle, description, and official evidence-link fields for attributed derived intelligence; personal applicant names, contacts, attachments, raw geometry, and raw source-replacement exports are suppressed.",
+      "attribution_required": true,
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "B1_FILE_DD",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 48,
+      "reconciliation_mode": "daily_full_snapshot",
+      "signal_stage": "pre_approval_and_approved",
+      "canary_required_fields": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_FILE_DD",
+        "B1_APPL_STATUS",
+        "SITE_ADDRESS"
+      ],
+      "field_allowlist": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_PER_GROUP",
+        "B1_PER_TYPE",
+        "B1_PER_SUB_TYPE",
+        "B1_PER_CATEGORY",
+        "B1_PARCEL_NBR",
+        "SITE_ADDRESS",
+        "B1_SITUS_ZIP",
+        "B1_SHORT_NOTES",
+        "APPLICANT_BUS_NAME",
+        "FILED_YEAR",
+        "B1_FILE_DD",
+        "B1_APPL_STATUS",
+        "LAST_STATUS_DT",
+        "B1_WORK_DESC",
+        "ACA_URL"
+      ],
+      "suppressed_fields": [
+        "APPLICANT_FULL_NAME",
+        "applicant_email",
+        "applicant_phone",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_site_application_intelligence_only_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))",
+        "out_fields": "OBJECTID,B1_ALT_ID,B1_PER_GROUP,B1_PER_TYPE,B1_PER_SUB_TYPE,B1_PER_CATEGORY,B1_PARCEL_NBR,SITE_ADDRESS,B1_SITUS_ZIP,B1_SHORT_NOTES,APPLICANT_BUS_NAME,FILED_YEAR,B1_FILE_DD,B1_APPL_STATUS,LAST_STATUS_DT,B1_WORK_DESC,ACA_URL",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "canary_stage_probes": [
+        {
+          "name": "columbus_site_engineering_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 10,
+          "connector": {
+            "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_APPL_STATUS IN ('Active','Under Review','Corrections Required')"
+          }
+        },
+        {
+          "name": "columbus_site_engineering_approved",
+          "expected_stage": "approved",
+          "sample_size": 10,
+          "connector": {
+            "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_APPL_STATUS IN ('Complete','Completed','Closed')"
+          }
+        }
+      ],
+      "defaults": {
+        "city": "Columbus",
+        "state": "OH",
+        "jurisdiction": "Columbus Department of Building and Zoning Services",
+        "permit_type": "site_engineering_application",
+        "source_url": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=be5e75e4c59e467faf29b6cd99c39113"
+      }
+    },
+    "field_mappings": [
+      {
+        "source_field": "B1_ALT_ID",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "B1_APPL_STATUS",
+              "operator": "in",
+              "values": [
+                "Complete",
+                "Completed",
+                "Closed"
+              ],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "B1_FILE_DD",
+        "canonical_field": "filed_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "LAST_STATUS_DT",
+        "canonical_field": "status_updated_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "B1_APPL_STATUS",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "B1_PER_TYPE",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "B1_PER_SUB_TYPE",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "B1_SHORT_NOTES",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "B1_WORK_DESC",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "SITE_ADDRESS",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "B1_SITUS_ZIP",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "B1_PARCEL_NBR",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "APPLICANT_BUS_NAME",
+        "canonical_field": "applicant_name",
+        "value_semantics": "legal_entity"
+      },
+      {
+        "source_field": "ACA_URL",
+        "canonical_field": "source_url"
+      }
+    ]
+  },
+  {
+    "key": "columbus_oh_commercial_building_permits",
+    "name": "Columbus Commercial Building Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Columbus, OH",
+    "base_url": "https://services1.arcgis.com/9yy6msODkIBzkUXU/arcgis/rest/services/Building_Permits/FeatureServer/0/query",
+    "settings": {
+      "official_landing_page": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=3528275d90d74afa8c14c74d72b04e33",
+      "license": "Creative Commons CC0 1.0 Universal",
+      "rights_basis": "The City of Columbus Department of Building and Zoning Services publishes the Building Permits application under CC0. Production retains the recent commercial permit identity, site, parcel, lifecycle, organization, scale, valuation, and official evidence-link fields as confirmation context; personal applicant names, contacts, attachments, raw geometry, and raw source-replacement exports are suppressed.",
+      "attribution_required": true,
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "LAST_STATUS_DT",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 48,
+      "reconciliation_mode": "periodic_full",
+      "signal_stage": "approved_only",
+      "canary_required_fields": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "SITE_ADDRESS",
+        "PERMIT_STATUS",
+        "ISSUED_DT"
+      ],
+      "field_allowlist": [
+        "OBJECTID",
+        "B1_ALT_ID",
+        "B1_PER_GROUP",
+        "B1_PER_TYPE",
+        "B1_PER_SUB_TYPE",
+        "B1_PER_CATEGORY",
+        "GENERAL_TYPE",
+        "B1_PARCEL_NBR",
+        "SITE_ADDRESS",
+        "B1_SITUS_ZIP",
+        "PERMIT_STATUS",
+        "APPLICANT_BUS_NAME",
+        "SQFT",
+        "G3_VALUE_TTL",
+        "ISSUED_YEAR",
+        "ISSUED_DT",
+        "LAST_STATUS_DT",
+        "VALUE_DESC",
+        "ACA_URL",
+        "UNITS",
+        "B1_APPL_STATUS"
+      ],
+      "suppressed_fields": [
+        "APPLICANT_FULL_NAME",
+        "applicant_email",
+        "applicant_phone",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_commercial_permit_confirmation_only_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "B1_ALT_ID IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND B1_PER_TYPE = 'Commercial' AND ISSUED_YEAR >= 2025",
+        "out_fields": "OBJECTID,B1_ALT_ID,B1_PER_GROUP,B1_PER_TYPE,B1_PER_SUB_TYPE,B1_PER_CATEGORY,GENERAL_TYPE,B1_PARCEL_NBR,SITE_ADDRESS,B1_SITUS_ZIP,PERMIT_STATUS,APPLICANT_BUS_NAME,SQFT,G3_VALUE_TTL,ISSUED_YEAR,ISSUED_DT,LAST_STATUS_DT,VALUE_DESC,ACA_URL,UNITS,B1_APPL_STATUS",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "defaults": {
+        "city": "Columbus",
+        "state": "OH",
+        "jurisdiction": "Columbus Department of Building and Zoning Services",
+        "approval_stage": "approved",
+        "source_url": "https://columbus.maps.arcgis.com/apps/instant/basic/index.html?appid=3528275d90d74afa8c14c74d72b04e33"
+      }
+    },
+    "field_mappings": [
+      {
+        "source_field": "B1_ALT_ID",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "B1_ALT_ID"
+          ]
+        }
+      },
+      {
+        "source_field": "PERMIT_STATUS",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "B1_PER_CATEGORY",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "B1_PER_SUB_TYPE",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "VALUE_DESC",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "SITE_ADDRESS",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "B1_SITUS_ZIP",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "B1_PARCEL_NBR",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "APPLICANT_BUS_NAME",
+        "canonical_field": "applicant_name",
+        "value_semantics": "legal_entity"
+      },
+      {
+        "source_field": "SQFT",
+        "canonical_field": "square_feet"
+      },
+      {
+        "source_field": "G3_VALUE_TTL",
+        "canonical_field": "valuation"
+      },
+      {
+        "source_field": "UNITS",
+        "canonical_field": "units"
+      },
+      {
+        "source_field": "ISSUED_DT",
+        "canonical_field": "issued_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "LAST_STATUS_DT",
+        "canonical_field": "status_updated_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "ACA_URL",
+        "canonical_field": "source_url"
+      }
+    ]
+  },
+  {
+    "key": "tacoma_wa_commercial_permit_lifecycle",
+    "name": "Tacoma Commercial Permit Lifecycle",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Tacoma, WA",
+    "base_url": "https://services3.arcgis.com/SCwJH1pD8WSn5T5y/arcgis/rest/services/accela_permit_data/FeatureServer/0/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=a12d6fbf58e4434b8ff5070c09646f19",
+      "license": "City of Tacoma Open Data Terms of Use",
+      "license_url": "https://geohub.cityoftacoma.org/pages/disclaimer",
+      "rights_basis": "The City of Tacoma publishes this public-authoritative Accela extract for application use and requires downstream applications to identify Tacoma as the original source and display the city disclaimer. Production stores attributed, derived permit intelligence and official record links, not a raw source replacement.",
+      "attribution_required": true,
+      "refresh_frequency": "daily",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "pull_date",
+      "freshness_semantics": "dataset_refreshed_at",
+      "freshness_sla_hours": 48,
+      "reconciliation_mode": "daily_incremental_with_periodic_full",
+      "signal_stage": "pre_approval_and_approved",
+      "canary_required_fields": [
+        "objectid",
+        "permit_number",
+        "current_status",
+        "application_date",
+        "pull_date"
+      ],
+      "field_allowlist": [
+        "objectid",
+        "permit_number",
+        "last_action",
+        "permit_group",
+        "permit_type",
+        "permit_subtype",
+        "permit_category",
+        "current_status",
+        "application_date",
+        "issued_date",
+        "address_line_1",
+        "description",
+        "fees_paid",
+        "latitude",
+        "longitude",
+        "parcel_number",
+        "zip",
+        "valuation",
+        "housing_units",
+        "link",
+        "pull_date",
+        "globalid_1",
+        "council_district_number"
+      ],
+      "suppressed_fields": [
+        "applicant_name",
+        "applicant_email",
+        "applicant_phone",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ],
+      "export_policy": "derived_commercial_permit_intelligence_only_with_tacoma_disclaimer_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "permit_number IS NOT NULL AND application_date >= DATE '2025-01-01' AND ((permit_type = 'Building' AND permit_subtype IN ('Commercial','Building')) OR permit_type IN ('Pre-Application','Land Use','Historic','Sign') OR (permit_type = 'Site' AND permit_subtype = 'Development') OR (permit_type = 'Right-of-Way' AND permit_subtype IN ('Construction','Occupancy')))",
+        "out_fields": "objectid,permit_number,last_action,permit_group,permit_type,permit_subtype,permit_category,current_status,application_date,issued_date,address_line_1,description,fees_paid,latitude,longitude,parcel_number,zip,valuation,housing_units,link,pull_date,globalid_1,council_district_number",
+        "order_by_fields": "objectid ASC",
+        "keyset_field": "objectid",
+        "include_geometry": false
+      },
+      "canary_freshness_probe": {
+        "sample_size": 10,
+        "connector": {
+          "where": "permit_number IS NOT NULL AND pull_date IS NOT NULL AND ((permit_type = 'Building' AND permit_subtype IN ('Commercial','Building')) OR permit_type IN ('Pre-Application','Land Use','Historic','Sign') OR (permit_type = 'Site' AND permit_subtype = 'Development') OR (permit_type = 'Right-of-Way' AND permit_subtype IN ('Construction','Occupancy')))",
+          "order_by_fields": "pull_date DESC,objectid DESC",
+          "keyset_field": null
+        }
+      },
+      "canary_stage_probes": [
+        {
+          "name": "tacoma_commercial_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 10,
+          "connector": {
+            "where": "permit_number IS NOT NULL AND application_date >= DATE '2025-01-01' AND issued_date IS NULL AND current_status NOT IN ('Permit Issued','Finaled','Closed','Decision Issued','Approved - Draft in Process') AND ((permit_type = 'Building' AND permit_subtype IN ('Commercial','Building')) OR permit_type IN ('Pre-Application','Land Use','Historic','Sign') OR (permit_type = 'Site' AND permit_subtype = 'Development') OR (permit_type = 'Right-of-Way' AND permit_subtype IN ('Construction','Occupancy')))",
+            "order_by_fields": "objectid DESC",
+            "keyset_field": null
+          }
+        },
+        {
+          "name": "tacoma_commercial_approved",
+          "expected_stage": "approved",
+          "sample_size": 10,
+          "connector": {
+            "where": "permit_number IS NOT NULL AND application_date >= DATE '2025-01-01' AND (issued_date IS NOT NULL OR current_status IN ('Permit Issued','Finaled','Closed','Decision Issued','Approved - Draft in Process')) AND ((permit_type = 'Building' AND permit_subtype IN ('Commercial','Building')) OR permit_type IN ('Pre-Application','Land Use','Historic','Sign') OR (permit_type = 'Site' AND permit_subtype = 'Development') OR (permit_type = 'Right-of-Way' AND permit_subtype IN ('Construction','Occupancy')))",
+            "order_by_fields": "objectid DESC",
+            "keyset_field": null
+          }
+        }
+      ],
+      "defaults": {
+        "city": "Tacoma",
+        "state": "WA",
+        "jurisdiction": "Tacoma Planning and Development Services",
+        "source_url": "https://www.arcgis.com/home/item.html?id=a12d6fbf58e4434b8ff5070c09646f19"
+      }
+    },
+    "field_mappings": [
+      {
+        "source_field": "permit_number",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "permit_number"
+          ]
+        }
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "permit_number"
+          ]
+        }
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "issued_date",
+              "operator": "present",
+              "value": "approved"
+            },
+            {
+              "field": "current_status",
+              "operator": "in",
+              "values": [
+                "Permit Issued",
+                "Finaled",
+                "Closed",
+                "Decision Issued",
+                "Approved - Draft in Process"
+              ],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "application_date",
+        "canonical_field": "filed_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "issued_date",
+        "canonical_field": "issued_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "pull_date",
+        "canonical_field": "status_updated_at",
+        "transform": "unix_milliseconds",
+        "transform_options": {
+          "max_future_hours": 48
+        }
+      },
+      {
+        "source_field": "current_status",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "permit_type",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "permit_subtype",
+        "canonical_field": "permit_subtype"
+      },
+      {
+        "source_field": "permit_category",
+        "canonical_field": "work_class"
+      },
+      {
+        "source_field": "description",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "address_line_1",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "zip",
+        "canonical_field": "postal_code"
+      },
+      {
+        "source_field": "parcel_number",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "valuation",
+        "canonical_field": "valuation"
+      },
+      {
+        "source_field": "housing_units",
+        "canonical_field": "units"
+      },
+      {
+        "source_field": "latitude",
+        "canonical_field": "latitude"
+      },
+      {
+        "source_field": "longitude",
+        "canonical_field": "longitude"
+      },
+      {
+        "source_field": "link",
+        "canonical_field": "source_url"
+      }
+    ]
+  },
+  {
+    "key": "arlington_tx_commercial_permit_applications",
+    "name": "Arlington Commercial Permit Applications",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Arlington, TX",
+    "base_url": "https://gis2.arlingtontx.gov/agsext2/rest/services/OpenData/OD_Property/MapServer/9/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=680c626067ad4c0ca5a8fadfd2f6e235",
+      "license": "Creative Commons Attribution 4.0 International",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "rights_basis": "The City of Arlington publishes the pre-issuance permit application layer under CC BY 4.0. Production retains attributed derived intelligence and suppresses raw geometry, attachments, contacts, and raw source-replacement exports.",
+      "attribution_required": true,
+      "refresh_frequency": "weekdays",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "ImportDate",
+      "freshness_semantics": "dataset_refreshed_at",
+      "freshness_sla_hours": 72,
+      "reconciliation_mode": "daily_full_snapshot_with_issued_transfer",
+      "signal_stage": "pre_approval_and_approved",
+      "canary_required_fields": ["OBJECTID", "FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE", "STATUSDESC", "InDate", "ImportDate"],
+      "field_allowlist": ["ImportDate", "OBJECTID", "FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE", "STATUSDESC", "InDate", "SUBDESC", "WORKDESC", "FOLDERNAME", "ConstructionValuationDeclared", "MainUse", "LandUseDescription", "Structure", "Census", "NameofBusiness", "SignConstructionValue", "FOLDERDESCRIPTION", "PROPGISID1", "PlanningSector", "ZoningUse"],
+      "suppressed_fields": ["applicant_name", "applicant_email", "applicant_phone", "mailing_address", "FOLDERCONDITION", "attachment", "document_body", "raw_geometry", "raw_source_export"],
+      "export_policy": "derived_preissuance_commercial_permit_intelligence_only_cc_by_attributed_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "FOLDERSEQUENCE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI')",
+        "out_fields": "ImportDate,OBJECTID,FOLDERYEAR,FOLDERSEQUENCE,FOLDERTYPE,STATUSDESC,InDate,SUBDESC,WORKDESC,FOLDERNAME,ConstructionValuationDeclared,MainUse,LandUseDescription,Structure,Census,NameofBusiness,SignConstructionValue,FOLDERDESCRIPTION,PROPGISID1,PlanningSector,ZoningUse",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "canary_freshness_probe": {
+        "sample_size": 10,
+        "connector": {
+          "where": "FOLDERSEQUENCE IS NOT NULL AND ImportDate IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI')",
+          "order_by_fields": "ImportDate DESC,OBJECTID DESC",
+          "keyset_field": null
+        }
+      },
+      "canary_stage_probes": [
+        {
+          "name": "arlington_commercial_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 10,
+          "connector": {
+            "where": "FOLDERSEQUENCE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI') AND STATUSDESC IN ('Pre-Application','Application Incomplete','Pending')",
+            "order_by_fields": "OBJECTID DESC",
+            "keyset_field": null
+          }
+        },
+        {
+          "name": "arlington_commercial_approved_for_issue",
+          "expected_stage": "approved",
+          "sample_size": 10,
+          "connector": {
+            "where": "FOLDERSEQUENCE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI') AND STATUSDESC = 'Approved for Issue'",
+            "order_by_fields": "OBJECTID DESC",
+            "keyset_field": null
+          }
+        }
+      ],
+      "defaults": {
+        "city": "Arlington",
+        "state": "TX",
+        "jurisdiction": "Arlington Planning and Development Services",
+        "source_url": "https://www.arcgis.com/home/item.html?id=680c626067ad4c0ca5a8fadfd2f6e235"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "__source_record_id", "canonical_field": "source_record_id", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}, "is_required": true},
+      {"source_field": "__permit_number", "canonical_field": "permit_number", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}},
+      {"source_field": "__application_number", "canonical_field": "application_number", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}},
+      {"source_field": "__approval_stage", "canonical_field": "approval_stage", "transform": "conditional_map", "transform_options": {"cases": [{"field": "STATUSDESC", "operator": "in", "values": ["Approved for Issue"], "value": "approved"}], "default": "pre_approval"}},
+      {"source_field": "InDate", "canonical_field": "filed_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "ImportDate", "canonical_field": "status_updated_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "STATUSDESC", "canonical_field": "status"},
+      {"source_field": "FOLDERTYPE", "canonical_field": "permit_type"},
+      {"source_field": "SUBDESC", "canonical_field": "permit_subtype"},
+      {"source_field": "WORKDESC", "canonical_field": "work_class"},
+      {"source_field": "NameofBusiness", "canonical_field": "project_name"},
+      {"source_field": "FOLDERDESCRIPTION", "canonical_field": "description"},
+      {"source_field": "FOLDERNAME", "canonical_field": "address"},
+      {"source_field": "PROPGISID1", "canonical_field": "parcel_id"},
+      {"source_field": "__valuation", "canonical_field": "valuation", "transform": "first_nonempty", "transform_options": {"fields": ["ConstructionValuationDeclared", "SignConstructionValue"]}},
+      {"source_field": "__proposed_use", "canonical_field": "proposed_use", "transform": "join_fields", "transform_options": {"fields": ["MainUse", "LandUseDescription", "Structure", "ZoningUse"], "separator": " | "}}
+    ]
+  },
+  {
+    "key": "arlington_tx_commercial_issued_permits",
+    "name": "Arlington Commercial Issued Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Arlington, TX",
+    "base_url": "https://gis2.arlingtontx.gov/agsext2/rest/services/OpenData/OD_Property/MapServer/1/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=c89c30011e1b4b2188dd54f3944d0218",
+      "license": "Creative Commons Attribution 4.0 International",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "rights_basis": "The City of Arlington publishes the issued-permit companion layer under CC BY 4.0. Production uses it to confirm permits that leave the pre-issuance application snapshot.",
+      "attribution_required": true,
+      "refresh_frequency": "weekdays",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_field": "ImportDate",
+      "freshness_semantics": "dataset_refreshed_at",
+      "freshness_sla_hours": 72,
+      "reconciliation_mode": "daily_full_snapshot",
+      "signal_stage": "approved_only",
+      "canary_required_fields": ["OBJECTID", "FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE", "STATUSDESC", "ISSUEDATE", "ImportDate"],
+      "field_allowlist": ["ImportDate", "OBJECTID", "FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE", "STATUSDESC", "ISSUEDATE", "FINALDATE", "InDate", "SUBDESC", "WORKDESC", "FOLDERNAME", "ConstructionValuationDeclared", "MainUse", "LandUseDescription", "Structure", "Census", "NameofBusiness", "SignConstructionValue", "PROPGISID1", "PlanningSector", "ZoningUse"],
+      "suppressed_fields": ["applicant_name", "applicant_email", "applicant_phone", "mailing_address", "FOLDERCONDITION", "attachment", "document_body", "raw_geometry", "raw_source_export"],
+      "export_policy": "derived_issued_commercial_permit_confirmation_only_cc_by_attributed_no_raw_source_replacement",
+      "connector": {
+        "page_size": 1000,
+        "where": "FOLDERSEQUENCE IS NOT NULL AND ISSUEDATE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI') AND ISSUEDATE >= DATE '2025-01-01'",
+        "out_fields": "ImportDate,OBJECTID,FOLDERYEAR,FOLDERSEQUENCE,FOLDERTYPE,STATUSDESC,ISSUEDATE,FINALDATE,InDate,SUBDESC,WORKDESC,FOLDERNAME,ConstructionValuationDeclared,MainUse,LandUseDescription,Structure,Census,NameofBusiness,SignConstructionValue,PROPGISID1,PlanningSector,ZoningUse",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": false
+      },
+      "canary_freshness_probe": {
+        "sample_size": 10,
+        "connector": {
+          "where": "FOLDERSEQUENCE IS NOT NULL AND ImportDate IS NOT NULL AND ISSUEDATE IS NOT NULL AND FOLDERTYPE IN ('CP','CO','SI')",
+          "order_by_fields": "ImportDate DESC,OBJECTID DESC",
+          "keyset_field": null
+        }
+      },
+      "defaults": {
+        "city": "Arlington",
+        "state": "TX",
+        "jurisdiction": "Arlington Planning and Development Services",
+        "approval_stage": "approved",
+        "source_url": "https://www.arcgis.com/home/item.html?id=c89c30011e1b4b2188dd54f3944d0218"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "__source_record_id", "canonical_field": "source_record_id", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}, "is_required": true},
+      {"source_field": "__permit_number", "canonical_field": "permit_number", "transform": "join_fields", "transform_options": {"fields": ["FOLDERYEAR", "FOLDERSEQUENCE", "FOLDERTYPE"], "separator": "-"}},
+      {"source_field": "STATUSDESC", "canonical_field": "status"},
+      {"source_field": "FOLDERTYPE", "canonical_field": "permit_type"},
+      {"source_field": "SUBDESC", "canonical_field": "permit_subtype"},
+      {"source_field": "WORKDESC", "canonical_field": "work_class"},
+      {"source_field": "NameofBusiness", "canonical_field": "project_name"},
+      {"source_field": "FOLDERNAME", "canonical_field": "address"},
+      {"source_field": "PROPGISID1", "canonical_field": "parcel_id"},
+      {"source_field": "__valuation", "canonical_field": "valuation", "transform": "first_nonempty", "transform_options": {"fields": ["ConstructionValuationDeclared", "SignConstructionValue"]}},
+      {"source_field": "__proposed_use", "canonical_field": "proposed_use", "transform": "join_fields", "transform_options": {"fields": ["MainUse", "LandUseDescription", "Structure", "ZoningUse"], "separator": " | "}},
+      {"source_field": "InDate", "canonical_field": "filed_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "ISSUEDATE", "canonical_field": "issued_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "FINALDATE", "canonical_field": "completed_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}},
+      {"source_field": "ImportDate", "canonical_field": "status_updated_at", "transform": "unix_milliseconds", "transform_options": {"max_future_hours": 48}}
+    ]
+  },
+  {
+    "key": "hawaii_statewide_tmk_parcels_narrow",
+    "name": "Hawaii Statewide TMK Parcel Spine",
+    "adapter": "arcgis",
+    "record_type": "parcel",
+    "jurisdiction": "Hawaii",
+    "base_url": "https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=579b8dcb7a8e44c1af201e1b3cdf655f",
+      "license": "State of Hawaii public domain",
+      "license_url": "https://portal.ehawaii.gov/page/terms-of-use/",
+      "rights_basis": "The Hawaii Statewide GIS Program expressly marks the 2026 statewide TMK parcel layer public domain. Narrow admission stores TMK identity, county/island divisions, GIS acreage, county evidence link, and geometry for derived nearby-parcel context. The layer is a visual and assessment reference, not a legal survey, title source, or replacement for county parcel systems.",
+      "attribution_required": true,
+      "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_sla_hours": 960,
+      "canary_required_fields": ["objectid", "tmk_txt", "county", "geometry"],
+      "reconciliation_mode": "monthly_full_snapshot",
+      "signal_stage": "parcel_context",
+      "coverage_limitations": [
+        "County source dates vary and parcel geometry is a visual reference, not a legal or survey boundary."
+      ],
+      "field_allowlist": [
+        "objectid", "tmk", "tmk_txt", "county", "division", "island",
+        "zone", "section", "plat", "plat1", "parcel", "parcel1",
+        "gisacres", "cty_tmk", "qpub_link", "geometry"
+      ],
+      "suppressed_fields": [
+        "owner", "mailing_address", "assessed_value", "land_value",
+        "improvement_value", "sale_date", "sale_price", "legal_description",
+        "raw_source_file", "raw_geometry_export"
+      ],
+      "export_policy": "derived_nearby_parcel_context_only_hawaii_public_domain_no_raw_source_replacement",
+      "max_snapshot_retirement_fraction": 0.02,
+      "connector": {
+        "page_size": 100,
+        "where": "tmk_txt IS NOT NULL AND county IS NOT NULL",
+        "out_fields": "objectid,tmk,tmk_txt,county,division,island,zone,section,plat,plat1,parcel,parcel1,gisacres,cty_tmk,qpub_link",
+        "order_by_fields": "objectid ASC",
+        "keyset_field": "objectid",
+        "include_geometry": true,
+        "query": {"outSR": 4326}
+      },
+      "defaults": {
+        "state": "HI",
+        "jurisdiction": "Hawaii",
+        "source_url": "https://www.arcgis.com/home/item.html?id=579b8dcb7a8e44c1af201e1b3cdf655f"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "tmk_txt", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "cty_tmk", "canonical_field": "parcel_group_id", "transform": "first_nonempty", "transform_options": {"fields": ["cty_tmk", "tmk_txt"]}},
+      {"source_field": "county", "canonical_field": "county"},
+      {"source_field": "island", "canonical_field": "city"},
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
+      {"source_field": "gisacres", "canonical_field": "land_area_sq_ft", "transform": "multiply", "transform_options": {"factor": 43560}},
+      {"source_field": "qpub_link", "canonical_field": "source_url"}
+    ]
+  },
+  {
+    "key": "alaska_dnr_statewide_parcels_narrow",
+    "name": "Alaska DNR Statewide Parcel Composite",
+    "adapter": "arcgis",
+    "record_type": "parcel",
+    "jurisdiction": "Alaska",
+    "base_url": "https://services1.arcgis.com/7HDiw78fcUiM2BWn/arcgis/rest/services/AK_Parcels/FeatureServer/0/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=458be3d8aafa47cd882af05cee983f6b",
+      "license": "State of Alaska DNR public use with attribution and modification disclosure",
+      "license_url": "https://www.arcgis.com/sharing/rest/content/items/458be3d8aafa47cd882af05cee983f6b",
+      "rights_basis": "The Alaska Department of Natural Resources Division of Forestry and Fire Protection publishes this statewide composite for statewide applications and permits use with source attribution and disclosure of modifications. Narrow admission stores only source identity, contributing local government, generalized use, processing date, and geometry for derived nearby-parcel context. Owner, alternate owner, values, raw statewide extracts, and source-replacement exports remain excluded.",
+      "attribution_required": true,
+      "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_sla_hours": 960,
+      "canary_required_fields": ["OBJECTID", "GlobalID", "local_gov", "geometry"],
+      "reconciliation_mode": "monthly_full_snapshot",
+      "signal_stage": "parcel_context",
+      "field_allowlist": [
+        "OBJECTID", "GlobalID", "parcel_id", "feature_id", "local_gov",
+        "property_type", "property_use", "datetime_processed", "geometry"
+      ],
+      "suppressed_fields": [
+        "owner", "alt_owner", "land_value", "building_value", "total_value",
+        "mailing_address", "sale_date", "sale_price", "raw_source_file",
+        "raw_geometry_export"
+      ],
+      "export_policy": "derived_nearby_parcel_context_only_alaska_dnr_attributed_no_raw_resale",
+      "max_snapshot_retirement_fraction": 0.02,
+      "connector": {
+        "page_size": 100,
+        "where": "GlobalID IS NOT NULL AND local_gov IS NOT NULL",
+        "out_fields": "OBJECTID,GlobalID,parcel_id,feature_id,local_gov,property_type,property_use,datetime_processed",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": true,
+        "query": {"outSR": 4326}
+      },
+      "defaults": {
+        "state": "AK",
+        "jurisdiction": "Alaska",
+        "source_url": "https://www.arcgis.com/home/item.html?id=458be3d8aafa47cd882af05cee983f6b"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "GlobalID", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "__parcel_group_id", "canonical_field": "parcel_group_id", "transform": "first_nonempty", "transform_options": {"fields": ["parcel_id", "feature_id", "GlobalID"]}},
+      {"source_field": "local_gov", "canonical_field": "county"},
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
+      {"source_field": "__land_use", "canonical_field": "land_use", "transform": "first_nonempty", "transform_options": {"fields": ["property_use", "property_type"]}},
+      {"source_field": "datetime_processed", "canonical_field": "observed_at", "transform": "date"}
+    ]
+  },
+  {
+    "key": "idaho_its_statewide_parcels_narrow",
+    "name": "Idaho ITS Statewide Parcel Framework",
+    "adapter": "arcgis",
+    "record_type": "parcel",
+    "jurisdiction": "Idaho",
+    "base_url": "https://services1.arcgis.com/CNPdEkvnGl65jCX8/ArcGIS/rest/services/Public_Idaho_Parcels_/FeatureServer/7/query",
+    "settings": {
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=cc1d9d013e584c89b448344723504b29",
+      "license": "State of Idaho public parcel data terms; no mailing-list use",
+      "license_url": "https://www.arcgis.com/sharing/rest/content/items/65a3f7c6d4ca404ba6ab677913953b35",
+      "rights_basis": "The State of Idaho Office of Information Technology Services publishes participating-county standardized parcel polygons for public and private-sector business use. Narrow admission stores parcel identity, steward, county, extract date, acreage, generalized assessment category, and geometry for derived nearby-parcel context. Owner, mailing-list, legal-description, valuation, improvement, raw extract, and source-replacement export fields remain excluded.",
+      "attribution_required": true,
+      "refresh_frequency": "monthly",
+      "collection_interval_minutes": 43200,
+      "collection_sla_hours": 720,
+      "retry_interval_minutes": 360,
+      "schedule_mode": "automatic",
+      "freshness_sla_hours": 960,
+      "canary_required_fields": ["OBJECTID", "FP_ID", "PARCEL_ID", "County", "geometry"],
+      "reconciliation_mode": "monthly_full_snapshot",
+      "signal_stage": "parcel_context",
+      "coverage_limitations": [
+        "Coverage includes participating Idaho counties and must not be described as complete title or assessor coverage for all 44 counties."
+      ],
+      "field_allowlist": [
+        "OBJECTID", "FP_ID", "PARCEL_ID", "STEWARD", "County", "UPDATED",
+        "WEBSITE", "FIPS", "ASR_ACRES", "ASR_CATS", "geometry"
+      ],
+      "suppressed_fields": [
+        "MAIL_STATE", "LGL_DESCR", "VAL_LAND", "VAL_IMPVTS", "VAL_TOTAL",
+        "HOME_EXMPT", "owner", "mailing_address", "sale_date", "sale_price",
+        "raw_source_file", "raw_geometry_export"
+      ],
+      "export_policy": "derived_nearby_parcel_context_only_idaho_its_no_mail_list_or_raw_resale",
+      "max_snapshot_retirement_fraction": 0.02,
+      "connector": {
+        "page_size": 100,
+        "where": "FP_ID IS NOT NULL AND PARCEL_ID IS NOT NULL",
+        "out_fields": "OBJECTID,FP_ID,PARCEL_ID,STEWARD,County,UPDATED,WEBSITE,FIPS,ASR_ACRES,ASR_CATS",
+        "order_by_fields": "OBJECTID ASC",
+        "keyset_field": "OBJECTID",
+        "include_geometry": true,
+        "query": {"outSR": 4326}
+      },
+      "defaults": {
+        "state": "ID",
+        "jurisdiction": "Idaho",
+        "source_url": "https://www.arcgis.com/home/item.html?id=cc1d9d013e584c89b448344723504b29"
+      }
+    },
+    "field_mappings": [
+      {"source_field": "FP_ID", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "PARCEL_ID", "canonical_field": "parcel_group_id"},
+      {"source_field": "County", "canonical_field": "county"},
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
+      {"source_field": "ASR_ACRES", "canonical_field": "land_area_sq_ft", "transform": "multiply", "transform_options": {"factor": 43560}},
+      {"source_field": "ASR_CATS", "canonical_field": "land_use"},
+      {"source_field": "UPDATED", "canonical_field": "observed_at", "transform": "unix_milliseconds"}
     ]
   }
 ]

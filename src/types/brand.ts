@@ -1,12 +1,20 @@
 export type BrandMatchReviewStatus = 'candidate' | 'confirmed' | 'dismissed' | 'retracted';
 export type BrandMatchApprovalStage = 'pre_approval' | 'approved';
+export type BrandDetectionMethod = 'direct_alias' | 'historical_party';
+export type BrandMatchFreshness = 'fresh' | 'active' | 'aging' | 'stale';
+export type BrandSignalCohort = 'national_retail' | 'major_builder';
 
 import type { Deal } from './deal';
 import type { NearbyParcelSearchSummary } from './parcel';
 
 export interface PermitBrandMatchListParams {
+  brand_id?: string;
+  cohort?: BrandSignalCohort;
   review_status?: BrandMatchReviewStatus;
   approval_stage?: BrandMatchApprovalStage;
+  detection_method?: BrandDetectionMethod;
+  freshness?: BrandMatchFreshness;
+  sort_by?: 'confidence' | 'freshness';
   limit?: number;
 }
 
@@ -18,6 +26,30 @@ export interface BrandProfile {
   scale?: string | null;
   priority: number;
   is_active: boolean;
+  signal_cohort?: BrandSignalCohort;
+}
+
+export interface BrandExpansionMarket {
+  city?: string | null;
+  state?: string | null;
+  signal_count: number;
+  planning_count: number;
+  pre_approval_count: number;
+  approved_count: number;
+  latest_signal_at: string;
+}
+
+export interface BrandExpansionSummary {
+  brand: BrandProfile;
+  signal_count: number;
+  planning_count: number;
+  pre_approval_count: number;
+  approved_count: number;
+  market_count: number;
+  parcel_candidate_count: number;
+  average_confidence: number;
+  latest_signal_at: string;
+  markets: BrandExpansionMarket[];
 }
 
 export interface LinkedDealSummary {
@@ -41,18 +73,22 @@ export interface BrandPermitSummary {
   approval_stage?: BrandMatchApprovalStage | null;
   status?: string | null;
   project_name?: string | null;
+  applicant_name?: string | null;
   description?: string | null;
   address?: string | null;
   city?: string | null;
   state?: string | null;
   jurisdiction?: string | null;
   permit_type?: string | null;
+  permit_subtype?: string | null;
   work_class?: string | null;
   proposed_use?: string | null;
   valuation?: number | null;
   latitude?: number | null;
   longitude?: number | null;
   filed_at?: string | null;
+  status_updated_at?: string | null;
+  last_observed_at?: string;
   source_url?: string | null;
 }
 
@@ -67,9 +103,15 @@ export interface PermitBrandMatch {
   rule_ids: string[];
   excerpt: string;
   detector_version: string;
-  signal_quality: 'applicant_dba' | 'direct_project_name' | 'description_context' | 'supporting_context';
+  detection_method: BrandDetectionMethod;
+  signal_quality: 'applicant_dba' | 'applicant_legal_entity' | 'direct_project_name' | 'description_context' | 'supporting_context' | 'historical_party';
   signal_quality_label: string;
   signal_quality_note: string;
+  freshness?: 'fresh' | 'active' | 'aging' | 'stale';
+  freshness_date?: string;
+  freshness_label?: string;
+  signal_age_days?: number;
+  needs_reverification?: boolean;
   first_seen_at: string;
   last_seen_at: string;
   brand: BrandProfile;
@@ -82,13 +124,18 @@ export interface BrandMatchRawEvidence {
   external_record_id: string;
   content_hash: string;
   received_at: string;
+  last_observed_at?: string;
+  observation_recorded?: boolean;
   source_updated_at?: string | null;
   source_key: string;
   source_name: string;
   source_url?: string | null;
   payload_excerpt: Record<string, string | number | boolean>;
   received_age_hours?: number | null;
+  last_observed_age_hours?: number | null;
   source_lag_hours?: number | null;
+  source_timestamp_semantics?: 'record_updated_at' | 'dataset_refreshed_at' | 'filing_event_at' | 'ingestion_observed_at' | 'unclassified_source_timestamp';
+  source_timestamp_label?: string;
 }
 
 export interface BrandMatchGraphContext {
@@ -133,6 +180,8 @@ export interface PermitBrandMatchEvidence {
   matched_fields: string[];
   excerpt: string;
   detector_version: string;
+  detection_method: BrandDetectionMethod;
+  needs_reverification?: boolean;
   signal_quality: PermitBrandMatch['signal_quality'];
   signal_quality_label: string;
   signal_quality_note: string;
@@ -143,4 +192,15 @@ export interface PermitBrandMatchEvidence {
   first_evidence: BrandMatchRawEvidence;
   latest_evidence: BrandMatchRawEvidence;
   graph_context: BrandMatchGraphContext[];
+  inference_evidence: BrandPartyFingerprintEvidence[];
+}
+
+export interface BrandPartyFingerprintEvidence {
+  party_type: string;
+  display_name: string;
+  state?: string | null;
+  evidence_count: number;
+  source_match_ids: string[];
+  confidence: number;
+  last_verified_at: string;
 }

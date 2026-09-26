@@ -1,11 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { render, screen, within } from "@testing-library/react";
 
 import IngestionOperations from "@/pages/IngestionOperations";
 
+vi.mock("@/hooks/useMeasuredCoverage", () => ({
+  useMeasuredCoverage: () => ({ isPending: true, isFetching: false }),
+}));
+
 vi.mock("@/hooks/useIngestionHealth", () => ({
   useIngestionHealth: vi.fn(),
+  useIngestionSchedulePlan: vi.fn(),
+  useIngestionHostPolicy: vi.fn(),
   useCandidateCanaryHistory: vi.fn(),
   usePromoteIngestionCandidate: vi.fn(),
 }));
@@ -16,9 +22,51 @@ vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
-import { useIngestionHealth, useCandidateCanaryHistory, usePromoteIngestionCandidate } from "@/hooks/useIngestionHealth";
+import { useIngestionHealth, useIngestionHostPolicy, useIngestionSchedulePlan, useCandidateCanaryHistory, usePromoteIngestionCandidate } from "@/hooks/useIngestionHealth";
+
+beforeEach(() => {
+  (useIngestionHostPolicy as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    data: {
+      ready: false,
+      coverage_ready: false,
+      policy_digest: "test-policy-digest",
+      executor_name: null,
+      executor_verified: false,
+      source_count: 121,
+      required_host_count: 40,
+      configured_host_count: 3,
+      required_hosts: [],
+      configured_hosts: [],
+      missing_hosts: ["data.example.gov"],
+      unused_hosts: [],
+      unsafe_sources: [],
+      requirements: [],
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  });
+});
 
 describe("<IngestionOperations>", () => {
+  it.each([undefined, 'TX'])('explains missing configured sources without inferring catalog or candidate state (%s)', (state) => {
+    vi.mocked(useIngestionHealth).mockReturnValue({
+      data: { sources: [], candidates: [] }, isLoading: false, isFetching: false,
+      error: null, refetch: vi.fn(), canary: { isPending: false }, candidateCanary: { isPending: false },
+    } as unknown as ReturnType<typeof useIngestionHealth>);
+    vi.mocked(useIngestionSchedulePlan).mockReturnValue({ isLoading: false } as ReturnType<typeof useIngestionSchedulePlan>);
+    vi.mocked(usePromoteIngestionCandidate).mockReturnValue({ isPending: false } as ReturnType<typeof usePromoteIngestionCandidate>);
+    render(<MemoryRouter initialEntries={[state ? `/source-health?state=${state}` : '/source-health']}><IngestionOperations /></MemoryRouter>);
+    const health = within(screen.getByRole('region', { name: 'Ingestion source health' }));
+    expect(health.getByText(state ? 'No sources for this state' : 'No sources configured')).toBeInTheDocument();
+    expect(health.getByText(state
+      ? 'No configured sources match this state. Source candidates are listed separately below.'
+      : 'No sources are configured for this organization. An administrator must complete source onboarding before collection can begin.')).toBeInTheDocument();
+    expect(health.getByRole('link', { name: 'Review source candidates' })).toHaveAttribute('href', '#source-candidates');
+    expect(screen.getByRole('region', { name: 'Ingestion candidate queue' })).toHaveAttribute('id', 'source-candidates');
+    expect(screen.queryByText('The source catalog has not been synchronized.')).not.toBeInTheDocument();
+  });
+
   it("shows approved-only source names in the coverage footprint", () => {
     (useIngestionHealth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
@@ -121,8 +169,26 @@ describe("<IngestionOperations>", () => {
               approved_only_sources: 0,
             },
           ],
+          rollout_queue: [
+            {
+              state: "TX",
+              rollout_cluster: 1,
+              rollout_label: "Texas, Washington, New York",
+              coverage_status: "live",
+              live_sources: 2,
+              candidate_sources: 0,
+              jurisdiction_count: 2,
+              priority_score: 185,
+              next_action: "add_retailer_opening_source",
+              next_action_label: "Add retailer-opening source",
+            },
+          ],
           candidate_only_state_count: 1,
           candidate_only_states: ["TX"],
+          researched_state_count: 3,
+          unresearched_state_count: 47,
+          researched_states: ["TX", "MI", "GA"],
+          unresearched_states: ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "HI"],
           covered_state_count: 2,
           missing_state_count: 48,
           covered_states: ["TX", "MI"],
@@ -174,6 +240,48 @@ describe("<IngestionOperations>", () => {
       mutate: vi.fn(),
       variables: undefined,
     });
+    (useIngestionSchedulePlan as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        as_of: "2026-08-11T12:00:00Z",
+        shard_count: 1,
+        shard_index: 0,
+        total_source_count: 3,
+        catalog_source_count: 3,
+        unsynced_source_count: 0,
+        unsynced_source_keys: [],
+        catalog_synced: true,
+        shard_source_count: 3,
+        automatic_source_count: 3,
+        due_source_count: 1,
+        active_source_count: 1,
+        items: [
+          {
+            source_id: "source-texas-comptroller-sales-tax-locations",
+            source_key: "texas_comptroller_sales_tax_locations",
+            source_name: "Texas Comptroller Sales Tax Locations",
+            due: true,
+            due_reason: "interval_elapsed",
+            interval_minutes: 1440,
+            retry_interval_minutes: 360,
+            collection_sla_hours: 24,
+            max_pages_per_run: 10,
+            priority: 50,
+            schedule_mode: "automatic",
+            shard_index: 0,
+            active_run: false,
+            stale_run: false,
+            latest_status: "completed",
+            last_terminal_at: "2026-08-10T10:00:00Z",
+            due_at: "2026-08-11T10:00:00Z",
+            overdue_minutes: 120,
+          },
+        ],
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    });
 
     render(
       <MemoryRouter>
@@ -181,12 +289,24 @@ describe("<IngestionOperations>", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Coverage Footprint")).toBeInTheDocument();
-    const liveMix = screen.getByLabelText("Live source mix");
-    expect(within(liveMix).getByText("Live Source Mix")).toBeInTheDocument();
+    expect(screen.getByText("Configured Footprint")).toBeInTheDocument();
+    expect(screen.getByText(/not verified imported records or geographic completeness/i)).toBeInTheDocument();
+    expect(screen.getByText("Production Activation")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByText("data.example.gov")).toBeInTheDocument();
+    expect(screen.getByText("Collection Schedule")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Texas Comptroller Sales Tax Locations · due" })).toHaveAttribute(
+      "href",
+      "/source-health/sources/source-texas-comptroller-sales-tax-locations",
+    );
+    const liveMix = screen.getByLabelText("Configured source mix");
+    expect(within(liveMix).getByText("Configured Source Mix")).toBeInTheDocument();
     expect(within(liveMix).getByText("approved only")).toBeInTheDocument();
     expect(screen.getByText("State leaders")).toBeInTheDocument();
     expect(screen.getByText("Next activation queue")).toBeInTheDocument();
+    expect(screen.getByText("50-state rollout queue")).toBeInTheDocument();
+    expect(screen.getByText("TX · Cluster 1")).toBeInTheDocument();
+    expect(screen.getByText("Add retailer-opening source")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Austin Plan Review Cases/i })).toHaveAttribute(
       "href",
       "/source-health/sources/source-1",
@@ -271,7 +391,12 @@ describe("<IngestionOperations>", () => {
             blocker_summary: "Retry",
             early_warning_value: "Candidate",
             candidate_source_fields: [],
-            can_run_canary: false,
+            can_run_canary: true,
+            catalog_backed: true,
+            last_canary_at: "2026-07-23T12:00:00Z",
+            last_canary_ok: true,
+            last_canary_records_valid: 5,
+            last_canary_records_failed: 0,
             last_checked_on: "2026-07-23",
             next_audit_on: "2026-07-24",
             notes: "Test",
@@ -290,6 +415,30 @@ describe("<IngestionOperations>", () => {
             early_warning_value: "Candidate",
             candidate_source_fields: [],
             can_run_canary: false,
+            catalog_backed: false,
+            last_checked_on: "2026-07-23",
+            next_audit_on: "2026-07-24",
+            notes: "Test",
+          },
+          {
+            key: "texas_unreviewed_candidate",
+            name: "Texas Unreviewed Candidate",
+            adapter: "socrata",
+            record_type: "permit",
+            jurisdiction: "Texas",
+            base_url: "https://example.com/tx-unreviewed",
+            official_landing_page: "https://example.com/tx-unreviewed",
+            license: "Public",
+            status: "operational_retry",
+            blocker_summary: "Canary passed",
+            early_warning_value: "Awaiting source review",
+            candidate_source_fields: [],
+            can_run_canary: true,
+            catalog_backed: false,
+            last_canary_at: "2026-07-23T12:00:00Z",
+            last_canary_ok: true,
+            last_canary_records_valid: 5,
+            last_canary_records_failed: 0,
             last_checked_on: "2026-07-23",
             next_audit_on: "2026-07-24",
             notes: "Test",
@@ -329,6 +478,10 @@ describe("<IngestionOperations>", () => {
           activation_queue: [],
           candidate_only_state_count: 0,
           candidate_only_states: [],
+          researched_state_count: 2,
+          unresearched_state_count: 48,
+          researched_states: ["TX", "CA"],
+          unresearched_states: ["AL", "AK", "AZ", "AR", "CO", "CT", "DE", "FL", "GA", "HI"],
           covered_state_count: 2,
           missing_state_count: 48,
           covered_states: ["TX", "CA"],
@@ -361,6 +514,27 @@ describe("<IngestionOperations>", () => {
       mutate: vi.fn(),
       variables: undefined,
     });
+    (useIngestionSchedulePlan as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        as_of: "2026-08-11T12:00:00Z",
+        shard_count: 1,
+        shard_index: 0,
+        total_source_count: 1,
+        catalog_source_count: 1,
+        unsynced_source_count: 0,
+        unsynced_source_keys: [],
+        catalog_synced: true,
+        shard_source_count: 1,
+        automatic_source_count: 1,
+        due_source_count: 0,
+        active_source_count: 0,
+        items: [],
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    });
 
     render(
       <MemoryRouter initialEntries={["/source-health?state=TX"]}>
@@ -375,11 +549,13 @@ describe("<IngestionOperations>", () => {
       "href",
       "/source-health/candidates/texas_candidate",
     );
-    expect(screen.getAllByRole("button", { name: /promote source/i })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /promote source/i })).toHaveLength(1);
+    expect(screen.getByText("Catalog review required")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open official source for texas candidate/i })).toHaveAttribute(
       "href",
       "https://example.com/tx",
     );
     expect(screen.queryByText("California Candidate")).not.toBeInTheDocument();
+    expect(useIngestionSchedulePlan).toHaveBeenLastCalledWith("TX");
   });
 });

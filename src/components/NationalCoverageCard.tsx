@@ -17,6 +17,8 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
   const missingStates = coverage.missing_states.slice(0, 10);
   const stateLeaders = coverage.state_buckets.slice(0, 6);
   const activationQueue = coverage.activation_queue.slice(0, 10);
+  const topActivation = activationQueue[0];
+  const rolloutNow = coverage.rollout_queue?.slice(0, 3) ?? [];
 
   return (
     <div className="rounded-xl border bg-card p-4 md:p-5 card-shadow">
@@ -40,12 +42,31 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
         <Metric label="Retailer openings" value={coverage.retailer_opening_source_count} />
       </div>
 
+      {rolloutNow.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Current rollout actions">
+          <span className="text-[11px] font-medium text-foreground">Rollout now</span>
+          {rolloutNow.map((item) => (
+            <Link
+              key={item.state}
+              to={`/source-health?state=${item.state}`}
+              className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+              title={item.rollout_label}
+            >
+              {item.state} · {item.next_action_label}
+            </Link>
+          ))}
+        </div>
+      )}
+
       <div className="mt-4 rounded-lg border bg-background px-3 py-3">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-medium text-foreground">State coverage gap</p>
             <p className="text-[11px] text-muted-foreground">
-              {coverage.covered_state_count} states covered · {coverage.missing_state_count} still need a live source
+              {coverage.covered_state_count} states live · {coverage.missing_state_count} still need a live source
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {coverage.researched_state_count} states researched · {coverage.unresearched_state_count} without a source decision
             </p>
           </div>
           <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -54,7 +75,7 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
           {missingStates.length === 0 ? (
-            <span className="text-xs text-muted-foreground">No state gaps detected</span>
+            <span className="text-xs text-muted-foreground">All states have a live source</span>
           ) : (
             missingStates.map((state) => (
               <span key={state} className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground">
@@ -74,7 +95,7 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-medium text-foreground">State leaders</p>
-            <p className="text-[11px] text-muted-foreground">States with the most live and candidate sources</p>
+            <p className="text-[11px] text-muted-foreground">States with the most live, candidate, and readiness signals</p>
           </div>
           <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
             top {stateLeaders.length}
@@ -89,7 +110,7 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
                 key={bucket.state}
                 to={`/source-health?state=${bucket.state}`}
                 className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                title={`${bucket.live_sources} live · ${bucket.candidate_sources} candidate · ${bucket.retailer_opening_sources} retailer-opening`}
+                title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
               >
                 {bucket.state} · {bucket.live_sources + bucket.candidate_sources}
               </Link>
@@ -105,6 +126,7 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
             <p className="text-[11px] text-muted-foreground">
               {coverage.candidate_only_state_count} states have candidate coverage but no live source yet
             </p>
+            <p className="text-[11px] text-muted-foreground">Ranked by candidate depth and retry readiness</p>
           </div>
           <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
             loop
@@ -119,13 +141,18 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
                 key={bucket.state}
                 to={`/source-health?state=${bucket.state}`}
                 className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                title={`${bucket.live_sources} live · ${bucket.candidate_sources} candidate`}
+                title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
               >
                 {bucket.state} · {bucket.candidate_sources}
               </Link>
             ))
           )}
         </div>
+        {topActivation && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Top priority: {topActivation.state} · {(topActivation.priority_reasons ?? [])[0] ?? "no reason"}
+          </p>
+        )}
         {coverage.candidate_only_state_count > activationQueue.length && (
           <p className="mt-2 text-[11px] text-muted-foreground">
             {coverage.candidate_only_state_count - activationQueue.length} more activation states hidden

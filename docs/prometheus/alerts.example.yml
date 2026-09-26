@@ -1,0 +1,52 @@
+# Example Prometheus alert rules for DealSignal
+#
+# Import into Prometheus/Grafana/Mimir. Adjust thresholds for your SLO targets
+# (see docs/slo.md). Wire notifications to PagerDuty/Opsgenie/Slack.
+
+groups:
+  - name: dealsignal
+    rules:
+      - alert: DealSignalDown
+        expr: |
+          absent(up{job="dealsignal-api"} == 1)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DealSignal API scrape target missing"
+          description: "Prometheus cannot reach the API metrics endpoint."
+
+      - alert: DealSignalHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(http_requests_total{status!~"4.."}[5m]))
+          ) > 0.02
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx error rate above 2%"
+          description: "Sustained 5xx rate may exhaust the monthly error budget."
+
+      - alert: DealSignalHighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket[5m]))
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 latency above 500ms"
+          description: "Read-path SLO may be burning."
+
+      - alert: DealSignalDeepHealthFailing
+        expr: |
+          probe_success{job="dealsignal-deep-health"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "/health/deep failing"
+          description: "Database may be unreachable — check Postgres."

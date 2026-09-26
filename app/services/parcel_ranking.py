@@ -9,6 +9,7 @@ from app.models.parcel import ParcelFact, ParcelRecord
 RANKER_VERSION = "developer-v1"
 RANKER_VERSIONS = {
     "developer": RANKER_VERSION,
+    "investor": "investor-v1",
     "broker": "broker-v2",
     "realtor": "realtor-v2",
 }
@@ -109,7 +110,7 @@ def rank_parcel_candidate(
         return rank_developer_candidate(
             parcel, facts, distance_miles=distance_miles, radius_miles=radius_miles
         )
-    if persona not in {"broker", "realtor"}:
+    if persona not in {"investor", "broker", "realtor"}:
         raise ValueError(f"Unknown parcel ranking persona: {persona}")
     return _rank_market_candidate(
         parcel,
@@ -139,17 +140,21 @@ def _rank_market_candidate(
     ownership = [fact for fact in current_facts if fact.fact_type == "ownership"]
     fact_ids = [fact.id for fact in current_facts]
     raw_ids = sorted({fact.raw_source_record_id for fact in current_facts})
-    weights = (
-        {
+    if persona == "investor":
+        weights = {
+            "proximity": 25, "ownership": 10, "tenure": 15,
+            "valuation": 25, "zoning": 15, "area": 10,
+        }
+    elif persona == "broker":
+        weights = {
             "proximity": 30, "ownership": 20, "tenure": 15,
             "valuation": 15, "zoning": 10, "area": 10,
         }
-        if persona == "broker"
-        else {
+    else:
+        weights = {
             "proximity": 30, "ownership": 20, "tenure": 10,
             "valuation": 15, "zoning": 15, "area": 10,
         }
-    )
     features: list[dict[str, Any]] = []
     reasons = [f"{distance_miles:.2f} miles from the confirmed signal"]
     cautions = ["No owner willingness to sell or listing intent is inferred"]

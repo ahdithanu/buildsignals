@@ -92,6 +92,9 @@ page, stand down the page.
 
 **Postmortem** (required for every Sev-1 and Sev-2, within 3 business days):
 
+Use the template in [`docs/templates/postmortem.md`](../templates/postmortem.md).
+Log drills and incidents in [`docs/ops-log.md`](../ops-log.md).
+
 - **Blameless.** The target is the system that let a human mistake reach prod,
   not the human.
 - Cover: timeline (from the Slack timestamps), user impact, root cause,

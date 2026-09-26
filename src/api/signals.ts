@@ -15,8 +15,11 @@ export function mapSignal(raw: any): Signal {
 
   return {
     id: raw.id,
+    dealId: raw.deal_id ?? null,
+    source: raw.source ?? null,
+    severity: raw.severity ?? null,
     type: raw.signal_type || '',
-    property: raw.deal_name || 'Unknown',
+    property: raw.deal_name || raw.signal_type?.replace(/_/g, ' ') || 'Untitled signal',
     summary: raw.description || '',
     confidence,
     date: raw.created_at || '',
@@ -26,8 +29,8 @@ export function mapSignal(raw: any): Signal {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 export const signalsApi = {
-  list: async (): Promise<Signal[]> => {
-    const rawList = await apiClient.get<any[]>('/signals');
+  list: async (skip = 0, limit = 50): Promise<Signal[]> => {
+    const rawList = await apiClient.get<any[]>(`/signals?skip=${skip}&limit=${limit}`);
     return rawList.map(mapSignal);
   },
 

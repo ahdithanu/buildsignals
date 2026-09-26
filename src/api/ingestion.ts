@@ -3,14 +3,18 @@ import type {
   CandidateCanaryAttempt,
   CandidateCanaryResult,
   IngestionCoverage,
+  IngestionHostPolicy,
   IngestionCandidate,
   IngestionReliabilitySummary,
   IngestionRun,
   IngestionSourceRecord,
+  MeasuredCoverage,
+  MeasuredCoverageParams,
   PermitDetail,
   PermitRecord,
   SourceCanaryResult,
   SourceHealth,
+  SourceSchedulePlan,
 } from '@/types/ingestion';
 
 export const ingestionApi = {
@@ -49,6 +53,15 @@ export const ingestionApi = {
     apiClient.post<IngestionSourceRecord>(`/ingestion/candidates/${candidateKey}/promote`, {}),
   coverage: (): Promise<IngestionCoverage> =>
     apiClient.get<IngestionCoverage>('/ingestion/coverage'),
+  measuredCoverage: (params: MeasuredCoverageParams): Promise<MeasuredCoverage> =>
+    apiClient.get<MeasuredCoverage>('/ingestion/coverage/measured', { ...params }),
   reliabilitySummary: (): Promise<IngestionReliabilitySummary> =>
     apiClient.get<IngestionReliabilitySummary>('/ingestion/reliability-summary'),
+  schedulePlan: (state?: string | null): Promise<SourceSchedulePlan> =>
+    apiClient.get<SourceSchedulePlan>(
+      '/ingestion/schedule-plan',
+      state ? { state } : undefined,
+    ),
+  hostPolicy: (): Promise<IngestionHostPolicy> =>
+    apiClient.get<IngestionHostPolicy>('/ingestion/host-policy'),
 };

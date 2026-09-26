@@ -97,8 +97,11 @@ class ArcGISFeatureServerConnector(BaseConnector):
             raise ConnectorResponseError("ArcGIS response is missing a features list")
 
         records = tuple(self._normalize_feature(feature) for feature in features)
+        raw_record_count = len(records)
+        if self.keyset_field:
+            records = _dedupe_keyset_records(records, self.keyset_field)
         exceeded_limit = payload.get("exceededTransferLimit") is True
-        has_more = exceeded_limit or len(records) == self.page_size
+        has_more = exceeded_limit or raw_record_count == self.page_size
         if has_more and not records:
             raise ConnectorResponseError(
                 "ArcGIS indicated another page without returning any features"
@@ -158,6 +161,21 @@ def _sql_literal(value: Any) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     return f"'{str(value).replace(chr(39), chr(39) * 2)}'"
+
+
+def _dedupe_keyset_records(
+    records: tuple[dict[str, Any], ...], field: str
+) -> tuple[dict[str, Any], ...]:
+    """Collapse publisher join duplicates that share one pagination identity."""
+    deduped: list[dict[str, Any]] = []
+    seen: set[Any] = set()
+    for record in records:
+        value = record.get(field)
+        if value is None or value not in seen:
+            deduped.append(record)
+            if value is not None:
+                seen.add(value)
+    return tuple(deduped)
 
 
 # Concise alias for callers that do not need the vendor product name.

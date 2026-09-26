@@ -1,15 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ArrowRight } from 'lucide-react';
+import { AuthPageShell } from '@/components/auth/AuthPageShell';
 import { useToast } from '@/hooks/use-toast';
 import { passwordResetApi } from '@/api/password_reset';
 import { ApiError } from '@/api/client';
@@ -31,12 +23,7 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl">Reset password</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <AuthPageShell eyebrow="Account recovery" title="Reset password">
             <div className="text-sm text-destructive" role="alert">
               No reset token was provided. Please use the link from your email
               or{' '}
@@ -48,9 +35,7 @@ export default function ResetPassword() {
               </Link>
               .
             </div>
-          </CardContent>
-        </Card>
-      </div>
+      </AuthPageShell>
     );
   }
 
@@ -87,12 +72,7 @@ export default function ResetPassword() {
 
   if (invalidLink) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl">Reset link unusable</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <AuthPageShell eyebrow="Account recovery" title="Reset link unusable">
             <div className="text-sm text-destructive mb-4" role="alert">
               {INVALID_LINK_MESSAGE}
             </div>
@@ -104,58 +84,55 @@ export default function ResetPassword() {
                 Request a new reset link
               </Link>
             </p>
-          </CardContent>
-        </Card>
-      </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Choose a new password</CardTitle>
-          <CardDescription>
-            Pick something strong you haven't used elsewhere.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New password</Label>
-              <Input
+    <AuthPageShell
+      eyebrow="Account recovery"
+      title="Choose a new password"
+      description="Use a strong password you have not used elsewhere."
+    >
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <label className="block">
+              <span className="section-label">New password</span>
+              <input
                 id="new-password"
                 type="password"
                 autoComplete="new-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                minLength={12}
+                placeholder="At least 12 characters"
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm password</Label>
-              <Input
+            </label>
+            <label className="block">
+              <span className="section-label">Confirm password</span>
+              <input
                 id="confirm-password"
                 type="password"
                 autoComplete="new-password"
                 required
+                minLength={12}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Repeat password"
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
-            </div>
+            </label>
             {error && (
               <div className="text-sm text-destructive" role="alert">
                 {error}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Resetting…' : 'Reset password'}
-            </Button>
+            <button type="submit" className="flex h-11 w-full items-center justify-between bg-foreground px-4 text-xs font-semibold text-background disabled:opacity-50" disabled={submitting}>
+              {submitting ? 'Resetting...' : 'Reset password'}
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+    </AuthPageShell>
   );
 }

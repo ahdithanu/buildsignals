@@ -53,6 +53,9 @@ fill them in up front, or set placeholders and correct them in step 5.
 | `APP_BASE_URL` | same frontend URL — used in password-reset links |
 | `RESEND_API_KEY` | your Resend key (or leave blank to disable email) |
 | `SENTRY_DSN` | backend Sentry DSN (or blank) |
+| `INGESTION_ALLOWED_HOSTS` | exact reviewed worker host list from `catalog host-audit --print-required-hosts` |
+| `INGESTION_HOST_POLICY_EXECUTOR` | leave blank until the API list is confirmed identical to the worker; then set the worker service name |
+| `INGESTION_HOST_POLICY_DIGEST` | `policy_digest` from the executor's exact static host policy |
 
 **Frontend (`dealsignal-frontend`):**
 
@@ -146,6 +149,14 @@ curl -s -o /dev/null -w '%{http_code}\n' $BASE/metrics          # 401 (token req
       `SELECT rolsuper FROM pg_roles WHERE rolname = current_user;` → must be
       `f`. (App-layer org scoping still applies either way, but RLS is the
       defense-in-depth backstop and you want it real.)
+- [ ] **Enable daily permit ingestion:** set `CORS_ALLOWED_ORIGINS` on the
+      `dealsignal-permit-ingestion-cohort-1` cron service (same value as API),
+      run the scoped host audit, then execute the cohort once manually. See
+      [ingestion-scheduling.md](ingestion-scheduling.md).
+- [ ] **Enable weekly Savannah ingestion:** set `CORS_ALLOWED_ORIGINS` and
+      `INGESTION_ORGANIZATION` on `dealsignal-savannah-permit-ingestion`, run it
+      once manually, and verify the bounded snapshot and graph projection
+      before relying on the Monday schedule.
 
 From here on, deploying is just merging to `main`. Read [deploy.md](deploy.md)
 before the first routine deploy.

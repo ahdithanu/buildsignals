@@ -80,7 +80,7 @@ def test_forgot_known_email_returns_204_and_sends(client, mock_send):
     mock_send.assert_called_once()
     kwargs = mock_send.call_args.kwargs
     assert kwargs["to"] == REGISTER["email"]
-    assert "Reset your DealSignal password" in kwargs["subject"]
+    assert "Reset your BuildSignals password" in kwargs["subject"]
     assert "/reset-password?token=" in kwargs["text"]
 
 

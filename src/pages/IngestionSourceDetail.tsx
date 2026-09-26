@@ -21,6 +21,14 @@ function formatShortDate(value?: string | null) {
   return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString();
 }
 
+function formatAge(hours?: number | null) {
+  if (hours === null || hours === undefined) return 'Unavailable';
+  if (hours < 0) return 'Clock skew detected';
+  if (hours < 1) return 'Less than 1 hour';
+  if (hours < 48) return `${Math.round(hours)} hours`;
+  return `${Math.round(hours / 24)} days`;
+}
+
 export default function IngestionSourceDetail() {
   const { sourceId } = useParams();
   const navigate = useNavigate();
@@ -147,11 +155,21 @@ export default function IngestionSourceDetail() {
           </div>
         </div>
 
-        <section className="grid gap-3 md:grid-cols-4">
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <Stat icon={Database} label="Records seen" value={health.records_seen.toLocaleString()} />
           <Stat icon={ShieldAlert} label="Failures" value={health.records_failed.toLocaleString()} />
           <Stat icon={CalendarClock} label="Last success" value={formatDate(health.last_success_at)} />
           <Stat icon={CalendarClock} label="Last run" value={formatDate(health.last_run_at)} />
+          <Stat
+            icon={CalendarClock}
+            label={health.freshness_label || 'Publisher timestamp'}
+            value={`${formatAge(health.source_lag_hours)} · ${health.source_watermark_enforced ? 'health signal' : 'activity only'}`}
+          />
+          <Stat
+            icon={ShieldCheck}
+            label="Collection SLA"
+            value={`${health.collection_sla_hours ?? health.freshness_sla_hours ?? 36} hours${health.collection_sla_configured === false ? ' (default)' : ''}`}
+          />
         </section>
 
         <section className="rounded-md border bg-card p-4 card-shadow">

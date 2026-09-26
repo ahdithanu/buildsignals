@@ -31,6 +31,7 @@ export const queryKeys = {
   },
   brands: {
     all: ['brands'] as const,
+    expansion: (days: number, cohort: string) => ['brands', 'expansion', cohort, days] as const,
     matches: (params?: Record<string, unknown>) => ['brands', 'matches', params] as const,
     forDeal: (dealId: string) => ['brands', 'deal', dealId] as const,
     evidence: (matchId: string) => ['brands', 'evidence', matchId] as const,
@@ -45,6 +46,13 @@ export const queryKeys = {
     entityDetail: (entityId: string) => ['graph', 'entity', entityId] as const,
     entitySearch: (query: string, entityType?: string) =>
       ['graph', 'search', query, entityType ?? 'all'] as const,
+    paths: (sourceEntityId: string, targetEntityId: string, maxDepth: number) =>
+      ['graph', 'paths', sourceEntityId, targetEntityId, maxDepth] as const,
+    mergeCandidates: (entityId: string) => ['graph', 'merge-candidates', entityId] as const,
+    relationshipDetail: (relationshipId: string) =>
+      ['graph', 'relationship', relationshipId] as const,
+    relationshipReviewQueue: (dueWithinDays: number) =>
+      ['graph', 'relationship-review-queue', dueWithinDays] as const,
   },
   organizations: {
     members: (orgId: string) => ['organizations', 'members', orgId] as const,
@@ -52,6 +60,11 @@ export const queryKeys = {
   ingestion: {
     health: (state?: string | null) => ['ingestion', 'health', state ?? 'all'] as const,
     coverage: ['ingestion', 'coverage'] as const,
+    measuredCoverage: (organizationId: string | null, params: Record<string, unknown>) =>
+      ['ingestion', 'measured-coverage', organizationId, params] as const,
+    schedulePlan: (state?: string | null) =>
+      ['ingestion', 'schedule-plan', state ?? 'all'] as const,
+    hostPolicy: ['ingestion', 'host-policy'] as const,
     permitDetail: (permitId: string) => ['ingestion', 'permits', permitId] as const,
     candidateCanaryHistory: (candidateKey: string) =>
       ['ingestion', 'candidate-canary-history', candidateKey] as const,

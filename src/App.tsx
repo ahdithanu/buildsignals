@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SessionQueryProvider } from "@/components/auth/SessionQueryProvider";
 import {
   RedirectIfAuthenticated,
   RequireAuth,
@@ -16,15 +16,23 @@ import MemoGenerator from "./pages/MemoGenerator";
 import Pipeline from "./pages/Pipeline";
 import MarketSignals from "./pages/MarketSignals";
 import PermitBrandReview from "./pages/PermitBrandReview";
+import BrandExpansion from "./pages/BrandExpansion";
+import PlanningSignals from "./pages/PlanningSignals";
 import PermitDetail from "./pages/PermitDetail";
 import IngestionOperations from "./pages/IngestionOperations";
 import IngestionCandidateDetail from "./pages/IngestionCandidateDetail";
 import IngestionSourceDetail from "./pages/IngestionSourceDetail";
 import GraphEntityDetail from "./pages/GraphEntityDetail";
+import GraphRelationshipDetail from "./pages/GraphRelationshipDetail";
 import GraphExplorer from "./pages/GraphExplorer";
+import GraphVerificationQueue from "./pages/GraphVerificationQueue";
 import ParcelDetail from "./pages/ParcelDetail";
+import AcquisitionRadar from "./pages/AcquisitionRadar";
+import AcquisitionMap from "./pages/AcquisitionMap";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
+import Evaluations from "./pages/Evaluations";
+import Observability from "./pages/Observability";
 import Team from "./pages/Team";
 import Account from "./pages/Account";
 import Login from "./pages/Login";
@@ -34,11 +42,9 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-const queryClient = new QueryClient();
-
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+  <AuthProvider>
+    <SessionQueryProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -80,6 +86,8 @@ const App = () => (
             />
 
             {/* Authenticated routes */}
+            <Route path="/admin/evals" element={<RequireAuth><Evaluations /></RequireAuth>} />
+            <Route path="/admin/observability" element={<RequireAuth><Observability /></RequireAuth>} />
             <Route
               path="/"
               element={
@@ -137,6 +145,30 @@ const App = () => (
               }
             />
             <Route
+              path="/map"
+              element={
+                <RequireAuth>
+                  <AcquisitionMap />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/brand-expansion"
+              element={
+                <RequireAuth>
+                  <BrandExpansion />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/planning"
+              element={
+                <RequireAuth>
+                  <PlanningSignals />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/permit-review"
               element={
                 <RequireAuth>
@@ -185,10 +217,34 @@ const App = () => (
               }
             />
             <Route
+              path="/graph/relationships/:relationshipId"
+              element={
+                <RequireAuth>
+                  <GraphRelationshipDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/graph"
               element={
                 <RequireAuth>
                   <GraphExplorer />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/graph/verification"
+              element={
+                <RequireAuth>
+                  <GraphVerificationQueue />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/acquisition-radar"
+              element={
+                <RequireAuth>
+                  <AcquisitionRadar />
                 </RequireAuth>
               }
             />
@@ -237,8 +293,8 @@ const App = () => (
           </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+    </SessionQueryProvider>
+  </AuthProvider>
 );
 
 export default App;

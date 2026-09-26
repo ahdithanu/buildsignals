@@ -49,7 +49,7 @@ class ResendEmailService:
         self._resend = resend
         self._from = os.environ.get(
             "RESEND_FROM_ADDRESS",
-            "DealSignal <noreply@dealsignal.dev>",
+            "BuildSignals <noreply@dealsignal.dev>",
         )
 
     def send(self, *, to: str, subject: str, html: str, text: str) -> None:

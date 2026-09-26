@@ -79,10 +79,9 @@ _ORG_SCOPED_MODELS: list[tuple[str, type]] = [
     ("audit_logs", AuditLog),
 ]
 
-# Fields stripped from any User payload that leaves this endpoint. Keep this
-# list deny-by-default — if a future column lands on User (e.g. mfa_secret),
-# add it here BEFORE deploying.
-_USER_SECRET_FIELDS = {"password_hash"}
+# Allowlist public profile fields so future credential columns cannot leak.
+_USER_EXPORT_FIELDS = {"id", "email", "full_name", "is_active", "totp_enabled",
+                       "last_login_at", "created_at", "updated_at"}
 
 
 def _serialize(obj: Any, *, drop: Iterable[str] = ()) -> dict:
@@ -109,7 +108,8 @@ def _serialize(obj: Any, *, drop: Iterable[str] = ()) -> dict:
 
 def _serialize_user(user: User) -> dict:
     """Same as `_serialize` but always strips secret credential fields."""
-    return _serialize(user, drop=_USER_SECRET_FIELDS)
+    return _serialize(user, drop=(col.key for col in sa_inspect(User).columns
+                                  if col.key not in _USER_EXPORT_FIELDS))
 
 
 @router.get("/{org_id}/export")

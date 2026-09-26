@@ -6,6 +6,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
+from app.utils.org_scope import get_org_id
 
 
 def log_change(
@@ -17,13 +18,19 @@ def log_change(
     actor_id: Optional[str] = None,
     old_values: Optional[dict] = None,
     new_values: Optional[dict] = None,
-    organization_id: str = "default-org",
+    organization_id: Optional[str] = None,
     request_id: Optional[str] = None,
 ) -> AuditLog:
     """Create an audit log entry. Does NOT call db.commit() — caller is responsible.
 
     actor_id should be a valid User.id or None for system-generated actions.
+    Omitted organization scope follows the request, never a hardcoded tenant.
+    Background callers must pass their organization explicitly.
     """
+    if organization_id is None:
+        organization_id = get_org_id()
+    if not organization_id or not organization_id.strip():
+        raise ValueError("Audit organization_id must not be empty")
     entry = AuditLog(
         organization_id=organization_id,
         entity_type=entity_type,

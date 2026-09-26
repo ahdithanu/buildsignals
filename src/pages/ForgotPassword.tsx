@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ArrowRight } from 'lucide-react';
+import { AuthPageShell } from '@/components/auth/AuthPageShell';
 import { passwordResetApi } from '@/api/password_reset';
 import { ApiError } from '@/api/client';
 
@@ -60,19 +52,16 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Forgot your password?</CardTitle>
-          <CardDescription>
-            Enter your email and we'll send you a reset link.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <AuthPageShell
+      eyebrow="Account recovery"
+      title="Reset your password"
+      description="Enter your work email and we'll send a reset link if the account exists."
+      footer={<Link to="/login" className="font-semibold text-foreground hover:underline">Back to sign in</Link>}
+    >
           {message ? (
             <div className="space-y-4">
               <div
-                className="text-sm text-foreground rounded-md border border-border bg-muted p-3"
+                className="border-l-2 border-foreground bg-secondary p-3 text-sm text-foreground"
                 role="status"
               >
                 {message}
@@ -89,20 +78,12 @@ export default function ForgotPassword() {
                   </button>
                 </p>
               )}
-              <p className="text-sm text-muted-foreground text-center">
-                <Link
-                  to="/login"
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  Back to sign in
-                </Link>
-              </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <label className="block">
+                <span className="section-label">Work email</span>
+                <input
                   id="email"
                   type="email"
                   autoComplete="email"
@@ -110,27 +91,19 @@ export default function ForgotPassword() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@firm.com"
+                  className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
                 />
-              </div>
-              <Button
+              </label>
+              <button
                 type="submit"
-                className="w-full"
+                className="flex h-11 w-full items-center justify-between bg-foreground px-4 text-xs font-semibold text-background disabled:opacity-50"
                 disabled={submitting}
               >
-                {submitting ? 'Sending…' : 'Send reset link'}
-              </Button>
-              <p className="text-sm text-muted-foreground text-center">
-                <Link
-                  to="/login"
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  Back to sign in
-                </Link>
-              </p>
+                {submitting ? 'Sending...' : 'Send reset link'}
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </form>
           )}
-        </CardContent>
-      </Card>
-    </div>
+    </AuthPageShell>
   );
 }

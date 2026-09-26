@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ArrowRight } from 'lucide-react';
+import { AuthPageShell } from '@/components/auth/AuthPageShell';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Register() {
@@ -19,8 +17,8 @@ export default function Register() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+    if (password.length < 12) {
+      setError('Password must be at least 12 characters.');
       return;
     }
     setSubmitting(true);
@@ -40,78 +38,74 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Create your DealSignal account</CardTitle>
-          <CardDescription>
-            Spin up a new workspace, or leave the organization field blank to join the shared demo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full name</Label>
-              <Input
+    <AuthPageShell
+      eyebrow="Enterprise access"
+      title="Create your BuildSignals account"
+      description="Create an organization-scoped workspace for your team."
+      footer={<>Already have an account? <Link to="/login" className="font-semibold text-foreground hover:underline">Sign in</Link></>}
+    >
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <label className="block">
+              <span className="section-label">Full name</span>
+              <input
                 id="fullName"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Jane Smith"
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
+            </label>
+            <label className="block">
+              <span className="section-label">Work email</span>
+              <input
                 id="email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@firm.com"
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
+            </label>
+            <label className="block">
+              <span className="section-label">Password</span>
+              <input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 required
-                minLength={8}
+                minLength={12}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                placeholder="At least 12 characters"
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="orgName">Organization name (optional)</Label>
-              <Input
+            </label>
+            <label className="block">
+              <span className="section-label">Organization name (optional)</span>
+              <input
                 id="orgName"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 placeholder="Acme Capital"
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
               <p className="text-xs text-muted-foreground">
-                Provide a name to create a new workspace where you'll be the admin.
+                A named workspace makes you its administrator.
               </p>
-            </div>
+            </label>
             {error && (
-              <div className="text-sm text-destructive" role="alert">
+              <div className="border-l-2 border-destructive pl-3 text-xs text-destructive" role="alert">
                 {error}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Creating account…' : 'Create account'}
-            </Button>
+            <button type="submit" className="flex h-11 w-full items-center justify-between bg-foreground px-4 text-xs font-semibold text-background disabled:opacity-50" disabled={submitting}>
+              {submitting ? 'Creating account...' : 'Create account'}
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </form>
-          <p className="text-sm text-muted-foreground text-center mt-4">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary underline-offset-4 hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    </AuthPageShell>
   );
 }

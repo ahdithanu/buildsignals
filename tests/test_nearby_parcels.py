@@ -1,20 +1,33 @@
 from __future__ import annotations
 
+import csv
+import io
+import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
 import app.services.ingestion.service as ingestion_service
+from app.models.acquisition import (
+    ParcelAcquisitionActivity,
+    ParcelAcquisitionCase,
+    ParcelAcquisitionSource,
+)
 from app.models.audit_log import AuditLog
 from app.models.brand import PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
-from app.models.ingestion import IngestionSource, RawSourceRecord
+from app.models.ingestion import (
+    IngestionSource,
+    RawSourceRecord,
+    RawSourceRecordObservation,
+)
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
-from app.models.parcel import ParcelFact, ParcelRecord
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
 from app.models.user import User
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.catalog import load_catalog
 from app.services.ingestion.connectors import FetchEnvelope
+from app.services.parcel_export import derived_export_fields
 from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
 from app.services.parcel_proximity import find_nearby_parcels, haversine_miles
 from app.services.parcel_ranking import rank_developer_candidate, rank_parcel_candidate
@@ -197,6 +210,37 @@ def _add_parcel(
     return parcel
 
 
+def _role_headers(db, role: MemberRole = MemberRole.admin) -> dict[str, str]:
+    org = db.get(Organization, "default-org") or Organization(
+        id="default-org", name="Default Org", slug="default-org", is_active=True
+    )
+    user = User(
+        id=str(uuid4()),
+        email=f"parcel-export-{uuid4()}@acme.com",
+        full_name="Parcel Export Admin",
+        password_hash=hash_password("CorrectHorseBattery42"),
+        is_active=True,
+    )
+    db.add_all([org, user])
+    db.add(OrganizationMembership(
+        id=str(uuid4()),
+        organization_id=org.id,
+        user_id=user.id,
+        role=role,
+        is_default=True,
+    ))
+    db.commit()
+    return {
+        "Authorization": (
+            "Bearer " + create_access_token(user_id=user.id, org_id=org.id)
+        )
+    }
+
+
+def _admin_headers(db) -> dict[str, str]:
+    return _role_headers(db, MemberRole.admin)
+
+
 def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tmp_path):
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
@@ -258,7 +302,11 @@ def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tm
     assert history.status_code == 200
     assert history.json()[0]["id"] == body["id"]
 
-    for persona in ("broker", "realtor"):
+    for persona, expected_version in (
+        ("investor", "investor-v1"),
+        ("broker", "broker-v2"),
+        ("realtor", "realtor-v2"),
+    ):
         persona_search = client.post(
             f"/deals/{deal['id']}/nearby-parcel-searches",
             json={
@@ -269,9 +317,403 @@ def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tm
         )
         assert persona_search.status_code == 201, persona_search.text
         persona_body = persona_search.json()
-        assert persona_body["ranker_version"] == f"{persona}-v2"
-        assert persona_body["candidates"][0]["explanation"]["ranker_version"] == f"{persona}-v2"
+        assert persona_body["ranker_version"] == expected_version
+        assert persona_body["candidates"][0]["explanation"]["ranker_version"] == expected_version
         assert "No owner willingness to sell" in persona_body["candidates"][0]["explanation"]["cautions"][0]
+
+
+def test_nearby_parcel_export_is_policy_gated_safe_and_audited(
+    client, db, tmp_path
+):
+    headers = _admin_headers(db)
+    deal, source_data, match = _setup_confirmed_signal(
+        client, db, tmp_path, headers=headers
+    )
+    source = db.get(IngestionSource, source_data["id"])
+    source.settings = {
+        **(source.settings or {}),
+        "export_policy": "derived_nearby_parcel_context_only_no_raw_delaware_firstmap_resale",
+    }
+    raw = db.query(RawSourceRecord).one()
+    parcel = _add_parcel(
+        db,
+        source.id,
+        raw.id,
+        "P-EXPORT",
+        -97.735,
+        land_area_sq_ft=80_000,
+        zoning_code="Commercial Retail",
+        land_use="Retail",
+    )
+    parcel.address = '=HYPERLINK("https://bad.example","click")'
+    db.commit()
+    created = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        headers=headers,
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "developer",
+        },
+    )
+    assert created.status_code == 201, created.text
+    search_id = created.json()["id"]
+
+    response = client.post(
+        f"/nearby-parcel-searches/{search_id}/export", headers=headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/csv")
+    assert response.headers["x-exported-count"] == "1"
+    assert response.headers["x-omitted-count"] == "0"
+    rows = list(csv.DictReader(io.StringIO(response.text)))
+    assert len(rows) == 1
+    assert rows[0]["external_parcel_id"] == "P-EXPORT"
+    assert rows[0]["address"].startswith("'=")
+    assert "owner" not in rows[0]
+    assert "geometry" not in rows[0]
+    audit = db.query(AuditLog).filter_by(
+        entity_type="nearby_parcel_search",
+        entity_id=search_id,
+        action="export",
+    ).one()
+    values = json.loads(audit.new_values)
+    assert values["exported_count"] == 1
+    assert values["omitted_count"] == 0
+    assert values["ownership_included"] is False
+    assert values["raw_geometry_included"] is False
+    assert values["candidate_ids"] == [created.json()["candidates"][0]["id"]]
+    assert len(values["content_sha256"]) == 64
+    assert values["policy_decisions"][source.key]["approved"] is True
+    assert audit.request_id
+
+
+def test_nearby_parcel_export_fails_closed_without_reviewed_policy(
+    client, db, tmp_path
+):
+    headers = _admin_headers(db)
+    deal, source_data, match = _setup_confirmed_signal(
+        client, db, tmp_path, headers=headers
+    )
+    source = db.get(IngestionSource, source_data["id"])
+    raw = db.query(RawSourceRecord).one()
+    _add_parcel(
+        db,
+        source.id,
+        raw.id,
+        "P-BLOCKED",
+        -97.735,
+        zoning_code="Commercial Retail",
+    )
+    db.commit()
+    created = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        headers=headers,
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "developer",
+        },
+    )
+    assert created.status_code == 201, created.text
+
+    response = client.post(
+        f"/nearby-parcel-searches/{created.json()['id']}/export",
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert "No candidates are exportable" in response.json()["detail"]
+    denied = db.query(AuditLog).filter_by(action="export_denied").one()
+    assert json.loads(denied.new_values)["reason"] == "no_reviewed_active_source_policy"
+
+
+def test_nearby_parcel_export_rejects_malformed_policy_and_inactive_source(
+    client, db, tmp_path
+):
+    headers = _admin_headers(db)
+    deal, source_data, match = _setup_confirmed_signal(
+        client, db, tmp_path, headers=headers
+    )
+    source = db.get(IngestionSource, source_data["id"])
+    source.settings = {
+        **(source.settings or {}),
+        "export_policy": "derived_nearby_parcel_context_raw_export_allowed",
+    }
+    raw = db.query(RawSourceRecord).one()
+    _add_parcel(db, source.id, raw.id, "P-MALFORMED", -97.735)
+    db.commit()
+    created = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        headers=headers,
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "developer",
+        },
+    )
+    assert created.status_code == 201, created.text
+    search_id = created.json()["id"]
+
+    assert derived_export_fields(source.settings) == frozenset()
+    malformed = client.post(
+        f"/nearby-parcel-searches/{search_id}/export", headers=headers
+    )
+    assert malformed.status_code == 422
+
+    source.settings = {
+        **(source.settings or {}),
+        "export_policy": "derived_nearby_parcel_context_only_no_raw_delaware_firstmap_resale",
+    }
+    source.is_active = False
+    db.commit()
+    inactive = client.post(
+        f"/nearby-parcel-searches/{search_id}/export", headers=headers
+    )
+    assert inactive.status_code == 422
+    decisions = json.loads(
+        db.query(AuditLog)
+        .filter_by(action="export_denied")
+        .order_by(AuditLog.created_at.desc())
+        .first()
+        .new_values
+    )["policy_decisions"]
+    assert decisions[source.key]["active"] is False
+
+
+def test_nearby_parcel_export_requires_editor_or_admin(client, db):
+    response = client.post(
+        "/nearby-parcel-searches/does-not-matter/export",
+        headers=_role_headers(db, MemberRole.viewer),
+    )
+
+    assert response.status_code == 403
+
+
+def test_parcel_acquisition_case_tracks_provenance_status_and_outreach(
+    client, db, tmp_path
+):
+    headers = _admin_headers(db)
+    deal, source_data, match = _setup_confirmed_signal(
+        client, db, tmp_path, headers=headers
+    )
+    source = db.get(IngestionSource, source_data["id"])
+    raw = db.query(RawSourceRecord).one()
+    _add_parcel(db, source.id, raw.id, "P-CASE", -97.735)
+    db.commit()
+    created = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        headers=headers,
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "broker",
+        },
+    )
+    assert created.status_code == 201, created.text
+    acquisition_case = db.query(ParcelAcquisitionCase).one()
+    provenance = db.query(ParcelAcquisitionSource).one()
+    assert provenance.case_id == acquisition_case.id
+    assert provenance.candidate_id == created.json()["candidates"][0]["id"]
+
+    reviewed = client.patch(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=headers,
+        json={"status": "shortlisted"},
+    )
+    assert reviewed.status_code == 200, reviewed.text
+    assert reviewed.json()["status"] == "shortlisted"
+    assert db.query(NearbyParcelCandidate).one().review_status == "shortlisted"
+
+    assignee_id = db.query(OrganizationMembership).one().user_id
+    assigned = client.patch(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=headers,
+        json={"assigned_to_user_id": assignee_id},
+    )
+    assert assigned.status_code == 200, assigned.text
+    assert assigned.json()["assigned_to_user_id"] == assignee_id
+    assert db.query(NearbyParcelCandidate).one().assigned_to_user_id == assignee_id
+    unassigned = client.patch(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=headers,
+        json={"assigned_to_user_id": None},
+    )
+    assert unassigned.status_code == 200, unassigned.text
+    assert unassigned.json()["assigned_to_user_id"] is None
+    assert db.query(NearbyParcelCandidate).one().assigned_to_user_id is None
+
+    follow_up = datetime(2026, 8, 21, 17, 0, tzinfo=timezone.utc)
+    outreach = client.post(
+        f"/parcel-acquisition-cases/{acquisition_case.id}/activities",
+        headers=headers,
+        json={
+            "activity_type": "call",
+            "notes": "Owner representative requested a follow-up.",
+            "follow_up_at": follow_up.isoformat(),
+        },
+    )
+    assert outreach.status_code == 201, outreach.text
+    assert outreach.json()["activity_type"] == "call"
+    detail = client.get(f"/parcel-acquisition-cases/{acquisition_case.id}")
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["status"] == "contacted"
+    assert detail.json()["follow_up_at"].startswith("2026-08-21T17:00:00")
+    assert len(detail.json()["sources"]) == 1
+    assert len(detail.json()["activities"]) == 1
+    assert db.query(ParcelAcquisitionActivity).count() == 1
+    assert db.query(AuditLog).filter_by(
+        entity_type="parcel_acquisition_case"
+    ).count() == 4
+
+    promoted = client.post(
+        f"/parcel-candidates/{provenance.candidate_id}/opportunity",
+        headers=headers,
+        json={"name": "Outreach Parcel"},
+    )
+    assert promoted.status_code == 200, promoted.text
+    db.refresh(acquisition_case)
+    assert acquisition_case.status == "promoted"
+    assert acquisition_case.promoted_deal_id == promoted.json()["deal"]["id"]
+
+    other_org = client.post("/auth/register", json={
+        "email": "other-org-acquisition@example.com",
+        "password": "CorrectHorseBattery42",
+        "full_name": "Other Org Admin",
+        "organization_name": "Other Acquisition Org",
+    })
+    assert other_org.status_code == 201, other_org.text
+    other_headers = {
+        "Authorization": f"Bearer {other_org.json()['access_token']}"
+    }
+    assert client.get(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=other_headers,
+    ).status_code == 404
+    assert client.patch(
+        f"/parcel-acquisition-cases/{acquisition_case.id}",
+        headers=other_headers,
+        json={"status": "dismissed"},
+    ).status_code == 404
+    assert client.post(
+        f"/parcel-acquisition-cases/{acquisition_case.id}/activities",
+        headers=other_headers,
+        json={"activity_type": "note", "notes": "Must remain isolated"},
+    ).status_code == 404
+    other_radar = client.get("/acquisition-radar", headers=other_headers)
+    assert other_radar.status_code == 200
+    assert other_radar.json()["items"] == []
+
+
+def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcels(
+    client, db, tmp_path
+):
+    deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
+    source = db.get(IngestionSource, source_data["id"])
+    raw = db.query(RawSourceRecord).one()
+    parcel = _add_parcel(
+        db,
+        source.id,
+        raw.id,
+        "P-RADAR",
+        -97.735,
+        land_area_sq_ft=80_000,
+        land_value=1_000_000,
+        improvement_value=100_000,
+        zoning_code="Commercial Retail",
+        land_use="Retail",
+    )
+    db.commit()
+    first_response = client.post(
+        f"/deals/{deal['id']}/nearby-parcel-searches",
+        json={
+            "anchor_brand_match_id": match.id,
+            "radius_miles": 2,
+            "persona": "developer",
+        },
+    )
+    assert first_response.status_code == 201, first_response.text
+    first = db.get(NearbyParcelSearch, first_response.json()["id"])
+    first_candidate = db.query(NearbyParcelCandidate).filter_by(
+        search_id=first.id,
+        parcel_id=parcel.id,
+    ).one()
+
+    second_deal = client.post("/deals", json={
+        "name": "Second Main Street signal",
+        "address": "200 Main Street",
+        "city": "Austin",
+        "state": "TX",
+        "zip_code": "78701",
+        "property_type": "retail",
+    }).json()
+    second_search = NearbyParcelSearch(
+        organization_id="default-org",
+        deal_id=second_deal["id"],
+        anchor_brand_match_id=first.anchor_brand_match_id,
+        anchor_permit_id=first.anchor_permit_id,
+        anchor_latitude=first.anchor_latitude,
+        anchor_longitude=first.anchor_longitude,
+        radius_miles=first.radius_miles,
+        persona="broker",
+        filters={},
+        result_limit=25,
+        as_of=datetime.now(timezone.utc),
+        ranker_version="broker-v2",
+    )
+    db.add(second_search)
+    db.flush()
+    second_candidate = NearbyParcelCandidate(
+        organization_id="default-org",
+        search_id=second_search.id,
+        parcel_id=parcel.id,
+        rank=1,
+        distance_miles=0.4,
+        score=88,
+        score_confidence=0.92,
+        explanation={"reasons": ["Repeated market signal"], "cautions": []},
+        review_status="candidate",
+        ranker_version="broker-v2",
+    )
+    db.add(second_candidate)
+    db.commit()
+    shortlisted = client.patch(
+        f"/parcel-candidates/{second_candidate.id}",
+        json={"review_status": "shortlisted"},
+    )
+    assert shortlisted.status_code == 200, shortlisted.text
+
+    response = client.get("/acquisition-radar?state=TX")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total"] == 1
+    assert body["summary"] == {
+        "total_parcels": 1,
+        "shortlisted_parcels": 1,
+        "multi_opportunity_parcels": 1,
+        "assigned_parcels": 0,
+        "state_count": 1,
+    }
+    item = body["items"][0]
+    assert item["parcel"]["external_parcel_id"] == "P-RADAR"
+    assert {fact["fact_type"] for fact in item["facts"]} == {"zoning"}
+    assert item["facts"][0]["source_url"] == "https://example.gov/parcels"
+    assert item["opportunity_count"] == 2
+    assert item["appearance_count"] == 2
+    assert item["personas"] == ["broker", "developer"]
+    assert item["review_status"] == "shortlisted"
+    assert item["acquisition_case_id"]
+    assert item["radar_score"] > first_candidate.score * 0.45
+    assert {signal["deal_name"] for signal in item["signals"]} == {
+        "Main Street signal",
+        "Second Main Street signal",
+    }
+    assert "Appears near 2 opportunities" in item["reasons"]
+
+    filtered = client.get("/acquisition-radar?persona=developer&review_status=candidate")
+    assert filtered.status_code == 200
+    assert filtered.json()["items"] == []
 
 
 def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path):
@@ -579,13 +1021,15 @@ def test_creating_opportunity_from_geocoded_signal_auto_seeds_parcel_context(cli
     assert body["nearby_parcel_search"]["persona"] == "developer"
     assert body["nearby_parcel_search"]["radius_miles"] == 2.0
     assert [row["persona"] for row in body["nearby_parcel_searches"]] == [
-        "developer", "broker", "realtor"
+        "developer", "investor", "broker", "realtor"
     ]
 
     deal_id = body["deal"]["id"]
     history = client.get(f"/deals/{deal_id}/nearby-parcel-searches")
     assert history.status_code == 200, history.text
-    assert {row["persona"] for row in history.json()[:3]} == {"developer", "broker", "realtor"}
+    assert {row["persona"] for row in history.json()[:4]} == {
+        "developer", "investor", "broker", "realtor"
+    }
     assert any(row["id"] == body["nearby_parcel_search"]["id"] for row in history.json())
 
     search = client.get(f"/nearby-parcel-searches/{body['nearby_parcel_search']['id']}")
@@ -719,6 +1163,16 @@ def test_market_ranker_uses_sale_tenure_without_inferring_intent():
     assert ranked.explanation["cautions"][0] == (
         "No owner willingness to sell or listing intent is inferred"
     )
+
+    investor = rank_parcel_candidate(
+        parcel, [sale], persona="investor", distance_miles=1, radius_miles=2
+    )
+    assert investor.explanation["ranker_version"] == "investor-v1"
+    valuation = next(
+        feature for feature in investor.explanation["features"]
+        if feature["name"] == "valuation_context"
+    )
+    assert valuation["weight"] == 25
 
 
 def test_parcel_ingestion_versions_fact_evidence(client, db, tmp_path):
@@ -856,8 +1310,10 @@ def test_parcel_snapshot_geometry_surfaces_as_boundary_geometry(db):
 def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     csv_path = tmp_path / "assessor.csv"
     csv_path.write_text(
-        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
-        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,900000,100000,Original Owner LLC\n"
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Original Owner LLC\n"
     )
     payload = {
         "key": "travis_assessor_test",
@@ -886,8 +1342,12 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
                     "land_area_sq_ft",
                     {"transform": "multiply", "transform_options": {"factor": 43560}},
                 ),
+                ("improvement_area", "improvement_area_sq_ft", {}),
                 ("land_value", "land_value", {}),
                 ("improvement_value", "improvement_value", {}),
+                ("total_value", "total_assessed_value", {}),
+                ("zoning", "zoning_code", {}),
+                ("land_use", "land_use", {}),
                 ("owner", "owner_name", {}),
             )
         ],
@@ -911,6 +1371,12 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     ownership = db.query(ParcelFact).filter(ParcelFact.fact_type == "ownership").one()
     assert ownership.value["owner_name"] == "Original Owner LLC"
     assert ownership.source_url == str(csv_path)
+    assert {
+        fact.fact_type for fact in db.query(ParcelFact).filter(
+            ParcelFact.is_current.is_(True)
+        ).all()
+    } == {"ownership", "zoning", "land_use", "improvements", "valuation"}
+    first_fact_verified_at = ownership.last_verified_at
     graph_types = {entity.entity_type.value for entity in db.query(GraphEntity).all()}
     assert {"parcel", "owner"}.issubset(graph_types)
     owner_relationship = db.query(GraphRelationship).filter(
@@ -920,6 +1386,8 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert db.query(GraphRelationshipEvidence).filter(
         GraphRelationshipEvidence.relationship_id == owner_relationship.id
     ).count() == 1
+    first_observed_at = db.query(RawSourceRecordObservation).one().last_observed_at
+    first_raw_id = db.query(RawSourceRecord).one().id
 
     unchanged = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
     assert unchanged.status_code == 201, unchanged.text
@@ -930,9 +1398,99 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert len(relationships) == 1
     assert relationships[0].id == owner_relationship.id
     assert relationships[0].is_current is True
+    assert db.query(ParcelFact).filter(
+        ParcelFact.fact_type == "ownership",
+        ParcelFact.is_current.is_(True),
+    ).one().last_verified_at > first_fact_verified_at
+    assert db.query(RawSourceRecord).count() == 1
+    assert db.query(RawSourceRecordObservation).count() == 1
+    assert (
+        db.query(RawSourceRecordObservation).one().last_observed_at
+        > first_observed_at
+    )
 
     csv_path.write_text(
-        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Replacement Owner LLC\n"
+    )
+    changed = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert changed.status_code == 201, changed.text
+    assert changed.json()["records_updated"] == 1
+    assert db.query(RawSourceRecord).count() == 2
+    assert db.query(RawSourceRecordObservation).count() == 2
+    assert db.query(ParcelFact).filter(
+        ParcelFact.fact_type == "ownership",
+        ParcelFact.is_current.is_(True),
+    ).one().value["owner_name"] == "Replacement Owner LLC"
+
+    csv_path.write_text(
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Original Owner LLC\n"
+    )
+    reverted = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert reverted.status_code == 201, reverted.text
+    assert reverted.json()["records_updated"] == 1
+    db.expire_all()
+    parcel = db.query(ParcelRecord).one()
+    assert parcel.latest_raw_record_id == first_raw_id
+    current_ownership = db.query(ParcelFact).filter(
+        ParcelFact.fact_type == "ownership",
+        ParcelFact.is_current.is_(True),
+    ).one()
+    assert current_ownership.raw_source_record_id == first_raw_id
+    assert current_ownership.value["owner_name"] == "Original Owner LLC"
+    ownership_versions = db.query(ParcelFact).filter(
+        ParcelFact.fact_type == "ownership"
+    ).order_by(ParcelFact.valid_from.asc()).all()
+    assert len(ownership_versions) == 3
+    assert ownership_versions[0].raw_source_record_id == first_raw_id
+    assert ownership_versions[0].valid_to is not None
+    assert ownership_versions[1].valid_to is not None
+    assert ownership_versions[2].raw_source_record_id == first_raw_id
+    assert ownership_versions[2].valid_to is None
+    assert ownership_versions[2].is_current is True
+    assert db.query(RawSourceRecord).count() == 2
+    assert db.query(RawSourceRecordObservation).count() == 2
+
+    csv_path.write_text(
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,,Retail,\n"
+    )
+    omitted = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
+    assert omitted.status_code == 201, omitted.text
+    db.expire_all()
+    assert db.query(ParcelFact).filter(
+        ParcelFact.fact_type.in_(("ownership", "zoning")),
+        ParcelFact.is_current.is_(True),
+    ).count() == 0
+    assert db.get(GraphRelationship, owner_relationship.id).is_current is False
+
+    csv_path.write_text(
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Original Owner LLC\n"
+    )
+    restored_facts = client.post(
+        f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1}
+    )
+    assert restored_facts.status_code == 201, restored_facts.text
+    db.expire_all()
+    assert db.query(ParcelFact).filter(
+        ParcelFact.fact_type.in_(("ownership", "zoning")),
+        ParcelFact.is_current.is_(True),
+    ).count() == 2
+    assert db.get(GraphRelationship, owner_relationship.id).is_current is True
+
+    csv_path.write_text(
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
     )
     retired = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
     assert retired.status_code == 201, retired.text
@@ -941,8 +1499,10 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert db.get(GraphRelationship, owner_relationship.id).is_current is False
 
     csv_path.write_text(
-        "parcel,address,city,state,lat,lon,acres,land_value,improvement_value,owner\n"
-        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,900000,100000,Original Owner LLC\n"
+        "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
+        "improvement_value,total_value,zoning,land_use,owner\n"
+        "P-100,300 Main St,Austin,TX,30.2700,-97.7400,2,12000,900000,"
+        "100000,1000000,CS,Retail,Original Owner LLC\n"
     )
     restored = client.post(f"/ingestion/sources/{source_id}/runs", json={"max_pages": 1})
     assert restored.status_code == 201, restored.text

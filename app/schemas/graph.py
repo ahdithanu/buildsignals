@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.models.graph import GraphEntityType, GraphRelationshipType
 from app.schemas.brand import PermitBrandMatchResponse
@@ -66,6 +66,13 @@ class GraphRelationshipCreate(BaseModel):
     evidence: list[GraphEvidenceCreate] = Field(..., min_length=1)
 
 
+class GraphRelationshipVerify(BaseModel):
+    evidence: list[GraphEvidenceCreate] = Field(..., min_length=1)
+    confidence: Optional[float] = Field(None, ge=0, le=1)
+    verification_interval_days: int = Field(90, ge=1, le=3650)
+    reason: str = Field(..., min_length=3, max_length=500)
+
+
 class GraphRelationshipEvidenceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -98,7 +105,23 @@ class GraphRelationshipResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_verified_at: datetime
+    verification_due_at: datetime
     evidence: list[GraphRelationshipEvidenceResponse] = Field(default_factory=list)
+
+    @computed_field
+    @property
+    def verification_status(self) -> Literal["fresh", "due", "stale", "historical"]:
+        if not self.is_current:
+            return "historical"
+        now = datetime.now(timezone.utc)
+        due_at = self.verification_due_at
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=timezone.utc)
+        if due_at <= now:
+            return "stale"
+        if due_at <= now + timedelta(days=14):
+            return "due"
+        return "fresh"
 
 
 class GraphRelatedEntityResponse(BaseModel):
@@ -107,14 +130,58 @@ class GraphRelatedEntityResponse(BaseModel):
     direction: str
 
 
+class GraphRelationshipDetailResponse(BaseModel):
+    relationship: GraphRelationshipResponse
+    source_entity: GraphEntityResponse
+    target_entity: GraphEntityResponse
+
+
+class GraphRelationshipReviewQueueItem(GraphRelationshipDetailResponse):
+    review_reasons: list[str] = Field(default_factory=list)
+
+
 class GraphEntityDetailResponse(GraphEntityResponse):
     aliases: list[str] = Field(default_factory=list)
+    source_identities: list["GraphEntitySourceIdentityResponse"] = Field(default_factory=list)
     links: list[dict[str, str]] = Field(default_factory=list)
     related: list[GraphRelatedEntityResponse] = Field(default_factory=list)
 
 
 class GraphEntitySearchResponse(GraphEntityResponse):
     aliases: list[str] = Field(default_factory=list)
+
+
+class GraphEntityMergeCandidateResponse(BaseModel):
+    entity: GraphEntityResponse
+    score: float
+    reasons: list[str] = Field(default_factory=list)
+
+
+class GraphEntitySourceIdentityResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source_system: str
+    source_id: str
+    confidence: float
+    last_verified_at: datetime
+
+
+class GraphEntityMergeCreate(BaseModel):
+    duplicate_entity_id: str = Field(..., min_length=1, max_length=36)
+    reason: str = Field(..., min_length=3, max_length=500)
+
+
+class GraphEntityMergeResponse(BaseModel):
+    merge_id: str
+    merged_entity_id: str
+    survivor: GraphEntityResponse
+    aliases_moved: int
+    source_identities_moved: int
+    links_moved: int
+    relationships_rewired: int
+    relationships_collapsed: int
+    evidence_moved: int
+    created_at: datetime
 
 
 class GraphPathResponse(BaseModel):

@@ -19,3 +19,10 @@ export async function registerAndLogin(page: Page, email: string): Promise<void>
   await expect(page.getByRole("alert")).not.toBeVisible({ timeout: 2_000 }).catch(() => undefined);
   await expect(page).toHaveURL("http://localhost:8080/", { timeout: 15_000 });
 }
+
+/** Open the authenticated account menu and sign out. */
+export async function signOut(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+}

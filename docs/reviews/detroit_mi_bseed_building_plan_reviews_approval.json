@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "candidate_key": "detroit_mi_bseed_building_plan_reviews",
+  "decision": "approved_for_production",
+  "reviewed_by": "Build Signals Owner",
+  "reviewed_on": "2026-08-15",
+  "candidate_canary_completed_on": "2026-08-15",
+  "rights_approved": true,
+  "data_minimization_approved": true,
+  "settings": {
+    "official_landing_page": "https://www.arcgis.com/home/item.html?id=b47bda202cac49dcbef8d477e9ecb09b",
+    "license": "City of Detroit public-domain open-portal permitting information",
+    "reconciliation_mode": "daily_full_snapshot",
+    "refresh_frequency": "daily",
+    "collection_interval_minutes": 1440,
+    "collection_sla_hours": 24,
+    "retry_interval_minutes": 360,
+    "schedule_mode": "automatic",
+    "freshness_field": "task_status_date",
+    "freshness_semantics": "filing_event_at",
+    "freshness_sla_hours": 72,
+    "signal_stage": "pre_approval_and_approved",
+    "attribution_required": true,
+    "rights_basis": "Approved by the Build Signals owner on 2026-08-15 for commercial storage and customer-facing derived intelligence from the City of Detroit BSEED public-authoritative building permit plan-review layer. Preserve City of Detroit and BSEED attribution, official source links, retrieval timestamps, and currentness caveats. Retain only the approved plan-review identity, site, lifecycle, work-description, parcel, and coordinate fields; do not fetch contacts, attachments, document bodies, internal identifiers, raw geometry, or offer raw source-replacement exports.",
+    "export_policy": "derived_plan_review_intelligence_only_no_raw_source_replacement",
+    "field_allowlist": [
+      "ObjectId",
+      "record_id",
+      "address",
+      "submitted_date",
+      "task",
+      "task_status",
+      "task_status_date",
+      "work_description",
+      "parcel_id",
+      "longitude",
+      "latitude"
+    ],
+    "suppressed_fields": [
+      "task_id",
+      "pmr_id",
+      "address_id",
+      "applicant_name",
+      "owner_name",
+      "contractor_name",
+      "architect_name",
+      "engineer_name",
+      "reviewer_name",
+      "phone_number",
+      "email_address",
+      "mailing_address",
+      "plan_file",
+      "attachment",
+      "document_body",
+      "raw_geometry",
+      "raw_source_export"
+    ],
+    "canary_required_fields": [
+      "record_id",
+      "address",
+      "submitted_date",
+      "task_status",
+      "task_status_date"
+    ],
+    "connector": {
+      "page_size": 1000,
+      "where": "record_id IS NOT NULL AND address IS NOT NULL AND submitted_date IS NOT NULL AND task_status IN ('Accepted - Document Review Required','Routed for Electronic Review','Plans Approved')",
+      "out_fields": "ObjectId,record_id,address,submitted_date,task,task_status,task_status_date,work_description,parcel_id,longitude,latitude",
+      "order_by_fields": "ObjectId ASC",
+      "keyset_field": "ObjectId",
+      "include_geometry": false,
+      "query": {
+        "outSR": 4326
+      }
+    },
+    "defaults": {
+      "city": "Detroit",
+      "state": "MI",
+      "jurisdiction": "Detroit",
+      "permit_type": "building_plan_review",
+      "source_url": "https://www.arcgis.com/home/item.html?id=b47bda202cac49dcbef8d477e9ecb09b"
+    }
+  },
+  "field_mappings": [
+    {
+      "source_field": "record_id",
+      "canonical_field": "source_record_id",
+      "is_required": true
+    },
+    {
+      "source_field": "__permit_number",
+      "canonical_field": "permit_number",
+      "transform": "first_nonempty",
+      "transform_options": {
+        "fields": ["record_id"]
+      }
+    },
+    {
+      "source_field": "__application_number",
+      "canonical_field": "application_number",
+      "transform": "first_nonempty",
+      "transform_options": {
+        "fields": ["record_id"]
+      }
+    },
+    {
+      "source_field": "submitted_date",
+      "canonical_field": "filed_at",
+      "transform": "date"
+    },
+    {
+      "source_field": "__approval_stage",
+      "canonical_field": "approval_stage",
+      "transform": "conditional_map",
+      "transform_options": {
+        "cases": [
+          {
+            "field": "task_status",
+            "operator": "in",
+            "values": ["Plans Approved"],
+            "value": "approved"
+          }
+        ],
+        "default": "pre_approval"
+      }
+    },
+    {
+      "source_field": "task_status",
+      "canonical_field": "status"
+    },
+    {
+      "source_field": "task_status_date",
+      "canonical_field": "status_updated_at",
+      "transform": "date"
+    },
+    {
+      "source_field": "task",
+      "canonical_field": "review_type"
+    },
+    {
+      "source_field": "work_description",
+      "canonical_field": "description"
+    },
+    {
+      "source_field": "address",
+      "canonical_field": "address"
+    },
+    {
+      "source_field": "parcel_id",
+      "canonical_field": "parcel_id"
+    },
+    {
+      "source_field": "longitude",
+      "canonical_field": "longitude"
+    },
+    {
+      "source_field": "latitude",
+      "canonical_field": "latitude"
+    }
+  ]
+}

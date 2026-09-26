@@ -7,7 +7,13 @@ import pytest
 
 import app.services.ingestion.service as ingestion_service
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
-from app.models.ingestion import IngestionRun, PermitEvent, PermitRecord, RawSourceRecord
+from app.models.ingestion import (
+    IngestionRun,
+    PermitEvent,
+    PermitRecord,
+    RawSourceRecord,
+    RawSourceRecordObservation,
+)
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.connectors import FetchEnvelope
 from app.services.ingestion.service import _claim_source_run, execute_source_run
@@ -63,6 +69,10 @@ def _write_csv(
     )
 
 
+def _raise_graph_failure(*_args, **_kwargs):
+    raise RuntimeError("graph failed")
+
+
 def test_register_source_and_reject_embedded_secret(client, tmp_path):
     payload = _source_payload(str(tmp_path / "permits.csv"))
     response = client.post("/ingestion/sources", json=payload)
@@ -85,21 +95,82 @@ def test_csv_run_is_idempotent_and_versions_corrections(client, db, tmp_path):
     assert first.status_code == 201, first.text
     assert first.json()["records_inserted"] == 1
     assert first.json()["records_failed"] == 0
+    first_raw = db.query(RawSourceRecord).one()
+    first_received_at = first_raw.received_at
+    first_run_id = first_raw.run_id
+    first_observed_at = db.query(RawSourceRecordObservation).one().last_observed_at
 
     second = client.post(f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1})
     assert second.status_code == 201
     assert second.json()["records_inserted"] == 0
     assert second.json()["records_updated"] == 0
     assert db.query(RawSourceRecord).count() == 1
+    observation = db.query(RawSourceRecordObservation).one()
+    assert observation.last_observed_at > first_observed_at
+    advanced_observed_at = observation.last_observed_at
+    assert db.query(RawSourceRecord).one().received_at == first_received_at
+    assert db.query(RawSourceRecord).one().run_id == first_run_id
     assert db.query(PermitEvent).count() == 1
+    ingestion_service._touch_raw_observation(
+        db, first_raw, first_observed_at - timedelta(days=1)
+    )
+    assert db.query(RawSourceRecordObservation).one().last_observed_at == advanced_observed_at
 
     _write_csv(csv_path, status="Finaled")
     third = client.post(f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1})
     assert third.status_code == 201, third.text
     assert third.json()["records_updated"] == 1
     assert db.query(RawSourceRecord).count() == 2
+    assert db.query(RawSourceRecordObservation).count() == 2
     assert db.query(PermitEvent).count() == 2
     assert db.query(PermitRecord).one().status == "Finaled"
+
+    _write_csv(csv_path, status="Issued")
+    reverted = client.post(f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1})
+    assert reverted.status_code == 201, reverted.text
+    assert reverted.json()["records_updated"] == 1
+    assert db.query(RawSourceRecord).count() == 2
+    assert db.query(RawSourceRecordObservation).count() == 2
+    assert db.query(PermitEvent).count() == 3
+    assert db.query(PermitRecord).one().status == "Issued"
+
+
+def test_raw_source_record_rejects_orm_mutation(client, db, tmp_path):
+    csv_path = tmp_path / "permits.csv"
+    _write_csv(csv_path)
+    source = client.post(
+        "/ingestion/sources", json=_source_payload(str(csv_path))
+    ).json()
+    response = client.post(
+        f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1}
+    )
+    assert response.status_code == 201, response.text
+
+    raw = db.query(RawSourceRecord).one()
+    raw.payload = {"tampered": True}
+    with pytest.raises(ValueError, match="RawSourceRecord rows are immutable"):
+        db.commit()
+    db.rollback()
+
+    raw = db.query(RawSourceRecord).one()
+    unreferenced = RawSourceRecord(
+        organization_id=raw.organization_id,
+        source_id=raw.source_id,
+        run_id=raw.run_id,
+        external_record_id="unreferenced-record",
+        record_type="permit",
+        content_hash="unreferenced-hash",
+        payload={"id": "unreferenced-record"},
+        received_at=datetime.now(timezone.utc),
+    )
+    db.add(unreferenced)
+    db.commit()
+
+    db.delete(unreferenced)
+    with pytest.raises(ValueError, match="RawSourceRecord rows are immutable"):
+        db.commit()
+    db.rollback()
+    assert db.query(RawSourceRecord).count() == 2
 
 
 def test_source_record_filters_skip_out_of_scope_rows(client, db, tmp_path):
@@ -201,6 +272,61 @@ def test_bad_record_rolls_back_and_reports_committed_counts(client, db, tmp_path
     assert "Missing required source fields" in response.json()["error_message"]
     assert db.query(PermitRecord).count() == 0
     assert db.query(RawSourceRecord).count() == 0
+
+
+def test_downstream_failure_rolls_back_new_raw_observation(
+    client, db, tmp_path, monkeypatch
+):
+    csv_path = tmp_path / "downstream-new.csv"
+    _write_csv(csv_path)
+    source = client.post("/ingestion/sources", json=_source_payload(str(csv_path))).json()
+    monkeypatch.setattr(
+        ingestion_service,
+        "_project_permit_to_graph",
+        _raise_graph_failure,
+    )
+
+    response = client.post(f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1})
+
+    assert response.status_code == 201, response.text
+    assert response.json()["records_failed"] == 1
+    assert db.query(RawSourceRecord).count() == 0
+    assert db.query(RawSourceRecordObservation).count() == 0
+
+
+def test_downstream_failure_does_not_advance_existing_observation(
+    client, db, tmp_path, monkeypatch
+):
+    csv_path = tmp_path / "downstream-existing.csv"
+    _write_csv(csv_path)
+    payload = _source_payload(str(csv_path))
+    source = client.post("/ingestion/sources", json=payload).json()
+    first = client.post(f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1})
+    assert first.status_code == 201, first.text
+    observed_at = db.query(RawSourceRecordObservation).one().last_observed_at
+    patched = client.patch(
+        f"/ingestion/sources/{source['id']}",
+        json={
+            "field_mappings": [
+                mapping
+                for mapping in payload["field_mappings"]
+                if mapping["canonical_field"] != "owner_name"
+            ]
+        },
+    )
+    assert patched.status_code == 200, patched.text
+    monkeypatch.setattr(
+        ingestion_service,
+        "_project_permit_to_graph",
+        _raise_graph_failure,
+    )
+
+    response = client.post(f"/ingestion/sources/{source['id']}/runs", json={"max_pages": 1})
+
+    assert response.status_code == 201, response.text
+    assert response.json()["records_failed"] == 1
+    db.expire_all()
+    assert db.query(RawSourceRecordObservation).one().last_observed_at == observed_at
 
 
 def test_mapping_change_reprocesses_raw_and_expires_removed_relationship(client, db, tmp_path):

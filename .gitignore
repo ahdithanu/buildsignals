@@ -1,5 +1,6 @@
 # Python
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -43,3 +44,6 @@ vite.config.ts.timestamp-*.mjs
 # Coverage artifacts
 .coverage
 htmlcov/
+.vercel
+.env.local
+.env.*.local

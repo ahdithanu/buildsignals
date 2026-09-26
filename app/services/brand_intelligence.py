@@ -4,14 +4,15 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from dateutil import parser as date_parser
 from pydantic import TypeAdapter
+from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.brand import BrandAlias, BrandProfile, PermitBrandMatch
+from app.models.brand import BrandAlias, BrandPartyFingerprint, BrandProfile, PermitBrandMatch
 from app.models.deal import Deal
 from app.models.graph import (
     GraphEntity,
@@ -20,12 +21,17 @@ from app.models.graph import (
     GraphRelationship,
     GraphRelationshipType,
 )
-from app.models.ingestion import PermitRecord, RawSourceRecord
+from app.models.ingestion import PermitRecord, RawSourceRecord, SourceFieldMapping
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch
+from app.models.planning import PlanningCompanyMatch, PlanningRecord
 from app.models.signal import Signal
 from app.schemas.brand import (
     BrandDefinition,
+    BrandExpansionMarketResponse,
+    BrandExpansionSummaryResponse,
     BrandMatchGraphContext,
     BrandMatchRawEvidence,
+    BrandPartyFingerprintEvidence,
     BrandPermitSummary,
     BrandProfileResponse,
     LinkedDealSummary,
@@ -42,13 +48,28 @@ from app.services.normalization_service import normalize_signal_type
 from app.utils.org_scope import active_query, get_org_id
 
 DEFAULT_BRAND_CATALOG_PATH = Path(__file__).with_name("brand_catalog.json")
-DETECTOR_VERSION = "brand-alias-v1"
+DETECTOR_VERSION = "brand-alias-v2"
+STEALTH_DETECTOR_VERSION = "stealth-retailer-v1"
 MINIMUM_CONFIDENCE = 0.70
 FIELD_CONFIDENCE = {
     "project_name": 0.98,
+    "applicant_name": 0.96,
     "description": 0.92,
     "proposed_use": 0.85,
     "occupancy_type": 0.80,
+}
+MAJOR_BUILDER_FIELD_CONFIDENCE = {
+    "project_name": 0.98,
+    "applicant_name": 0.96,
+    "developer_name": 0.96,
+    "owner_name": 0.94,
+    "description": 0.92,
+}
+APPLICANT_SEMANTIC_CONFIDENCE = {
+    "business_dba": 0.97,
+    "legal_entity": 0.92,
+    "unknown": 0.0,
+    "person": 0.0,
 }
 CONTEXT_FIELDS = (
     "description",
@@ -82,7 +103,48 @@ RETAIL_CONTEXT_TERMS = (
     "sign",
     "sales tax permit",
 )
-NEGATIVE_CONTEXTS = ("adjacent to", "near", "formerly", "across from", "next to")
+MAJOR_BUILDER_CONTEXT_TERMS = (
+    "subdivision",
+    "single-family",
+    "single family",
+    "townhome",
+    "townhomes",
+    "model home",
+    "master-planned",
+    "master planned",
+    "residential lots",
+    "residential lot",
+    "residential development",
+    "residential subdivision",
+    "homebuilder",
+    "home builder",
+)
+NATIONAL_RETAIL_COHORT = "national_retail"
+MAJOR_BUILDER_COHORT = "major_builder"
+NEGATIVE_CONTEXTS = (
+    "adjacent to",
+    "near",
+    "nearby",
+    "former",
+    "formerly",
+    "across from",
+    "next to",
+    "removal of",
+    "remove",
+    "relocation from",
+    "relocating from",
+    "landlord for",
+    "sign facing",
+    "competitor to",
+)
+PARTY_FIELDS = (
+    "applicant_name",
+    "owner_name",
+    "developer_name",
+    "contractor_name",
+    "architect_name",
+    "engineer_name",
+)
 TERMINAL_PREAPPROVAL_STATUS_TERMS = (
     "withdrawn",
     "denied",
@@ -96,6 +158,10 @@ TERMINAL_PREAPPROVAL_STATUS_TERMS = (
     "rejected",
     "suspended",
 )
+APPLICANT_LEGAL_SUFFIXES = {
+    "co", "company", "corp", "corporation", "inc", "incorporated",
+    "llc", "llp", "lp", "ltd", "limited", "pllc",
+}
 _CATALOG_ADAPTER = TypeAdapter(list[BrandDefinition])
 
 
@@ -107,13 +173,31 @@ class BrandCatalogSyncResult:
 
 
 @dataclass(frozen=True)
+class BrandMatchBackfillBatchResult:
+    scanned: int
+    matches_created: int
+    matches_refreshed: int
+    matches_retracted: int
+    next_cursor: str | None
+    has_more: bool
+
+
+@dataclass(frozen=True)
 class Detection:
     brand: BrandProfile
-    alias: BrandAlias
+    alias: BrandAlias | None
     field: str
     excerpt: str
     confidence: float
     matched_fields: tuple[str, ...]
+    rule_ids: tuple[str, ...]
+    detector_version: str = DETECTOR_VERSION
+
+
+@dataclass
+class FingerprintAccumulator:
+    display_name: str
+    match_ids: list[str]
 
 
 def utcnow() -> datetime:
@@ -187,33 +271,46 @@ def detect_permit_brands(
     db: Session,
     permit: PermitRecord,
     raw: RawSourceRecord,
+    *,
+    aliases: list[BrandAlias] | None = None,
+    applicant_semantics: str | None = None,
 ) -> list[PermitBrandMatch]:
     opening_signal = _is_future_retailer_opening_signal(permit, raw)
-    if permit.approval_stage != "pre_approval" and not opening_signal:
+    if permit.approval_stage not in {"pre_approval", "approved"}:
         return []
     normalized_status = _normalize_text(permit.status or "")
-    if any(_contains(normalized_status, term) for term in TERMINAL_PREAPPROVAL_STATUS_TERMS):
+    if permit.approval_stage == "pre_approval" and any(
+        _contains(normalized_status, term)
+        for term in TERMINAL_PREAPPROVAL_STATUS_TERMS
+    ):
         return []
     if not permit.address and not (
         permit.parcel_id and permit.city and permit.state
     ):
         return []
 
-    aliases = active_query(db.query(BrandAlias), BrandAlias).options(
-        joinedload(BrandAlias.brand)
-    ).join(BrandProfile).filter(
-        BrandAlias.is_active.is_(True),
-        BrandProfile.is_active.is_(True),
-    ).all()
-    if not aliases:
-        return []
-
-    fields = {
-        field: value
-        for field in FIELD_CONFIDENCE
-        if (value := getattr(permit, field, None)) and isinstance(value, str)
+    aliases = aliases if aliases is not None else _active_brand_aliases(db)
+    applicant_semantics = (
+        applicant_semantics
+        if applicant_semantics is not None
+        else _applicant_value_semantics(db, permit)
+    )
+    retail_field_confidence = dict(FIELD_CONFIDENCE)
+    retail_field_confidence["applicant_name"] = APPLICANT_SEMANTIC_CONFIDENCE[
+        applicant_semantics
+    ]
+    builder_field_confidence = dict(MAJOR_BUILDER_FIELD_CONFIDENCE)
+    builder_field_confidence["applicant_name"] = APPLICANT_SEMANTIC_CONFIDENCE[
+        applicant_semantics
+    ]
+    fields_by_cohort = {
+        NATIONAL_RETAIL_COHORT: _eligible_match_fields(permit, retail_field_confidence),
+        MAJOR_BUILDER_COHORT: _eligible_match_fields(permit, builder_field_confidence),
     }
-    combined = _normalize_text(" ".join(fields.values()))
+    confidence_by_cohort = {
+        NATIONAL_RETAIL_COHORT: retail_field_confidence,
+        MAJOR_BUILDER_COHORT: builder_field_confidence,
+    }
     retail_context = _normalize_text(
         " ".join(
             str(value)
@@ -221,10 +318,29 @@ def detect_permit_brands(
             if (value := getattr(permit, field, None))
         )
     )
-    if not any(_contains(retail_context, term) for term in RETAIL_CONTEXT_TERMS):
-        return []
+    has_retail_context = any(
+        _contains(retail_context, term) for term in RETAIL_CONTEXT_TERMS
+    )
+    has_builder_context = any(
+        _contains(retail_context, _normalize_text(term))
+        for term in MAJOR_BUILDER_CONTEXT_TERMS
+    )
     best_by_brand: dict[str, Detection] = {}
     for alias in aliases:
+        cohort = _signal_cohort(alias.brand)
+        if cohort == NATIONAL_RETAIL_COHORT:
+            if not has_retail_context or (
+                permit.approval_stage == "approved" and not opening_signal
+            ):
+                continue
+        elif cohort == MAJOR_BUILDER_COHORT:
+            if not has_builder_context:
+                continue
+        else:
+            continue
+        fields = fields_by_cohort[cohort]
+        field_confidence = confidence_by_cohort[cohort]
+        combined = _normalize_text(" ".join(fields.values()))
         normalized_alias = alias.normalized_alias
         if alias.requires_context and not any(
             _contains(combined, _normalize_text(term)) for term in (alias.context_terms or [])
@@ -234,13 +350,17 @@ def detect_permit_brands(
             field
             for field, value in fields.items()
             if _contains(_normalize_text(value), normalized_alias)
+            and (
+                field != "applicant_name"
+                or _is_exact_applicant_alias(value, normalized_alias)
+            )
             and not _negative_alias_context(value, normalized_alias)
         )
         if len(matched_fields) < alias.minimum_field_matches:
             continue
         for field in matched_fields:
             value = fields[field]
-            confidence = round(FIELD_CONFIDENCE[field] * alias.confidence, 4)
+            confidence = round(field_confidence[field] * alias.confidence, 4)
             if confidence < MINIMUM_CONFIDENCE:
                 continue
             detection = Detection(
@@ -250,10 +370,26 @@ def detect_permit_brands(
                 excerpt=_excerpt(value, alias.alias),
                 confidence=confidence,
                 matched_fields=matched_fields,
+                rule_ids=tuple(
+                    _rule_ids(opening_signal, cohort)
+                    + (["exact_applicant_alias"] if field == "applicant_name" else [])
+                    + (
+                        [f"applicant_{applicant_semantics}_source"]
+                        if field == "applicant_name"
+                        else []
+                    )
+                ),
             )
             current = best_by_brand.get(alias.brand_id)
             if current is None or detection.confidence > current.confidence:
                 best_by_brand[alias.brand_id] = detection
+
+    if has_retail_context:
+        for detection in _historical_party_detections(db, permit, opening_signal):
+            current = best_by_brand.get(detection.brand.id)
+            # Direct name evidence always outranks an inferred historical pattern.
+            if current is None:
+                best_by_brand[detection.brand.id] = detection
 
     matches: list[PermitBrandMatch] = []
     now = utcnow()
@@ -270,12 +406,12 @@ def detect_permit_brands(
                 first_raw_record_id=raw.id,
                 latest_raw_record_id=raw.id,
                 confidence=detection.confidence,
-                matched_alias=detection.alias.alias,
+                matched_alias=detection.alias.alias if detection.alias else "Confirmed party pattern",
                 matched_field=detection.field,
                 matched_fields=list(detection.matched_fields),
-                rule_ids=_rule_ids(opening_signal),
+                rule_ids=list(detection.rule_ids),
                 excerpt=detection.excerpt,
-                detector_version=DETECTOR_VERSION,
+                detector_version=detection.detector_version,
                 first_seen_at=now,
                 last_seen_at=now,
             )
@@ -285,14 +421,17 @@ def detect_permit_brands(
             match.last_seen_at = now
             if match.review_status == "retracted":
                 match.review_status = "candidate"
-            if detection.confidence >= match.confidence:
+            if (
+                detection.detector_version != match.detector_version
+                or detection.confidence >= match.confidence
+            ):
                 match.confidence = detection.confidence
-                match.matched_alias = detection.alias.alias
+                match.matched_alias = detection.alias.alias if detection.alias else "Confirmed party pattern"
                 match.matched_field = detection.field
                 match.matched_fields = list(detection.matched_fields)
-                match.rule_ids = _rule_ids(opening_signal)
+                match.rule_ids = list(detection.rule_ids)
                 match.excerpt = detection.excerpt
-                match.detector_version = DETECTOR_VERSION
+                match.detector_version = detection.detector_version
         matches.append(match)
 
     detected_brand_ids = set(best_by_brand)
@@ -310,7 +449,295 @@ def detect_permit_brands(
     return matches
 
 
-def _rule_ids(opening_signal: bool) -> list[str]:
+def backfill_brand_matches_batch(
+    db: Session,
+    *,
+    after_id: str | None = None,
+    batch_size: int = 500,
+) -> BrandMatchBackfillBatchResult:
+    """Replay current permit records through company detection in a resumable batch."""
+    if batch_size < 1 or batch_size > 5_000:
+        raise ValueError("batch_size must be between 1 and 5000")
+
+    query = active_query(db.query(PermitRecord), PermitRecord).options(
+        joinedload(PermitRecord.latest_raw_record),
+        joinedload(PermitRecord.source),
+    ).filter(
+        PermitRecord.is_active.is_(True),
+        PermitRecord.approval_stage.in_(("pre_approval", "approved")),
+    )
+    if after_id:
+        query = query.filter(PermitRecord.id > after_id)
+    rows = query.order_by(PermitRecord.id).limit(batch_size + 1).all()
+    permits = rows[:batch_size]
+    if not permits:
+        return BrandMatchBackfillBatchResult(0, 0, 0, 0, after_id, False)
+
+    aliases = _active_brand_aliases(db)
+    semantics_by_source = _applicant_semantics_by_source(
+        db, {permit.source_id for permit in permits}
+    )
+    created = refreshed = retracted = 0
+    for permit in permits:
+        existing = active_query(db.query(PermitBrandMatch), PermitBrandMatch).filter(
+            PermitBrandMatch.permit_id == permit.id
+        ).all()
+        previous_status = {match.id: match.review_status for match in existing}
+        detected = detect_permit_brands(
+            db,
+            permit,
+            permit.latest_raw_record,
+            aliases=aliases,
+            applicant_semantics=semantics_by_source.get(permit.source_id, "unknown"),
+        )
+        detected_ids = {match.id for match in detected}
+        created += sum(match_id not in previous_status for match_id in detected_ids)
+        refreshed += sum(match_id in previous_status for match_id in detected_ids)
+        retracted += sum(
+            previous_status.get(match.id) == "candidate"
+            and match.review_status == "retracted"
+            for match in existing
+        )
+        if detected or any(
+            previous_status.get(match.id) == "candidate"
+            and match.review_status == "retracted"
+            for match in existing
+        ):
+            from app.services.ingestion.service import project_permit_to_graph
+
+            project_permit_to_graph(db, permit)
+
+    db.flush()
+    return BrandMatchBackfillBatchResult(
+        scanned=len(permits),
+        matches_created=created,
+        matches_refreshed=refreshed,
+        matches_retracted=retracted,
+        next_cursor=permits[-1].id,
+        has_more=len(rows) > batch_size,
+    )
+
+
+def _active_brand_aliases(db: Session) -> list[BrandAlias]:
+    return active_query(db.query(BrandAlias), BrandAlias).options(
+        joinedload(BrandAlias.brand)
+    ).join(BrandProfile).filter(
+        BrandAlias.is_active.is_(True),
+        BrandProfile.is_active.is_(True),
+    ).all()
+
+
+def _applicant_semantics_by_source(
+    db: Session, source_ids: set[str]
+) -> dict[str, str]:
+    if not source_ids:
+        return {}
+    grouped: dict[str, set[str]] = {}
+    rows = active_query(
+        db.query(SourceFieldMapping), SourceFieldMapping
+    ).filter(
+        SourceFieldMapping.source_id.in_(source_ids),
+        SourceFieldMapping.canonical_field == "applicant_name",
+        SourceFieldMapping.is_active.is_(True),
+    ).all()
+    for mapping in rows:
+        grouped.setdefault(mapping.source_id, set()).add(mapping.value_semantics)
+    return {
+        source_id: next(iter(values)) if len(values) == 1 else "unknown"
+        for source_id, values in grouped.items()
+    }
+
+
+def _applicant_value_semantics(db: Session, permit: PermitRecord) -> str:
+    """Return the declared meaning of the source field normalized as applicant_name."""
+    semantics = {
+        value
+        for (value,) in active_query(
+            db.query(SourceFieldMapping.value_semantics), SourceFieldMapping
+        ).filter(
+            SourceFieldMapping.source_id == permit.source_id,
+            SourceFieldMapping.canonical_field == "applicant_name",
+            SourceFieldMapping.is_active.is_(True),
+        ).all()
+    }
+    if len(semantics) == 1:
+        return semantics.pop()
+    # Multiple alternative mappings cannot establish which source value won.
+    return "unknown"
+
+
+def _eligible_match_fields(
+    permit: PermitRecord,
+    field_confidence: dict[str, float],
+) -> dict[str, str]:
+    return {
+        field: value
+        for field, confidence in field_confidence.items()
+        if confidence >= MINIMUM_CONFIDENCE
+        if (value := getattr(permit, field, None)) and isinstance(value, str)
+    }
+
+
+def _signal_cohort(brand: BrandProfile) -> str:
+    attributes = brand.attributes if isinstance(brand.attributes, dict) else {}
+    cohort = attributes.get("signal_cohort", NATIONAL_RETAIL_COHORT)
+    return cohort if isinstance(cohort, str) else NATIONAL_RETAIL_COHORT
+
+
+def _brand_cohort_filter(signal_cohort: str):
+    cohort_value = BrandProfile.attributes["signal_cohort"].as_string()
+    if signal_cohort == NATIONAL_RETAIL_COHORT:
+        return or_(
+            BrandProfile.attributes.is_(None),
+            cohort_value.is_(None),
+            cohort_value == NATIONAL_RETAIL_COHORT,
+        )
+    return cohort_value == signal_cohort
+
+
+def _historical_party_detections(
+    db: Session,
+    permit: PermitRecord,
+    opening_signal: bool,
+) -> list[Detection]:
+    """Infer brands from distinctive, human-confirmed project-party combinations."""
+    evidence_by_brand: dict[str, list[tuple[str, str, BrandPartyFingerprint]]] = {}
+    state = (permit.state or "").strip().upper()
+    for field in PARTY_FIELDS:
+        display_value = getattr(permit, field, None)
+        if not isinstance(display_value, str) or not display_value.strip():
+            continue
+        normalized_value = normalize_name(display_value)
+        if len(normalized_value) < 4:
+            continue
+        fingerprints = active_query(
+            db.query(BrandPartyFingerprint), BrandPartyFingerprint
+        ).options(joinedload(BrandPartyFingerprint.brand)).filter(
+            BrandPartyFingerprint.party_type == field,
+            BrandPartyFingerprint.normalized_name == normalized_value,
+            BrandPartyFingerprint.state == state,
+            BrandPartyFingerprint.is_active.is_(True),
+            BrandPartyFingerprint.evidence_count >= 2,
+        ).all()
+        # A professional shared by competing brands is not a distinctive signal.
+        brand_ids = {fingerprint.brand_id for fingerprint in fingerprints}
+        if len(brand_ids) != 1:
+            continue
+        fingerprint = fingerprints[0]
+        evidence_by_brand.setdefault(fingerprint.brand_id, []).append(
+            (field, display_value.strip(), fingerprint)
+        )
+
+    detections: list[Detection] = []
+    for evidence in evidence_by_brand.values():
+        distinct_fields = tuple(sorted({field for field, _, _ in evidence}))
+        if len(distinct_fields) < 2:
+            continue
+        total_evidence = sum(item.evidence_count for _, _, item in evidence)
+        confidence = min(
+            0.86,
+            0.68 + (0.04 * len(distinct_fields)) + (0.01 * min(total_evidence, 6)),
+        )
+        brand = evidence[0][2].brand
+        if _signal_cohort(brand) != NATIONAL_RETAIL_COHORT:
+            continue
+        labels = ", ".join(
+            f"{field.removesuffix('_name').replace('_', ' ')} {value}"
+            for field, value, _ in evidence
+        )
+        base_rules = [
+            rule_id
+            for rule_id in _rule_ids(opening_signal)
+            if rule_id not in {"exact_alias", "national_retail_cohort"}
+        ]
+        rules = tuple(
+            base_rules + [
+                "historical_party_signature",
+                "multiple_independent_parties",
+                *[
+                    f"confirmed_{field.removesuffix('_name')}_history"
+                    for field in distinct_fields
+                ],
+            ]
+        )
+        detections.append(Detection(
+            brand=brand,
+            alias=None,
+            field="historical_parties",
+            excerpt=f"Inferred from confirmed {brand.name} project history: {labels}.",
+            confidence=round(confidence, 4),
+            matched_fields=distinct_fields,
+            rule_ids=rules,
+            detector_version=STEALTH_DETECTOR_VERSION,
+        ))
+    return detections
+
+
+def rebuild_brand_party_fingerprints(db: Session, brand_id: str) -> None:
+    """Materialize distinctive party history from confirmed direct brand matches."""
+    matches = active_query(db.query(PermitBrandMatch), PermitBrandMatch).options(
+        joinedload(PermitBrandMatch.permit)
+    ).filter(
+        PermitBrandMatch.brand_id == brand_id,
+        PermitBrandMatch.review_status == "confirmed",
+        PermitBrandMatch.matched_field != "historical_parties",
+        PermitBrandMatch.permit.has(PermitRecord.is_active.is_(True)),
+    ).all()
+    grouped: dict[tuple[str, str, str], FingerprintAccumulator] = {}
+    for match in matches:
+        state = (match.permit.state or "").strip().upper()
+        for field in PARTY_FIELDS:
+            value = getattr(match.permit, field, None)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            normalized_value = normalize_name(value)
+            if len(normalized_value) < 4:
+                continue
+            key = (field, normalized_value, state)
+            row = grouped.setdefault(
+                key,
+                FingerprintAccumulator(display_name=value.strip(), match_ids=[]),
+            )
+            row.match_ids.append(match.id)
+
+    existing = active_query(db.query(BrandPartyFingerprint), BrandPartyFingerprint).filter(
+        BrandPartyFingerprint.brand_id == brand_id
+    ).all()
+    existing_by_key = {(row.party_type, row.normalized_name, row.state or ""): row for row in existing}
+    now = utcnow()
+    for row in existing:
+        row.is_active = False
+        row.last_verified_at = now
+    for (party_type, normalized_name, state), values in grouped.items():
+        match_ids = list(dict.fromkeys(values.match_ids))
+        fingerprint = existing_by_key.get((party_type, normalized_name, state))
+        if fingerprint is None:
+            fingerprint = BrandPartyFingerprint(
+                organization_id=get_org_id(),
+                brand_id=brand_id,
+                party_type=party_type,
+                normalized_name=normalized_name,
+                display_name=values.display_name,
+                state=state,
+                first_seen_at=now,
+            )
+            db.add(fingerprint)
+        fingerprint.evidence_count = len(match_ids)
+        fingerprint.source_match_ids = match_ids
+        fingerprint.confidence = round(min(0.84, 0.62 + 0.06 * len(match_ids)), 4)
+        fingerprint.is_active = True
+        fingerprint.last_verified_at = now
+    db.flush()
+
+
+def _rule_ids(opening_signal: bool, cohort: str = NATIONAL_RETAIL_COHORT) -> list[str]:
+    if cohort == MAJOR_BUILDER_COHORT:
+        return [
+            "pre_approval",
+            "stable_location",
+            "major_builder_development_context",
+            "major_builder_exact_alias",
+        ]
     if opening_signal:
         return [
             "approved_retailer_opening",
@@ -318,8 +745,15 @@ def _rule_ids(opening_signal: bool) -> list[str]:
             "stable_location",
             "retail_context",
             "exact_alias",
+            "national_retail_cohort",
         ]
-    return ["pre_approval", "stable_location", "retail_context", "exact_alias"]
+    return [
+        "pre_approval",
+        "stable_location",
+        "retail_context",
+        "exact_alias",
+        "national_retail_cohort",
+    ]
 
 
 def _is_future_retailer_opening_signal(
@@ -349,22 +783,271 @@ def _is_future_retailer_opening_signal(
 def list_brand_matches(
     db: Session,
     *,
+    brand_id: str | None = None,
+    signal_cohort: str | None = None,
     review_status: str | None = None,
     approval_stage: str | None = None,
+    detection_method: str | None = None,
+    freshness: str | None = None,
+    sort_by: str = "confidence",
     limit: int = 100,
 ) -> list[PermitBrandMatchResponse]:
-    query = active_query(db.query(PermitBrandMatch), PermitBrandMatch).options(
+    query = active_query(db.query(PermitBrandMatch), PermitBrandMatch).join(
+        PermitRecord, PermitRecord.id == PermitBrandMatch.permit_id
+    ).options(
         joinedload(PermitBrandMatch.brand),
         joinedload(PermitBrandMatch.permit),
     )
+    if brand_id:
+        query = query.filter(PermitBrandMatch.brand_id == brand_id)
+    if signal_cohort:
+        query = query.join(
+            BrandProfile, BrandProfile.id == PermitBrandMatch.brand_id
+        ).filter(_brand_cohort_filter(signal_cohort))
     if review_status:
         query = query.filter(PermitBrandMatch.review_status == review_status)
     if approval_stage:
-        query = query.join(PermitRecord).filter(PermitRecord.approval_stage == approval_stage)
-    matches = query.order_by(
-        PermitBrandMatch.confidence.desc(), PermitBrandMatch.first_seen_at.desc()
-    ).limit(limit).all()
+        query = query.filter(PermitRecord.approval_stage == approval_stage)
+    if detection_method == "historical_party":
+        query = query.filter(PermitBrandMatch.matched_field == "historical_parties")
+    elif detection_method == "direct_alias":
+        query = query.filter(PermitBrandMatch.matched_field != "historical_parties")
+    now = utcnow()
+    future_limit = now + timedelta(days=1)
+    activity_at = func.coalesce(
+        case(
+            (PermitRecord.status_updated_at <= future_limit, PermitRecord.status_updated_at),
+            else_=None,
+        ),
+        case(
+            (PermitRecord.filed_at <= future_limit, PermitRecord.filed_at),
+            else_=None,
+        ),
+        PermitBrandMatch.first_seen_at,
+    )
+    cutoffs = {
+        "fresh": (now - timedelta(days=30), None),
+        "active": (now - timedelta(days=90), now - timedelta(days=30)),
+        "aging": (now - timedelta(days=180), now - timedelta(days=90)),
+        "stale": (None, now - timedelta(days=180)),
+    }
+    if freshness:
+        lower, upper = cutoffs[freshness]
+        if lower is not None:
+            query = query.filter(activity_at >= lower)
+        if upper is not None:
+            query = query.filter(activity_at < upper)
+    freshness_band = case(
+        (activity_at >= now - timedelta(days=30), 0),
+        (activity_at >= now - timedelta(days=90), 1),
+        (activity_at >= now - timedelta(days=180), 2),
+        else_=3,
+    )
+    ordering = (
+        (
+            freshness_band,
+            PermitBrandMatch.confidence.desc(),
+            activity_at.desc(),
+            PermitRecord.last_seen_at.desc(),
+        )
+        if sort_by == "freshness"
+        else (
+            PermitBrandMatch.confidence.desc(),
+            activity_at.desc(),
+            PermitRecord.last_seen_at.desc(),
+        )
+    )
+    matches = query.order_by(*ordering).limit(limit).all()
     return _serialize_brand_matches(db, matches)
+
+
+def list_brand_expansion_summaries(
+    db: Session,
+    *,
+    days: int = 180,
+    signal_cohort: str = NATIONAL_RETAIL_COHORT,
+    limit: int = 25,
+) -> list[BrandExpansionSummaryResponse]:
+    """Rank active companies across planning and permit evidence."""
+    cutoff = utcnow() - timedelta(days=days)
+    activity_at = func.coalesce(
+        PermitRecord.status_updated_at,
+        PermitRecord.filed_at,
+        PermitBrandMatch.first_seen_at,
+    )
+    signal_rows = active_query(db.query(PermitBrandMatch), PermitBrandMatch).join(
+        BrandProfile, BrandProfile.id == PermitBrandMatch.brand_id
+    ).join(
+        PermitRecord, PermitRecord.id == PermitBrandMatch.permit_id
+    ).filter(
+        PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
+        PermitRecord.is_active.is_(True),
+        PermitRecord.approval_stage.in_(("pre_approval", "approved")),
+        _brand_cohort_filter(signal_cohort),
+        activity_at >= cutoff,
+    ).with_entities(
+        BrandProfile,
+        PermitRecord.city,
+        PermitRecord.state,
+        PermitRecord.approval_stage,
+        func.count(PermitBrandMatch.id),
+        func.avg(PermitBrandMatch.confidence),
+        func.max(activity_at),
+    ).group_by(
+        BrandProfile.id,
+        PermitRecord.city,
+        PermitRecord.state,
+        PermitRecord.approval_stage,
+    ).all()
+
+    summaries: dict[str, dict] = {}
+    for brand, city, state, stage, count, average_confidence, latest_signal_at in signal_rows:
+        summary = summaries.setdefault(brand.id, {
+            "brand": brand,
+            "signal_count": 0,
+            "planning_count": 0,
+            "pre_approval_count": 0,
+            "approved_count": 0,
+            "confidence_total": 0.0,
+            "latest_signal_at": latest_signal_at,
+            "markets": {},
+        })
+        count = int(count)
+        summary["signal_count"] += count
+        summary[f"{stage}_count"] += count
+        summary["confidence_total"] += float(average_confidence) * count
+        summary["latest_signal_at"] = max(summary["latest_signal_at"], latest_signal_at)
+        market_key = (city or "", state or "")
+        market = summary["markets"].setdefault(market_key, {
+            "city": city,
+            "state": state,
+            "signal_count": 0,
+            "planning_count": 0,
+            "pre_approval_count": 0,
+            "approved_count": 0,
+            "latest_signal_at": latest_signal_at,
+        })
+        market["signal_count"] += count
+        market[f"{stage}_count"] += count
+        market["latest_signal_at"] = max(market["latest_signal_at"], latest_signal_at)
+
+    planning_activity_at = func.coalesce(
+        PlanningRecord.published_at,
+        PlanningRecord.first_seen_at,
+        PlanningRecord.meeting_at,
+    )
+    planning_rows = active_query(
+        db.query(PlanningCompanyMatch), PlanningCompanyMatch
+    ).join(
+        BrandProfile, BrandProfile.id == PlanningCompanyMatch.brand_id
+    ).join(
+        PlanningRecord, PlanningRecord.id == PlanningCompanyMatch.planning_record_id
+    ).filter(
+        PlanningCompanyMatch.review_status.in_(("candidate", "confirmed")),
+        _brand_cohort_filter(signal_cohort),
+        planning_activity_at >= cutoff,
+    ).with_entities(
+        BrandProfile,
+        PlanningRecord.city,
+        PlanningRecord.state,
+        func.count(PlanningCompanyMatch.id),
+        func.avg(PlanningCompanyMatch.confidence),
+        func.max(planning_activity_at),
+    ).group_by(
+        BrandProfile.id,
+        PlanningRecord.city,
+        PlanningRecord.state,
+    ).all()
+
+    for brand, city, state, count, average_confidence, latest_signal_at in planning_rows:
+        summary = summaries.setdefault(brand.id, {
+            "brand": brand,
+            "signal_count": 0,
+            "planning_count": 0,
+            "pre_approval_count": 0,
+            "approved_count": 0,
+            "confidence_total": 0.0,
+            "latest_signal_at": latest_signal_at,
+            "markets": {},
+        })
+        count = int(count)
+        summary["signal_count"] += count
+        summary["planning_count"] += count
+        summary["confidence_total"] += float(average_confidence) * count
+        summary["latest_signal_at"] = max(summary["latest_signal_at"], latest_signal_at)
+        market_key = (city or "", state or "")
+        market = summary["markets"].setdefault(market_key, {
+            "city": city,
+            "state": state,
+            "signal_count": 0,
+            "planning_count": 0,
+            "pre_approval_count": 0,
+            "approved_count": 0,
+            "latest_signal_at": latest_signal_at,
+        })
+        market["signal_count"] += count
+        market["planning_count"] += count
+        market["latest_signal_at"] = max(market["latest_signal_at"], latest_signal_at)
+
+    if not summaries:
+        return []
+
+    candidate_rows = active_query(db.query(PermitBrandMatch), PermitBrandMatch).join(
+        PermitRecord, PermitRecord.id == PermitBrandMatch.permit_id
+    ).join(
+        NearbyParcelSearch,
+        NearbyParcelSearch.anchor_brand_match_id == PermitBrandMatch.id,
+    ).join(
+        NearbyParcelCandidate,
+        NearbyParcelCandidate.search_id == NearbyParcelSearch.id,
+    ).filter(
+        PermitBrandMatch.brand_id.in_(tuple(summaries)),
+        PermitBrandMatch.review_status.in_(("candidate", "confirmed")),
+        PermitRecord.is_active.is_(True),
+        activity_at >= cutoff,
+        NearbyParcelCandidate.review_status != "dismissed",
+    ).with_entities(
+        PermitBrandMatch.brand_id,
+        func.count(func.distinct(NearbyParcelCandidate.parcel_id)),
+    ).group_by(PermitBrandMatch.brand_id).all()
+    candidate_counts = {brand_id: int(count) for brand_id, count in candidate_rows}
+
+    ranked = sorted(
+        summaries.values(),
+        key=lambda item: (
+            item["signal_count"],
+            item["planning_count"],
+            item["pre_approval_count"],
+            candidate_counts.get(item["brand"].id, 0),
+            item["brand"].priority,
+            item["latest_signal_at"],
+        ),
+        reverse=True,
+    )[:limit]
+    return [
+        BrandExpansionSummaryResponse(
+            brand=BrandProfileResponse.model_validate(item["brand"]),
+            signal_count=item["signal_count"],
+            planning_count=item["planning_count"],
+            pre_approval_count=item["pre_approval_count"],
+            approved_count=item["approved_count"],
+            market_count=len(item["markets"]),
+            parcel_candidate_count=candidate_counts.get(item["brand"].id, 0),
+            average_confidence=round(
+                item["confidence_total"] / item["signal_count"], 4
+            ),
+            latest_signal_at=item["latest_signal_at"],
+            markets=[
+                BrandExpansionMarketResponse(**market)
+                for market in sorted(
+                    item["markets"].values(),
+                    key=lambda value: (value["signal_count"], value["latest_signal_at"]),
+                    reverse=True,
+                )[:5]
+            ],
+        )
+        for item in ranked
+    ]
 
 
 def list_deal_brand_matches(
@@ -469,7 +1152,9 @@ def get_brand_match_evidence(
         joinedload(PermitBrandMatch.brand),
         joinedload(PermitBrandMatch.permit),
         joinedload(PermitBrandMatch.first_raw_record).joinedload(RawSourceRecord.source),
+        joinedload(PermitBrandMatch.first_raw_record).joinedload(RawSourceRecord.observation),
         joinedload(PermitBrandMatch.latest_raw_record).joinedload(RawSourceRecord.source),
+        joinedload(PermitBrandMatch.latest_raw_record).joinedload(RawSourceRecord.observation),
     ).filter(PermitBrandMatch.id == match_id).first()
     if match is None:
         return None
@@ -489,13 +1174,51 @@ def get_brand_match_evidence(
         signal_quality_note=summary.signal_quality_note,
         rule_ids=match.rule_ids or [],
         detector_version=match.detector_version,
+        detection_method=summary.detection_method,
+        needs_reverification=summary.needs_reverification,
         first_seen_at=match.first_seen_at,
         last_seen_at=match.last_seen_at,
         linked_deals=_linked_deals_for_matches(db, [match]).get(match.id, []),
         first_evidence=_raw_evidence(match.first_raw_record, match),
         latest_evidence=_raw_evidence(match.latest_raw_record, match),
         graph_context=_brand_match_graph_context(db, match.id),
+        inference_evidence=_brand_match_inference_evidence(db, match),
     )
+
+
+def _brand_match_inference_evidence(
+    db: Session,
+    match: PermitBrandMatch,
+) -> list[BrandPartyFingerprintEvidence]:
+    if match.matched_field != "historical_parties":
+        return []
+    state = (match.permit.state or "").strip().upper()
+    rows: list[BrandPartyFingerprintEvidence] = []
+    for field in match.matched_fields or []:
+        value = getattr(match.permit, field, None)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        fingerprint = active_query(
+            db.query(BrandPartyFingerprint), BrandPartyFingerprint
+        ).filter(
+            BrandPartyFingerprint.brand_id == match.brand_id,
+            BrandPartyFingerprint.party_type == field,
+            BrandPartyFingerprint.normalized_name == normalize_name(value),
+            BrandPartyFingerprint.state == state,
+            BrandPartyFingerprint.is_active.is_(True),
+        ).first()
+        if fingerprint is None:
+            continue
+        rows.append(BrandPartyFingerprintEvidence(
+            party_type=fingerprint.party_type,
+            display_name=fingerprint.display_name,
+            state=fingerprint.state,
+            evidence_count=fingerprint.evidence_count,
+            source_match_ids=fingerprint.source_match_ids,
+            confidence=fingerprint.confidence,
+            last_verified_at=fingerprint.last_verified_at,
+        ))
+    return rows
 
 
 def review_brand_match(
@@ -510,6 +1233,8 @@ def review_brand_match(
     if match is None:
         return None
     match.review_status = review_status
+    db.flush()
+    rebuild_brand_party_fingerprints(db, match.brand_id)
     relationships = active_query(db.query(GraphRelationship), GraphRelationship).filter(
         GraphRelationship.attributes["brand_match_id"].as_string() == match.id
     ).all()
@@ -638,16 +1363,42 @@ def _raw_evidence(
     match: PermitBrandMatch,
 ) -> BrandMatchRawEvidence:
     source = raw.source
+    settings = source.settings or {}
+    configured_semantics = settings.get("freshness_semantics")
+    if configured_semantics in {
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+        "ingestion_observed_at",
+    }:
+        timestamp_semantics = str(configured_semantics)
+    elif settings.get("freshness_field") or raw.source_updated_at is not None:
+        timestamp_semantics = "unclassified_source_timestamp"
+    else:
+        timestamp_semantics = "ingestion_observed_at"
+    timestamp_label = {
+        "record_updated_at": "Publisher record update",
+        "dataset_refreshed_at": "Publisher dataset refresh",
+        "filing_event_at": "Filing event",
+        "ingestion_observed_at": "Source timestamp",
+        "unclassified_source_timestamp": "Unclassified publisher timestamp",
+    }.get(timestamp_semantics, "Publisher timestamp")
     return BrandMatchRawEvidence(
         raw_record_id=raw.id,
         external_record_id=raw.external_record_id,
         content_hash=raw.content_hash,
         received_at=raw.received_at,
+        last_observed_at=(
+            raw.observation.last_observed_at if raw.observation else raw.received_at
+        ),
+        observation_recorded=raw.observation is not None,
         source_updated_at=raw.source_updated_at,
         source_key=source.key,
         source_name=source.name,
         source_url=source.base_url,
         payload_excerpt=_payload_excerpt(raw.payload, match),
+        source_timestamp_semantics=timestamp_semantics,
+        source_timestamp_label=timestamp_label,
     )
 
 
@@ -932,6 +1683,8 @@ def _payload_excerpt(payload: dict, match: PermitBrandMatch) -> dict[str, object
     blocked_fragments = ("phone", "email", "fax", "violation")
     priority = (
         "dba", "project_name", "business", "tenant", "applicant",
+        "applicant_name", "applicant_business_name", "applicant_company_name",
+        "applicant_organization_name", "legalname", "entityname",
         "work_desc", "description", "use_desc", "cuisine_description",
         "status_desc", "status", "inspection_date", "inspection_type",
         "action", "record_date", "submitted_date", "issue_date",
@@ -1036,6 +1789,17 @@ def _normalize_text(value: str) -> str:
 
 def _contains(text: str, alias: str) -> bool:
     return bool(alias) and f" {alias} " in f" {text} "
+
+
+def _is_exact_applicant_alias(value: str, alias: str) -> bool:
+    """Accept an alias as the whole applicant value, allowing only legal suffixes."""
+    normalized = _normalize_text(value)
+    if normalized == alias:
+        return True
+    if not normalized.startswith(f"{alias} "):
+        return False
+    suffix = normalized[len(alias):].split()
+    return bool(suffix) and all(token in APPLICANT_LEGAL_SUFFIXES for token in suffix)
 
 
 def _excerpt(value: str, alias: str, radius: int = 180) -> str:

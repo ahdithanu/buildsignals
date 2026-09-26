@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -10,6 +11,7 @@ from app.models.ingestion import IngestionSource, SourceFieldMapping
 from app.schemas.ingestion import FieldMappingCreate, IngestionSourceCreate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
 from app.services.ingestion.catalog import (
+    catalog_source_for_candidate,
     load_candidate_catalog,
     load_catalog,
     summarize_coverage,
@@ -20,9 +22,96 @@ from app.services.ingestion.normalization import (
     missing_required_source_fields,
     normalize_parcel,
     normalize_permit,
+    normalize_planning_record,
     prepare_mapped_record,
 )
-from app.services.ingestion.service import execute_source_run
+from app.services.ingestion.service import _normalization_hash, execute_source_run
+
+
+def test_production_permit_sources_declare_freshness_contracts():
+    entries = [entry for entry in load_catalog() if entry.record_type == "permit"]
+
+    assert entries
+    assert all(entry.settings["freshness_sla_hours"] > 0 for entry in entries)
+    assert all(
+        entry.settings["collection_sla_hours"]
+        >= entry.settings["collection_interval_minutes"] / 60
+        for entry in entries
+    )
+    for entry in entries:
+        freshness_field = entry.settings.get("freshness_field")
+        if freshness_field:
+            assert entry.settings["freshness_semantics"] in {
+                "record_updated_at",
+                "dataset_refreshed_at",
+                "filing_event_at",
+            }
+    by_key = {entry.key: entry for entry in entries}
+    assert by_key["buffalo_ny_planning_zoning_approvals"].settings[
+        "freshness_semantics"
+    ] == "filing_event_at"
+
+
+def test_applicant_mappings_declare_conservative_value_semantics():
+    applicant_mappings = {
+        (entry.key, mapping.source_field): mapping.value_semantics
+        for entry in load_catalog()
+        for mapping in entry.field_mappings
+        if mapping.canonical_field == "applicant_name"
+    }
+
+    assert len(applicant_mappings) == 26
+    assert set(applicant_mappings.values()) <= {
+        "unknown", "business_dba", "legal_entity", "person"
+    }
+    assert applicant_mappings[
+        ("new_york_ny_legacy_job_applications", "applicant_s_last_name")
+    ] == "person"
+    assert applicant_mappings[
+        ("texas_comptroller_sales_tax_locations", "__applicant_name")
+    ] == "legal_entity"
+    assert applicant_mappings[
+        ("washington_dc_basic_business_licenses_retail_openings", "ENTITYNAME")
+    ] == "legal_entity"
+    assert applicant_mappings[
+        ("new_york_state_sla_pending_licenses", "legalname")
+    ] == "legal_entity"
+    assert applicant_mappings[
+        ("new_york_ny_dob_now_job_applications", "applicant_business_name")
+    ] == "unknown"
+    assert applicant_mappings[
+        ("san_marcos_tx_planning_application_notices", "__applicant_name")
+    ] == "unknown"
+    assert applicant_mappings[
+        ("columbus_oh_site_engineering_applications", "APPLICANT_BUS_NAME")
+    ] == "legal_entity"
+    assert applicant_mappings[
+        ("columbus_oh_commercial_building_permits", "APPLICANT_BUS_NAME")
+    ] == "legal_entity"
+
+
+def test_field_semantic_change_invalidates_normalization_hash():
+    mapping = SimpleNamespace(
+        source_field="applicant",
+        canonical_field="applicant_name",
+        value_semantics="unknown",
+        transform=None,
+        transform_options=None,
+        default_value=None,
+        is_required=False,
+        is_active=True,
+    )
+    source = SimpleNamespace(
+        record_type="permit",
+        jurisdiction="Austin, TX",
+        settings={},
+        field_mappings=[mapping],
+    )
+
+    before = _normalization_hash(source)
+    mapping.value_semantics = "legal_entity"
+
+    assert _normalization_hash(source) != before
 
 
 def test_catalog_loads_first_live_source_cohort():
@@ -145,7 +234,25 @@ def test_catalog_loads_first_live_source_cohort():
         "hartford_ct_building_permits_lifecycle",
         "new_york_state_sla_pending_licenses",
         "detroit_mi_bseed_building_permits",
-    }
+        "detroit_mi_bseed_building_plan_reviews",
+        "washington_state_lcb_local_authority_letters",
+            "everett_wa_planning_application_notices",
+            "bend_or_planning_applications",
+            "bend_or_permit_applications_point",
+            "bend_or_permit_applications_line",
+            "taylor_tx_development_notices",
+            "san_marcos_tx_planning_application_notices",
+            "savannah_ga_commercial_building_permits",
+            "columbus_oh_site_engineering_applications",
+            "columbus_oh_commercial_building_permits",
+            "tacoma_wa_commercial_permit_lifecycle",
+            "arlington_tx_commercial_permit_applications",
+            "arlington_tx_commercial_issued_permits",
+            "dallas_tx_legistar_planning_agendas",
+            "hawaii_statewide_tmk_parcels_narrow",
+            "alaska_dnr_statewide_parcels_narrow",
+            "idaho_its_statewide_parcels_narrow",
+        }
     for entry in entries:
         source_fields = [mapping.source_field for mapping in entry.field_mappings]
         assert len(source_fields) == len(set(source_fields))
@@ -155,6 +262,7 @@ def test_catalog_loads_first_live_source_cohort():
         )
         assert entry.settings["signal_stage"] in {
             "pre_approval_and_approved",
+            "pre_approval",
             "approved_only",
             "parcel_context",
         }
@@ -191,10 +299,6 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     entries = load_candidate_catalog()
 
     assert {entry.key for entry in entries} == {
-        "washington_state_lcb_local_authority_letters",
-        "bend_or_planning_applications",
-        "bend_or_permit_applications_point",
-        "bend_or_permit_applications_line",
         "orlando_fl_planning_applications",
         "atlanta_ga_building_permit_tracker",
         "phoenix_az_plan_review_and_permits",
@@ -202,40 +306,52 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
         "birmingham_al_digital_plan_room",
         "mobile_al_build_mobile_portal",
         "evansville_in_building_commission_permits",
+        "anchorage_ak_bsd_permit_lookup",
+        "juneau_ak_civic_access_permits",
+        "honolulu_hi_building_permits_2005_2025",
+        "boise_id_development_tracker",
+        "cedar_rapids_ia_building_permits",
+        "mississippi_mdeq_permit_activity",
+        "diberville_ms_council_planning_agendas",
+        "biloxi_ms_development_review_agendas",
+        "bozeman_mt_active_planning_projects",
+        "bernalillo_county_nm_accela_permits",
+        "tulsa_ok_development_plans",
+        "charleston_wv_energov_permits",
+        "cheyenne_wy_opengov_permits",
+        "madison_wi_legistar_plan_commission",
+        "arapahoe_county_co_legistar_planning",
+        "mesquite_tx_planning_zoning_agendas",
+        "rockwall_tx_planning_development_cases",
+        "grand_prairie_tx_planning_cases",
+        "maricopa_county_az_planning_zoning_agendas",
+        "jacksonville_fl_planning_commission_agendas",
+        "hillsborough_county_fl_legistar_land_use",
+        "port_st_lucie_fl_legistar_planning",
+        "ocala_fl_legistar_planning_zoning",
+        "san_jose_ca_planning_director_hearings",
+        "san_jose_ca_large_energy_projects",
+        "citrus_county_fl_accela_permits",
+        "highlands_county_fl_etrakit_permits",
+        "sebring_fl_building_permit_records",
+        "hernando_county_fl_energov_permits",
     }
     by_key = {entry.key: entry for entry in entries}
 
-    lcb = by_key["washington_state_lcb_local_authority_letters"]
-    assert lcb.status == "operational_retry"
-    assert lcb.record_type == "permit"
-    assert lcb.last_checked_on.isoformat() == "2026-07-18"
-    assert lcb.next_audit_on.isoformat() == "2026-07-25"
-    assert "HTTP 503" in lcb.blocker_summary
-    assert "trade_name" in lcb.candidate_source_fields
-    assert lcb.can_run_canary is True
-    assert lcb.probe_settings is not None
-    assert any(
-        mapping.canonical_field == "source_record_id" and mapping.is_required
-        for mapping in lcb.probe_field_mappings
+    assert "savannah_ga_commercial_building_permits" not in by_key
+    assert "detroit_mi_bseed_building_plan_reviews" not in by_key
+    assert "san_marcos_tx_planning_application_notices" not in by_key
+    assert "taylor_tx_development_notices" not in by_key
+    assert not {key for key in by_key if key.startswith("bend_or_")}
+
+    assert by_key["citrus_county_fl_accela_permits"].status == "technical_hold"
+    assert by_key["highlands_county_fl_etrakit_permits"].jurisdiction == (
+        "Highlands County, FL"
     )
-
-    bend_planning = by_key["bend_or_planning_applications"]
-    assert bend_planning.status == "operational_retry"
-    assert bend_planning.base_url.endswith("/Planning/FeatureServer/0")
-    assert bend_planning.can_run_canary is True
-    assert "ApplicationDescription" in bend_planning.candidate_source_fields
-
-    bend_permits = by_key["bend_or_permit_applications_point"]
-    assert bend_permits.status == "operational_retry"
-    assert bend_permits.base_url.endswith("/Permit_Applications_Point/FeatureServer/0")
-    assert bend_permits.can_run_canary is True
-    assert "IssueDate" in bend_permits.candidate_source_fields
-
-    bend_lines = by_key["bend_or_permit_applications_line"]
-    assert bend_lines.status == "operational_retry"
-    assert bend_lines.base_url.endswith("/Permit_Applications_Line/FeatureServer/0")
-    assert bend_lines.can_run_canary is True
-    assert "CENTERLINID" in bend_lines.candidate_source_fields
+    assert by_key["sebring_fl_building_permit_records"].adapter == "manual_export"
+    assert by_key["hernando_county_fl_energov_permits"].base_url.startswith(
+        "https://hernandocountyfl-energovweb.tylerhost.net/"
+    )
 
     orlando = by_key["orlando_fl_planning_applications"]
     assert orlando.status == "legal_hold"
@@ -280,6 +396,225 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert evansville.base_url.endswith("/BC/BUILDING_COMMISSION_PERMITS/MapServer/0/query")
     assert "application status" in evansville.blocker_summary
     assert evansville.can_run_canary is False
+
+    mississippi = by_key["mississippi_mdeq_permit_activity"]
+    assert mississippi.status == "legal_hold"
+    assert mississippi.record_type == "permit"
+    assert mississippi.base_url.endswith("/epd-activity-search.aspx")
+    assert "before final approval" in mississippi.early_warning_value
+    assert mississippi.last_checked_on.isoformat() == "2026-09-02"
+    assert mississippi.can_run_canary is False
+
+    diberville = by_key["diberville_ms_council_planning_agendas"]
+    assert diberville.status == "legal_hold"
+    assert diberville.record_type == "planning"
+    assert diberville.base_url.endswith("/council-committee-center/")
+    assert "business openings" in diberville.early_warning_value
+    assert "primary evidence" in diberville.notes
+    assert diberville.can_run_canary is False
+
+    nationwide_holds = {
+        "anchorage_ak_bsd_permit_lookup",
+        "honolulu_hi_building_permits_2005_2025",
+        "boise_id_development_tracker",
+        "cedar_rapids_ia_building_permits",
+        "mississippi_mdeq_permit_activity",
+        "diberville_ms_council_planning_agendas",
+        "biloxi_ms_development_review_agendas",
+        "bozeman_mt_active_planning_projects",
+        "bernalillo_county_nm_accela_permits",
+        "tulsa_ok_development_plans",
+        "charleston_wv_energov_permits",
+        "cheyenne_wy_opengov_permits",
+    }
+    assert all(by_key[key].can_run_canary is False for key in nationwide_holds)
+
+
+def test_san_francisco_building_permits_use_current_primary_address_feed():
+    source = next(
+        entry for entry in load_catalog()
+        if entry.key == "san_francisco_ca_building_permits_primary_address"
+    )
+
+    assert source.base_url == "https://data.sfgov.org/resource/i98e-djp9.json"
+    assert source.settings["connector"]["query"] == {
+        "$where": "primary_address_flag = 'Y'"
+    }
+    assert source.settings["canary_freshness_probe"]["connector"] == {
+        "keyset_fields": None,
+        "order_by": "data_loaded_at DESC, record_id DESC",
+    }
+
+
+def test_savannah_production_source_preserves_distinct_minimized_lifecycle_rows():
+    source = next(
+        entry
+        for entry in load_catalog()
+        if entry.key == "savannah_ga_commercial_building_permits"
+    )
+    base_record = {
+        "PIN": "20005 02003",
+        "PermitNumber": "26-03951-BC",
+        "PermitType": "Building Commercial Permit",
+        "WorkClass": "New",
+        "PermitStatus": "In Review",
+        "District": "Hitch Village/Fred Wessels Homes",
+        "IssuedDate": None,
+        "FinalizedDate": None,
+        "Address": "620 EAST BAY ST",
+        "Description": "FOUNDATION PERMIT - HOTEL WITH BASEMENT",
+        "Permit_Value": 450000,
+    }
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in source.field_mappings]
+
+    normalized = []
+    for object_id in (104549, 104550):
+        prepared, field_mapping = prepare_mapped_record(
+            {**base_record, "OBJECTID": object_id}, mappings
+        )
+        normalized.append(
+            normalize_permit(
+                prepared,
+                field_mapping,
+                defaults=source.settings["defaults"],
+            )
+        )
+
+    assert normalized[0].source_record_id == (
+        "26-03951-BC|620 EAST BAY ST|104549"
+    )
+    assert normalized[1].source_record_id == (
+        "26-03951-BC|620 EAST BAY ST|104550"
+    )
+    assert normalized[0].values["permit_number"] == "26-03951-BC"
+    assert normalized[0].values["approval_stage"] == "pre_approval"
+    assert normalized[0].values["parcel_id"] == "20005 02003"
+    assert source.settings["reconciliation_mode"] == "weekly_full_snapshot"
+    assert source.settings["connector"]["include_geometry"] is False
+    assert "ApplicantName" not in source.settings["field_allowlist"]
+    assert "ApplicantName" in source.settings["suppressed_fields"]
+
+
+def test_candidate_catalog_closes_the_fifty_state_research_gap():
+    coverage = summarize_coverage()
+
+    assert coverage.researched_state_count == 50
+    assert coverage.unresearched_state_count == 0
+    assert coverage.unresearched_states == []
+    assert coverage.covered_state_count == 43
+    assert coverage.missing_state_count == 7
+    assert coverage.candidate_only_state_count == 7
+    assert set(coverage.candidate_only_states) == {
+        "IA", "MS", "MT", "NM", "OK", "WV", "WY",
+    }
+    assert set(coverage.missing_states) == set(coverage.candidate_only_states)
+
+
+def test_candidate_catalog_can_include_promoted_history():
+    entries = load_candidate_catalog(include_promoted=True)
+    by_key = {entry.key: entry for entry in entries}
+
+    assert {
+        "bend_or_permit_applications_line",
+        "bend_or_permit_applications_point",
+        "bend_or_planning_applications",
+        "taylor_tx_development_notices",
+        "san_marcos_tx_planning_application_notices",
+        "savannah_ga_commercial_building_permits",
+    } <= set(by_key)
+    for key in (
+        "bend_or_permit_applications_line",
+        "bend_or_permit_applications_point",
+        "bend_or_planning_applications",
+        "taylor_tx_development_notices",
+        "san_marcos_tx_planning_application_notices",
+        "savannah_ga_commercial_building_permits",
+    ):
+        production = catalog_source_for_candidate(by_key[key])
+        assert production is not None
+        assert production.settings["candidate_key"] == key
+
+
+def test_catalog_candidate_match_rejects_missing_provenance_and_identity_drift():
+    candidate = load_candidate_catalog(include_promoted=True)[0]
+    assert catalog_source_for_candidate(candidate, []) is None
+    base = IngestionSourceCreate(
+        key=candidate.key,
+        name=candidate.name,
+        adapter=candidate.adapter,
+        record_type=candidate.record_type,
+        jurisdiction=candidate.jurisdiction,
+        base_url=candidate.base_url,
+        settings={},
+        field_mappings=[],
+    )
+
+    with pytest.raises(ValueError, match="missing candidate provenance"):
+        catalog_source_for_candidate(candidate, [base])
+
+    unapproved = base.model_copy(
+        update={"settings": {"candidate_key": candidate.key}}
+    )
+    with pytest.raises(ValueError, match="not approved for production"):
+        catalog_source_for_candidate(candidate, [unapproved])
+
+    drifted = base.model_copy(
+        update={
+            "adapter": "csv" if candidate.adapter != "csv" else "socrata",
+            "settings": {
+                "candidate_key": candidate.key,
+                "candidate_status": "approved_for_production",
+            },
+        }
+    )
+    with pytest.raises(ValueError, match="drifted from its candidate"):
+        catalog_source_for_candidate(candidate, [drifted])
+
+
+def test_summarize_coverage_ignores_database_only_sources():
+    database_only = SimpleNamespace(
+        key="runtime_only_unreviewed_source",
+        is_active=True,
+    )
+
+    coverage = summarize_coverage(live_sources=[database_only])
+
+    assert coverage.live_source_count == 0
+    assert coverage.candidate_count == len(
+        load_candidate_catalog(include_promoted=True)
+    )
+    assert coverage.covered_state_count == 0
+    assert coverage.missing_state_count == 50
+    assert coverage.researched_state_count == 50
+    assert coverage.unresearched_state_count == 0
+
+
+def test_summarize_coverage_requires_active_database_source():
+    candidate = next(
+        entry
+        for entry in load_candidate_catalog(include_promoted=True)
+        if entry.key.startswith("bend_or_")
+    )
+    catalog_source = catalog_source_for_candidate(candidate)
+    assert catalog_source is not None
+    inactive = SimpleNamespace(key=catalog_source.key, is_active=False)
+    active = SimpleNamespace(
+        key=catalog_source.key,
+        name=catalog_source.name,
+        jurisdiction=catalog_source.jurisdiction,
+        settings=catalog_source.settings,
+        is_active=True,
+    )
+
+    inactive_coverage = summarize_coverage(live_sources=[inactive])
+    active_coverage = summarize_coverage(live_sources=[active])
+
+    assert inactive_coverage.live_source_count == 0
+    assert inactive_coverage.candidate_count == len(
+        load_candidate_catalog(include_promoted=True)
+    )
+    assert active_coverage.live_source_count == 1
+    assert active_coverage.candidate_count == inactive_coverage.candidate_count - 1
 
 
 def test_summarize_coverage_groups_live_sources_by_signal_stage():
@@ -444,8 +779,12 @@ def test_opening_signal_sources_declare_stage_date_and_raw_export_limits(tmp_pat
         "settings": {
             "official_landing_page": "https://example.test/openings",
             "license": "Public Domain",
-            "reconciliation_mode": "daily_recent_snapshot",
-            "signal_stage": "approved_only",
+                "reconciliation_mode": "daily_recent_snapshot",
+                "collection_interval_minutes": 1440,
+                "collection_sla_hours": 24,
+                "retry_interval_minutes": 360,
+                "schedule_mode": "automatic",
+                "signal_stage": "approved_only",
             "retailer_opening_signal": True,
             "opening_signal_date_field": "first_sale_date",
             "export_policy": "derived_retailer_opening_context_only_no_raw_export",
@@ -464,10 +803,15 @@ def test_opening_signal_sources_declare_stage_date_and_raw_export_limits(tmp_pat
 
     assert load_catalog(path)[0].key == "opening_signal"
 
+    preapproval_payload = json.loads(json.dumps(valid_payload))
+    preapproval_payload[0]["settings"]["signal_stage"] = "pre_approval_and_approved"
+    path.write_text(json.dumps(preapproval_payload), encoding="utf-8")
+    assert load_catalog(path)[0].key == "opening_signal"
+
     invalid_payload = json.loads(json.dumps(valid_payload))
-    invalid_payload[0]["settings"]["signal_stage"] = "pre_approval_and_approved"
+    invalid_payload[0]["settings"]["signal_stage"] = "parcel_context"
     path.write_text(json.dumps(invalid_payload), encoding="utf-8")
-    with pytest.raises(ValueError, match="retailer_opening_signal sources must be approved_only"):
+    with pytest.raises(ValueError, match="approved_only or pre_approval_and_approved"):
         load_catalog(path)
 
     invalid_payload = json.loads(json.dumps(valid_payload))
@@ -494,8 +838,12 @@ def test_opening_signal_date_field_must_be_selected(tmp_path):
         "settings": {
             "official_landing_page": "https://example.test/openings",
             "license": "Public Domain",
-            "reconciliation_mode": "daily_recent_snapshot",
-            "signal_stage": "approved_only",
+                "reconciliation_mode": "daily_recent_snapshot",
+                "collection_interval_minutes": 1440,
+                "collection_sla_hours": 24,
+                "retry_interval_minutes": 360,
+                "schedule_mode": "automatic",
+                "signal_stage": "approved_only",
             "retailer_opening_signal": True,
             "opening_signal_date_field": "first_sale_date",
             "export_policy": "derived_retailer_opening_context_only_no_raw_export",
@@ -1507,6 +1855,7 @@ def test_delaware_dnrec_stormwater_noi_preserves_pre_approval_signal():
     assert entry.record_type == "permit"
     assert entry.settings["license"] == "Public Domain"
     assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["connector"]["query"]["$where"] == "datereceived IS NOT NULL"
     assert "planned construction activities" in entry.settings["rights_basis"]
     assert "owneroperator" in entry.settings["field_allowlist"]
     assert "owner_name" in canonical_fields
@@ -1743,7 +2092,8 @@ def test_fairfax_development_tracker_suppresses_internal_fields_and_maps_lifecyc
 
     assert entry.adapter == "arcgis"
     assert entry.record_type == "permit"
-    assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["signal_stage"] == "approved_only"
+    assert "PLUSApprovedSiteRecords" in entry.base_url
     assert entry.settings["connector"]["include_centroid"] is True
     assert entry.settings["export_policy"] == (
         "derived_fairfax_development_context_only_no_raw_plus_resale"
@@ -2563,7 +2913,7 @@ def test_washington_dc_basic_business_licenses_are_retail_opening_context():
     assert entry.settings["retailer_opening_signal"] is True
     assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
     assert "LICENSESTATUS = 'Active'" in entry.settings["connector"]["where"]
-    assert "PREMISEINDC = 'Y'" in entry.settings["connector"]["where"]
+    assert "PREMISEINDC = 'Yes'" in entry.settings["connector"]["where"]
     assert "Restaurant" in entry.settings["connector"]["where"]
     assert "BUSINESSOWNERFIRSTNAME" not in out_fields
     assert "AGENTENTITY" not in out_fields
@@ -2578,12 +2928,12 @@ def test_washington_dc_basic_business_licenses_are_retail_opening_context():
         "CUSTOMERNUMBER": "931326000183",
         "LICENSESTATUS": "Active",
         "LICENSETYPE": "Business License",
-        "LICENSESUBTYPE": "Public Health Food Establish",
+        "CATEGORYSERVICETYPE": "Food Services",
         "LICENSESTATUSDATE": 1782878400000,
         "LICENSESTARTDATE": 1782878400000,
         "LICENSEENDDATE": 1848628800000,
         "INITIALISSUEDATE": 1782878400000,
-        "PRIMARYACTIVITY": "Restaurant",
+        "PRIMARYACTIVITYFLAG": "Yes",
         "BUSINESSACTIVITY": "Caterers",
         "PREMISEADDRESS": "1501 K ST NW, WASHINGTON, DC, 20005",
         "PREMISEINDC": "Y",
@@ -2624,6 +2974,8 @@ def test_new_york_sla_pending_licenses_are_preopening_context():
     assert entry.adapter == "socrata"
     assert entry.record_type == "permit"
     assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["retailer_opening_signal"] is True
+    assert entry.settings["opening_signal_date_field"] == "received_date"
     assert "license unspecified" in entry.settings["license"]
     assert entry.settings["freshness_field"] == "received_date"
     assert entry.settings["connector"]["keyset_fields"] == ["application_id"]
@@ -5197,6 +5549,8 @@ def test_greenville_county_parcel_source_excludes_owner_value_sale_and_tax_field
     )
     assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
     assert entry.settings["connector"]["include_geometry"] is True
+    assert entry.base_url.startswith("https://citygis.greenvillesc.gov/")
+    assert entry.settings["connector"]["page_size"] == 25
     assert suppressed.isdisjoint(out_fields)
     assert "OWNAM1" not in entry.settings["connector"]["out_fields"]
     assert "FAIRMKTVAL" not in entry.settings["connector"]["out_fields"]
@@ -5485,6 +5839,292 @@ def test_catalog_sync_is_idempotent_and_preserves_source_ids(db):
     assert second.unchanged == len(entries)
     assert {source.key: source.id for source in db.query(IngestionSource).all()} == source_ids
     assert db.query(SourceFieldMapping).count() == mapping_count
+
+
+def test_catalog_sync_preserves_tenant_source_pause(db):
+    entry = load_catalog()[0]
+    sync_catalog(db, [entry])
+    db.commit()
+    source = db.query(IngestionSource).one()
+    source.is_active = False
+    db.commit()
+
+    result = sync_catalog(db, [entry])
+    db.commit()
+
+    assert result.unchanged == 1
+    assert db.query(IngestionSource).one().is_active is False
+
+
+def test_catalog_sync_can_reactivate_a_catalog_disabled_source(db):
+    active_entry = load_catalog()[0]
+    inactive_entry = active_entry.model_copy(update={"is_active": False})
+    sync_catalog(db, [inactive_entry])
+    db.commit()
+    assert db.query(IngestionSource).one().is_active is False
+
+    result = sync_catalog(db, [active_entry])
+    db.commit()
+
+    assert result.updated == 1
+    assert db.query(IngestionSource).one().is_active is True
+
+
+def test_promoted_washington_sources_bootstrap_from_production_catalog(db):
+    keys = {
+        "washington_state_lcb_local_authority_letters",
+        "everett_wa_planning_application_notices",
+    }
+    entries = [entry for entry in load_catalog() if entry.key in keys]
+
+    first = sync_catalog(db, entries)
+    db.commit()
+    sources = {
+        source.key: source
+        for source in db.query(IngestionSource).filter(IngestionSource.key.in_(keys)).all()
+    }
+
+    assert first.created == 2
+    assert set(sources) == keys
+    assert sources["washington_state_lcb_local_authority_letters"].settings["connector"]["page_size"] == 500
+    assert sources["washington_state_lcb_local_authority_letters"].settings[
+        "reconciliation_mode"
+    ] == "daily_rolling_window_incremental"
+    assert sources["everett_wa_planning_application_notices"].settings["connector"]["page_size"] == 100
+    assert {
+        mapping.canonical_field
+        for mapping in sources["washington_state_lcb_local_authority_letters"].field_mappings
+    } >= {"source_record_id", "permit_number", "project_name", "latitude", "longitude"}
+    assert "linked_document_body" in sources[
+        "everett_wa_planning_application_notices"
+    ].settings["suppressed_fields"]
+
+    second = sync_catalog(db, entries)
+    db.commit()
+    assert second.unchanged == 2
+
+
+def test_taylor_development_notices_promote_minimized_preapproval_evidence():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "taylor_tx_development_notices"
+    )
+    record = {
+        "guid": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079/639217198500000000",
+        "title": "Notice of Public Hearings - PZ 2026-2715 - Employment Center Plan - Project Mustang",
+        "link": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079",
+        "published_at": "Fri, 07 Aug 2026 16:17:30 -0600",
+        "description": "",
+    }
+    mappings = [
+        SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings
+    ]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == record["guid"]
+    assert normalized.values["application_number"] == "PZ 2026-2715"
+    assert normalized.values["project_name"] == record["title"]
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["source_url"] == record["link"]
+    assert entry.settings["candidate_status"] == "approved_for_production"
+    assert entry.settings["promotion_rights_approved"] is True
+    assert entry.settings["field_allowlist"] == [
+        "guid",
+        "title",
+        "link",
+        "published_at",
+        "description",
+    ]
+    assert {
+        "applicant_contact",
+        "planner_contact",
+        "linked_document_body",
+        "enclosure",
+        "raw_source_export",
+    } <= set(entry.settings["suppressed_fields"])
+
+
+@pytest.mark.parametrize(
+    ("task_status", "expected_stage"),
+    [
+        ("Routed for Electronic Review", "pre_approval"),
+        ("Plans Approved", "approved"),
+    ],
+)
+def test_detroit_plan_reviews_promote_minimized_lifecycle_evidence(
+    task_status, expected_stage
+):
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "detroit_mi_bseed_building_plan_reviews"
+    )
+    record = {
+        "ObjectId": 91382,
+        "record_id": "BLD2026-01024",
+        "address": "1200 WOODWARD AVE",
+        "submitted_date": 1786752000000,
+        "task": "Building Plan Review",
+        "task_status": task_status,
+        "task_status_date": 1786752000000,
+        "work_description": "INTERIOR TENANT BUILDOUT",
+        "parcel_id": "01000123.",
+        "longitude": -83.0458,
+        "latitude": 42.3314,
+    }
+    mappings = [
+        SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings
+    ]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == "BLD2026-01024"
+    assert normalized.values["approval_stage"] == expected_stage
+    assert normalized.values["parcel_id"] == "01000123."
+    assert entry.settings["candidate_status"] == "approved_for_production"
+    assert entry.settings["promotion_rights_approved"] is True
+    assert entry.settings["promotion_data_minimization_approved"] is True
+    assert entry.settings["connector"]["include_geometry"] is False
+    assert entry.settings["connector"]["out_fields"] == ",".join(
+        entry.settings["field_allowlist"]
+    )
+    assert {
+        "applicant_name",
+        "owner_name",
+        "contractor_name",
+        "architect_name",
+        "engineer_name",
+        "reviewer_name",
+        "task_id",
+        "plan_file",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export",
+    } <= set(entry.settings["suppressed_fields"])
+
+
+def test_san_marcos_notices_promote_contact_suppressed_preapproval_evidence():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "san_marcos_tx_planning_application_notices"
+    )
+    record = {
+        "article_id": "2617",
+        "title": "ZC-26-07 (Wonder World Medical CM to BP)",
+        "link": "https://www.sanmarcostx.gov/m/newsflash/Home/Detail/2617",
+        "published_at": "August 11, 2026",
+        "description": (
+            "A Zoning Change Application from Commercial to Business Park was "
+            "submitted by the Drenner Group on behalf of SM Hwy 123 Landholdings, LLC."
+        ),
+    }
+    mappings = [
+        SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings
+    ]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == "2617"
+    assert normalized.values["application_number"] == "ZC-26-07"
+    assert normalized.values["project_name"] == record["title"]
+    assert normalized.values["description"] == record["description"]
+    assert normalized.values["applicant_name"] == "Drenner Group"
+    assert normalized.values["owner_name"] == "SM Hwy 123 Landholdings, LLC"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["source_url"] == record["link"]
+    assert entry.adapter == "civicplus_newsflash"
+    assert entry.settings["candidate_status"] == "approved_for_production"
+    assert entry.settings["promotion_rights_approved"] is True
+    assert entry.settings["promotion_data_minimization_approved"] is True
+    assert entry.settings["field_allowlist"] == [
+        "article_id",
+        "title",
+        "link",
+        "published_at",
+        "description",
+    ]
+    assert entry.settings["connector"]["category_id"] == 30
+    assert entry.settings["connector"]["max_description_chars"] == 2000
+    mapping_by_canonical = {
+        mapping.canonical_field: mapping for mapping in entry.field_mappings
+    }
+    assert mapping_by_canonical["applicant_name"].value_semantics == "unknown"
+    assert mapping_by_canonical["owner_name"].value_semantics == "unknown"
+    assert {
+        "email_address",
+        "phone_number",
+        "linked_detail_body",
+        "linked_document_body",
+        "attachment",
+        "raw_source_export",
+    } <= set(entry.settings["suppressed_fields"])
+
+
+@pytest.mark.parametrize(
+    ("description", "applicant", "owner"),
+    [
+        (
+            "A Zoning Change Application has beensubmitted by the Drenner Group, "
+            "onbehalf of SM Hwy 123 Landholdings, LLC, for approximately 4.64 acres.",
+            "Drenner Group",
+            "SM Hwy 123 Landholdings, LLC",
+        ),
+        (
+            "A request was submitted by Shane Glosson, TWWG, LLC, on behalf of "
+            "Sinai Pentecostal Church for approximately 14.72 acres.",
+            "Shane Glosson, TWWG, LLC",
+            "Sinai Pentecostal Church",
+        ),
+        (
+            "A request has been submitted by Quiddity Engineering, LLC, on behalf "
+            "of HEB, LP, to modify standards within the district.",
+            "Quiddity Engineering, LLC",
+            "HEB, LP",
+        ),
+    ],
+)
+def test_san_marcos_party_extraction_stops_at_project_narrative(
+    description, applicant, owner
+):
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "san_marcos_tx_planning_application_notices"
+    )
+    mappings = [
+        SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings
+    ]
+    record = {
+        "article_id": "test-party",
+        "title": "ZC-26-99 Test",
+        "link": "https://www.sanmarcostx.gov/m/newsflash/Home/Detail/test-party",
+        "published_at": "August 14, 2026",
+        "description": description,
+    }
+
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared, field_mapping, defaults=entry.settings["defaults"]
+    )
+
+    assert normalized.values["applicant_name"] == applicant
+    assert normalized.values["owner_name"] == owner
 
 
 def test_catalog_sync_updates_mutable_fields_and_rejects_adapter_change(db):
@@ -5932,6 +6572,41 @@ def test_required_first_nonempty_treats_whitespace_as_missing():
         {"state_id": " ", "local_id": "\t"},
         mappings,
     ) == ["state_id|local_id"]
+
+
+def test_regex_extract_reads_case_identity_from_another_field():
+    mapping = FieldMappingCreate(
+        source_field="__application_number",
+        canonical_field="application_number",
+        transform="regex_extract",
+        transform_options={
+            "source_field": "link",
+            "pattern": r"(?i)(rev(?:ii|iii)\d{2}-\d+)",
+        },
+    )
+
+    prepared, field_mapping = prepare_mapped_record(
+        {"link": "https://example.test/Notice-of-Application-REVII26-014"},
+        [mapping],
+    )
+
+    mapped_key = next(
+        key for key, canonical in field_mapping.items()
+        if canonical == "application_number"
+    )
+    assert prepared[mapped_key] == "REVII26-014"
+
+
+def test_regex_extract_rejects_an_unknown_capture_group():
+    mapping = FieldMappingCreate(
+        source_field="case_number",
+        canonical_field="application_number",
+        transform="regex_extract",
+        transform_options={"pattern": r"(PZ-\d+)", "group": 2},
+    )
+
+    with pytest.raises(ValueError, match="group does not exist"):
+        prepare_mapped_record({"case_number": "PZ-123"}, [mapping])
 
 
 def test_object_path_transform_can_read_list_indexes():
@@ -8256,6 +8931,328 @@ def test_each_catalog_mapping_normalizes_representative_record():
             "SALEPRICE": "215000",
             "ASOFDATE": "2026-07-07",
         },
+        "bend_or_planning_applications": {
+            "OBJECTID": 1,
+            "ApplicationNumber": "PL-26-001",
+            "ApplicationDate": 1785542400000,
+            "ApplicationDescription": "Commercial site plan",
+            "ProjectTypeCode": "SP",
+            "ApplicationTypeCode": "SITE",
+            "AppStatusDesc": "Under Review",
+            "Address": "100 NW Test Ave",
+            "TAXLOT": "17120000100",
+            "DecisionDate": None,
+            "LASTUPDATE": 1785628800000,
+            "OverallStatus": "A",
+            "centroid": {"x": -121.3153, "y": 44.0582},
+        },
+        "bend_or_permit_applications_point": {
+            "OBJECTID": 2,
+            "ApplicationNumber": "BP-26-002",
+            "ApplicationDate": 1785542400000,
+            "IssueDate": None,
+            "DateFinaled": None,
+            "SQFT": 12000,
+            "Units": 1,
+            "ProjectValuation": 1500000,
+            "ApplicationType": "TI",
+            "ApplicationStatus": "RV",
+            "BldgUse": "COM",
+            "UseDesc": "Retail",
+            "Owner": "Example Owner LLC",
+            "Address": "200 NE Test St",
+            "TAXLOT": "17120000200",
+            "LASTUPDATE": 1785628800000,
+            "OverallStatus": "A",
+            "ApplicationDescription": "Retail tenant improvement",
+            "ProposedLandUse": "Retail",
+            "geometry": {"x": -121.3001, "y": 44.0601},
+        },
+        "bend_or_permit_applications_line": {
+            "OBJECTID": 3,
+            "ApplicationNumber": "PR-26-003",
+            "ApplicationDate": 1785542400000,
+            "IssueDate": 1785628800000,
+            "DateFinaled": None,
+            "SQFT": 5000,
+            "Units": 1,
+            "ProjectValuation": 600000,
+            "ApplicationType": "INF",
+            "ApplicationStatus": "PI",
+            "StatusDesc": "Permit Issued",
+            "BldgUse": "COM",
+            "UseDesc": "Commercial",
+            "Owner": "Example Corridor LLC",
+            "Address": "NW Test Corridor",
+            "TAXLOT": "17120000300",
+            "LASTUPDATE": 1785628800000,
+            "OverallStatus": "I",
+        },
+        "washington_state_lcb_local_authority_letters": {
+            "license": "432561",
+            "applicationdate": "2026-07-31T00:00:00.000",
+            "countyname": "King",
+            "cityname": "Seattle",
+            "l_a_type": "New Application",
+            "licenseename": "Example Retail LLC",
+            "tradename": "Example Market",
+            "streetaddress": "100 Pine St",
+            "city": "Seattle",
+            "state": "WA",
+            "zipcode": "98101",
+            "privdesc01": "Grocery Store - Beer/Wine",
+            "privdesc02": None,
+            "privdesc03": None,
+            "la_posted_date": "2026-08-01T00:00:00.000",
+            "systemdate": "2026-08-01T12:00:00.000",
+            "ubi": "600000001",
+            "location": {"latitude": "47.6101", "longitude": "-122.3344"},
+        },
+        "everett_wa_planning_application_notices": {
+            "guid": "https://www.everettwa.gov/DocumentCenter/View/54345/notice/1",
+            "title": "Notice of Application",
+            "link": "https://www.everettwa.gov/DocumentCenter/View/54345/Notice-of-Application-REVII26-014",
+            "published_at": "Fri, 31 Jul 2026 15:07:37 -0800",
+            "description": "Application for replacement of two commercial storage silos.",
+        },
+        "taylor_tx_development_notices": {
+            "guid": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079/639217198500000000",
+            "title": "Notice of Public Hearings - PZ 2026-2715 - Employment Center Plan - Project Mustang",
+            "link": "https://www.taylortx.gov/CivicAlerts.aspx?aid=2079",
+            "published_at": "Fri, 07 Aug 2026 16:17:30 -0600",
+            "description": "",
+        },
+        "san_marcos_tx_planning_application_notices": {
+            "article_id": "2617",
+            "title": "ZC-26-07 (Wonder World Medical CM to BP)",
+            "link": "https://www.sanmarcostx.gov/m/newsflash/Home/Detail/2617",
+            "published_at": "August 11, 2026",
+            "description": "Commercial to Business Park zoning application.",
+        },
+        "savannah_ga_commercial_building_permits": {
+            "OBJECTID": 104549,
+            "PIN": "20005 02003",
+            "PermitNumber": "26-03951-BC",
+            "PermitType": "Building Commercial Permit",
+            "WorkClass": "New",
+            "PermitStatus": "In Review",
+            "District": "Hitch Village/Fred Wessels Homes",
+            "IssuedDate": None,
+            "FinalizedDate": None,
+            "Address": "620 EAST BAY ST",
+            "Description": "FOUNDATION PERMIT - HOTEL WITH BASEMENT",
+            "Permit_Value": 450000,
+        },
+        "columbus_oh_site_engineering_applications": {
+            "OBJECTID": 7721,
+            "B1_ALT_ID": "26345-00571",
+            "B1_PER_GROUP": "Engineering",
+            "B1_PER_TYPE": "Site Compliance Plan",
+            "B1_PER_SUB_TYPE": "Final",
+            "B1_PER_CATEGORY": "New Application",
+            "B1_PARCEL_NBR": "010034024",
+            "SITE_ADDRESS": "1339 E 5TH AVE",
+            "B1_SITUS_ZIP": "43219",
+            "B1_SHORT_NOTES": "Columbus Climate Controls CO Project",
+            "APPLICANT_BUS_NAME": "MARKROB PROPERTIES LLC",
+            "FILED_YEAR": 2026,
+            "B1_FILE_DD": 1787112000000,
+            "B1_APPL_STATUS": "Under Review",
+            "LAST_STATUS_DT": 1787162736000,
+            "B1_WORK_DESC": "Additional retail showroom and associated parking.",
+            "ACA_URL": "https://ca.columbus.gov/permits/example",
+        },
+        "columbus_oh_commercial_building_permits": {
+            "OBJECTID": 479976,
+            "B1_ALT_ID": "ALTC2603559",
+            "B1_PER_GROUP": "Building",
+            "B1_PER_TYPE": "Commercial",
+            "B1_PER_SUB_TYPE": "Structural",
+            "B1_PER_CATEGORY": "Alteration",
+            "GENERAL_TYPE": "Commercial - Other",
+            "B1_PARCEL_NBR": "31844202025015",
+            "SITE_ADDRESS": "2140 IKEA WAY",
+            "B1_SITUS_ZIP": "43240",
+            "PERMIT_STATUS": "Final Inspection Approved",
+            "APPLICANT_BUS_NAME": "GRA+D Architects",
+            "SQFT": 1855,
+            "G3_VALUE_TTL": 777294,
+            "ISSUED_YEAR": 2026,
+            "ISSUED_DT": 1771977600000,
+            "LAST_STATUS_DT": 1786924800000,
+            "VALUE_DESC": "Additions and alterations - non-residential",
+            "ACA_URL": "https://ca.columbus.gov/permits/example",
+            "UNITS": 0,
+            "B1_APPL_STATUS": "Active",
+        },
+        "tacoma_wa_commercial_permit_lifecycle": {
+            "objectid": 110780,
+            "permit_number": "BLDCA26-0252",
+            "last_action": "Create",
+            "permit_group": "Permits",
+            "permit_type": "Building",
+            "permit_subtype": "Commercial",
+            "permit_category": "Alteration",
+            "current_status": "Pending Intake Screening",
+            "application_date": 1787184000000,
+            "issued_date": None,
+            "address_line_1": "601 S 8TH ST",
+            "description": "Commercial tenant improvement and interior demolition.",
+            "fees_paid": 0,
+            "latitude": 47.255,
+            "longitude": -122.445,
+            "parcel_number": "2008010010",
+            "zip": "98402",
+            "valuation": 800000,
+            "housing_units": 0,
+            "link": "https://aca-prod.accela.com/TACOMA/record/example",
+            "pull_date": 1787216441000,
+            "globalid_1": "a1aac0f4-6b5f-4421-b6f8-4269011e19b1",
+            "council_district_number": 2,
+        },
+        "arlington_tx_commercial_permit_applications": {
+            "ImportDate": 1787258880996,
+            "OBJECTID": 438,
+            "FOLDERYEAR": "26",
+            "FOLDERSEQUENCE": "069196",
+            "FOLDERTYPE": "SI",
+            "STATUSDESC": "Pending",
+            "InDate": 1787184000000,
+            "SUBDESC": "Business",
+            "WORKDESC": "New",
+            "FOLDERNAME": "200 E FRONT STREET Suite 150",
+            "ConstructionValuationDeclared": None,
+            "MainUse": "Restaurant",
+            "LandUseDescription": "Food Services",
+            "Structure": "Commercial",
+            "Census": "327",
+            "NameofBusiness": "Game Theory Restaurant & Bar",
+            "SignConstructionValue": 25000,
+            "FOLDERDESCRIPTION": "New illuminated wall sign.",
+            "PROPGISID1": "1234567",
+            "PlanningSector": "Central",
+            "ZoningUse": "Commercial",
+        },
+        "arlington_tx_commercial_issued_permits": {
+            "ImportDate": 1787278661000,
+            "OBJECTID": 245788,
+            "FOLDERYEAR": "26",
+            "FOLDERSEQUENCE": "069196",
+            "FOLDERTYPE": "SI",
+            "STATUSDESC": "Issued",
+            "ISSUEDATE": 1787234055000,
+            "FINALDATE": None,
+            "InDate": 1787184000000,
+            "SUBDESC": "Business",
+            "WORKDESC": "New",
+            "FOLDERNAME": "200 E FRONT STREET Suite 150",
+            "ConstructionValuationDeclared": None,
+            "MainUse": "Restaurant",
+            "LandUseDescription": "Food Services",
+            "Structure": "Commercial",
+            "Census": "327",
+            "NameofBusiness": "Game Theory Restaurant & Bar",
+            "SignConstructionValue": 25000,
+            "PROPGISID1": 1234567,
+            "PlanningSector": "Central",
+            "ZoningUse": "Commercial",
+        },
+        "detroit_mi_bseed_building_plan_reviews": {
+            "ObjectId": 91382,
+            "record_id": "BLD2026-01024",
+            "address": "1200 WOODWARD AVE",
+            "submitted_date": 1786752000000,
+            "task": "Building Plan Review",
+            "task_status": "Routed for Electronic Review",
+            "task_status_date": 1786752000000,
+            "work_description": "INTERIOR TENANT BUILDOUT",
+            "parcel_id": "01000123.",
+            "longitude": -83.0458,
+            "latitude": 42.3314,
+        },
+        "dallas_tx_legistar_planning_agendas": {
+            "source_record_id": "legistar:cityofdallas:4543:115220",
+            "event_type": "planning_hearing_agenda_item",
+            "stage": "hearing_scheduled",
+            "title": "Zoning case Z234-001",
+            "summary": "Public hearing for a commercial zoning application.",
+            "evidence_excerpt": "Public hearing for a commercial zoning application.",
+            "agenda_item_number": "5",
+            "reference_number": "Z234-001",
+            "meeting_name": "City Plan Commission",
+            "governing_body": "City Plan Commission",
+            "meeting_at": "2026-09-03T00:00:00",
+            "published_at": "2026-08-12T15:10:00Z",
+            "decision_at": None,
+            "modified_at": "2026-08-12T19:00:00Z",
+            "source_url": "https://cityofdallas.legistar.com/LegislationDetail.aspx?ID=1",
+        },
+        "hawaii_statewide_tmk_parcels_narrow": {
+            "objectid": 1001,
+            "tmk": "11001001",
+            "tmk_txt": "1-1-001:001",
+            "county": "HONOLULU",
+            "division": "1",
+            "island": "OAHU",
+            "zone": "1",
+            "section": "1",
+            "plat": "001",
+            "plat1": "001",
+            "parcel": "001",
+            "parcel1": "001",
+            "gisacres": 0.75,
+            "cty_tmk": "HONOLULU:1-1-001:001",
+            "qpub_link": "https://qpublic.schneidercorp.com/",
+            "geometry": {
+                "rings": [[
+                    [-157.858, 21.307],
+                    [-157.857, 21.307],
+                    [-157.857, 21.308],
+                    [-157.858, 21.308],
+                    [-157.858, 21.307],
+                ]]
+            },
+        },
+        "alaska_dnr_statewide_parcels_narrow": {
+            "OBJECTID": 2001,
+            "GlobalID": "{A0000000-0000-0000-0000-000000000001}",
+            "parcel_id": "AK-2001",
+            "feature_id": "AK-FEATURE-2001",
+            "local_gov": "Municipality of Anchorage",
+            "property_type": "Commercial",
+            "property_use": "Retail",
+            "datetime_processed": "2026-08-28T00:00:00Z",
+            "geometry": {
+                "rings": [[
+                    [-149.901, 61.217],
+                    [-149.900, 61.217],
+                    [-149.900, 61.218],
+                    [-149.901, 61.218],
+                    [-149.901, 61.217],
+                ]]
+            },
+        },
+        "idaho_its_statewide_parcels_narrow": {
+            "OBJECTID": 3001,
+            "FP_ID": "ID-FP-3001",
+            "PARCEL_ID": "R1234567890",
+            "STEWARD": "Ada County",
+            "County": "Ada",
+            "UPDATED": 1785542400000,
+            "WEBSITE": "https://adacounty.id.gov/assessor/",
+            "FIPS": "16001",
+            "ASR_ACRES": 1.25,
+            "ASR_CATS": "Commercial",
+            "geometry": {
+                "rings": [[
+                    [-116.203, 43.615],
+                    [-116.202, 43.615],
+                    [-116.202, 43.616],
+                    [-116.203, 43.616],
+                    [-116.203, 43.615],
+                ]]
+            },
+        },
     }
 
     for entry in load_catalog():
@@ -8272,6 +9269,9 @@ def test_each_catalog_mapping_normalizes_representative_record():
                 "sedgwick_county_ks_parcels_nearby_narrow",
                 "delaware_firstmap_statewide_parcels_narrow",
                 "virginia_vgin_statewide_parcels_narrow",
+                "hawaii_statewide_tmk_parcels_narrow",
+                "alaska_dnr_statewide_parcels_narrow",
+                "idaho_its_statewide_parcels_narrow",
             }
             if entry.key not in address_optional_parcel_sources and not str(
                 entry.settings.get("export_policy", "")
@@ -8285,6 +9285,15 @@ def test_each_catalog_mapping_normalizes_representative_record():
             assert normalized.values.get("parcel_group_id") or entry.key != (
                 "miami_dade_fl_property_appraiser_parcels"
             )
+            continue
+        if entry.record_type == "planning":
+            normalized = normalize_planning_record(
+                prepared, field_mapping, defaults=entry.settings.get("defaults")
+            )
+            assert normalized.source_record_id
+            assert normalized.values.get("title")
+            assert normalized.values.get("stage") == "hearing_scheduled"
+            assert normalized.values.get("source_url")
             continue
         normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings.get("defaults"))
         assert normalized.source_record_id
@@ -8344,7 +9353,7 @@ def test_boulder_catalog_uses_guid_identity_and_issue_date_boundary():
         "StatusCurrent": "In Review",
         "Description": "Commercial tenant finish for new retail store",
         "OriginalAddress": "1000 Pearl St",
-        "AppliedDate": 1784073600000,
+        "AppliedDate": "2026-07-15",
     }
     prepared, field_mapping = prepare_mapped_record(application, mappings)
     normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
@@ -8354,10 +9363,11 @@ def test_boulder_catalog_uses_guid_identity_and_issue_date_boundary():
     assert normalized.values["approval_stage"] == "pre_approval"
     assert normalized.values["filed_at"].isoformat() == "2026-07-15T00:00:00+00:00"
 
-    issued = {**application, "IssuedDate": 1784160000000, "StatusCurrent": "Issued"}
+    issued = {**application, "IssuedDate": "2026-07-16", "StatusCurrent": "Issued"}
     prepared, field_mapping = prepare_mapped_record(issued, mappings)
     normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
     assert normalized.values["approval_stage"] == "approved"
+    assert normalized.values["issued_at"].isoformat() == "2026-07-16T00:00:00+00:00"
 
 
 def test_somerville_catalog_filters_building_applications_and_preserves_review_stage():
@@ -8518,7 +9528,7 @@ def test_portland_catalog_scopes_development_records_and_quarantines_bad_dates()
 
     assert entry.settings["connector"] == {
         "page_size": 4000,
-        "where": "TYPE IN ('CO','RS','SD','LU','DR','PC')",
+        "where": "FOLDERTYPE IN ('CO','RS','SD','LU','DR','PC')",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
     }
@@ -8865,3 +9875,919 @@ def test_service_rejects_unbounded_page_counts(db):
         execute_source_run(db, source, max_pages=0)
     with pytest.raises(ValueError, match="between 1 and 100"):
         execute_source_run(db, source, max_pages=101)
+
+
+def test_columbus_site_engineering_preserves_pre_approval_project_context():
+    entry = next(
+        entry for entry in load_catalog()
+        if entry.key == "columbus_oh_site_engineering_applications"
+    )
+    out_fields = {
+        field.strip()
+        for field in entry.settings["connector"]["out_fields"].split(",")
+    }
+    suppressed = set(entry.settings["suppressed_fields"])
+
+    assert entry.adapter == "arcgis"
+    assert entry.settings["license"] == "Creative Commons CC0 1.0 Universal"
+    assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert "Site Compliance Plan" in entry.settings["connector"]["where"]
+    assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
+    assert "APPLICANT_FULL_NAME" not in out_fields
+    assert suppressed.isdisjoint(out_fields)
+
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings]
+    application = {
+        "OBJECTID": 7721,
+        "B1_ALT_ID": "26345-00571",
+        "B1_PER_GROUP": "Engineering",
+        "B1_PER_TYPE": "Site Compliance Plan",
+        "B1_PER_SUB_TYPE": "Final",
+        "B1_PER_CATEGORY": "New Application",
+        "B1_PARCEL_NBR": "010034024",
+        "SITE_ADDRESS": "1339 E 5TH AVE",
+        "B1_SITUS_ZIP": "43219",
+        "B1_SHORT_NOTES": "Columbus Climate Controls CO Project",
+        "APPLICANT_BUS_NAME": "MARKROB PROPERTIES LLC",
+        "FILED_YEAR": 2026,
+        "B1_FILE_DD": 1787112000000,
+        "B1_APPL_STATUS": "Under Review",
+        "LAST_STATUS_DT": 1787162736000,
+        "B1_WORK_DESC": "Additional retail showroom and associated parking.",
+        "ACA_URL": "https://ca.columbus.gov/permits/example",
+    }
+    prepared, field_mapping = prepare_mapped_record(application, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == "26345-00571"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["project_name"] == "Columbus Climate Controls CO Project"
+    assert normalized.values["parcel_id"] == "010034024"
+    assert normalized.values["applicant_name"] == "MARKROB PROPERTIES LLC"
+    assert normalized.values["filed_at"].year == 2026
+
+    completed = {**application, "B1_APPL_STATUS": "Completed"}
+    prepared, field_mapping = prepare_mapped_record(completed, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+    assert normalized.values["approval_stage"] == "approved"
+
+
+def test_columbus_commercial_permits_are_approved_confirmation():
+    entry = next(
+        entry for entry in load_catalog()
+        if entry.key == "columbus_oh_commercial_building_permits"
+    )
+    out_fields = {
+        field.strip()
+        for field in entry.settings["connector"]["out_fields"].split(",")
+    }
+
+    assert entry.settings["signal_stage"] == "approved_only"
+    assert "B1_PER_TYPE = 'Commercial'" in entry.settings["connector"]["where"]
+    assert "APPLICANT_FULL_NAME" not in out_fields
+
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings]
+    permit = {
+        "OBJECTID": 479976,
+        "B1_ALT_ID": "ALTC2603559",
+        "B1_PER_GROUP": "Building",
+        "B1_PER_TYPE": "Commercial",
+        "B1_PER_SUB_TYPE": "Structural",
+        "B1_PER_CATEGORY": "Alteration",
+        "GENERAL_TYPE": "Commercial - Other",
+        "B1_PARCEL_NBR": "31844202025015",
+        "SITE_ADDRESS": "2140 IKEA WAY",
+        "B1_SITUS_ZIP": "43240",
+        "PERMIT_STATUS": "Final Inspection Approved",
+        "APPLICANT_BUS_NAME": "GRA+D Architects",
+        "SQFT": 1855,
+        "G3_VALUE_TTL": 777294,
+        "ISSUED_YEAR": 2026,
+        "ISSUED_DT": 1771977600000,
+        "LAST_STATUS_DT": 1786924800000,
+        "VALUE_DESC": "Additions and alterations - non-residential",
+        "ACA_URL": "https://ca.columbus.gov/permits/example",
+        "UNITS": 0,
+        "B1_APPL_STATUS": "Active",
+    }
+    prepared, field_mapping = prepare_mapped_record(permit, mappings)
+    normalized = normalize_permit(
+        prepared,
+        field_mapping,
+        defaults=entry.settings["defaults"],
+    )
+
+    assert normalized.source_record_id == "ALTC2603559"
+    assert normalized.values["approval_stage"] == "approved"
+    assert normalized.values["permit_number"] == "ALTC2603559"
+    assert normalized.values["valuation"] == Decimal("777294")
+    assert normalized.values["square_feet"] == 1855
+
+
+def test_tacoma_commercial_permits_preserve_pre_approval_context():
+    entry = next(
+        entry for entry in load_catalog()
+        if entry.key == "tacoma_wa_commercial_permit_lifecycle"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+    assert entry.settings["signal_stage"] == "pre_approval_and_approved"
+    assert entry.settings["connector"]["keyset_field"] == "objectid"
+    assert "applicant_name" not in out_fields
+
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in entry.field_mappings]
+    permit = {
+        "objectid": 110780,
+        "permit_number": "BLDCA26-0252",
+        "last_action": "Create",
+        "permit_group": "Permits",
+        "permit_type": "Building",
+        "permit_subtype": "Commercial",
+        "permit_category": "Alteration",
+        "current_status": "Pending Intake Screening",
+        "application_date": 1787184000000,
+        "issued_date": None,
+        "address_line_1": "601 S 8TH ST",
+        "description": "Commercial tenant improvement.",
+        "fees_paid": 0,
+        "latitude": 47.255,
+        "longitude": -122.445,
+        "parcel_number": "2008010010",
+        "zip": "98402",
+        "valuation": 800000,
+        "housing_units": 0,
+        "link": "https://aca-prod.accela.com/TACOMA/record/example",
+        "pull_date": 1787216441000,
+        "globalid_1": "a1aac0f4-6b5f-4421-b6f8-4269011e19b1",
+        "council_district_number": 2,
+    }
+    prepared, field_mapping = prepare_mapped_record(permit, mappings)
+    normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
+    assert normalized.source_record_id == "BLDCA26-0252"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["parcel_id"] == "2008010010"
+
+    prepared, field_mapping = prepare_mapped_record(
+        {**permit, "current_status": "Permit Issued"}, mappings
+    )
+    normalized = normalize_permit(prepared, field_mapping, defaults=entry.settings["defaults"])
+    assert normalized.values["approval_stage"] == "approved"
+
+
+def test_arlington_lifecycle_pair_preserves_retail_signal_and_identity():
+    entries = {
+        entry.key: entry
+        for entry in load_catalog()
+        if entry.key.startswith("arlington_tx_commercial_")
+    }
+    application = entries["arlington_tx_commercial_permit_applications"]
+    issued = entries["arlington_tx_commercial_issued_permits"]
+    assert application.settings["license"] == "Creative Commons Attribution 4.0 International"
+    assert application.settings["signal_stage"] == "pre_approval_and_approved"
+    assert issued.settings["signal_stage"] == "approved_only"
+    assert "applicant_name" not in application.settings["connector"]["out_fields"]
+
+    record = {
+        "ImportDate": 1787258880996,
+        "OBJECTID": 438,
+        "FOLDERYEAR": "26",
+        "FOLDERSEQUENCE": "069196",
+        "FOLDERTYPE": "SI",
+        "STATUSDESC": "Pending",
+        "InDate": 1787184000000,
+        "SUBDESC": "Business",
+        "WORKDESC": "New",
+        "FOLDERNAME": "200 E FRONT STREET Suite 150",
+        "ConstructionValuationDeclared": None,
+        "MainUse": "Restaurant",
+        "LandUseDescription": "Food Services",
+        "Structure": "Commercial",
+        "Census": "327",
+        "NameofBusiness": "Game Theory Restaurant & Bar",
+        "SignConstructionValue": 25000,
+        "FOLDERDESCRIPTION": "New illuminated wall sign.",
+        "PROPGISID1": "1234567",
+        "PlanningSector": "Central",
+        "ZoningUse": "Commercial",
+    }
+    mappings = [SimpleNamespace(**mapping.model_dump()) for mapping in application.field_mappings]
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(
+        prepared, field_mapping, defaults=application.settings["defaults"]
+    )
+    assert normalized.source_record_id == "26-069196-SI"
+    assert normalized.values["approval_stage"] == "pre_approval"
+    assert normalized.values["project_name"] == "Game Theory Restaurant & Bar"
+    assert normalized.values["valuation"] == Decimal("25000")
+
+    prepared, field_mapping = prepare_mapped_record(
+        {**record, "STATUSDESC": "Approved for Issue"}, mappings
+    )
+    normalized = normalize_permit(
+        prepared, field_mapping, defaults=application.settings["defaults"]
+    )
+    assert normalized.values["approval_stage"] == "approved"
+
+
+def test_san_jose_planning_companion_sources_are_registered_for_document_ingestion():
+    candidates = {
+        entry.key: entry
+        for entry in load_candidate_catalog()
+        if entry.jurisdiction == "San Jose, CA"
+    }
+
+    hearings = candidates["san_jose_ca_planning_director_hearings"]
+    assert hearings.record_type == "planning"
+    assert hearings.adapter == "planning_documents"
+    assert hearings.status == "technical_hold"
+    assert hearings.can_run_canary is False
+    assert "file_numbers" in hearings.candidate_source_fields
+    assert "staff_recommendation" in hearings.candidate_source_fields
+
+    settings = hearings.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["document_allowed_hosts"] == ["www.sanjoseca.gov"]
+    assert connector["max_index_pages"] == 1
+    assert connector["max_documents"] == 24
+    assert connector["max_document_bytes"] == 10 * 1024 * 1024
+    assert connector["max_items_per_document"] == 100
+    assert connector["max_item_characters"] == 50_000
+    assert connector["max_records"] == 250
+    assert connector["meeting_name"] == "Planning Director Hearing"
+    assert connector["stages"] == {
+        "agenda": "hearing_scheduled",
+        "minutes": "decision_recorded",
+    }
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_semantics"] == "ingestion_observed_at"
+    assert settings["freshness_sla_hours"] == 168
+    assert settings["defaults"] == {
+        "jurisdiction": "San Jose, CA",
+        "city": "San Jose",
+        "state": "CA",
+        "confidence": 0.95,
+    }
+
+    item_pattern = re.compile(connector["item_pattern"], re.IGNORECASE | re.MULTILINE)
+    file_pattern = re.compile(connector["file_pattern"], re.IGNORECASE | re.MULTILINE)
+    heading = "4.A SP26-005 & ER26-024"
+    assert item_pattern.search(heading).group("item_number") == "4.A"
+    assert [match.group("file_number") for match in file_pattern.finditer(heading)] == [
+        "SP26-005",
+        "ER26-024",
+    ]
+
+    values = connector["value_patterns"]
+    assert set(values) == {
+        "project_description",
+        "address",
+        "owner_name",
+        "environmental_review",
+        "staff_recommendation",
+    }
+    sample = """4.A SP26-005 & ER26-024
+PROJECT DESCRIPTION: Special Use Permit for a retaining wall.
+PROJECT LOCATION: 6763 Crystal Springs Drive
+PROPERTY OWNER: Example Property Owner LLC
+ENVIRONMENTAL REVIEW: Exempt under CEQA Guidelines Section 15303.
+STAFF RECOMMENDATION: Consider the exemption and approve the permit.
+ADJOURNMENT
+"""
+    extracted = {
+        field: re.search(pattern, sample, re.IGNORECASE | re.MULTILINE).group("value").strip()
+        for field, pattern in values.items()
+    }
+    assert extracted["project_description"].startswith("Special Use Permit")
+    assert extracted["address"] == "6763 Crystal Springs Drive"
+    assert extracted["owner_name"] == "Example Property Owner LLC"
+    assert extracted["environmental_review"].startswith("Exempt under CEQA")
+    assert extracted["staff_recommendation"].startswith("Consider the exemption")
+
+    mappings = {
+        mapping.source_field: mapping.canonical_field for mapping in hearings.probe_field_mappings
+    }
+    assert mappings["source_record_id"] == "source_record_id"
+    assert mappings["stage"] == "stage"
+    assert mappings["address"] == "address"
+    assert mappings["owner_name"] == "owner_name"
+    assert mappings["meeting_at"] == "meeting_at"
+    assert mappings["source_url"] == "source_url"
+    assert "project_description" not in mappings
+    assert "environmental_review" not in mappings
+    assert "staff_recommendation" not in mappings
+    assert "HTTP 403" in hearings.blocker_summary
+    assert "2026-08-22" in hearings.blocker_summary
+    assert "browser automation" in hearings.blocker_summary
+
+    energy = candidates["san_jose_ca_large_energy_projects"]
+    assert energy.record_type == "planning"
+    assert energy.adapter == "html_table"
+    assert energy.status == "technical_hold"
+    assert "file_number" in energy.candidate_source_fields
+    assert "environmental_review_status" in energy.candidate_source_fields
+
+
+def test_dallas_legistar_planning_candidate_is_bounded_and_rights_gated():
+    candidates = {
+        entry.key: entry for entry in load_candidate_catalog(include_promoted=True)
+    }
+
+    dallas = candidates["dallas_tx_legistar_planning_agendas"]
+    assert dallas.record_type == "planning"
+    assert dallas.adapter == "legistar"
+    assert dallas.status == "operational_retry"
+    assert dallas.can_run_canary is True
+
+    settings = dallas.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/cityofdallas"
+    assert "City Plan Commission" in connector["body_names"]
+    assert connector["event_page_size"] == 20
+    assert connector["max_events"] == 40
+    assert connector["max_items_per_event"] == 150
+    assert connector["max_records"] == 250
+    assert connector["lookback_days"] == 45
+    assert connector["future_days"] == 120
+    assert connector["max_evidence_characters"] == 10_000
+    assert settings["signal_stage"] == "pre_approval"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["freshness_sla_hours"] == 336
+    assert "canary_stage_probes" not in settings
+
+    mappings = {
+        mapping.source_field: mapping.canonical_field
+        for mapping in dallas.probe_field_mappings
+    }
+    assert mappings["source_record_id"] == "source_record_id"
+    assert mappings["reference_number"] == "reference_number"
+    assert mappings["governing_body"] == "governing_body"
+    assert "decision_at" not in mappings
+    assert mappings["source_url"] == "source_url"
+    assert "Rights and data-minimization scope were approved" in dallas.blocker_summary
+    assert "pre-approval only" in dallas.notes
+    assert {mapping.canonical_field for mapping in dallas.probe_field_mappings} <= {
+        "source_record_id",
+        "reference_number",
+        "event_type",
+        "stage",
+        "title",
+        "summary",
+        "evidence_excerpt",
+        "agenda_item_number",
+        "meeting_name",
+        "governing_body",
+        "project_name",
+        "address",
+        "city",
+        "state",
+        "postal_code",
+        "parcel_id",
+        "jurisdiction",
+        "applicant_name",
+        "owner_name",
+        "developer_name",
+        "latitude",
+        "longitude",
+        "meeting_at",
+        "published_at",
+        "decision_at",
+        "source_url",
+        "confidence",
+    }
+
+    assert "atlanta_ga_legistar_planning_agendas" not in candidates
+
+    production = {
+        entry.key: entry for entry in load_catalog()
+    }["dallas_tx_legistar_planning_agendas"]
+    assert production.record_type == "planning"
+    assert production.is_active is True
+    assert production.settings["signal_stage"] == "pre_approval"
+    assert production.settings["promotion_rights_approved"] is True
+    assert production.settings["export_policy"] == (
+        "derived_planning_intelligence_only_no_raw_source_or_document_export"
+    )
+
+
+def test_madison_legistar_candidate_preserves_full_planning_lifecycle():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    madison = candidates["madison_wi_legistar_plan_commission"]
+    assert madison.record_type == "planning"
+    assert madison.adapter == "legistar"
+    assert madison.status == "legal_hold"
+    assert madison.can_run_canary is False
+    assert "3 hearing_scheduled and 64 decision_recorded" in madison.notes
+
+    settings = madison.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/madison"
+    assert connector["body_names"] == ["PLAN COMMISSION"]
+    assert connector["max_events"] == 20
+    assert connector["max_items_per_event"] == 200
+    assert connector["max_records"] == 250
+    assert connector["lookback_days"] == 90
+    assert connector["future_days"] == 120
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["freshness_sla_hours"] == 168
+
+    mappings = {
+        mapping.source_field: mapping.canonical_field
+        for mapping in madison.probe_field_mappings
+    }
+    assert mappings["source_record_id"] == "source_record_id"
+    assert mappings["reference_number"] == "reference_number"
+    assert mappings["stage"] == "stage"
+    assert mappings["decision_at"] == "decision_at"
+    assert mappings["source_url"] == "source_url"
+    assert "bounded commercial storage" in madison.blocker_summary
+
+
+def test_arapahoe_legistar_candidate_is_current_bounded_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    arapahoe = candidates["arapahoe_county_co_legistar_planning"]
+    assert arapahoe.record_type == "planning"
+    assert arapahoe.adapter == "legistar"
+    assert arapahoe.status == "legal_hold"
+    assert arapahoe.can_run_canary is False
+    assert "8 hearing_scheduled and 17 decision_recorded" in arapahoe.notes
+    assert "no record lacked a file or matter identity" in arapahoe.notes
+
+    settings = arapahoe.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/arapahoe"
+    assert connector["body_names"] == [
+        "Planning Commission",
+        "Board of Adjustment",
+        "East Arapahoe County Advisory Planning Commission",
+    ]
+    assert connector["event_page_size"] == 10
+    assert connector["max_events"] == 20
+    assert connector["max_items_per_event"] == 200
+    assert connector["max_records"] == 250
+    assert connector["lookback_days"] == 120
+    assert connector["future_days"] == 120
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["freshness_sla_hours"] == 168
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "legistar_matter_id",
+            "namespace": "legistar:arapahoe:legislation",
+            "transform": "scalar",
+        }
+    ]
+    assert "explicit approval" in arapahoe.blocker_summary
+
+
+def test_maricopa_planning_agenda_candidate_is_bounded_and_commercially_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    maricopa = candidates["maricopa_county_az_planning_zoning_agendas"]
+    assert maricopa.record_type == "planning"
+    assert maricopa.adapter == "planning_documents"
+    assert maricopa.status == "legal_hold"
+    assert maricopa.can_run_canary is False
+    assert "18 project-level hearing records" in maricopa.notes
+    assert "zero missing case identities" in maricopa.notes
+
+    settings = maricopa.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == (
+        "https://www.maricopa.gov/AgendaCenter/Planning-Zoning-Commission-9"
+    )
+    assert connector["document_allowed_hosts"] == ["www.maricopa.gov"]
+    assert connector["max_index_pages"] == 1
+    assert connector["max_documents"] == 12
+    assert connector["max_document_bytes"] == 1024 * 1024
+    assert connector["max_items_per_document"] == 50
+    assert connector["max_item_characters"] == 10_000
+    assert connector["max_records"] == 250
+    assert connector["stages"] == {"agenda": "hearing_scheduled"}
+    assert settings["signal_stage"] == "pre_approval"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "reference_number",
+            "namespace": "maricopa:planning_case",
+            "transform": "scalar",
+        }
+    ]
+
+    item_pattern = re.compile(connector["item_pattern"], re.IGNORECASE | re.MULTILINE)
+    file_pattern = re.compile(connector["file_pattern"], re.IGNORECASE | re.MULTILINE)
+    sample = "4.\nCPA260007 and Z260018 Staff Report"
+    assert item_pattern.search(sample).group("item_number") == "4."
+    assert [match.group("file_number") for match in file_pattern.finditer(sample)] == [
+        "CPA260007",
+        "Z260018",
+    ]
+    assert "commercial-purpose" in maricopa.blocker_summary
+
+
+def test_jacksonville_planning_candidate_is_bounded_suppressed_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    jacksonville = candidates["jacksonville_fl_planning_commission_agendas"]
+    assert jacksonville.record_type == "planning"
+    assert jacksonville.adapter == "planning_documents"
+    assert jacksonville.status == "legal_hold"
+    assert jacksonville.can_run_canary is False
+    assert "19 hearing_scheduled and 19 decision_recorded" in jacksonville.notes
+    assert "zero retained owner or agent lines" in jacksonville.notes
+
+    settings = jacksonville.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["document_allowed_hosts"] == ["www.jacksonville.gov"]
+    assert connector["document_type_patterns"] == {
+        "minutes": "Results Agenda",
+        "agenda": "Meeting Agenda",
+    }
+    assert connector["suppression_patterns"] == ["^Owner[(]s[)]:.*$"]
+    assert connector["max_index_pages"] == 1
+    assert connector["max_documents"] == 2
+    assert connector["max_document_bytes"] == 1024 * 1024
+    assert connector["max_items_per_document"] == 100
+    assert connector["max_item_characters"] == 20_000
+    assert connector["max_records"] == 200
+    assert connector["stages"] == {
+        "agenda": "hearing_scheduled",
+        "minutes": "decision_recorded",
+    }
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "reference_number",
+            "namespace": "jacksonville:planning_case",
+            "transform": "scalar",
+        }
+    ]
+
+    item_pattern = re.compile(connector["item_pattern"], re.IGNORECASE | re.MULTILINE)
+    file_pattern = re.compile(connector["file_pattern"], re.IGNORECASE | re.MULTILINE)
+    sample = "Ex-Parte 2. 2026-0554 (Companion 2026-0553)\nCouncil District-2"
+    assert item_pattern.search(sample).group("item_number") == "2"
+    assert [match.group("file_number") for match in file_pattern.finditer(sample)] == [
+        "2026-0554",
+        "2026-0553",
+    ]
+    assert "explicit approval" in jacksonville.blocker_summary
+
+
+def test_hillsborough_legistar_candidate_is_current_bounded_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    hillsborough = candidates["hillsborough_county_fl_legistar_land_use"]
+    assert hillsborough.record_type == "planning"
+    assert hillsborough.adapter == "legistar"
+    assert hillsborough.status == "legal_hold"
+    assert hillsborough.can_run_canary is False
+    assert "330 decision-backed planning records" in hillsborough.notes
+    assert "zero email or phone contacts" in hillsborough.notes
+    assert "McDonald's" in hillsborough.notes
+
+    settings = hillsborough.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/hillsboroughcounty"
+    assert connector["body_names"] == [
+        "BOCC Land Use",
+        "Zoning Hearing Master",
+        "Land Use Hearing Officer",
+    ]
+    assert connector["record_stages"] == ["decision_recorded"]
+    assert len(connector["suppression_patterns"]) == 2
+    assert connector["event_page_size"] == 10
+    assert connector["max_events"] == 30
+    assert connector["max_items_per_event"] == 250
+    assert connector["max_records"] == 500
+    assert connector["lookback_days"] == 120
+    assert connector["future_days"] == 120
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "legistar_matter_id",
+            "namespace": "legistar:hillsboroughcounty:legislation",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "reference_number",
+            "namespace": "hillsborough:land_use_case",
+            "transform": "scalar",
+        },
+    ]
+    assert "public applicant/entity retention" in hillsborough.blocker_summary
+
+
+def test_mesquite_planning_candidate_is_current_bounded_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    mesquite = candidates["mesquite_tx_planning_zoning_agendas"]
+    assert mesquite.record_type == "planning"
+    assert mesquite.adapter == "planning_documents"
+    assert mesquite.status == "legal_hold"
+    assert mesquite.can_run_canary is False
+    assert "21 pre-approval zoning-hearing records" in mesquite.notes
+    assert "zero missing case identities" in mesquite.notes
+    assert "Chick-fil-A" in mesquite.notes
+    assert "BJ's Wholesale" in mesquite.notes
+
+    settings = mesquite.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"].endswith("/Planning-Zoning-Commission-18/")
+    assert connector["document_allowed_hosts"] == ["www.cityofmesquite.com"]
+    assert connector["max_index_pages"] == 1
+    assert connector["max_documents"] == 12
+    assert connector["max_document_bytes"] == 1024 * 1024
+    assert connector["max_items_per_document"] == 50
+    assert connector["max_records"] == 250
+    assert len(connector["suppression_patterns"]) == 2
+    assert connector["stages"] == {"agenda": "hearing_scheduled"}
+    assert settings["signal_stage"] == "pre_approval"
+    assert settings["freshness_sla_hours"] == 504
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "reference_number",
+            "namespace": "mesquite:planning_case",
+            "transform": "scalar",
+        }
+    ]
+
+    item_pattern = re.compile(connector["item_pattern"], re.IGNORECASE | re.MULTILINE)
+    file_pattern = re.compile(connector["file_pattern"], re.IGNORECASE | re.MULTILINE)
+    sample = "4. ZONING APPLICATION NO. Z0626-0458"
+    assert item_pattern.search(sample).group("item_number") == "4"
+    assert file_pattern.search(sample).group("file_number") == "Z0626-0458"
+    assert "explicit City approval" in mesquite.blocker_summary
+
+
+def test_rockwall_planning_candidate_has_exact_cases_derived_points_and_rights_gate():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    rockwall = candidates["rockwall_tx_planning_development_cases"]
+    assert rockwall.record_type == "planning"
+    assert rockwall.adapter == "arcgis"
+    assert rockwall.status == "legal_hold"
+    assert rockwall.can_run_canary is False
+    assert "120 current-year" in rockwall.notes
+    assert "119 had valid derived WGS84 centroids" in rockwall.notes
+    assert "Culver's" in rockwall.notes
+    assert "Raising Cane's" in rockwall.notes
+
+    settings = rockwall.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["keyset_field"] == "OBJECTID"
+    assert connector["order_by_fields"] == "OBJECTID ASC"
+    assert connector["include_geometry"] is True
+    assert connector["query"] == {"outSR": 4326}
+    assert connector["page_size"] == 200
+    assert "Case_No NOT LIKE '%XXX%'" in connector["where"]
+    assert "Case_No LIKE 'Z2026-%'" in connector["where"]
+    assert "Case_No LIKE 'SP2026-%'" in connector["where"]
+    assert "Case_No LIKE 'P2026-%'" in connector["where"]
+    assert settings["signal_stage"] == "pre_approval"
+    assert settings["freshness_field"] == "last_edited_date"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "Case_No",
+            "namespace": "rockwall:planning_case",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "CROSS_REF",
+            "namespace": "rockwall:parcel_cross_reference",
+            "transform": "scalar",
+        },
+    ]
+
+    mappings = {mapping.source_field: mapping for mapping in rockwall.probe_field_mappings}
+    assert mappings["geometry"].canonical_field == "latitude"
+    assert mappings["geometry"].transform == "arcgis_polygon_centroid"
+    assert mappings["geometry"].transform_options == {"axis": "y"}
+    assert mappings["__longitude"].canonical_field == "longitude"
+    assert mappings["__longitude"].transform == "arcgis_polygon_centroid"
+    assert mappings["__longitude"].transform_options == {
+        "source_field": "geometry",
+        "axis": "x",
+    }
+    assert "explicit City approval" in rockwall.blocker_summary
+
+
+def test_grand_prairie_planning_candidate_is_lifecycle_complete_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    grand_prairie = candidates["grand_prairie_tx_planning_cases"]
+    assert grand_prairie.record_type == "permit"
+    assert grand_prairie.adapter == "arcgis"
+    assert grand_prairie.status == "legal_hold"
+    assert grand_prairie.can_run_canary is False
+    assert "167 meaningful planning rows" in grand_prairie.notes
+    assert "165 unique plan numbers" in grand_prairie.notes
+    assert "47 submitted, in-review, or on-hold" in grand_prairie.notes
+    assert "102 approved or complete" in grand_prairie.notes
+    assert "Dutch Bros" in grand_prairie.notes
+    assert "Prologis" in grand_prairie.notes
+
+    settings = grand_prairie.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["keyset_field"] == "OBJECTID"
+    assert connector["order_by_fields"] == "OBJECTID ASC"
+    assert connector["include_geometry"] is True
+    assert connector["query"] == {"outSR": 4326, "geometryPrecision": 6}
+    assert connector["page_size"] == 500
+    assert "PLAN_NUMBER IS NOT NULL" in connector["where"]
+    assert "Specific Use Permit" in connector["where"]
+    assert "Site Plan" in connector["where"]
+    assert "ZBA" not in connector["where"]
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "PLAN_NUMBER",
+            "namespace": "grand_prairie:planning_case",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "PROJECT",
+            "namespace": "grand_prairie:master_project",
+            "transform": "scalar",
+        },
+    ]
+
+    mappings = {
+        mapping.source_field: mapping
+        for mapping in grand_prairie.probe_field_mappings
+    }
+    assert mappings["PLAN_NUMBER"].canonical_field == "source_record_id"
+    assert mappings["__approval_stage"].transform == "conditional_map"
+    assert mappings["geometry"].transform_options == {"path": ["y"]}
+    assert mappings["__longitude"].transform_options == {
+        "source_field": "geometry",
+        "path": ["x"],
+    }
+    assert "explicit City approval" in grand_prairie.blocker_summary
+
+
+def test_port_st_lucie_legistar_candidate_has_exact_project_identity_and_rights_gate():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    psl = candidates["port_st_lucie_fl_legistar_planning"]
+    assert psl.record_type == "planning"
+    assert psl.adapter == "legistar"
+    assert psl.status == "legal_hold"
+    assert psl.can_run_canary is False
+    assert "31 project hearing records" in psl.notes
+    assert "7 hearing_scheduled and 24 decision_recorded" in psl.notes
+    assert "Pollo Tropical" in psl.notes
+    assert "Dollar Tree" in psl.notes
+
+    settings = psl.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/psl"
+    assert connector["body_names"] == ["Planning and Zoning Board"]
+    assert connector["matter_types"] == [
+        "Public Hearing",
+        "Public Hearing - Quasi Judicial",
+    ]
+    assert len(connector["suppression_patterns"]) == 2
+    assert connector["max_events"] == 20
+    assert connector["max_records"] == 300
+    assert connector["lookback_days"] == 120
+    assert connector["future_days"] == 120
+    assert settings["signal_stage"] == "pre_approval_and_approved"
+    assert settings["freshness_field"] == "modified_at"
+    assert settings["external_reference_extractors"] == [
+        {
+            "source_field": "legistar_matter_id",
+            "namespace": "legistar:psl:legislation",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "reference_number",
+            "namespace": "legistar:psl:file",
+            "transform": "scalar",
+        },
+        {
+            "source_field": "title",
+            "namespace": "psl:planning_project",
+            "transform": "regex_extract",
+            "pattern": r"\b(P[0-9]{2}-[0-9]{3}(?:-A[0-9]+)?)\b",
+            "group": 1,
+        },
+    ]
+    assert "explicit City approval" in psl.blocker_summary
+
+
+def test_ocala_legistar_candidate_is_project_filtered_and_rights_gated():
+    candidates = {entry.key: entry for entry in load_candidate_catalog()}
+
+    ocala = candidates["ocala_fl_legistar_planning_zoning"]
+    assert ocala.record_type == "planning"
+    assert ocala.adapter == "legistar"
+    assert ocala.status == "legal_hold"
+    assert ocala.can_run_canary is False
+    assert "23 project-level" in ocala.notes
+    assert "exact local case number" in ocala.notes
+    assert "TBMI Commercial Outparcel" in ocala.notes
+
+    settings = ocala.probe_settings
+    assert settings is not None
+    connector = settings["connector"]
+    assert connector["endpoint"] == "https://webapi.legistar.com/v1/ocala"
+    assert connector["body_names"] == ["Planning & Zoning Commission"]
+    assert connector["matter_types"] == [
+        "P&Z Subdivision",
+        "P&Z Rezoning",
+        "P&Z Land Use Change",
+        "P&Z Abrogation",
+        "P&Z Annexation",
+    ]
+    assert len(connector["suppression_patterns"]) == 2
+    assert connector["max_events"] == 20
+    assert connector["max_records"] == 300
+    assert settings["freshness_sla_hours"] == 336
+    assert settings["external_reference_extractors"][-1] == {
+        "source_field": "title",
+        "namespace": "ocala:planning_case",
+        "transform": "regex_extract",
+        "pattern": r"\b([A-Z]{2,6}[0-9]{2}-[0-9]{4})\b",
+        "group": 1,
+    }
+    assert "explicit City approval" in ocala.blocker_summary
+
+
+def test_alaska_statewide_parcels_use_narrow_attributed_geometry_scope():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "alaska_dnr_statewide_parcels_narrow"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+
+    assert entry.record_type == "parcel"
+    assert entry.settings["signal_stage"] == "parcel_context"
+    assert entry.settings["attribution_required"] is True
+    assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
+    assert entry.settings["connector"]["include_geometry"] is True
+    assert {"owner", "alt_owner", "land_value", "total_value"}.isdisjoint(out_fields)
+    assert entry.field_mappings[0].source_field == "GlobalID"
+
+
+def test_idaho_statewide_parcels_exclude_mailing_and_value_fields():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "idaho_its_statewide_parcels_narrow"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+
+    assert entry.record_type == "parcel"
+    assert entry.settings["signal_stage"] == "parcel_context"
+    assert entry.settings["connector"]["keyset_field"] == "OBJECTID"
+    assert entry.settings["connector"]["include_geometry"] is True
+    assert {"MAIL_STATE", "LGL_DESCR", "VAL_LAND", "VAL_TOTAL"}.isdisjoint(
+        out_fields
+    )
+    assert "participating Idaho counties" in entry.settings["coverage_limitations"][0]
+    assert entry.field_mappings[0].source_field == "FP_ID"
+
+
+def test_hawaii_statewide_parcels_use_public_domain_tmk_scope():
+    entry = next(
+        source
+        for source in load_catalog()
+        if source.key == "hawaii_statewide_tmk_parcels_narrow"
+    )
+    out_fields = set(entry.settings["connector"]["out_fields"].split(","))
+
+    assert entry.record_type == "parcel"
+    assert entry.settings["signal_stage"] == "parcel_context"
+    assert entry.settings["license"] == "State of Hawaii public domain"
+    assert entry.settings["connector"]["keyset_field"] == "objectid"
+    assert entry.settings["connector"]["include_geometry"] is True
+    assert {
+        "owner",
+        "assessed_value",
+        "sale_price",
+        "legal_description",
+    }.isdisjoint(out_fields)
+    assert "visual reference" in entry.settings["coverage_limitations"][0]
+    assert entry.field_mappings[0].source_field == "tmk_txt"

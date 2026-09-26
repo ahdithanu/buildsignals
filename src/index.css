@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,95 +6,93 @@
 
 @layer base {
   :root {
-    --background: 40 33% 98%;
-    --foreground: 215 28% 17%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 215 28% 17%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 28% 17%;
-
-    --primary: 215 28% 17%;
-    --primary-foreground: 40 33% 98%;
-
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 215 28% 17%;
-
-    --muted: 220 14% 96%;
-    --muted-foreground: 215 13% 50%;
-
-    --accent: 37 90% 51%;
-    --accent-foreground: 215 28% 17%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 215 28% 17%;
-
-    --radius: 0.625rem;
-
-    --success: 152 56% 40%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 215 28% 17%;
-    --info: 210 92% 55%;
-    --info-foreground: 0 0% 100%;
-
-    --gold: 37 90% 51%;
-    --gold-light: 40 85% 95%;
-
-    --sidebar-background: 215 28% 17%;
-    --sidebar-foreground: 215 15% 75%;
-    --sidebar-primary: 37 90% 51%;
-    --sidebar-primary-foreground: 215 28% 17%;
-    --sidebar-accent: 215 25% 22%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 215 25% 25%;
-    --sidebar-ring: 37 90% 51%;
-    --sidebar-muted: 215 20% 40%;
-
-    --shadow-card: 0 1px 3px 0 hsl(215 28% 17% / 0.04), 0 1px 2px -1px hsl(215 28% 17% / 0.04);
-    --shadow-elevated: 0 4px 6px -1px hsl(215 28% 17% / 0.06), 0 2px 4px -2px hsl(215 28% 17% / 0.04);
-    --shadow-prominent: 0 10px 15px -3px hsl(215 28% 17% / 0.08), 0 4px 6px -4px hsl(215 28% 17% / 0.04);
+    --background: 0 4% 95%;
+    --foreground: 20 5% 12%;
+    --card: 0 18% 96%;
+    --card-foreground: 20 5% 12%;
+    --popover: 0 18% 96%;
+    --popover-foreground: 20 5% 12%;
+    --primary: 20 5% 12%;
+    --primary-foreground: 0 18% 96%;
+    --secondary: 0 7% 91%;
+    --secondary-foreground: 20 5% 12%;
+    --muted: 0 7% 91%;
+    --muted-foreground: 0 2% 43%;
+    --accent: 8 85% 50%;
+    --accent-foreground: 0 18% 96%;
+    --destructive: 8 100% 34%;
+    --destructive-foreground: 0 18% 96%;
+    --border: 0 5% 82%;
+    --input: 0 5% 72%;
+    --ring: 20 5% 12%;
+    --radius: 0px;
+    --success: 152 38% 32%;
+    --success-foreground: 0 18% 96%;
+    --warning: 39 71% 39%;
+    --warning-foreground: 20 5% 12%;
+    --info: 215 77% 44%;
+    --info-foreground: 0 18% 96%;
+    --gold: 39 71% 39%;
+    --gold-light: 40 25% 91%;
+    --sidebar-background: 0 4% 95%;
+    --sidebar-foreground: 20 5% 12%;
+    --sidebar-primary: 20 5% 12%;
+    --sidebar-primary-foreground: 0 18% 96%;
+    --sidebar-accent: 0 7% 91%;
+    --sidebar-accent-foreground: 20 5% 12%;
+    --sidebar-border: 0 5% 82%;
+    --sidebar-ring: 20 5% 12%;
+    --sidebar-muted: 0 2% 43%;
+    --shadow-card: none;
+    --shadow-elevated: none;
+    --shadow-prominent: none;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
+    letter-spacing: 0;
   }
+
+  html {
+    background: hsl(var(--background));
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    min-width: 320px;
+    font-family: 'Archivo', system-ui, -apple-system, sans-serif;
   }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+
+  h1, h2, h3, h4, h5, h6, button, input, select, textarea {
+    font-family: 'Archivo', system-ui, -apple-system, sans-serif;
+  }
+
+  button, a, input, select, textarea {
+    border-radius: 0;
   }
 }
 
 @layer utilities {
-  .card-shadow {
-    box-shadow: var(--shadow-card);
-  }
-  .card-shadow-hover {
-    box-shadow: var(--shadow-elevated);
-  }
+  .card-shadow,
+  .card-shadow-hover,
   .card-shadow-prominent {
-    box-shadow: var(--shadow-prominent);
+    box-shadow: none;
   }
-  .score-excellent {
-    @apply text-success;
+
+  .section-label {
+    @apply text-[9px] font-semibold uppercase text-muted-foreground;
   }
-  .score-good {
-    @apply text-emerald-500;
+
+  .stage-preapproval {
+    @apply border border-destructive bg-transparent text-destructive;
   }
-  .score-average {
-    @apply text-warning;
+
+  .stage-approved {
+    @apply border border-foreground bg-foreground text-background;
   }
-  .score-poor {
-    @apply text-destructive;
-  }
+
+  .score-excellent { @apply text-success; }
+  .score-good { @apply text-emerald-700; }
+  .score-average { @apply text-warning; }
+  .score-poor { @apply text-destructive; }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import GraphEntityDetail from "@/pages/GraphEntityDetail";
 
@@ -9,6 +9,10 @@ vi.mock("@/hooks/useGraphEntity", () => ({
 }));
 vi.mock("@/hooks/useGraphPaths", () => ({
   useGraphPaths: vi.fn(),
+}));
+vi.mock("@/hooks/useGraphEntityMergeCandidates", () => ({
+  useGraphEntityMergeCandidates: vi.fn(),
+  useMergeGraphEntity: vi.fn(),
 }));
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
@@ -20,10 +24,12 @@ vi.mock("@/contexts/AuthContext", () => ({
 }));
 
 import { useGraphEntity } from "@/hooks/useGraphEntity";
+import { useGraphEntityMergeCandidates, useMergeGraphEntity } from "@/hooks/useGraphEntityMergeCandidates";
 import { useGraphPaths } from "@/hooks/useGraphPaths";
 
 describe("<GraphEntityDetail>", () => {
-  it("shows aliases, record links, and related entities", () => {
+  it("shows aliases, record links, related entities, and reviewed merge controls", () => {
+    const mergeMutate = vi.fn();
     (useGraphEntity as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
         id: "entity-1",
@@ -43,6 +49,14 @@ describe("<GraphEntityDetail>", () => {
         last_verified_at: "2026-07-23T12:00:00Z",
         attributes: { category: "developer" },
         aliases: ["Acme Dev", "Acme Development Company"],
+        source_identities: [
+          {
+            source_system: "official_registry",
+            source_id: "dev-1",
+            confidence: 0.92,
+            last_verified_at: "2026-07-23T12:00:00Z",
+          },
+        ],
         links: [
           { record_type: "deal", record_id: "deal-1" },
           { record_type: "parcel", record_id: "parcel-1" },
@@ -213,6 +227,29 @@ describe("<GraphEntityDetail>", () => {
       isLoading: false,
       error: null,
     });
+    (useGraphEntityMergeCandidates as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [
+        {
+          entity: {
+            id: "entity-6",
+            entity_type: "developer",
+            display_name: "Acme Development Group",
+            source_system: "permit_feed",
+            source_id: "permit-party-6",
+            confidence: 0.84,
+            last_verified_at: "2026-07-23T12:00:00Z",
+          },
+          score: 0.91,
+          reasons: ["exact normalized name match", "same city"],
+        },
+      ],
+      isLoading: false,
+      error: null,
+    });
+    (useMergeGraphEntity as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      mutate: mergeMutate,
+      isPending: false,
+    });
 
     render(
       <MemoryRouter initialEntries={["/graph/entities/entity-1"]}>
@@ -225,10 +262,30 @@ describe("<GraphEntityDetail>", () => {
     expect(screen.getByRole("heading", { name: "Acme Development LLC" })).toBeInTheDocument();
     expect(screen.getByText("Acme Dev")).toBeInTheDocument();
     expect(screen.getByText("Acme Development Company")).toBeInTheDocument();
+    expect(screen.getByText("Source identities")).toBeInTheDocument();
+    expect(screen.getAllByText("dev-1")).toHaveLength(2);
+    expect(screen.getByText((content) => content.includes("permit-party-6"))).toBeInTheDocument();
     expect(screen.getByText("deal-1")).toBeInTheDocument();
     expect(screen.getByText("parcel-1")).toBeInTheDocument();
     expect(screen.getByText("permit-1")).toBeInTheDocument();
     expect(screen.getByText("Related by Type")).toBeInTheDocument();
+    expect(screen.getByText("Merge Candidates")).toBeInTheDocument();
+    expect(screen.getByText("Acme Development Group")).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes("91% match"))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Merge" }));
+    expect(screen.getByRole("alertdialog", { name: "Merge duplicate entity?" })).toBeInTheDocument();
+    expect(screen.getByText(/Acme Development LLC will remain canonical/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm merge" }));
+    expect(mergeMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        survivorEntityId: "entity-1",
+        duplicateEntityId: "entity-6",
+      }),
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    );
     expect(screen.getAllByText("property", { selector: "h4" })).toHaveLength(1);
     expect(screen.getByText("Relationship Paths")).toBeInTheDocument();
     expect(screen.getByText("Confidence 91%")).toBeInTheDocument();

@@ -562,4 +562,3 @@ export function getScoreBg(score: number): string {
   if (score >= 55) return 'bg-warning/10 text-warning';
   return 'bg-destructive/10 text-destructive';
 }
-

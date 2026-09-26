@@ -1,7 +1,21 @@
+import sqlite3
+
 from sqlalchemy import create_engine, event, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import DATABASE_URL
+
+
+def configure_sqlite_foreign_keys(target_engine: Engine) -> None:
+    @event.listens_for(target_engine, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record):
+        if not isinstance(dbapi_connection, sqlite3.Connection):
+            return
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.close()
+
 
 # Only use check_same_thread for SQLite
 connect_args = {}
@@ -9,6 +23,8 @@ if DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
 
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
+if engine.dialect.name == "sqlite":
+    configure_sqlite_foreign_keys(engine)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 

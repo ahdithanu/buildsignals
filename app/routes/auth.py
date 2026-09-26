@@ -47,7 +47,6 @@ from app.services.security import (
     verify_password,
 )
 from app.utils.auth_deps import get_current_user
-from app.utils.org_scope import DEFAULT_ORG_ID
 
 
 def _set_refresh_cookie(
@@ -120,15 +119,6 @@ def _slugify(text: str) -> str:
     return slug or "org"
 
 
-def _unique_slug(db: Session, base: str) -> str:
-    slug = base
-    i = 1
-    while db.query(Organization).filter(Organization.slug == slug).first():
-        i += 1
-        slug = f"{base}-{i}"
-    return slug
-
-
 # ── register ────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
@@ -177,26 +167,28 @@ def register(
     db.add(user)
     db.flush()
 
-    # Create org (new or join default)
-    if payload.organization_name:
-        slug = _unique_slug(db, _slugify(payload.organization_name))
-        org = Organization(
-            id=str(uuid4()),
-            name=payload.organization_name,
-            slug=slug,
-            is_active=True,
+    # Public signup always creates a tenant; joining one requires an admin grant.
+    org_name = (payload.organization_name or "").strip()
+    if not org_name:
+        owner_name = " ".join(payload.full_name.split())
+        suffix = "'s workspace"
+        org_name = (
+            f"{owner_name[:255 - len(suffix)].rstrip()}{suffix}"
+            if owner_name else "Personal workspace"
         )
-        db.add(org)
-        db.flush()
-        role = MemberRole.admin  # creator becomes admin of their org
-    else:
-        org = db.get(Organization, DEFAULT_ORG_ID)
-        if not org:
-            raise HTTPException(
-                status_code=500,
-                detail="Default organization not found — run seed.py",
-            )
-        role = MemberRole.editor
+    org_id = str(uuid4())
+    # 63 characters + separator + UUID fit the 100-character slug column.
+    # The UUID also keeps concurrent same-name signups from sharing a slug.
+    slug_base = _slugify(org_name)[:63].rstrip("-")
+    org = Organization(
+        id=org_id,
+        name=org_name,
+        slug=f"{slug_base}-{org_id}",
+        is_active=True,
+    )
+    db.add(org)
+    db.flush()
+    role = MemberRole.admin
 
     # Membership
     membership = OrganizationMembership(
@@ -308,7 +300,10 @@ def login(
                 content={"detail": "TOTP code required"},
                 headers={"X-Auth-Reason": "totp_required"},
             )
-        if not user.totp_secret or not pyotp.TOTP(user.totp_secret).verify(
+        from app.services.mfa_secrets import read_secret
+
+        secret = read_secret(user)
+        if not secret or not pyotp.TOTP(secret).verify(
             payload.totp_code, valid_window=1,
         ):
             lockout.record_failure(email_key)

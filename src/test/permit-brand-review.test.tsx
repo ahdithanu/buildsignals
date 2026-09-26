@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import PermitBrandReview from "@/pages/PermitBrandReview";
 
@@ -41,9 +41,10 @@ describe("<PermitBrandReview>", () => {
           rule_ids: ["rule-1"],
           excerpt: "Chipotle tenant improvement filing",
           detector_version: "brand-alias-v1",
-          signal_quality: "description_context",
-          signal_quality_label: "Description context",
-          signal_quality_note: "Brand appears in description text.",
+          detection_method: "historical_party",
+          signal_quality: "historical_party",
+          signal_quality_label: "Historical party",
+          signal_quality_note: "Parties on this filing have prior brand history.",
           first_seen_at: "2026-07-18T00:00:00Z",
           last_seen_at: "2026-07-18T00:00:00Z",
           brand: { id: "brand-1", key: "chipotle", name: "Chipotle", priority: 5, is_active: true },
@@ -61,6 +62,7 @@ describe("<PermitBrandReview>", () => {
           rule_ids: ["rule-2"],
           excerpt: "Starbucks establishment name on filing",
           detector_version: "brand-alias-v1",
+          detection_method: "direct_alias",
           signal_quality: "applicant_dba",
           signal_quality_label: "Applicant DBA",
           signal_quality_note: "Brand appears as the applicant.",
@@ -88,7 +90,12 @@ describe("<PermitBrandReview>", () => {
     expect(screen.getByText("Validate retailer matches and approved-opening signals detected in municipal permit filings")).toBeInTheDocument();
     expect(screen.getByText("Pre-approval")).toBeInTheDocument();
     expect(screen.getByText("Approved")).toBeInTheDocument();
-    expect(screen.getAllByText("1")).toHaveLength(2);
+    expect(screen.getByText("Stealth inferred")).toBeInTheDocument();
+    expect(screen.getAllByText("1")).toHaveLength(3);
+    expect(screen.getByRole("link", { name: /Stealth inferred 1/i })).toHaveAttribute(
+      "href",
+      "/permit-review?status=candidate&stage=all&detection_method=historical_party&limit=100",
+    );
     expect(screen.getByRole("link", { name: /Pre-approval 1/i })).toHaveAttribute(
       "href",
       "/permit-review?status=candidate&stage=pre_approval&limit=100",
@@ -121,8 +128,91 @@ describe("<PermitBrandReview>", () => {
     expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({
       approval_stage: "approved",
       review_status: "candidate",
+      sort_by: "freshness",
       limit: 100,
     });
+  });
+
+  it("honors the major builder cohort when opening its review queue", () => {
+    (usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      isFetching: false,
+      refetch: vi.fn(),
+      review: { isPending: false, mutate: vi.fn(), variables: undefined },
+      createOpportunity: { isPending: false, mutate: vi.fn(), variables: undefined },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/permit-review?cohort=major_builder"]}>
+        <PermitBrandReview />
+      </MemoryRouter>,
+    );
+
+    const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
+    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({ cohort: "major_builder" });
+    expect(screen.getByRole("heading", { name: "Major Builder Review" })).toBeInTheDocument();
+  });
+
+  it("honors the freshness filter and requests freshness ranking", () => {
+    (usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      isFetching: false,
+      refetch: vi.fn(),
+      review: { isPending: false, mutate: vi.fn(), variables: undefined },
+      createOpportunity: { isPending: false, mutate: vi.fn(), variables: undefined },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/permit-review?freshness=stale"]}>
+        <PermitBrandReview />
+      </MemoryRouter>,
+    );
+
+    const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
+    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({
+      freshness: "stale",
+      sort_by: "freshness",
+      review_status: "candidate",
+    });
+  });
+
+  it("honors and persists the stealth detection method filter", async () => {
+    (usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      isFetching: false,
+      refetch: vi.fn(),
+      review: { isPending: false, mutate: vi.fn(), variables: undefined },
+      createOpportunity: { isPending: false, mutate: vi.fn(), variables: undefined },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/permit-review?detection_method=historical_party"]}>
+        <Routes>
+          <Route path="/permit-review" element={<><LocationProbe /><PermitBrandReview /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
+    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({
+      detection_method: "historical_party",
+      review_status: "candidate",
+      limit: 100,
+    });
+
+    const methodGroup = screen.getByRole("group", { name: "Detection method" });
+    fireEvent.click(within(methodGroup).getByRole("button", { name: "Direct" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location-probe")).toHaveTextContent("detection_method=direct_alias");
+    });
+    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({ detection_method: "direct_alias" });
   });
 
   it("syncs the filter state back into the queue URL", async () => {

@@ -41,6 +41,18 @@ function verifiedLabel(value: string): string {
   return `verified ${parsed.toLocaleDateString()}`;
 }
 
+function verificationStatus(item: GraphRelatedEntity) {
+  if (item.relationship.verification_status) return item.relationship.verification_status;
+  if (!item.relationship.is_current) return 'historical';
+  const dueAt = item.relationship.verification_due_at
+    ? new Date(item.relationship.verification_due_at)
+    : new Date(new Date(item.relationship.last_verified_at).getTime() + 90 * 24 * 60 * 60 * 1000);
+  const daysRemaining = (dueAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+  if (daysRemaining <= 0) return 'stale';
+  if (daysRemaining <= 14) return 'due';
+  return 'fresh';
+}
+
 function createdLabel(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return 'added';
@@ -149,6 +161,13 @@ function GroupList({ label, icon: Icon, items }: { label: string; icon: Componen
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <ApprovalStage item={item} />
+                {(verificationStatus(item) === 'stale' || verificationStatus(item) === 'due') && (
+                  <span className={verificationStatus(item) === 'stale'
+                    ? 'rounded-md bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive'
+                    : 'rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800'}>
+                    {verificationStatus(item) === 'stale' ? 'Stale evidence' : 'Review due'}
+                  </span>
+                )}
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
                   {relationshipLabel(item.relationship.relationship_type)}
                 </span>
@@ -202,6 +221,10 @@ export function OpportunityGraphPanel({ dealId }: { dealId: string | undefined }
   const total = data
     ? groups.reduce((count, group) => count + data[group.key].length, 0) + data.other.length
     : 0;
+  const relationshipsNeedingReview = data
+    ? [...groups.flatMap((group) => data[group.key]), ...data.other]
+      .filter((item) => ['due', 'stale'].includes(verificationStatus(item))).length
+    : 0;
   const preApprovalCount = data
     ? permitBrandMatches.filter((match) => match.permit.approval_stage !== 'approved').length
     : 0;
@@ -248,6 +271,7 @@ export function OpportunityGraphPanel({ dealId }: { dealId: string | undefined }
         {!isLoading && !error && data && (
           <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-muted-foreground">
             <span>{total} connected</span>
+            {relationshipsNeedingReview > 0 && <span>{relationshipsNeedingReview} need verification</span>}
             <span>{data.nearby_parcel_searches} parcel search{data.nearby_parcel_searches === 1 ? '' : 'es'}</span>
             {data.nearby_parcel_searches > 0 && (
               <Link

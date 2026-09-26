@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import { MapPinned, Map as MapIcon, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -177,6 +177,7 @@ export function ParcelMap({
   className,
   emptyLabel = 'Boundary data is not attached yet.',
 }: ParcelMapProps) {
+  const gridPatternId = `parcel-map-grid-${useId().replace(/:/g, '')}`;
   const primaryRings = useMemo(() => extractBoundaryRings(boundary), [boundary]);
   const pointBoundaries = useMemo(
     () => points.flatMap((point) => {
@@ -261,11 +262,11 @@ export function ParcelMap({
       <div className="overflow-hidden rounded-md border bg-background">
         <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="block h-auto w-full">
           <defs>
-            <pattern id="parcel-map-grid" width="36" height="36" patternUnits="userSpaceOnUse">
+            <pattern id={gridPatternId} width="36" height="36" patternUnits="userSpaceOnUse">
               <path d="M 36 0 L 0 0 0 36" fill="none" stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
             </pattern>
           </defs>
-          <rect width={VIEWBOX_WIDTH} height={VIEWBOX_HEIGHT} fill="url(#parcel-map-grid)" className="text-muted-foreground" />
+          <rect width={VIEWBOX_WIDTH} height={VIEWBOX_HEIGHT} fill={`url(#${gridPatternId})`} className="text-muted-foreground" />
           <circle
             cx={centerPoint.x}
             cy={centerPoint.y}

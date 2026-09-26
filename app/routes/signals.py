@@ -2,15 +2,103 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.models.buildsignal import BuildSignalReview, BuildSignalRevision
 from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.models.signal import Signal
+from app.schemas.buildsignal import (
+    BuildSignalAssessmentDraft,
+    BuildSignalAssessmentResponse,
+    BuildSignalReviewCreate,
+    BuildSignalReviewResponse,
+    BuildSignalRevisionResponse,
+    PublicationCreate,
+    PublicationResponse,
+)
 from app.schemas.signal import SignalCreate, SignalResponse
+from app.services.assessment_publication import change_publication, publication_history
+from app.services.buildsignal_assessment import (
+    get_revision,
+    resolve_assessment,
+    review_revision,
+    save_revision,
+)
 from app.services.normalization_service import normalize_signal_type
-from app.utils.auth_deps import require_role
+from app.utils.auth_deps import require_role, require_role_strict
 from app.utils.org_scope import active_query, get_org_id, scope_query
 
 router = APIRouter(tags=["signals"])
+
+
+@router.get("/assessment-revisions/{revision_id}/publication", response_model=list[PublicationResponse],
+            dependencies=[Depends(require_role_strict(MemberRole.admin, MemberRole.editor, MemberRole.viewer))])
+def list_publication_events(
+    revision_id: str, limit: int = Query(50, ge=1, le=100), skip: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    return publication_history(db, revision_id, limit, skip)
+
+
+@router.post("/assessment-revisions/{revision_id}/publication", response_model=PublicationResponse, status_code=201)
+def record_publication_event(
+    revision_id: str, payload: PublicationCreate,
+    principal: dict = Depends(require_role_strict(MemberRole.admin)), db: Session = Depends(get_db),
+):
+    return change_publication(db, revision_id, payload, principal["user_id"])
+
+
+@router.post("/signals/{signal_id}/assessment-revisions", response_model=BuildSignalRevisionResponse, status_code=201)
+def create_assessment_revision(
+    signal_id: str, payload: BuildSignalAssessmentDraft,
+    principal: dict = Depends(require_role_strict(MemberRole.admin, MemberRole.editor)),
+    db: Session = Depends(get_db),
+):
+    return save_revision(db, signal_id, payload, principal["user_id"])
+
+
+@router.get("/signals/{signal_id}/assessment-revisions", response_model=list[BuildSignalRevisionResponse],
+            dependencies=[Depends(require_role_strict(MemberRole.admin, MemberRole.editor, MemberRole.viewer))])
+def list_assessment_revisions(
+    signal_id: str, limit: int = Query(50, ge=1, le=100), skip: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    if not scope_query(db.query(Signal), Signal).filter_by(id=signal_id).first():
+        raise HTTPException(404, "Signal not found")
+    return scope_query(db.query(BuildSignalRevision), BuildSignalRevision).filter_by(signal_id=signal_id).order_by(
+        BuildSignalRevision.created_at.desc(), BuildSignalRevision.id.desc(),
+    ).offset(skip).limit(limit).all()
+
+
+@router.post("/assessment-revisions/{revision_id}/reviews", response_model=BuildSignalReviewResponse, status_code=201)
+def create_assessment_review(
+    revision_id: str, payload: BuildSignalReviewCreate,
+    principal: dict = Depends(require_role_strict(MemberRole.admin)), db: Session = Depends(get_db),
+):
+    return review_revision(db, revision_id, payload, principal["user_id"])
+
+
+@router.get("/assessment-revisions/{revision_id}/reviews", response_model=list[BuildSignalReviewResponse],
+            dependencies=[Depends(require_role_strict(MemberRole.admin, MemberRole.editor, MemberRole.viewer))])
+def list_assessment_reviews(
+    revision_id: str, limit: int = Query(50, ge=1, le=100), skip: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    get_revision(db, revision_id)
+    return scope_query(db.query(BuildSignalReview), BuildSignalReview).filter_by(revision_id=revision_id).order_by(
+        BuildSignalReview.created_at.desc(), BuildSignalReview.id.desc(),
+    ).offset(skip).limit(limit).all()
+
+
+@router.post(
+    "/signals/{signal_id}/assessment-preview",
+    response_model=BuildSignalAssessmentResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def preview_assessment(
+    signal_id: str, payload: BuildSignalAssessmentDraft, db: Session = Depends(get_db),
+):
+    """Validate and resolve an analyst draft without publishing or storing it."""
+    return resolve_assessment(db, signal_id, payload)
 
 
 # ── list all signals ─────────────────────────────────────────────────────────

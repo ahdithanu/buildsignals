@@ -1,11 +1,12 @@
-import { Activity, CheckCircle2, ChevronDown, ChevronUp, Database, ExternalLink, Play, RefreshCw, Rocket, Store, TriangleAlert } from 'lucide-react';
+import { Activity, CheckCircle2, ChevronDown, ChevronUp, Clock3, Database, ExternalLink, Play, RefreshCw, Rocket, Store, TriangleAlert } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
+import { MeasuredCoveragePanel } from '@/components/MeasuredCoveragePanel';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCandidateCanaryHistory, useIngestionHealth, usePromoteIngestionCandidate } from '@/hooks/useIngestionHealth';
+import { useCandidateCanaryHistory, useIngestionHealth, useIngestionHostPolicy, useIngestionSchedulePlan, usePromoteIngestionCandidate } from '@/hooks/useIngestionHealth';
 import { useToast } from '@/hooks/use-toast';
 import { stateCodeFromJurisdiction } from '@/lib/jurisdiction';
 import { buildIngestionReliabilitySummary, resolveIngestionReliabilitySummary } from '@/lib/ingestionReliability';
@@ -35,6 +36,7 @@ const candidateStatusStyles: Record<IngestionCandidate['status'], string> = {
 
 function ageLabel(hours?: number | null) {
   if (hours === null || hours === undefined) return 'No completed run';
+  if (hours < 0) return 'Clock skew detected';
   if (hours < 1) return 'Less than 1 hour ago';
   if (hours < 48) return `${Math.round(hours)} hours ago`;
   return `${Math.round(hours / 24)} days ago`;
@@ -122,6 +124,15 @@ function HealthRow({
       <div className="text-xs">
         <p className="font-medium text-foreground">{ageLabel(source.ingestion_age_hours)}</p>
         <p className="mt-0.5 text-muted-foreground">Last successful collection</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Collection SLA: {source.collection_sla_hours ?? source.freshness_sla_hours ?? 36}h
+          {source.collection_sla_configured === false ? ' (default)' : ''}
+        </p>
+        {source.freshness_semantics && source.freshness_semantics !== 'ingestion_observed_at' && (
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {source.freshness_label}: {source.source_watermark_enforced ? 'health signal' : 'activity context only'}
+          </p>
+        )}
       </div>
       <div className="text-xs">
         <p className="font-medium text-foreground">{failureLabel(source)}</p>
@@ -156,13 +167,9 @@ function HealthRow({
 function CandidateRow({
   candidate,
   canManage,
-  promoting,
-  onPromote,
 }: {
   candidate: IngestionCandidate;
   canManage: boolean;
-  promoting: boolean;
-  onPromote: () => void;
 }) {
   const lastCanaryLabel = candidate.last_canary_at
     ? `${candidate.last_canary_ok ? 'Passed' : 'Failed'} ${new Date(candidate.last_canary_at).toLocaleString()}`
@@ -213,21 +220,7 @@ function CandidateRow({
         <p className="mt-1 text-muted-foreground">{candidate.early_warning_value}</p>
         <p className="mt-1 text-[11px] text-muted-foreground">{lastCanaryLabel}</p>
       </div>
-      <div className="flex justify-end">
-        {canManage && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8"
-            disabled={promoting}
-            onClick={onPromote}
-          >
-            {promoting ? <RefreshCw className="animate-spin" /> : <Rocket />}
-            Promote source
-          </Button>
-        )}
-      </div>
+      <div className="flex justify-end" aria-hidden={!canManage} />
     </article>
   );
 }
@@ -299,7 +292,7 @@ function CandidateRetryRow({
       </div>
       <div className="flex justify-end">
         <div className="flex items-center gap-2">
-          {canManage && (
+          {canManage && candidate.last_canary_ok === true && candidate.catalog_backed && (
             <Button
               type="button"
               variant="outline"
@@ -312,18 +305,10 @@ function CandidateRetryRow({
               Promote source
             </Button>
           )}
-          {canManage && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8"
-              disabled={promoting}
-              onClick={onPromote}
-            >
-              {promoting ? <RefreshCw className="animate-spin" /> : <Rocket />}
-              Promote source
-            </Button>
+          {candidate.last_canary_ok === true && !candidate.catalog_backed && (
+            <span className="whitespace-nowrap text-[11px] font-medium text-amber-700 dark:text-amber-300">
+              Catalog review required
+            </span>
           )}
           <Button
             type="button"
@@ -398,6 +383,19 @@ export default function IngestionOperations() {
     canary,
     candidateCanary,
   } = useIngestionHealth(selectedState);
+  const {
+    data: schedulePlan,
+    isLoading: scheduleLoading,
+    isFetching: scheduleFetching,
+    error: scheduleError,
+    refetch: refetchSchedule,
+  } = useIngestionSchedulePlan(selectedState);
+  const {
+    data: hostPolicy,
+    isLoading: hostPolicyLoading,
+    error: hostPolicyError,
+    refetch: refetchHostPolicy,
+  } = useIngestionHostPolicy();
   const promoteCandidate = usePromoteIngestionCandidate();
   const sources = data?.sources ?? [];
   const candidates = data?.candidates ?? [];
@@ -426,6 +424,9 @@ export default function IngestionOperations() {
     () => candidates.filter((candidate) => matchesStateFilter(candidate.jurisdiction, selectedState)),
     [candidates, selectedState],
   );
+  const scheduleAttention = (schedulePlan?.items ?? [])
+    .filter((item) => item.due || item.active_run)
+    .slice(0, 10);
 
   const runCanary = (source: SourceHealth) => {
     canary.mutate(
@@ -474,7 +475,7 @@ export default function IngestionOperations() {
         onSuccess: (source) => {
           toast({
             title: 'Source promoted',
-            description: `${candidate.name} is now live as ${source.name}.`,
+            description: `${candidate.name} is now configured as ${source.name}.`,
           });
           navigate(`/source-health/sources/${source.id}`);
         },
@@ -502,8 +503,14 @@ export default function IngestionOperations() {
               Official permit, application, and parcel feeds
             </p>
           </div>
-          <Button type="button" variant="outline" size="sm" disabled={isFetching} onClick={() => refetch()}>
-            <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isFetching || scheduleFetching}
+            onClick={() => void Promise.all([refetch(), refetchSchedule(), refetchHostPolicy()])}
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', (isFetching || scheduleFetching) && 'animate-spin')} />
             Refresh
           </Button>
         </div>
@@ -592,16 +599,150 @@ export default function IngestionOperations() {
           </section>
         )}
 
+        <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Production activation">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <Rocket className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Production Activation</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Reviewed outbound access for every production catalog source
+                </p>
+              </div>
+            </div>
+            {hostPolicy && (
+              <span className={cn(
+                'rounded-md border px-2 py-1 text-[11px] font-medium',
+                hostPolicy.ready
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-amber-200 bg-amber-50 text-amber-800',
+              )}>
+                {hostPolicy.ready ? 'Ready' : 'Blocked'}
+              </span>
+            )}
+          </div>
+          {hostPolicyLoading ? (
+            <p className="text-xs text-muted-foreground">Checking activation policy...</p>
+          ) : hostPolicyError ? (
+            <p className="text-xs text-red-700">Activation policy is temporarily unavailable.</p>
+          ) : hostPolicy ? (
+            <>
+              <div className="grid grid-cols-3 divide-x rounded-md border bg-background">
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{hostPolicy.source_count}</p>
+                  <p className="text-[11px] text-muted-foreground">Catalog sources</p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{hostPolicy.missing_hosts.length}</p>
+                  <p className="text-[11px] text-muted-foreground">Missing hosts</p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{hostPolicy.unsafe_sources.length}</p>
+                  <p className="text-[11px] text-muted-foreground">Unsafe sources</p>
+                </div>
+              </div>
+              {!hostPolicy.ready && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {!hostPolicy.executor_verified && (
+                    <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800">
+                      Executor not verified
+                    </span>
+                  )}
+                  {hostPolicy.missing_hosts.slice(0, 12).map((host) => (
+                    <span key={host} className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800">
+                      {host}
+                    </span>
+                  ))}
+                  {hostPolicy.missing_hosts.length > 12 && (
+                    <span className="px-2.5 py-1 text-[11px] text-muted-foreground">
+                      +{hostPolicy.missing_hosts.length - 12} more
+                    </span>
+                  )}
+                </div>
+              )}
+              {hostPolicy.executor_verified && (
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Executor: {hostPolicy.executor_name}
+                </p>
+              )}
+            </>
+          ) : null}
+        </section>
+
+        <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Collection schedule">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <Clock3 className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Collection Schedule</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Catalog cadence, retry backoff, and resumable work due now
+                </p>
+              </div>
+            </div>
+            {schedulePlan && (
+              <span className="text-xs text-muted-foreground">
+                shard {schedulePlan.shard_index + 1} of {schedulePlan.shard_count}
+              </span>
+            )}
+          </div>
+          {scheduleLoading ? (
+            <p className="text-xs text-muted-foreground">Loading collection plan...</p>
+          ) : scheduleError ? (
+            <p className="text-xs text-red-700">Collection plan is temporarily unavailable.</p>
+          ) : schedulePlan ? (
+            <>
+              {!schedulePlan.catalog_synced && (
+                <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {schedulePlan.unsynced_source_count} catalog source{schedulePlan.unsynced_source_count === 1 ? '' : 's'} pending tenant sync
+                </p>
+              )}
+              <div className="grid grid-cols-3 divide-x rounded-md border bg-background">
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{schedulePlan.due_source_count}</p>
+                  <p className="text-[11px] text-muted-foreground">Due now</p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{schedulePlan.active_source_count}</p>
+                  <p className="text-[11px] text-muted-foreground">Running</p>
+                </div>
+                <div className="px-3 py-3">
+                  <p className="text-lg font-semibold tabular-nums">{schedulePlan.automatic_source_count}</p>
+                  <p className="text-[11px] text-muted-foreground">Automatic</p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {scheduleAttention.length === 0 ? (
+                  <span className="text-[11px] text-muted-foreground">No collection work is due.</span>
+                ) : (
+                  scheduleAttention.map((item) => (
+                    <Link
+                      key={item.source_id}
+                      to={`/source-health/sources/${item.source_id}`}
+                      className="rounded-md border bg-secondary/40 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+                      title={`${item.due_reason.replace(/_/g, ' ')} · ${item.max_pages_per_run} page limit`}
+                    >
+                      {item.source_name} · {item.stale_run ? 'stale, reclaim due' : item.active_run ? 'running' : 'due'}
+                    </Link>
+                  ))
+                )}
+              </div>
+            </>
+          ) : null}
+        </section>
+
+        <MeasuredCoveragePanel />
+
         {!isLoading && !error && sources.length > 0 && (
-          <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Live source mix">
+          <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Configured source mix">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Live Source Mix</h3>
+                <h3 className="text-sm font-semibold text-foreground">Configured Source Mix</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Official feeds grouped by signal stage
                 </p>
               </div>
-              <span className="text-xs text-muted-foreground">{sources.length} live sources</span>
+              <span className="text-xs text-muted-foreground">{sources.length} configured sources</span>
             </div>
             <div className="grid gap-3 md:grid-cols-3">
               {Object.entries(coverage?.live_signal_sources_by_stage ?? {})
@@ -638,16 +779,16 @@ export default function IngestionOperations() {
           <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Ingestion coverage footprint">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Coverage Footprint</h3>
+                <h3 className="text-sm font-semibold text-foreground">Configured Footprint</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Live sources, candidate sources, and the jurisdictions they touch
+                  Source configuration, not verified imported records or geographic completeness
                 </p>
               </div>
               <span className="text-xs text-muted-foreground">{coverage.jurisdiction_count} jurisdictions</span>
             </div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
               <div className="rounded-md border bg-secondary/35 px-3 py-3">
-                <p className="text-[11px] text-muted-foreground">Live sources</p>
+                <p className="text-[11px] text-muted-foreground">Configured sources</p>
                 <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">{coverage.live_source_count}</p>
               </div>
               <div className="rounded-md border bg-secondary/35 px-3 py-3">
@@ -672,7 +813,10 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">State coverage gap</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {coverage.covered_state_count} states covered · {coverage.missing_state_count} still need a live source
+                    {coverage.covered_state_count} states configured · {coverage.missing_state_count} still need a configured source
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {coverage.researched_state_count} states researched · {coverage.unresearched_state_count} without a source decision
                   </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -692,7 +836,7 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">State leaders</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    States with the most live and candidate sources
+                    States with the most configured and candidate sources
                   </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -705,7 +849,7 @@ export default function IngestionOperations() {
                     key={bucket.state}
                     to={`/source-health?state=${bucket.state}`}
                     className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                    title={`${bucket.live_sources} live · ${bucket.candidate_sources} candidate · ${bucket.retailer_opening_sources} retailer-opening`}
+                    title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
                   >
                     {bucket.state} · {bucket.live_sources + bucket.candidate_sources}
                   </Link>
@@ -717,7 +861,10 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">Next activation queue</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {coverage.candidate_only_state_count} states have candidate coverage but no live source yet
+                    {coverage.candidate_only_state_count} states have candidates but no configured source yet
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Ranked by candidate depth and retry readiness
                   </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -730,13 +877,52 @@ export default function IngestionOperations() {
                     key={bucket.state}
                     to={`/source-health?state=${bucket.state}`}
                     className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                    title={`${bucket.live_sources} live · ${bucket.candidate_sources} candidate`}
+                    title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
                   >
                     {bucket.state} · {bucket.candidate_sources}
                   </Link>
                 ))}
               </div>
+              {coverage.activation_queue[0] && (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Top priority: {coverage.activation_queue[0].state} · {(coverage.activation_queue[0].priority_reasons ?? [])[0] ?? "no reason"}
+                </p>
+              )}
             </div>
+            {(coverage.rollout_queue?.length ?? 0) > 0 && (
+              <div className="mt-4 rounded-md border bg-background px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-foreground">50-state rollout queue</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      The current {coverage.jurisdiction_count}-region footprint organized into activation clusters
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">{coverage.rollout_queue?.length} states</span>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {coverage.rollout_queue?.slice(0, 12).map((item) => (
+                    <Link
+                      key={item.state}
+                      to={`/source-health?state=${item.state}`}
+                      className="flex min-w-0 items-center justify-between gap-3 rounded-md border bg-secondary/25 px-2.5 py-2 transition-colors hover:bg-secondary/50"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-xs font-medium text-foreground">
+                          {item.state} · Cluster {item.rollout_cluster}
+                        </span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {item.next_action_label}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[10px] capitalize text-muted-foreground">
+                        {item.coverage_status === 'live' ? 'configured' : item.coverage_status}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
             {coverage.retailer_opening_sources.length > 0 && (
               <div className="mt-4 rounded-md border bg-background px-3 py-3">
                 <div className="flex items-center gap-2 text-xs font-medium text-foreground">
@@ -816,9 +1002,10 @@ export default function IngestionOperations() {
                 title={selectedState ? "No sources for this state" : "No sources configured"}
                 description={
                   selectedState
-                    ? "This state does not have any live or candidate source rows yet."
-                    : "The source catalog has not been synchronized."
+                    ? "No configured sources match this state. Source candidates are listed separately below."
+                    : "No sources are configured for this organization. An administrator must complete source onboarding before collection can begin."
                 }
+                action={<a href="#source-candidates" className="text-xs font-semibold underline">Review source candidates</a>}
               />
             ) : (
               filteredSources.map((source) => (
@@ -834,7 +1021,7 @@ export default function IngestionOperations() {
         </section>
 
         {!isLoading && !error && (
-          <section className="overflow-hidden rounded-md border bg-card card-shadow" aria-label="Ingestion candidate queue">
+          <section id="source-candidates" className="overflow-hidden rounded-md border bg-card card-shadow" aria-label="Ingestion candidate queue">
             <div className="border-b px-4 py-3">
               <h3 className="text-sm font-semibold text-foreground">Expansion Queue</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
@@ -874,8 +1061,6 @@ export default function IngestionOperations() {
                     key={candidate.key}
                     candidate={candidate}
                     canManage={canManage}
-                    promoting={activePromoteCandidateKey === candidate.key}
-                    onPromote={() => promoteCandidateSource(candidate)}
                   />
                 )
               ))

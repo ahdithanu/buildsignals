@@ -21,10 +21,11 @@ from app.services.ingestion.normalization import (
     missing_required_source_fields,
     normalize_parcel,
     normalize_permit,
+    normalize_planning_record,
     parse_source_datetime,
     prepare_mapped_record,
 )
-from app.services.ingestion.service import _record_matches_filters
+from app.services.ingestion.service import _record_matches_filters, resolve_stale_run_after
 from app.utils.org_scope import active_query, get_org_id
 
 
@@ -73,6 +74,13 @@ class SourceHealthResult:
     cursor_updated_at: datetime | None
     cursor_stalled: bool
     reasons: list[str]
+    collection_sla_hours: float = 36.0
+    collection_sla_configured: bool = False
+    freshness_sla_hours: float = 36.0
+    freshness_sla_configured: bool = False
+    freshness_semantics: str = "ingestion_observed_at"
+    freshness_label: str = "Collection observed"
+    source_watermark_enforced: bool = False
 
 
 @dataclass(frozen=True)
@@ -141,9 +149,7 @@ def evaluate_source_health(
         round((now - _as_utc(active_run.heartbeat_at)).total_seconds(), 2)
         if active_run else None
     )
-    stale_after_seconds = float(
-        (source.settings or {}).get("stale_run_after_seconds", 300)
-    )
+    stale_after_seconds = resolve_stale_run_after(source.settings).total_seconds()
     active_run_stale = bool(
         heartbeat_age_seconds is not None
         and heartbeat_age_seconds > stale_after_seconds
@@ -188,25 +194,78 @@ def evaluate_source_health(
         and all(run.checkpoint == partials[0].checkpoint for run in partials[1:])
     )
 
-    sla_hours = float((source.settings or {}).get("freshness_sla_hours", 36))
-    critical_hours = max(48.0, sla_hours * 4 / 3)
+    settings = source.settings or {}
+    configured_sla = settings.get("freshness_sla_hours")
+    freshness_sla_configured = isinstance(configured_sla, (int, float)) and not isinstance(
+        configured_sla, bool
+    ) and configured_sla > 0
+    sla_hours = float(configured_sla) if freshness_sla_configured else 36.0
+    configured_collection_sla = settings.get("collection_sla_hours")
+    collection_sla_configured = (
+        isinstance(configured_collection_sla, (int, float))
+        and not isinstance(configured_collection_sla, bool)
+        and configured_collection_sla > 0
+    )
+    collection_sla_hours = (
+        float(configured_collection_sla)
+        if collection_sla_configured
+        else _default_collection_sla_hours(settings)
+    )
+    configured_semantics = settings.get("freshness_semantics")
+    if configured_semantics in {
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+        "ingestion_observed_at",
+    }:
+        freshness_semantics = str(configured_semantics)
+    elif settings.get("freshness_field"):
+        freshness_semantics = "unclassified_source_timestamp"
+    else:
+        freshness_semantics = "ingestion_observed_at"
+    freshness_label = {
+        "record_updated_at": "Publisher record update",
+        "dataset_refreshed_at": "Publisher dataset refresh",
+        "filing_event_at": "Latest filing event",
+        "ingestion_observed_at": "Collection observed",
+        "unclassified_source_timestamp": "Unclassified publisher timestamp",
+    }.get(freshness_semantics, "Publisher timestamp")
+    source_watermark_enforced = freshness_semantics in {
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "unclassified_source_timestamp",
+    }
+    collection_critical_hours = max(48.0, collection_sla_hours * 4 / 3)
+    freshness_critical_hours = max(48.0, sla_hours * 4 / 3)
     reasons: list[str] = []
     status = "healthy"
     if last_success is None:
         status = "unknown"
         reasons.append("No successful operational run has completed")
-    elif ingestion_age is not None and ingestion_age > critical_hours:
+    elif ingestion_age is not None and ingestion_age > collection_critical_hours:
         status = "critical"
         reasons.append(f"Latest successful ingestion is {ingestion_age:.1f} hours old")
-    elif ingestion_age is not None and ingestion_age > sla_hours:
+    elif ingestion_age is not None and ingestion_age > collection_sla_hours:
         status = "degraded"
-        reasons.append(f"Latest successful ingestion exceeds the {sla_hours:g}-hour SLA")
-    if source_lag is not None and source_lag > critical_hours:
+        reasons.append(
+            "Latest successful ingestion exceeds the "
+            f"{collection_sla_hours:g}-hour collection SLA"
+        )
+    if (
+        source_watermark_enforced
+        and source_lag is not None
+        and source_lag > freshness_critical_hours
+    ):
         status = "critical"
-        reasons.append(f"Latest source watermark is {source_lag:.1f} hours old")
-    elif source_lag is not None and source_lag > sla_hours and status == "healthy":
+        reasons.append(f"{freshness_label} is {source_lag:.1f} hours old")
+    elif (
+        source_watermark_enforced
+        and source_lag is not None
+        and source_lag > sla_hours
+        and status == "healthy"
+    ):
         status = "degraded"
-        reasons.append(f"Latest source watermark exceeds the {sla_hours:g}-hour SLA")
+        reasons.append(f"{freshness_label} exceeds the {sla_hours:g}-hour SLA")
     if cursor_stalled:
         status = "critical"
         reasons.append("Checkpoint did not advance across three partial runs")
@@ -262,6 +321,13 @@ def evaluate_source_health(
         cursor_updated_at=cursor_run.completed_at if cursor_run else None,
         cursor_stalled=cursor_stalled,
         reasons=reasons,
+        collection_sla_hours=collection_sla_hours,
+        collection_sla_configured=collection_sla_configured,
+        freshness_sla_hours=sla_hours,
+        freshness_sla_configured=freshness_sla_configured,
+        freshness_semantics=freshness_semantics,
+        freshness_label=freshness_label,
+        source_watermark_enforced=source_watermark_enforced,
     )
 
 
@@ -316,6 +382,17 @@ def _as_utc(value: datetime) -> datetime:
 
 def _hours_between(later: datetime, earlier: datetime) -> float:
     return round((_as_utc(later) - _as_utc(earlier)).total_seconds() / 3600, 2)
+
+
+def _default_collection_sla_hours(settings: dict[str, Any]) -> float:
+    interval = settings.get("collection_interval_minutes")
+    if (
+        isinstance(interval, (int, float))
+        and not isinstance(interval, bool)
+        and interval > 0
+    ):
+        return float(interval) / 60
+    return 36.0
 
 
 def validate_source_canary(
@@ -632,22 +709,26 @@ def _validate_canary_records(
                 **dict(settings.get("defaults") or {}),
                 **({"jurisdiction": source.jurisdiction} if source.jurisdiction else {}),
             }
-            normalized = (
-                normalize_parcel(prepared, field_mapping, defaults=defaults)
-                if source.record_type == "parcel"
-                else normalize_permit(prepared, field_mapping, defaults=defaults)
-            )
+            if source.record_type == "parcel":
+                normalized = normalize_parcel(prepared, field_mapping, defaults=defaults)
+            elif source.record_type == "planning":
+                normalized = normalize_planning_record(
+                    prepared, field_mapping, defaults=defaults
+                )
+            else:
+                normalized = normalize_permit(prepared, field_mapping, defaults=defaults)
             valid += 1
             source_record_id = normalized.source_record_id
             if source_record_id in observed_record_ids:
                 duplicate_record_ids.add(source_record_id)
             observed_record_ids.add(source_record_id)
             sample_record_ids.append(source_record_id)
-            stage = (
-                "parcel_snapshot"
-                if source.record_type == "parcel"
-                else normalized.values.get("approval_stage") or "unclassified"
-            )
+            if source.record_type == "parcel":
+                stage = "parcel_snapshot"
+            elif source.record_type == "planning":
+                stage = normalized.values.get("stage") or "planning_unclassified"
+            else:
+                stage = normalized.values.get("approval_stage") or "unclassified"
             stages[stage] = stages.get(stage, 0) + 1
         except Exception as exc:
             if len(errors) < 10:
@@ -701,9 +782,16 @@ def _freshness_errors(
     newest = max(_as_utc(value) for value in watermarks)
     lag_hours = _hours_between(now, newest)
     sla_hours = float(settings.get("freshness_sla_hours", 36))
+    freshness_label = {
+        "record_updated_at": "publisher record update",
+        "dataset_refreshed_at": "publisher dataset refresh",
+        "filing_event_at": "filing event",
+    }.get(str(settings.get("freshness_semantics")), "publisher timestamp")
+    if settings.get("freshness_semantics") == "filing_event_at":
+        return []
     if lag_hours > sla_hours:
         return [
-            f"{error_prefix}Latest canary source watermark is {lag_hours:.1f} "
+            f"{error_prefix}Latest canary {freshness_label} is {lag_hours:.1f} "
             f"hours old; exceeds the {sla_hours:g}-hour SLA"
         ]
     return []

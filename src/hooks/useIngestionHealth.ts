@@ -50,6 +50,26 @@ export function useIngestionCoverage() {
   });
 }
 
+export function useIngestionSchedulePlan(state?: string | null) {
+  return useQuery({
+    queryKey: queryKeys.ingestion.schedulePlan(state),
+    queryFn: () => ingestionApi.schedulePlan(state),
+    retry: 1,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useIngestionHostPolicy() {
+  return useQuery({
+    queryKey: queryKeys.ingestion.hostPolicy,
+    queryFn: () => ingestionApi.hostPolicy(),
+    retry: 1,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+}
+
 export function useCandidateCanaryHistory(candidateKey: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: candidateKey ? queryKeys.ingestion.candidateCanaryHistory(candidateKey) : ['ingestion', 'candidate-canary-history', 'disabled'],

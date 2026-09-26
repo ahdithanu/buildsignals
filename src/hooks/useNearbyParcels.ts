@@ -66,5 +66,8 @@ export function useNearbyParcels(dealId: string | undefined, persona: ParcelPers
       queryClient.invalidateQueries({ queryKey: queryKeys.graph.entityDetail(result.deal.id) });
     },
   });
-  return { history, search, create, review, assign, promote };
+  const exportSearch = useMutation({
+    mutationFn: (searchId: string) => parcelsApi.exportSearch(searchId),
+  });
+  return { history, search, create, review, assign, promote, exportSearch };
 }
