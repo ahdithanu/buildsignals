@@ -85,7 +85,7 @@ export default function DemoWorkspace() {
           <div className="border-b pb-4"><h2 className="font-semibold">Parcel intelligence</h2><p className="mt-2 text-sm">{summary.data?.parcel_references.toLocaleString() ?? '...'} distinct IDs reported in filings; {summary.data?.parcel_records ?? '...'} parcel records loaded in this demo.</p><button className="mt-3 text-sm font-medium underline" onClick={() => setSection('parcels')}>Inspect references</button></div>
           <div className="border-b pb-4"><h2 className="font-semibold">Geographic view</h2><p className="mt-2 text-sm">{summary.data?.mapped_permits ?? '...'} located filings ({summary.data?.derived_geocoded_permits ?? '...'} Census address estimates) and {summary.data?.mapped_parcels ?? '...'} mapped parcel records. Boundaries display only when a source permits it.</p><button className="mt-3 text-sm font-medium underline" onClick={() => setSection('map')}>Open map</button></div>
         </div>
-        <p className="text-sm text-muted-foreground">Planning, brand matches, saved opportunities, and nearby parcel rankings are not populated by this historical permit cohort.</p>
+        <p className="text-sm text-muted-foreground">This demo includes source filings, evidence graph relationships, reported parcel references, and any qualified mapped locations available in the cohort. It does not claim live planning coverage, confirmed brand expansions, verified for-sale listings, or ranked nearby acquisition candidates.</p>
       </section>}
       {(section === 'permits' || section === 'graph') && <>
       {section === 'graph' && <section aria-label="Connected activity" className="border-b pb-4">

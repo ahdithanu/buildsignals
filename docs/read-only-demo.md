@@ -27,6 +27,10 @@ expansion signal. Settings, write controls, exports, and non-demo routes are
 unavailable. Ordinary customers retain their existing
 application and authentication flow. The login subtitle and site descriptions
 use the requested development-intelligence wording.
+The overview describes the populated source-filing, graph, parcel-reference,
+and qualified-location surfaces while explicitly saying the demo does not claim
+live planning coverage, confirmed brand expansions, verified for-sale listings,
+or ranked nearby acquisition candidates.
 
 ## Security Boundaries
 
