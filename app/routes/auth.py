@@ -8,6 +8,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import (
+    DEMO_LOGIN_EMAIL,
+    DEMO_LOGIN_ENABLED,
+    DEMO_LOGIN_PASSWORD,
     REFRESH_COOKIE_NAME,
     REFRESH_COOKIE_PATH,
     REFRESH_COOKIE_SAMESITE,
@@ -342,6 +345,29 @@ def login(
         user_id=user.id,
         organization_id=membership.organization_id,
         role=membership.role.value,
+    )
+
+
+# ── demo login ──────────────────────────────────────────────────────────────
+
+@router.post("/demo", response_model=TokenResponse)
+def demo_login(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Open the seeded demo workspace without exposing credentials client-side."""
+    if not DEMO_LOGIN_ENABLED or not DEMO_LOGIN_EMAIL or not DEMO_LOGIN_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Demo workspace is not enabled",
+        )
+
+    return login(
+        LoginRequest(email=DEMO_LOGIN_EMAIL, password=DEMO_LOGIN_PASSWORD),
+        request=request,
+        response=response,
+        db=db,
     )
 
 

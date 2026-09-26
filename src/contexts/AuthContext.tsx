@@ -23,6 +23,8 @@ interface AuthState {
   isLoading: boolean;
   /** Login + persist token. Returns the resolved user. */
   login: (data: LoginRequest) => Promise<User>;
+  /** Demo login + persist token. Returns the resolved demo user. */
+  demoLogin: () => Promise<User>;
   /** Register + persist token. */
   register: (data: RegisterRequest) => Promise<User>;
   /** Clear token + server-side refresh cookie. */
@@ -119,6 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [authenticate],
   );
 
+  const demoLogin = useCallback(
+    () => authenticate(() => authApi.demoLogin()),
+    [authenticate],
+  );
+
   const register = useCallback(
     (data: RegisterRequest) => authenticate(() => authApi.register(data)),
     [authenticate],
@@ -147,11 +154,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: user !== null,
       isLoading,
       login,
+      demoLogin,
       register,
       logout,
       refresh,
     }),
-    [user, organizationId, role, isLoading, login, register, logout, refresh],
+    [user, organizationId, role, isLoading, login, demoLogin, register, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
