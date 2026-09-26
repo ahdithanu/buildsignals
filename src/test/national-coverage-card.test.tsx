@@ -49,6 +49,8 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 2,
                 pre_approval_sources: 1,
                 approved_only_sources: 1,
+                priority_score: 0,
+                priority_reasons: [],
               },
               {
                 state: "MI",
@@ -57,6 +59,8 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 0,
                 pre_approval_sources: 0,
                 approved_only_sources: 1,
+                priority_score: 0,
+                priority_reasons: [],
               },
             ],
             activation_queue: [
@@ -67,10 +71,30 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 0,
                 pre_approval_sources: 0,
                 approved_only_sources: 0,
+                priority_score: 0,
+                priority_reasons: [],
+              },
+            ],
+            rollout_queue: [
+              {
+                state: "WA",
+                rollout_cluster: 1,
+                rollout_label: "Texas, Washington, New York",
+                coverage_status: "live",
+                live_sources: 5,
+                candidate_sources: 1,
+                jurisdiction_count: 4,
+                priority_score: 515,
+                next_action: "run_candidate_canary",
+                next_action_label: "Run candidate canary",
               },
             ],
             candidate_only_state_count: 1,
             candidate_only_states: ["TX"],
+            researched_state_count: 15,
+            unresearched_state_count: 35,
+            researched_states: ["MI", "TX"],
+            unresearched_states: ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA"],
             covered_state_count: 14,
             missing_state_count: 36,
             covered_states: ["MI", "TX"],
@@ -88,11 +112,17 @@ describe("<NationalCoverageCard>", () => {
     expect(screen.getByText(/pre approval and approved/i)).toBeInTheDocument();
     expect(screen.getAllByText(/approved only/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/operational retry/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/14 states covered/i)).toBeInTheDocument();
+    expect(screen.getByText(/14 states live/i)).toBeInTheDocument();
     expect(screen.getByText(/36 still need a live source/i)).toBeInTheDocument();
+    expect(screen.getByText(/15 states researched/i)).toBeInTheDocument();
     expect(screen.getByText("AL")).toBeInTheDocument();
     expect(screen.getByText(/state leaders/i)).toBeInTheDocument();
     expect(screen.getByText(/next activation queue/i)).toBeInTheDocument();
+    expect(screen.getByText(/rollout now/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "WA · Run candidate canary" })).toHaveAttribute(
+      "href",
+      "/source-health?state=WA",
+    );
     expect(screen.getByText("TX · 1")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "TX · 1" })).toHaveAttribute("href", "/source-health?state=TX");
     expect(screen.getByText("Detroit BSEED Building Permits")).toBeInTheDocument();

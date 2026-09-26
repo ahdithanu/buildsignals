@@ -1,21 +1,19 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
  * Playwright E2E config.
- *
- * ⚠️  These specs have NOT been run against the app yet — they were written
- * against the source (real element ids / button text) but never executed,
- * because the authoring environment had Node 10 (Playwright needs 18+).
- * On the first CI run, expect to fix a selector or two. See e2e/README.md.
  *
  * Boots BOTH servers itself via `webServer`:
  *   - backend  : FastAPI on :8000 (migrations run first; rate limits raised
  *                so the register/login flow isn't 429'd from one IP)
  *   - frontend : Vite dev server on :8080 (the app's configured port)
  *
- * The frontend's default API base is http://localhost:8000 (see
- * src/api/client.ts), so no VITE_API_BASE_URL override is needed as long as
- * the backend stays on :8000.
+ * Never reuse existing servers: their underlying database cannot be inferred
+ * from a loopback URL. The backend always owns a fresh temporary SQLite DB.
  */
 export default defineConfig({
   testDir: "./tests",
@@ -37,26 +35,19 @@ export default defineConfig({
 
   webServer: [
     {
-      // Backend. Fresh throwaway SQLite DB, migrated, with auth rate limits
-      // raised so E2E's repeated register/login from one IP doesn't trip the
-      // 429 guard (see loadtest/README.md for the same gotcha).
-      command:
-        "bash -c 'cd .. && " +
-        "rm -f e2e-test.db && " +
-        "DATABASE_URL=sqlite:///./e2e-test.db SECRET_KEY=e2e-secret-key-not-for-production ENVIRONMENT=development alembic upgrade head && " +
-        "DATABASE_URL=sqlite:///./e2e-test.db SECRET_KEY=e2e-secret-key-not-for-production ENVIRONMENT=development python3 seed.py && " +
-        "DATABASE_URL=sqlite:///./e2e-test.db SECRET_KEY=e2e-secret-key-not-for-production ENVIRONMENT=development ALLOW_ANONYMOUS=false REFRESH_COOKIE_SECURE=false " +
-        "LOGIN_RATE_LIMIT=100000 REGISTER_RATE_LIMIT=100000 REFRESH_RATE_LIMIT=100000 GLOBAL_RATE_LIMIT=1000000 " +
-        "uvicorn app.main:app --host 0.0.0.0 --port 8000'",
+      command: `${JSON.stringify(process.env.PYTHON || "python3")} e2e/backend.py`,
+      cwd: root,
       url: "http://localhost:8000/health",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
     {
       // Frontend dev server.
-      command: "cd .. && VITE_API_BASE_URL=http://localhost:8080 npm run dev",
+      command: "npm run dev -- --host 127.0.0.1 --port 8080 --strictPort",
+      cwd: root,
+      env: { VITE_API_BASE_URL: "http://localhost:8000", VITE_SENTRY_DSN: "" },
       url: "http://localhost:8080",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],

@@ -5,11 +5,8 @@ from sqlalchemy.orm import Session
 from app.models.deal import Deal, RiskLevel
 
 
-def score_deal(db: Session, deal: Deal) -> dict:
-    """Evaluate *deal* against scoring criteria and persist the result.
-
-    Returns a dict with the total score, risk_level, and per-factor breakdown.
-    """
+def evaluate_deal_score(deal: Deal) -> dict:
+    """Compute the production scoring rubric without changing the deal."""
 
     breakdown: dict[str, dict] = {}
 
@@ -77,16 +74,21 @@ def score_deal(db: Session, deal: Deal) -> dict:
     else:
         risk = RiskLevel.high
 
-    # Persist
-    deal.score = total
-    deal.risk_level = risk
-    db.add(deal)
-    db.commit()
-    db.refresh(deal)
-
     return {
         "deal_id": deal.id,
         "score": total,
         "risk_level": risk.value,
         "breakdown": breakdown,
     }
+
+
+def score_deal(db: Session, deal: Deal) -> dict:
+    """Evaluate the deal and persist the result using the shared scoring rubric."""
+    result = evaluate_deal_score(deal)
+    deal.score = result["score"]
+    deal.risk_level = RiskLevel(result["risk_level"])
+    db.add(deal)
+    db.commit()
+    db.refresh(deal)
+
+    return result

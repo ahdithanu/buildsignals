@@ -1,145 +1,88 @@
-import { useState } from "react";
-import { Layout } from "@/components/Layout";
-import { LoadingState, ErrorState } from "@/components/DataStates";
-import { motion } from "framer-motion";
-import { MapPin, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { signalsApi } from "@/api/signals";
-import { queryKeys } from "@/lib/queryKeys";
-import type { Signal } from "@/types/activity";
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, RefreshCw, Search } from 'lucide-react';
+import { Layout } from '@/components/Layout';
+import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
+import { DetectedActivity } from '@/components/DetectedActivity';
+import { SignalAssessmentPanel } from '@/components/SignalAssessmentPanel';
+import { OpportunityGraphPanel } from '@/components/OpportunityGraphPanel';
+import { useAuth } from '@/contexts/AuthContext';
+import { signalsApi } from '@/api/signals';
+import { cn } from '@/lib/utils';
 
-const fadeIn = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
-
-const signalTypeLabel: Record<string, string> = {
-  zoning: 'Zoning Change', permit: 'Permit Activity', listing: 'Broker Listing',
-  ownership: 'Ownership Transfer', competitor: 'Competitor Activity', demographic: 'Demographic Shift',
-};
-
-const signalTypeEmoji: Record<string, string> = {
-  zoning: '🏗️', permit: '📋', listing: '🏠', ownership: '🔄', competitor: '⚡', demographic: '📊',
-};
-
-const impactIcon = {
-  positive: <TrendingUp className="h-3.5 w-3.5 text-success" />,
-  negative: <TrendingDown className="h-3.5 w-3.5 text-destructive" />,
-  neutral: <Minus className="h-3.5 w-3.5 text-muted-foreground" />,
-};
-
-const confidenceStyle = {
-  high: 'bg-success/10 text-success',
-  medium: 'bg-warning/10 text-warning',
-  low: 'bg-muted text-muted-foreground',
-};
-
-const watchlists = ['Phoenix, AZ', 'Dallas, TX', 'Tampa, FL', 'Austin, TX', 'Atlanta, GA', 'Denver, CO', 'Nashville, TN'];
+const pageSize = 50;
+function dateLabel(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleString();
+}
 
 export default function MarketSignals() {
-  const [selectedMarket, setSelectedMarket] = useState<string | null>(null);
-
-  const { data: signals, isLoading, error, refetch } = useQuery<Signal[]>({
-    queryKey: queryKeys.signals.all,
-    queryFn: () => signalsApi.list(),
-    retry: 1,
+  const { organizationId } = useAuth();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState('');
+  const [page, setPage] = useState(0);
+  const signals = useQuery({
+    queryKey: ['signals', organizationId, page],
+    queryFn: () => signalsApi.list(page * pageSize, pageSize),
+    enabled: Boolean(organizationId), retry: 1,
   });
-
-  const allSignals = signals ?? [];
-
-  const filtered = allSignals.filter(s => {
-    if (selectedMarket && !s.property.toLowerCase().includes(selectedMarket.split(',')[0].toLowerCase())) return false;
-    return true;
-  });
-
-  if (isLoading) {
-    return <Layout><LoadingState message="Loading signals..." /></Layout>;
-  }
-
-  if (error) {
-    return <Layout><ErrorState message="Failed to load signals." onRetry={() => refetch()} /></Layout>;
-  }
-
-  return (
-    <Layout>
-      <div className="p-6 max-w-[1400px] mx-auto">
-        <motion.div {...fadeIn} className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold font-display text-foreground">Market Signals</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">External signals that impact your deal pipeline</p>
-          </div>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar: Watchlists */}
-          <motion.div {...fadeIn} transition={{ delay: 0.1 }}>
-            <div className="rounded-xl border bg-card p-5 card-shadow">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Watchlists</h3>
-              <div className="space-y-1">
-                <button
-                  onClick={() => setSelectedMarket(null)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    !selectedMarket ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-secondary'
-                  }`}
-                >
-                  All Markets
-                </button>
-                {watchlists.map(m => {
-                  const count = allSignals.filter(s => s.property.toLowerCase().includes(m.split(',')[0].toLowerCase())).length;
-                  return (
-                    <button
-                      key={m}
-                      onClick={() => setSelectedMarket(m)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                        selectedMarket === m ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:bg-secondary'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2"><MapPin className="h-3 w-3" />{m}</span>
-                      {count > 0 && <span className="text-xs">{count}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Signal Feed */}
-          <motion.div {...fadeIn} transition={{ delay: 0.15 }} className="lg:col-span-3 space-y-4">
-            {filtered.length === 0 && (
-              <div className="rounded-xl border bg-card p-12 text-center text-muted-foreground card-shadow">
-                No signals found for this market.
-              </div>
-            )}
-            {filtered.map(signal => (
-              <div key={signal.id} className="rounded-xl border bg-card p-5 card-shadow hover:card-shadow-hover transition-shadow">
-                <div className="flex items-start gap-4">
-                  <div className="text-2xl">{signalTypeEmoji[signal.type]}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{signalTypeLabel[signal.type]}</span>
-                          {impactIcon[signal.impact]}
-                        </div>
-                        <h4 className="text-sm font-semibold text-foreground">{signal.property}</h4>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-xs font-medium rounded-md px-2 py-0.5 ${confidenceStyle[signal.confidence]}`}>
-                          {signal.confidence} confidence
-                        </span>
-                        <span className="text-xs text-muted-foreground">{signal.date}</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{signal.summary}</p>
-                    <div className="flex items-center gap-2 mt-3">
-                      <span className={`text-xs font-medium capitalize ${signal.impact === 'positive' ? 'text-success' : signal.impact === 'negative' ? 'text-destructive' : 'text-muted-foreground'}`}>
-                        {signal.impact} impact
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
+  const filtered = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return (signals.data ?? []).filter(signal => (!type || signal.type === type)
+      && `${signal.property} ${signal.summary} ${signal.source ?? ''} ${signal.id}`.toLowerCase().includes(search));
+  }, [signals.data, query, type]);
+  const selected = filtered.find(signal => signal.id === selectedId) ?? filtered[0];
+  const types = [...new Set([...(signals.data ?? []).map(signal => signal.type), ...(type ? [type] : [])])].sort();
+  const hasFilters = !!(query.trim() || type);
+  return <Layout>
+    <div className="flex min-h-[calc(100vh-48px)] flex-col">
+      <header className="flex flex-wrap items-center gap-3 border-b-2 border-foreground px-4 py-3">
+        <h1 className="text-lg font-semibold">Market signals</h1>
+        <label className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-0"><Search size={16} className="shrink-0" /><input aria-label="Search loaded signals" placeholder="Search loaded signals" className="h-9 min-w-0 w-full bg-transparent text-sm" value={query} onChange={event => setQuery(event.target.value)} /></label>
+        <label className="text-xs">Type<select aria-label="Signal type" className="ml-2 max-w-48 border border-border bg-background p-2" value={type} onChange={event => setType(event.target.value)}><option value="">All types</option>{types.map(item => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}</select></label>
+        <button title="Refresh signals" aria-label="Refresh signals" disabled={signals.isFetching} onClick={() => signals.refetch()}><RefreshCw size={16} className={signals.isFetching ? 'animate-spin' : ''} /></button>
+      </header>
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-xs">
+        <span>{page === 0 && signals.isSuccess && signals.data.length === 0 ? 'No saved market signals' : `${filtered.length} saved signals shown on page ${page + 1}`}</span>
+        <div className="flex items-center gap-3"><button title="Previous page" aria-label="Previous page" disabled={page === 0 || signals.isFetching} onClick={() => { setPage(value => value - 1); setType(''); }}><ArrowLeft size={16} /></button><button title="Next page" aria-label="Next page" disabled={signals.isFetching || (signals.data?.length ?? 0) < pageSize} onClick={() => { setPage(value => value + 1); setType(''); }}><ArrowRight size={16} /></button></div>
       </div>
-    </Layout>
-  );
+      {signals.isLoading && <LoadingState message="Loading signals..." />}
+      {signals.error && <ErrorState message="Failed to load signals." onRetry={() => signals.refetch()} />}
+      {!signals.isLoading && !signals.error && !filtered.length && (
+        page === 0 && signals.data?.length === 0 ? (
+          hasFilters ? <EmptyState title="No saved signals found" description="No market signals are saved for this organization. Clear filters to view detected activity." /> : <DetectedActivity />
+        ) : (
+          <EmptyState title="No signals found" description={signals.data?.length
+            ? 'No loaded records match the selected filters.'
+            : 'No signals on this page. Return to the previous page.'} />
+        )
+      )}
+      {!signals.error && selected && <div className="grid flex-1 content-start lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
+        <section aria-label="Signal queue" className="min-w-0 border-r border-border">
+          {filtered.map(signal => <button key={signal.id} aria-pressed={selected.id === signal.id} onClick={() => setSelectedId(signal.id)} className={cn('block w-full border-b border-border p-4 text-left hover:bg-secondary', selected.id === signal.id && 'bg-secondary')}>
+            <span className="block break-words text-sm font-semibold">{signal.property}</span>
+            <span className="mt-1 block text-xs text-muted-foreground">{dateLabel(signal.date)}</span>
+            <span className="mt-2 block break-words text-xs">{signal.summary || 'No description recorded.'}</span>
+          </button>)}
+        </section>
+        <section aria-label="Selected signal diligence" className="min-w-0">
+          <header className="border-b border-border p-4 md:p-5">
+            <h2 className="break-words text-lg font-semibold">{selected.property}</h2>
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm">{selected.summary || 'No description recorded.'}</p>
+            <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+              <div><dt className="text-muted-foreground">Record ID</dt><dd className="break-all">{selected.id}</dd></div>
+              <div><dt className="text-muted-foreground">Recorded at</dt><dd>{dateLabel(selected.date)}</dd></div>
+              <div><dt className="text-muted-foreground">Source</dt><dd className="break-words">{selected.source || 'Not recorded'}</dd></div>
+              <div><dt className="text-muted-foreground">Reported severity</dt><dd>{selected.severity == null ? 'Not assessed' : `${selected.severity} / 10`}</dd></div>
+            </dl>
+            {selected.dealId && <Link className="mt-3 inline-flex items-center gap-1 text-sm underline" to={`/deal/${encodeURIComponent(selected.dealId)}`}>Open opportunity<ArrowRight size={14} /></Link>}
+          </header>
+          <SignalAssessmentPanel key={`${organizationId}-${selected.id}`} signalId={selected.id} />
+          {selected.dealId ? <OpportunityGraphPanel dealId={selected.dealId} /> : <p className="p-4 text-sm text-muted-foreground">No linked opportunity. Entity references appear in saved assessments.</p>}
+        </section>
+      </div>}
+    </div>
+  </Layout>;
 }

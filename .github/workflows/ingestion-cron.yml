@@ -1,0 +1,112 @@
+name: ingestion-cron
+
+# Hourly cadence-aware permit/parcel ingestion for AWS/manual deployments.
+# Set INGESTION_DATABASE_URL to your RDS connection string.
+# Required: production secret, CORS origin, and outbound host allowlist values.
+#
+# Render users can use the cron service in render.yaml instead.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      max_pages_per_source:
+        description: Optional max-pages override (1-100); blank uses catalog policy
+        required: false
+        default: ""
+      organization:
+        description: Organization slug or id
+        required: false
+        default: "default-org"
+      shard_count:
+        description: Deterministic worker shard count
+        required: false
+        default: "1"
+      shard_index:
+        description: Zero-based worker shard index
+        required: false
+        default: "0"
+      plan_only:
+        description: Print the due plan without fetching
+        type: boolean
+        required: false
+        default: true
+      stage:
+        description: Signal stage to collect
+        type: choice
+        options:
+          - all
+          - pre_approval_and_approved
+          - approved_only
+        required: false
+        default: all
+      rollout_wave:
+        description: Reviewed nationwide rollout wave; required for execution
+        type: choice
+        options:
+          - ""
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+        required: false
+        default: ""
+
+jobs:
+  ingest:
+    if: github.event_name == 'workflow_dispatch' || vars.INGESTION_ORCHESTRATOR == 'github'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production-ingestion-${{ github.event.inputs.shard_index || '0' }}
+      cancel-in-progress: false
+    timeout-minutes: 360
+    env:
+      DATABASE_URL: ${{ secrets.INGESTION_DATABASE_URL }}
+      SECRET_KEY: ${{ secrets.INGESTION_CRON_SECRET_KEY }}
+      CORS_ALLOWED_ORIGINS: ${{ secrets.INGESTION_CORS_ALLOWED_ORIGINS }}
+      INGESTION_ALLOWED_HOSTS: ${{ secrets.INGESTION_ALLOWED_HOSTS }}
+      INGESTION_HOST_POLICY_DIGEST: ${{ secrets.INGESTION_HOST_POLICY_DIGEST }}
+      INGESTION_ROLLOUT_MANIFEST_DIGEST: ${{ secrets.INGESTION_ROLLOUT_MANIFEST_DIGEST }}
+      ENVIRONMENT: production
+      INGESTION_ORGANIZATION: ${{ github.event.inputs.organization || 'default-org' }}
+      INGESTION_MAX_PAGES_PER_SOURCE: ${{ github.event.inputs.max_pages_per_source || '' }}
+      INGESTION_SHARD_COUNT: ${{ github.event.inputs.shard_count || '1' }}
+      INGESTION_SHARD_INDEX: ${{ github.event.inputs.shard_index || '0' }}
+      INGESTION_PLAN_ONLY: ${{ github.event_name == 'workflow_dispatch' && toJSON(inputs.plan_only) || vars.INGESTION_PLAN_ONLY || 'true' }}
+      INGESTION_STAGE: ${{ github.event.inputs.stage || 'all' }}
+      INGESTION_ROLLOUT_WAVE: ${{ github.event.inputs.rollout_wave || vars.INGESTION_ROLLOUT_WAVE || '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run due ingestion
+        run: |
+          required=(DATABASE_URL SECRET_KEY CORS_ALLOWED_ORIGINS INGESTION_ALLOWED_HOSTS INGESTION_HOST_POLICY_DIGEST INGESTION_ROLLOUT_MANIFEST_DIGEST)
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Required ingestion secret ${name} is not configured."
+              exit 1
+            fi
+          done
+          HOST_AUDIT_ARGS=(
+            catalog host-audit
+            --allow-unused-hosts
+            --stage "$INGESTION_STAGE"
+            --shard-count "$INGESTION_SHARD_COUNT"
+            --shard-index "$INGESTION_SHARD_INDEX"
+          )
+          if [[ -n "$INGESTION_ROLLOUT_WAVE" ]]; then
+            HOST_AUDIT_ARGS+=(--rollout-wave "$INGESTION_ROLLOUT_WAVE")
+          fi
+          python -m app.services.ingestion.cli "${HOST_AUDIT_ARGS[@]}"
+          chmod +x scripts/daily-ingestion.sh
+          ./scripts/daily-ingestion.sh

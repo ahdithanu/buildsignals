@@ -245,7 +245,7 @@ export default function MemoGenerator() {
 
                   <div className="border-t pt-4">
                     <p className="text-xs text-muted-foreground text-center">
-                      Confidential — Prepared with DealSignal
+                      Confidential · Prepared with BuildSignals
                     </p>
                   </div>
                 </div>

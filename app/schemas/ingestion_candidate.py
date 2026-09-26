@@ -20,7 +20,7 @@ class IngestionSourceCandidate(BaseModel):
     key: str = Field(min_length=1, max_length=120, pattern=r"^[a-z0-9][a-z0-9_]*$")
     name: str = Field(min_length=1, max_length=255)
     adapter: str = Field(min_length=1, max_length=50)
-    record_type: Literal["permit", "parcel"]
+    record_type: Literal["permit", "parcel", "planning"]
     jurisdiction: str = Field(min_length=1, max_length=255)
     base_url: str = Field(min_length=1, max_length=2000)
     official_landing_page: str = Field(min_length=1, max_length=2000)
@@ -38,6 +38,7 @@ class IngestionSourceCandidate(BaseModel):
     candidate_source_fields: list[str] = Field(default_factory=list, max_length=50)
     probe_settings: dict[str, Any] | None = None
     probe_field_mappings: list[CandidateFieldMapping] = Field(default_factory=list)
+    production_page_size: int | None = Field(default=None, ge=1, le=10000)
     can_run_canary: bool = False
     last_checked_on: date
     next_audit_on: date

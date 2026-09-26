@@ -18,6 +18,8 @@ from app.models.graph import (  # noqa
     GraphEntity,
     GraphEntityAlias,
     GraphEntityLink,
+    GraphEntityMerge,
+    GraphEntitySourceIdentity,
     GraphRelationship,
     GraphRelationshipEvidence,
 )
@@ -28,12 +30,36 @@ from app.models.ingestion import (  # noqa
     PermitEvent,
     PermitRecord,
     RawSourceRecord,
+    RawSourceRecordObservation,
+    RecordExternalReference,
     SourceFieldMapping,
 )
-from app.models.brand import BrandAlias, BrandProfile, PermitBrandMatch  # noqa
+from app.models.brand import (  # noqa
+    BrandAlias,
+    BrandPartyFingerprint,
+    BrandProfile,
+    PermitBrandMatch,
+)
 from app.models.parcel import (  # noqa
     NearbyParcelCandidate,
     NearbyParcelSearch,
     ParcelFact,
     ParcelRecord,
 )
+from app.models.acquisition import (  # noqa
+    ParcelAcquisitionActivity,
+    ParcelAcquisitionCase,
+    ParcelAcquisitionSource,
+)
+from app.models.parcel_lineage import (  # noqa
+    ParcelLineageEvent,
+    ParcelLineageEvidence,
+    ParcelLineageParticipant,
+)
+from app.models.planning import PlanningCompanyMatch, PlanningRecord  # noqa
+from app.models.ingestion_onboarding import (  # noqa
+    OrganizationIngestionEnrollment,
+    OrganizationIngestionEnrollmentSource,
+)
+from app.models.buildsignal import BuildSignalPublication, BuildSignalRevision, BuildSignalReview  # noqa: F401
+from app.models.evaluation import EvalCase, EvalDataset, EvalMetric, EvalResult, EvalRun  # noqa: F401

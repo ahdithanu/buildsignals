@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from sqlalchemy import func, or_, select, union_all
 from sqlalchemy.orm import Session, joinedload
@@ -15,12 +16,19 @@ from app.models.graph import (
     GraphEntity,
     GraphEntityAlias,
     GraphEntityLink,
+    GraphEntityMerge,
+    GraphEntitySourceIdentity,
     GraphEntityType,
     GraphRelationship,
     GraphRelationshipEvidence,
     GraphRelationshipType,
 )
-from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
+from app.schemas.graph import (
+    GraphEntityCreate,
+    GraphEvidenceCreate,
+    GraphRelationshipCreate,
+    GraphRelationshipVerify,
+)
 from app.utils.org_scope import active_query, get_org_id
 
 COMPANY_SUFFIXES = {
@@ -41,6 +49,39 @@ COMPANY_SUFFIXES = {
     "group",
 }
 
+ATTRIBUTE_ALIAS_KEYS = {
+    "alias",
+    "aliases",
+    "alternate_name",
+    "alternate_names",
+    "aka",
+    "business_name",
+    "company_name",
+    "dba",
+    "doing_business_as",
+    "engineer_name",
+    "developer_name",
+    "contractor_name",
+    "architect_name",
+    "lender_name",
+    "owner_name",
+    "person_name",
+    "property_name",
+    "display_name",
+    "legal_name",
+    "name",
+    "site_name",
+    "trade_name",
+}
+
+UNIT_ADDRESS_KEYS = {
+    "apartment": "unit",
+    "apt": "unit",
+    "suite": "unit",
+    "ste": "unit",
+    "unit": "unit",
+}
+
 ADDRESS_REPLACEMENTS = {
     "street": "st",
     "avenue": "ave",
@@ -49,7 +90,7 @@ ADDRESS_REPLACEMENTS = {
     "drive": "dr",
     "lane": "ln",
     "court": "ct",
-    "suite": "ste",
+    "floor": "fl",
 }
 
 CONTEXT_BUCKETS: dict[GraphEntityType, str] = {
@@ -85,12 +126,25 @@ ADDRESS_AWARE_ENTITY_TYPES = {
 }
 
 
+@dataclass(frozen=True)
+class GraphEntityMergeResult:
+    merge: GraphEntityMerge
+    survivor: GraphEntity
+    aliases_moved: int
+    source_identities_moved: int
+    links_moved: int
+    relationships_rewired: int
+    relationships_collapsed: int
+    evidence_moved: int
+
+
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
 def normalize_name(value: str) -> str:
-    raw = re.sub(r"[^a-z0-9\s]", " ", value.lower())
+    raw = value.lower().replace("&", " and ")
+    raw = re.sub(r"[^a-z0-9\s]", " ", raw)
     words = [w for w in raw.split() if w not in COMPANY_SUFFIXES]
     return " ".join(words) or " ".join(raw.split())
 
@@ -100,8 +154,9 @@ def normalize_address(address: Optional[str], city: Optional[str] = None, state:
     raw = " ".join(str(part) for part in parts if part is not None and str(part).strip())
     if not raw:
         return None
+    raw = re.sub(r"#\s*([A-Za-z0-9-]+)", r" unit \1", raw)
     raw = re.sub(r"[^a-z0-9\s]", " ", raw.lower())
-    words = [ADDRESS_REPLACEMENTS.get(w, w) for w in raw.split()]
+    words = [ADDRESS_REPLACEMENTS.get(w, UNIT_ADDRESS_KEYS.get(w, w)) for w in raw.split()]
     return " ".join(words)
 
 
@@ -124,11 +179,87 @@ def _entity_query(db: Session):
     return active_query(db.query(GraphEntity), GraphEntity)
 
 
+def _collect_attribute_strings(attributes: dict[str, Any] | None, allowed_keys: set[str]) -> list[str]:
+    if not isinstance(attributes, dict):
+        return []
+
+    values: list[str] = []
+
+    def visit(mapping: dict[str, Any]) -> None:
+        for key, value in mapping.items():
+            normalized_key = str(key).casefold()
+            if normalized_key in allowed_keys:
+                values.extend(_coerce_strings(value))
+            if isinstance(value, dict):
+                visit(value)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        visit(item)
+
+    visit(attributes)
+    return values
+
+
+def _coerce_strings(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return [str(value)]
+    if isinstance(value, dict):
+        values: list[str] = []
+        for nested in value.values():
+            values.extend(_coerce_strings(nested))
+        return values
+    if isinstance(value, (list, tuple, set)):
+        values: list[str] = []
+        for item in value:
+            values.extend(_coerce_strings(item))
+        return values
+    return []
+
+
+def _payload_alias_candidates(payload: GraphEntityCreate) -> list[str]:
+    aliases = [payload.display_name, *payload.aliases]
+    aliases.extend(_collect_attribute_strings(payload.attributes, ATTRIBUTE_ALIAS_KEYS))
+    return aliases
+
+
+def _normalized_terms(values: Iterable[str]) -> list[str]:
+    terms = [normalize_name(value) for value in values if isinstance(value, str) and value.strip()]
+    return list(dict.fromkeys(term for term in terms if term))
+
+
+def _best_name_similarity(terms: Iterable[str], candidate_name: str) -> float:
+    best = 0.0
+    for term in terms:
+        similarity = _name_similarity(term, candidate_name)
+        if similarity > best:
+            best = similarity
+    return best
+
+
+def _entity_name_terms(entity: GraphEntity) -> list[str]:
+    terms = [entity.normalized_name]
+    terms.extend(
+        alias.normalized_alias
+        for alias in getattr(entity, "aliases", [])
+        if getattr(alias, "normalized_alias", None)
+    )
+    return list(dict.fromkeys(term for term in terms if term))
+
+
 def resolve_entity(db: Session, payload: GraphEntityCreate) -> tuple[GraphEntity, bool]:
     normalized = normalize_name(payload.display_name)
     normalized_address = normalize_address(payload.address, payload.city, payload.state, payload.zip_code)
-    authoritative_parcel_id = bool(
-        payload.entity_type == GraphEntityType.parcel
+    alias_candidates = _payload_alias_candidates(payload)
+    normalized_terms = _normalized_terms(alias_candidates)
+    authoritative_record_id = bool(
+        payload.entity_type in {
+            GraphEntityType.permit,
+            GraphEntityType.parcel,
+            GraphEntityType.source_record,
+        }
         and payload.source_system
         and payload.source_id
     )
@@ -140,9 +271,36 @@ def resolve_entity(db: Session, payload: GraphEntityCreate) -> tuple[GraphEntity
             GraphEntity.source_id == payload.source_id,
         ).first()
         if source_match:
+            previous_display_name = source_match.display_name
             _touch_entity(source_match, payload)
-            _ensure_aliases(db, source_match, [payload.display_name, *payload.aliases], payload.source_system, payload.source_id)
+            _refresh_authoritative_display_name(source_match, payload)
+            _ensure_aliases(
+                db,
+                source_match,
+                [*alias_candidates, previous_display_name],
+                payload.source_system,
+                payload.source_id,
+            )
             return source_match, False
+
+        identity_match = active_query(
+            db.query(GraphEntitySourceIdentity), GraphEntitySourceIdentity
+        ).join(GraphEntitySourceIdentity.entity).filter(
+            GraphEntitySourceIdentity.source_system == payload.source_system,
+            GraphEntitySourceIdentity.source_id == payload.source_id,
+            GraphEntity.entity_type == payload.entity_type,
+        ).first()
+        if identity_match:
+            previous_display_name = identity_match.entity.display_name
+            _touch_entity(identity_match.entity, payload)
+            _ensure_aliases(
+                db,
+                identity_match.entity,
+                [*alias_candidates, previous_display_name],
+                payload.source_system,
+                payload.source_id,
+            )
+            return identity_match.entity, False
 
         alias_source_match = active_query(db.query(GraphEntityAlias), GraphEntityAlias).join(
             GraphEntityAlias.entity
@@ -152,12 +310,20 @@ def resolve_entity(db: Session, payload: GraphEntityCreate) -> tuple[GraphEntity
             GraphEntity.entity_type == payload.entity_type,
         ).first()
         if alias_source_match:
+            previous_display_name = alias_source_match.entity.display_name
             _touch_entity(alias_source_match.entity, payload)
-            _ensure_aliases(db, alias_source_match.entity, [payload.display_name, *payload.aliases], payload.source_system, payload.source_id)
+            _refresh_authoritative_display_name(alias_source_match.entity, payload)
+            _ensure_aliases(
+                db,
+                alias_source_match.entity,
+                [*alias_candidates, previous_display_name],
+                payload.source_system,
+                payload.source_id,
+            )
             return alias_source_match.entity, False
 
     if (
-        not authoritative_parcel_id
+        not authoritative_record_id
         and normalized_address
         and payload.entity_type in {GraphEntityType.property, GraphEntityType.parcel}
     ):
@@ -170,31 +336,32 @@ def resolve_entity(db: Session, payload: GraphEntityCreate) -> tuple[GraphEntity
             _ensure_aliases(
                 db,
                 address_match,
-                [payload.display_name, *payload.aliases],
+                alias_candidates,
                 payload.source_system,
                 payload.source_id,
             )
             return address_match, False
 
-    if not authoritative_parcel_id:
+    if not authoritative_record_id:
+        exact_terms = normalized_terms or [normalized]
         exact = _entity_query(db).filter(
             GraphEntity.entity_type == payload.entity_type,
-            GraphEntity.normalized_name == normalized,
+            GraphEntity.normalized_name.in_(exact_terms),
         )
         if normalized_address:
             exact = exact.filter(or_(GraphEntity.normalized_address == normalized_address, GraphEntity.normalized_address.is_(None)))
         exact_match = exact.first()
         if exact_match:
             _touch_entity(exact_match, payload)
-            _ensure_aliases(db, exact_match, [payload.display_name, *payload.aliases], payload.source_system, payload.source_id)
+            _ensure_aliases(db, exact_match, alias_candidates, payload.source_system, payload.source_id)
             return exact_match, False
 
         alias_match = active_query(db.query(GraphEntityAlias), GraphEntityAlias).filter(
-            GraphEntityAlias.normalized_alias == normalized,
+            GraphEntityAlias.normalized_alias.in_(exact_terms),
         ).first()
         if alias_match and alias_match.entity.entity_type == payload.entity_type:
             _touch_entity(alias_match.entity, payload)
-            _ensure_aliases(db, alias_match.entity, [payload.display_name, *payload.aliases], payload.source_system, payload.source_id)
+            _ensure_aliases(db, alias_match.entity, alias_candidates, payload.source_system, payload.source_id)
             return alias_match.entity, False
 
         if normalized_address and payload.entity_type in ADDRESS_AWARE_ENTITY_TYPES:
@@ -203,25 +370,25 @@ def resolve_entity(db: Session, payload: GraphEntityCreate) -> tuple[GraphEntity
                 GraphEntity.normalized_address == normalized_address,
             ).order_by(GraphEntity.updated_at.desc()).limit(50).all()
             for candidate in address_candidates:
-                similarity = _name_similarity(normalized, candidate.normalized_name)
+                similarity = _best_name_similarity(exact_terms, candidate.normalized_name)
                 if similarity >= 0.72:
                     _touch_entity(candidate, payload)
-                    _ensure_aliases(db, candidate, [payload.display_name, *payload.aliases], payload.source_system, payload.source_id)
+                    _ensure_aliases(db, candidate, alias_candidates, payload.source_system, payload.source_id)
                     return candidate, False
 
         candidates = _resolution_candidates(
             db,
             entity_type=payload.entity_type,
-            normalized_name=normalized,
+            normalized_names=exact_terms,
             normalized_address=normalized_address,
         )
         for candidate in candidates:
-            similarity = _name_similarity(normalized, candidate.normalized_name)
+            similarity = _best_name_similarity(exact_terms, candidate.normalized_name)
             address_matches = normalized_address and candidate.normalized_address == normalized_address
             threshold = 0.9 if payload.entity_type in {GraphEntityType.property, GraphEntityType.parcel} else 0.86
             if similarity >= threshold or (address_matches and similarity >= 0.72):
                 _touch_entity(candidate, payload)
-                _ensure_aliases(db, candidate, [payload.display_name, *payload.aliases], payload.source_system, payload.source_id)
+                _ensure_aliases(db, candidate, alias_candidates, payload.source_system, payload.source_id)
                 return candidate, False
 
     entity = GraphEntity(
@@ -242,7 +409,7 @@ def resolve_entity(db: Session, payload: GraphEntityCreate) -> tuple[GraphEntity
     )
     db.add(entity)
     db.flush()
-    _ensure_aliases(db, entity, [payload.display_name, *payload.aliases], payload.source_system, payload.source_id)
+    _ensure_aliases(db, entity, alias_candidates, payload.source_system, payload.source_id)
     return entity, True
 
 
@@ -250,17 +417,19 @@ def _resolution_candidates(
     db: Session,
     *,
     entity_type: GraphEntityType,
-    normalized_name: str,
+    normalized_names: list[str],
     normalized_address: Optional[str],
 ) -> list[GraphEntity]:
     filters = []
     if normalized_address:
         filters.append(GraphEntity.normalized_address == normalized_address)
-    for token in _blocking_tokens(normalized_name):
-        filters.append(GraphEntity.normalized_name == token)
-        filters.append(GraphEntity.normalized_name.like(f"{token} %"))
-        filters.append(GraphEntity.normalized_name.like(f"% {token}"))
-        filters.append(GraphEntity.normalized_name.like(f"% {token} %"))
+    for normalized_name in normalized_names:
+        filters.append(GraphEntity.normalized_name == normalized_name)
+        for token in _blocking_tokens(normalized_name):
+            filters.append(GraphEntity.normalized_name == token)
+            filters.append(GraphEntity.normalized_name.like(f"{token} %"))
+            filters.append(GraphEntity.normalized_name.like(f"% {token}"))
+            filters.append(GraphEntity.normalized_name.like(f"% {token} %"))
     if not filters:
         return []
     return (
@@ -284,6 +453,15 @@ def _touch_entity(entity: GraphEntity, payload: GraphEntityCreate) -> None:
         entity.attributes = {**(entity.attributes or {}), **payload.attributes}
 
 
+def _refresh_authoritative_display_name(
+    entity: GraphEntity,
+    payload: GraphEntityCreate,
+) -> None:
+    if payload.display_name and entity.display_name != payload.display_name:
+        entity.display_name = payload.display_name
+        entity.normalized_name = normalize_name(payload.display_name)
+
+
 def _ensure_aliases(
     db: Session,
     entity: GraphEntity,
@@ -291,6 +469,7 @@ def _ensure_aliases(
     source_system: Optional[str],
     source_id: Optional[str],
 ) -> None:
+    _ensure_source_identity(db, entity, source_system, source_id)
     seen = {
         alias.normalized_alias
         for alias in active_query(db.query(GraphEntityAlias), GraphEntityAlias).filter(GraphEntityAlias.entity_id == entity.id).all()
@@ -308,6 +487,38 @@ def _ensure_aliases(
             source_id=source_id,
         ))
         seen.add(normalized)
+
+
+def _ensure_source_identity(
+    db: Session,
+    entity: GraphEntity,
+    source_system: Optional[str],
+    source_id: Optional[str],
+    confidence: Optional[float] = None,
+) -> Optional[GraphEntitySourceIdentity]:
+    if not source_system or not source_id:
+        return None
+    existing = active_query(
+        db.query(GraphEntitySourceIdentity), GraphEntitySourceIdentity
+    ).filter(
+        GraphEntitySourceIdentity.entity_id == entity.id,
+        GraphEntitySourceIdentity.source_system == source_system,
+        GraphEntitySourceIdentity.source_id == source_id,
+    ).first()
+    if existing:
+        existing.confidence = max(existing.confidence, confidence or entity.confidence)
+        existing.last_verified_at = utcnow()
+        return existing
+    identity = GraphEntitySourceIdentity(
+        organization_id=get_org_id(),
+        entity_id=entity.id,
+        source_system=source_system,
+        source_id=source_id,
+        confidence=confidence or entity.confidence,
+        last_verified_at=utcnow(),
+    )
+    db.add(identity)
+    return identity
 
 
 def link_entity_to_record(
@@ -372,6 +583,7 @@ def create_relationship(
         GraphRelationship.source_system == payload.source_system,
         GraphRelationship.source_id == payload.source_id,
     ).first()
+    verified_at = utcnow()
     if relationship is None:
         relationship = GraphRelationship(
             organization_id=get_org_id(),
@@ -383,20 +595,64 @@ def create_relationship(
             source_id=payload.source_id,
             attributes=payload.attributes,
             is_current=True,
-            valid_from=utcnow(),
-            last_verified_at=utcnow(),
+            valid_from=verified_at,
+            last_verified_at=verified_at,
+            verification_due_at=verified_at + timedelta(days=90),
         )
         db.add(relationship)
         db.flush()
     else:
         relationship.confidence = max(relationship.confidence, payload.confidence)
         relationship.attributes = {**(relationship.attributes or {}), **(payload.attributes or {})} or None
-        relationship.last_verified_at = utcnow()
+        relationship.last_verified_at = verified_at
+        relationship.verification_due_at = verified_at + timedelta(days=90)
         relationship.is_current = True
         relationship.valid_to = None
 
     for evidence in payload.evidence:
         add_relationship_evidence(db, relationship, evidence)
+    return relationship
+
+
+def relationship_review_queue(
+    db: Session,
+    *,
+    due_before: datetime,
+    limit: int = 100,
+    maximum_confidence: Optional[float] = None,
+) -> list[GraphRelationship]:
+    query = active_query(db.query(GraphRelationship), GraphRelationship).options(
+        joinedload(GraphRelationship.evidence),
+        joinedload(GraphRelationship.source_entity),
+        joinedload(GraphRelationship.target_entity),
+    ).filter(
+        GraphRelationship.is_current.is_(True),
+        GraphRelationship.verification_due_at <= due_before,
+    )
+    if maximum_confidence is not None:
+        query = query.filter(GraphRelationship.confidence <= maximum_confidence)
+    return query.order_by(
+        GraphRelationship.verification_due_at.asc(),
+        GraphRelationship.confidence.asc(),
+        GraphRelationship.created_at.asc(),
+    ).limit(limit).all()
+
+
+def verify_relationship(
+    db: Session,
+    relationship: GraphRelationship,
+    payload: GraphRelationshipVerify,
+) -> GraphRelationship:
+    verified_at = utcnow()
+    for evidence in payload.evidence:
+        add_relationship_evidence(db, relationship, evidence)
+    relationship.last_verified_at = verified_at
+    relationship.verification_due_at = verified_at + timedelta(
+        days=payload.verification_interval_days
+    )
+    if payload.confidence is not None:
+        relationship.confidence = payload.confidence
+    relationship.updated_at = verified_at
     return relationship
 
 
@@ -441,8 +697,19 @@ def add_relationship_evidence(
 def get_entity_or_none(db: Session, entity_id: str) -> Optional[GraphEntity]:
     return _entity_query(db).options(
         joinedload(GraphEntity.aliases),
+        joinedload(GraphEntity.source_identities),
         joinedload(GraphEntity.links),
     ).filter(GraphEntity.id == entity_id).first()
+
+
+def get_relationship_or_none(db: Session, relationship_id: str) -> Optional[GraphRelationship]:
+    return active_query(db.query(GraphRelationship), GraphRelationship).options(
+        joinedload(GraphRelationship.evidence),
+        joinedload(GraphRelationship.source_entity).joinedload(GraphEntity.aliases),
+        joinedload(GraphRelationship.source_entity).joinedload(GraphEntity.links),
+        joinedload(GraphRelationship.target_entity).joinedload(GraphEntity.aliases),
+        joinedload(GraphRelationship.target_entity).joinedload(GraphEntity.links),
+    ).filter(GraphRelationship.id == relationship_id).first()
 
 
 def search_entities(
@@ -496,6 +763,314 @@ def search_entities(
 
     rows.sort(key=score)
     return rows[:limit]
+
+
+def entity_merge_candidates(
+    db: Session,
+    entity_id: str,
+    *,
+    limit: int = 10,
+    minimum_score: float = 0.6,
+) -> list[tuple[GraphEntity, float, list[str]]]:
+    entity = get_entity_or_none(db, entity_id)
+    if entity is None:
+        return []
+
+    query_terms = _entity_name_terms(entity)
+    candidates = (
+        _entity_query(db)
+        .filter(
+            GraphEntity.entity_type == entity.entity_type,
+            GraphEntity.id != entity.id,
+        )
+        .options(joinedload(GraphEntity.aliases), joinedload(GraphEntity.links))
+        .order_by(GraphEntity.updated_at.desc())
+        .limit(250)
+        .all()
+    )
+
+    scored: list[tuple[GraphEntity, float, list[str]]] = []
+    for candidate in candidates:
+        reasons: list[str] = []
+        score = 0.0
+
+        candidate_terms = _entity_name_terms(candidate)
+        name_similarity = max(
+            (_name_similarity(left, right) for left in query_terms for right in candidate_terms),
+            default=0.0,
+        )
+        address_match = bool(
+            entity.normalized_address
+            and candidate.normalized_address
+            and entity.normalized_address == candidate.normalized_address
+        )
+        source_identity_match = bool(
+            entity.source_system
+            and entity.source_id
+            and candidate.source_system
+            and candidate.source_id
+            and entity.source_system == candidate.source_system
+            and entity.source_id == candidate.source_id
+        )
+
+        if source_identity_match:
+            score = 1.0
+            reasons.append("shared source identity")
+        elif entity.normalized_name == candidate.normalized_name:
+            score = 0.98
+            reasons.append("exact normalized name match")
+        elif any(term == candidate.normalized_name for term in query_terms) or any(term in candidate_terms for term in query_terms):
+            score = 0.96
+            reasons.append("alias match")
+        else:
+            score = round(0.4 + (name_similarity * 0.45), 4)
+            if name_similarity >= 0.88:
+                reasons.append("strong name similarity")
+            elif name_similarity >= 0.72:
+                reasons.append("name similarity")
+
+        if address_match:
+            score = round(min(1.0, score + 0.18), 4)
+            reasons.append("shared normalized address")
+
+        if entity.city and candidate.city and entity.city.casefold() == candidate.city.casefold():
+            score = round(min(1.0, score + 0.04), 4)
+            reasons.append("same city")
+
+        if entity.state and candidate.state and entity.state.casefold() == candidate.state.casefold():
+            score = round(min(1.0, score + 0.04), 4)
+            reasons.append("same state")
+
+        if score >= minimum_score:
+            scored.append((candidate, score, list(dict.fromkeys(reasons)) or ["review candidate"]))
+
+    scored.sort(key=lambda row: (-row[1], row[0].display_name.lower(), row[0].id))
+    return scored[:limit]
+
+
+def merge_graph_entities(
+    db: Session,
+    survivor_entity_id: str,
+    merged_entity_id: str,
+    *,
+    reason: str,
+) -> GraphEntityMergeResult:
+    if survivor_entity_id == merged_entity_id:
+        raise ValueError("An entity cannot be merged into itself")
+
+    survivor = get_entity_or_none(db, survivor_entity_id)
+    duplicate = get_entity_or_none(db, merged_entity_id)
+    if survivor is None or duplicate is None:
+        raise LookupError("Survivor or duplicate entity was not found")
+    if survivor.entity_type != duplicate.entity_type:
+        raise ValueError("Only entities of the same type can be merged")
+
+    _ensure_source_identity(
+        db,
+        survivor,
+        survivor.source_system,
+        survivor.source_id,
+        survivor.confidence,
+    )
+    _ensure_source_identity(
+        db,
+        duplicate,
+        duplicate.source_system,
+        duplicate.source_id,
+        duplicate.confidence,
+    )
+    db.flush()
+
+    relationships = active_query(db.query(GraphRelationship), GraphRelationship).options(
+        joinedload(GraphRelationship.evidence)
+    ).filter(
+        or_(
+            GraphRelationship.source_entity_id == duplicate.id,
+            GraphRelationship.target_entity_id == duplicate.id,
+        )
+    ).all()
+    source_identities = active_query(
+        db.query(GraphEntitySourceIdentity), GraphEntitySourceIdentity
+    ).filter(GraphEntitySourceIdentity.entity_id == duplicate.id).all()
+
+    snapshot = {
+        "id": duplicate.id,
+        "entity_type": duplicate.entity_type.value,
+        "display_name": duplicate.display_name,
+        "normalized_name": duplicate.normalized_name,
+        "normalized_address": duplicate.normalized_address,
+        "source_system": duplicate.source_system,
+        "source_id": duplicate.source_id,
+        "address": duplicate.address,
+        "city": duplicate.city,
+        "state": duplicate.state,
+        "zip_code": duplicate.zip_code,
+        "confidence": duplicate.confidence,
+        "attributes": duplicate.attributes,
+        "aliases": [alias.alias for alias in duplicate.aliases],
+        "source_identities": [
+            {
+                "source_system": identity.source_system,
+                "source_id": identity.source_id,
+                "confidence": identity.confidence,
+            }
+            for identity in source_identities
+        ],
+        "link_ids": [link.id for link in duplicate.links],
+        "relationship_ids": [relationship.id for relationship in relationships],
+        "created_at": duplicate.created_at.isoformat(),
+        "last_verified_at": duplicate.last_verified_at.isoformat(),
+    }
+
+    aliases_before = len(survivor.aliases)
+    _ensure_aliases(
+        db,
+        survivor,
+        [duplicate.display_name],
+        duplicate.source_system,
+        duplicate.source_id,
+    )
+    for alias in duplicate.aliases:
+        _ensure_aliases(
+            db,
+            survivor,
+            [alias.alias],
+            alias.source_system,
+            alias.source_id,
+        )
+    db.flush()
+    aliases_after = active_query(db.query(GraphEntityAlias), GraphEntityAlias).filter(
+        GraphEntityAlias.entity_id == survivor.id
+    ).count()
+
+    source_identities_moved = 0
+    for identity in source_identities:
+        existing = active_query(
+            db.query(GraphEntitySourceIdentity), GraphEntitySourceIdentity
+        ).filter(
+            GraphEntitySourceIdentity.entity_id == survivor.id,
+            GraphEntitySourceIdentity.source_system == identity.source_system,
+            GraphEntitySourceIdentity.source_id == identity.source_id,
+        ).first()
+        if existing:
+            existing.confidence = max(existing.confidence, identity.confidence)
+            existing.last_verified_at = max(existing.last_verified_at, identity.last_verified_at)
+            db.delete(identity)
+        else:
+            identity.entity_id = survivor.id
+        source_identities_moved += 1
+
+    links_moved = 0
+    for link in list(duplicate.links):
+        existing = active_query(db.query(GraphEntityLink), GraphEntityLink).filter(
+            GraphEntityLink.entity_id == survivor.id,
+            GraphEntityLink.record_type == link.record_type,
+            GraphEntityLink.record_id == link.record_id,
+        ).first()
+        if existing:
+            db.delete(link)
+        else:
+            link.entity_id = survivor.id
+        links_moved += 1
+
+    relationships_rewired = 0
+    relationships_collapsed = 0
+    evidence_moved = 0
+    for relationship in relationships:
+        next_source_id = survivor.id if relationship.source_entity_id == duplicate.id else relationship.source_entity_id
+        next_target_id = survivor.id if relationship.target_entity_id == duplicate.id else relationship.target_entity_id
+        if next_source_id == next_target_id:
+            db.delete(relationship)
+            relationships_collapsed += 1
+            continue
+
+        equivalent = active_query(db.query(GraphRelationship), GraphRelationship).filter(
+            GraphRelationship.id != relationship.id,
+            GraphRelationship.source_entity_id == next_source_id,
+            GraphRelationship.target_entity_id == next_target_id,
+            GraphRelationship.relationship_type == relationship.relationship_type,
+            GraphRelationship.source_system == relationship.source_system,
+            GraphRelationship.source_id == relationship.source_id,
+        ).first()
+        if equivalent:
+            equivalent.confidence = max(equivalent.confidence, relationship.confidence)
+            equivalent.attributes = {
+                **(relationship.attributes or {}),
+                **(equivalent.attributes or {}),
+            } or None
+            equivalent.last_verified_at = max(
+                equivalent.last_verified_at,
+                relationship.last_verified_at,
+            )
+            equivalent.valid_from = min(equivalent.valid_from, relationship.valid_from)
+            equivalent.is_current = equivalent.is_current or relationship.is_current
+            if equivalent.is_current:
+                equivalent.valid_to = None
+            for evidence in relationship.evidence:
+                add_relationship_evidence(
+                    db,
+                    equivalent,
+                    GraphEvidenceCreate(
+                        source_system=evidence.source_system,
+                        source_id=evidence.source_id,
+                        source_url=evidence.source_url,
+                        evidence_type=evidence.evidence_type,
+                        excerpt=evidence.excerpt,
+                        observed_at=evidence.observed_at,
+                        confidence=evidence.confidence,
+                        payload=evidence.payload,
+                    ),
+                )
+                evidence_moved += 1
+            db.delete(relationship)
+            relationships_collapsed += 1
+            continue
+
+        relationship.source_entity_id = next_source_id
+        relationship.target_entity_id = next_target_id
+        relationships_rewired += 1
+
+    merged_from = list((survivor.attributes or {}).get("merged_from_entity_ids", []))
+    if duplicate.id not in merged_from:
+        merged_from.append(duplicate.id)
+    survivor.attributes = {
+        **(duplicate.attributes or {}),
+        **(survivor.attributes or {}),
+        "merged_from_entity_ids": merged_from,
+    }
+    survivor.confidence = max(survivor.confidence, duplicate.confidence)
+    survivor.last_verified_at = max(survivor.last_verified_at, duplicate.last_verified_at)
+    survivor.address = survivor.address or duplicate.address
+    survivor.city = survivor.city or duplicate.city
+    survivor.state = survivor.state or duplicate.state
+    survivor.zip_code = survivor.zip_code or duplicate.zip_code
+    survivor.normalized_address = survivor.normalized_address or duplicate.normalized_address
+
+    merge = GraphEntityMerge(
+        organization_id=get_org_id(),
+        survivor_entity_id=survivor.id,
+        merged_entity_id=duplicate.id,
+        entity_type=duplicate.entity_type,
+        merged_display_name=duplicate.display_name,
+        reason=reason,
+        snapshot=snapshot,
+    )
+    db.add(merge)
+    db.flush()
+    _entity_query(db).filter(GraphEntity.id == duplicate.id).delete(synchronize_session=False)
+    db.flush()
+    db.expire(survivor, ["aliases", "source_identities", "links"])
+
+    return GraphEntityMergeResult(
+        merge=merge,
+        survivor=survivor,
+        aliases_moved=max(0, aliases_after - aliases_before),
+        source_identities_moved=source_identities_moved,
+        links_moved=links_moved,
+        relationships_rewired=relationships_rewired,
+        relationships_collapsed=relationships_collapsed,
+        evidence_moved=evidence_moved,
+    )
 
 
 def entity_for_record(db: Session, record_type: str, record_id: str) -> Optional[GraphEntity]:

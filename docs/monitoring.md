@@ -10,6 +10,22 @@ what to wire externally.
 
 **Target:** `/health/deep` on the production API (not shallow `/health`).
 
+**In-repo automation:** `.github/workflows/uptime.yml` runs every 5 minutes.
+Configure the URL via [`infra/uptime.env`](../infra/uptime.env) (committed) or
+the GitHub secret `UPTIME_BASE_URL`. The workflow skips cleanly until the API
+is actually deployed (404/connection refused).
+
+```bash
+./scripts/setup-infra.sh                    # auto-detect + write infra/uptime.env
+./scripts/setup-infra.sh --url https://...  # explicit URL
+```
+
+**Manual / cron:**
+
+```bash
+BASE=https://YOUR-API.onrender.com ./scripts/uptime-check.sh --deep
+```
+
 | Check | Interval | Timeout | Alert if |
 |-------|----------|---------|----------|
 | Deep health | 1 min | 10s | 2 consecutive failures |
@@ -81,7 +97,7 @@ From `docs/slo.md` — 99.5% availability ≈ 3.6h/month budget.
 | Budget exhausted | Critical | Feature freeze |
 
 Wire the 5xx rate query above to your paging tool with thresholds aligned
-to these tiers.
+to these tiers. Example rules: [`docs/prometheus/alerts.example.yml`](prometheus/alerts.example.yml).
 
 ---
 

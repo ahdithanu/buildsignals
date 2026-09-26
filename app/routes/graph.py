@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -13,26 +14,39 @@ from app.schemas.graph import (
     GraphBuyerLensSummary,
     GraphEntityCreate,
     GraphEntityDetailResponse,
+    GraphEntityMergeCandidateResponse,
+    GraphEntityMergeCreate,
+    GraphEntityMergeResponse,
     GraphEntityResponse,
     GraphEntitySearchResponse,
+    GraphEntitySourceIdentityResponse,
     GraphPathResponse,
     GraphRelatedEntityResponse,
     GraphRelationshipCreate,
+    GraphRelationshipDetailResponse,
     GraphRelationshipResponse,
+    GraphRelationshipReviewQueueItem,
+    GraphRelationshipVerify,
     GraphSharedParcelSummary,
     OpportunityGraphContextResponse,
 )
+from app.services.audit_service import log_change
 from app.services.brand_intelligence import list_deal_brand_matches
 from app.services.graph_service import (
     create_relationship,
+    entity_merge_candidates,
     find_relationship_paths,
     get_entity_or_none,
+    get_relationship_or_none,
+    merge_graph_entities,
     opportunity_context,
+    relationship_review_queue,
     relationships_for_entity,
     resolve_entity,
     search_entities,
     sync_deal_contacts_to_graph,
     upsert_deal_graph_context,
+    verify_relationship,
 )
 from app.services.parcel_service import (
     count_nearby_parcel_searches_for_deal,
@@ -40,7 +54,7 @@ from app.services.parcel_service import (
     summarize_shared_parcels_for_deal,
 )
 from app.utils.auth_deps import require_role
-from app.utils.org_scope import active_query
+from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 opportunity_router = APIRouter(tags=["graph"])
@@ -120,6 +134,10 @@ def get_entity(entity_id: str, db: Session = Depends(get_db)):
     return GraphEntityDetailResponse(
         **GraphEntityResponse.model_validate(entity).model_dump(),
         aliases=[alias.alias for alias in entity.aliases],
+        source_identities=[
+            GraphEntitySourceIdentityResponse.model_validate(identity)
+            for identity in entity.source_identities
+        ],
         links=[
             {"record_type": link.record_type, "record_id": link.record_id}
             for link in entity.links
@@ -145,12 +163,84 @@ def search_graph_entities(
     ]
 
 
+@router.post(
+    "/entities/{entity_id}/merge",
+    response_model=GraphEntityMergeResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def merge_entity(
+    entity_id: str,
+    payload: GraphEntityMergeCreate,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = merge_graph_entities(
+            db,
+            entity_id,
+            payload.duplicate_entity_id,
+            reason=payload.reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    log_change(
+        db,
+        "graph_entity",
+        entity_id,
+        "merge",
+        old_values={"merged_entity_id": payload.duplicate_entity_id},
+        new_values={"reason": payload.reason, "merge_id": result.merge.id},
+        organization_id=get_org_id(),
+    )
+    db.commit()
+    db.refresh(result.merge)
+    db.refresh(result.survivor)
+    return GraphEntityMergeResponse(
+        merge_id=result.merge.id,
+        merged_entity_id=result.merge.merged_entity_id,
+        survivor=GraphEntityResponse.model_validate(result.survivor),
+        aliases_moved=result.aliases_moved,
+        source_identities_moved=result.source_identities_moved,
+        links_moved=result.links_moved,
+        relationships_rewired=result.relationships_rewired,
+        relationships_collapsed=result.relationships_collapsed,
+        evidence_moved=result.evidence_moved,
+        created_at=result.merge.created_at,
+    )
+
+
 @router.get("/entities/{entity_id}/related", response_model=list[GraphRelatedEntityResponse])
 def related_entities(entity_id: str, db: Session = Depends(get_db)):
     entity = get_entity_or_none(db, entity_id)
     if not entity:
         raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
     return [_relationship_item(row) for row in relationships_for_entity(db, entity_id)]
+
+
+@router.get("/entities/{entity_id}/merge-candidates", response_model=list[GraphEntityMergeCandidateResponse])
+def merge_candidates(
+    entity_id: str,
+    limit: int = Query(8, ge=1, le=20),
+    minimum_score: float = Query(0.6, ge=0, le=1),
+    db: Session = Depends(get_db),
+):
+    entity = get_entity_or_none(db, entity_id)
+    if not entity:
+        raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+    return [
+        GraphEntityMergeCandidateResponse(
+            entity=GraphEntityResponse.model_validate(candidate),
+            score=score,
+            reasons=reasons,
+        )
+        for candidate, score, reasons in entity_merge_candidates(
+            db,
+            entity_id,
+            limit=limit,
+            minimum_score=minimum_score,
+        )
+    ]
 
 
 @router.post(
@@ -167,6 +257,95 @@ def add_relationship(payload: GraphRelationshipCreate, db: Session = Depends(get
     db.commit()
     db.refresh(relationship)
     return relationship
+
+
+@router.get(
+    "/relationships/review-queue",
+    response_model=list[GraphRelationshipReviewQueueItem],
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def relationship_verification_queue(
+    due_within_days: int = Query(14, ge=0, le=365),
+    maximum_confidence: Optional[float] = Query(None, ge=0, le=1),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(timezone.utc)
+    rows = relationship_review_queue(
+        db,
+        due_before=now + timedelta(days=due_within_days),
+        maximum_confidence=maximum_confidence,
+        limit=limit,
+    )
+    items = []
+    for relationship in rows:
+        due_at = relationship.verification_due_at
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=timezone.utc)
+        reasons = ["verification_overdue" if due_at <= now else "verification_due"]
+        if maximum_confidence is not None and relationship.confidence <= maximum_confidence:
+            reasons.append("low_confidence")
+        items.append(GraphRelationshipReviewQueueItem(
+            relationship=GraphRelationshipResponse.model_validate(relationship),
+            source_entity=GraphEntityResponse.model_validate(relationship.source_entity),
+            target_entity=GraphEntityResponse.model_validate(relationship.target_entity),
+            review_reasons=reasons,
+        ))
+    return items
+
+
+@router.get("/relationships/{relationship_id}", response_model=GraphRelationshipDetailResponse)
+def get_relationship(relationship_id: str, db: Session = Depends(get_db)):
+    relationship = get_relationship_or_none(db, relationship_id)
+    if relationship is None:
+        raise HTTPException(status_code=404, detail=f"Relationship {relationship_id} not found")
+    return GraphRelationshipDetailResponse(
+        relationship=GraphRelationshipResponse.model_validate(relationship),
+        source_entity=GraphEntityResponse.model_validate(relationship.source_entity),
+        target_entity=GraphEntityResponse.model_validate(relationship.target_entity),
+    )
+
+
+@router.post(
+    "/relationships/{relationship_id}/verify",
+    response_model=GraphRelationshipDetailResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def verify_graph_relationship(
+    relationship_id: str,
+    payload: GraphRelationshipVerify,
+    db: Session = Depends(get_db),
+):
+    relationship = get_relationship_or_none(db, relationship_id)
+    if relationship is None:
+        raise HTTPException(status_code=404, detail=f"Relationship {relationship_id} not found")
+    old_values = {
+        "confidence": relationship.confidence,
+        "last_verified_at": relationship.last_verified_at.isoformat(),
+        "verification_due_at": relationship.verification_due_at.isoformat(),
+    }
+    verify_relationship(db, relationship, payload)
+    log_change(
+        db,
+        "graph_relationship",
+        relationship_id,
+        "verify",
+        old_values=old_values,
+        new_values={
+            "confidence": relationship.confidence,
+            "verification_due_at": relationship.verification_due_at.isoformat(),
+            "reason": payload.reason,
+            "evidence_count": len(payload.evidence),
+        },
+        organization_id=get_org_id(),
+    )
+    db.commit()
+    relationship = get_relationship_or_none(db, relationship_id)
+    return GraphRelationshipDetailResponse(
+        relationship=GraphRelationshipResponse.model_validate(relationship),
+        source_entity=GraphEntityResponse.model_validate(relationship.source_entity),
+        target_entity=GraphEntityResponse.model_validate(relationship.target_entity),
+    )
 
 
 @router.get("/paths", response_model=list[GraphPathResponse])

@@ -1,5 +1,20 @@
 # Database Backups & Restore
 
+> Verification status: the provider configuration and recovery targets below
+> are historical assumptions, not verified production guarantees. Confirm the
+> actual database provider, plan, retention, and successful restore history
+> before relying on them. Frontend hosting does not establish database protection.
+
+## Local recovery verification
+
+Run `python scripts/verify_local_recovery.py /absolute/path/to/local-demo.db`.
+This opens the source read-only and restores a consistent SQLite backup into
+a temporary directory. It checks integrity, foreign keys, required tables, and
+reports row counts. Temporary data is removed afterward. This does not validate
+PostgreSQL recovery, tenant isolation, production backups, or application flows.
+Production readiness requires a separately approved restore into an isolated
+database, measured recovery times, tenant isolation checks, and recorded results.
+
 ## Where backups come from
 
 Production Postgres is managed by Render. Render automatically takes **daily
@@ -30,7 +45,7 @@ Spin up a copy of production to validate that the snapshot is usable.
 5. Connect via `psql` using the new connection string and run smoke queries:
    - `SELECT count(*) FROM users;`
    - `SELECT count(*) FROM organizations;`
-   - `SELECT max(created_at) FROM audit_log;` — confirms recency.
+   - `SELECT max(created_at) FROM audit_logs;` — confirms recency.
 6. Optionally point a staging deployment at the restored DB and exercise a few
    read-only flows.
 7. Delete the restored instance when finished.

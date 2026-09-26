@@ -14,7 +14,7 @@
 
 databases:
   - name: dealsignal-db
-    plan: starter         # Paid tier — required for pilot (free Postgres expires in 30 days)
+    plan: free            # ⚠ free Postgres expires in 30 days — upgrade for anything real
     postgresMajorVersion: "16"
 
 services:
@@ -23,7 +23,7 @@ services:
   # counts separately). With it, limits are enforced across every instance.
   - type: keyvalue
     name: dealsignal-redis
-    plan: starter         # Shared rate-limiter state across API instances
+    plan: free            # 25 MB is plenty for short-TTL rate-limit keys
     # Rate-limit keys all carry an EXPIRE, so evicting the least-recently-used
     # under memory pressure is safe.
     maxmemoryPolicy: allkeys-lru
@@ -33,7 +33,7 @@ services:
   - type: web
     name: dealsignal-api
     runtime: python
-    plan: starter         # No sleep-on-idle; required for production pilot
+    plan: free            # ⚠ free web services sleep when idle (cold starts). Upgrade for a pilot.
     buildCommand: pip install -r requirements.txt
     # Runs once per deploy, before traffic cuts over. Applies pending Alembic
     # migrations (incl. RLS from migration 003). A broken migration fails the
@@ -81,14 +81,207 @@ services:
       # SENTRY_DSN: backend error tracking. Leave unset to disable Sentry.
       - key: SENTRY_DSN
         sync: false
+      # Mirror the worker's reviewed policy so the read-only activation report
+      # reflects the deployed collection boundary. This value is not a secret.
+      - key: INGESTION_ALLOWED_HOSTS
+        sync: false
+      # Set both only after confirming the API policy digest exactly matches
+      # the named worker. Without the digest attestation the UI remains blocked.
+      - key: INGESTION_HOST_POLICY_EXECUTOR
+        sync: false
+      - key: INGESTION_HOST_POLICY_DIGEST
+        sync: false
       # NOTE: ALLOW_ANONYMOUS is intentionally NOT set here. Production forces
       # it false; the app refuses to start if you set it true.
+
+  # ── Nationwide rollout Wave 1 (UTC) ────────────────────────────────────────
+  # One paid cron rotates through the four reviewed Texas, Washington, and New
+  # York shards over each UTC day. The first Blueprint deployment is plan-only;
+  # switch INGESTION_PLAN_ONLY to false only after reviewing all four plans.
+  - type: cron
+    name: dealsignal-permit-ingestion-cohort-1
+    runtime: python
+    plan: starter
+    schedule: "15 */6 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./scripts/daily-ingestion.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      # The shared config validates CORS in production even though this worker
+      # does not serve HTTP. Use the same frontend origin as the API service.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        value: data.austintexas.gov,data.buffalony.gov,data.cityofnewyork.us,data.ny.gov,data.seattle.gov,data.texas.gov,data.wa.gov,gis2.arlingtontx.gov,mapit.fortworthtexas.gov,maps.cob.org,services2.arcgis.com,services3.arcgis.com,webapi.legistar.com,www.everettwa.gov,www.sanmarcostx.gov,www.taylortx.gov
+      - key: INGESTION_HOST_POLICY_DIGEST
+        value: ac5e6fd26bdab13c493e3ff27d0680958951eace448119b66377dd14de15ba2c
+      - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
+        value: 0c9f4437464a111dd61ec6a8df91a1f593e641b4b7300e60e874fdb2e5cbe896
+      - key: INGESTION_ROLLOUT_WAVE
+        value: "1"
+      - key: INGESTION_SHARD_COUNT
+        value: "4"
+      - key: INGESTION_ROTATE_SHARDS
+        value: "true"
+      - key: INGESTION_PLAN_ONLY
+        value: "true"
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
+  # Runs between collection windows so stale data and repeated failures are
+  # surfaced without waiting for the next ingestion execution.
+  - type: cron
+    name: dealsignal-ingestion-health-cohort-1
+    runtime: python
+    plan: starter
+    schedule: "45 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli health
+      --organization "$INGESTION_ORGANIZATION"
+      --source-key washington_state_lcb_local_authority_letters
+      --source-key everett_wa_planning_application_notices
+      --source-key bend_or_planning_applications
+      --source-key bend_or_permit_applications_point
+      --source-key bend_or_permit_applications_line
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
+  # Savannah publishes weekly. This worker uses the due planner so a retry can
+  # resume a partial snapshot without weakening the approved weekly cadence.
+  - type: cron
+    name: dealsignal-savannah-permit-ingestion
+    runtime: python
+    plan: starter
+    schedule: "30 10 * * 1"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli scheduled-due
+      --organization "$INGESTION_ORGANIZATION"
+      --source-key savannah_ga_commercial_building_permits
+      --rollout-wave 4
+      --max-pages-per-source 100
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        value: pub.sagis.org
+      - key: INGESTION_HOST_POLICY_DIGEST
+        value: a3e282659996966df47ab7297eb3c0c3fc4072066ceb34931584c965bf0fe5cd
+      - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
+        value: 0c9f4437464a111dd61ec6a8df91a1f593e641b4b7300e60e874fdb2e5cbe896
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
+  # Dallas planning agendas are a pre-approval source. This worker is pinned
+  # to the reviewed Legistar host and Texas rollout wave.
+  - type: cron
+    name: dealsignal-dallas-planning-ingestion
+    runtime: python
+    plan: starter
+    schedule: "45 11 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli scheduled-due
+      --organization "$INGESTION_ORGANIZATION"
+      --source-key dallas_tx_legistar_planning_agendas
+      --rollout-wave 1
+      --max-pages-per-source 10
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        value: webapi.legistar.com
+      - key: INGESTION_HOST_POLICY_DIGEST
+        value: f69e8ec6e3bf9d6795e24bb734886df9d0251026a46e18fadcbb23493815043c
+      - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
+        value: 0c9f4437464a111dd61ec6a8df91a1f593e641b4b7300e60e874fdb2e5cbe896
+      - key: INGESTION_ORGANIZATION
+        sync: false
+
+  # Retries only overdue runnable candidates and persists every outcome. A
+  # successful post-audit canary stops future retries but never auto-promotes.
+  - type: cron
+    name: dealsignal-ingestion-candidate-retries
+    runtime: python
+    plan: starter
+    schedule: "30 13 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      python -m app.services.ingestion.cli retry-candidates
+      --organization "$INGESTION_ORGANIZATION"
+      --sample-size 10
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dealsignal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: INGESTION_ALLOWED_HOSTS
+        value: services5.arcgis.com
+      - key: INGESTION_HOST_POLICY_DIGEST
+        sync: false
+      - key: INGESTION_ROLLOUT_MANIFEST_DIGEST
+        sync: false
+      - key: INGESTION_ORGANIZATION
+        sync: false
 
   # ── Frontend (static site) ─────────────────────────────────────────────────
   - type: web
     name: dealsignal-frontend
     runtime: static
-    buildCommand: npm ci && npm run build
+    # `npm install` (not `npm ci`) until package-lock.json is regenerated on a
+    # Node 18+ machine — the lock is currently behind package.json.
+    buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
       # VITE_* vars are baked into the bundle AT BUILD TIME. Changing one needs
@@ -124,15 +317,21 @@ services:
       - path: /*
         name: Permissions-Policy
         value: camera=(), microphone=(), geolocation=(), interest-cohort=()
-      # Content-Security-Policy — validated with `npm run build` (Node 20).
-      # If you use a custom API domain, add it to connect-src in the dashboard.
-      - path: /*
-        name: Content-Security-Policy
-        value: >-
-          default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-          img-src 'self' data: https:; font-src 'self' data:;
-          connect-src 'self' https://*.onrender.com https://*.ingest.sentry.io https://*.sentry.io;
-          frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+      # ── Content-Security-Policy — ENABLE AFTER A BUILD TEST ──
+      # A strict script-src is the real XSS defense, but a wrong CSP white-
+      # screens the app, and this couldn't be validated in the authoring env
+      # (Node 10). Before enabling: `npm run build && npm run preview`, confirm
+      # the app loads with no CSP violations in the console, and adjust
+      # connect-src to your actual API + Sentry origins. Vite's prod build may
+      # need 'unsafe-inline' in style-src (injected styles); it should NOT need
+      # it in script-src. Then uncomment:
+      # - path: /*
+      #   name: Content-Security-Policy
+      #   value: >-
+      #     default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+      #     img-src 'self' data: https:; font-src 'self' data:;
+      #     connect-src 'self' https://YOUR-API.onrender.com https://*.ingest.sentry.io;
+      #     frame-ancestors 'none'; base-uri 'self'; object-src 'none'
     routes:
       # SPA fallback: every path serves index.html so client-side routing works.
       - type: rewrite

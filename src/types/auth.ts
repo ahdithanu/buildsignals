@@ -33,6 +33,7 @@ export interface RegisterRequest {
 export interface LoginRequest {
   email: string;
   password: string;
+  totp_code?: string;
 }
 
 export interface Organization {

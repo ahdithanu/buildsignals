@@ -17,13 +17,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import type {
+  BrandDetectionMethod,
+  BrandMatchFreshness,
   BrandMatchApprovalStage,
   BrandMatchReviewStatus,
+  BrandSignalCohort,
   PermitBrandMatchListParams,
 } from '@/types/brand';
 
 type StatusFilter = BrandMatchReviewStatus | 'all';
 type StageFilter = BrandMatchApprovalStage | 'all';
+type MethodFilter = BrandDetectionMethod | 'all';
+type FreshnessFilter = BrandMatchFreshness | 'all';
 
 const statusFilters: Array<{ value: StatusFilter; label: string }> = [
   { value: 'candidate', label: 'Needs review' },
@@ -35,6 +40,12 @@ const statusFilters: Array<{ value: StatusFilter; label: string }> = [
 
 const limitOptions = [25, 50, 100, 250];
 
+const methodFilters: Array<{ value: MethodFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'direct_alias', label: 'Direct' },
+  { value: 'historical_party', label: 'Stealth' },
+];
+
 function parseStatusFilter(value: string | null): StatusFilter {
   return value === 'candidate' || value === 'confirmed' || value === 'dismissed' || value === 'retracted'
     ? value
@@ -45,9 +56,23 @@ function parseStageFilter(value: string | null): StageFilter {
   return value === 'pre_approval' || value === 'approved' ? value : 'all';
 }
 
+function parseMethodFilter(value: string | null): MethodFilter {
+  return value === 'direct_alias' || value === 'historical_party' ? value : 'all';
+}
+
 function parseLimitFilter(value: string | null): number {
   const parsed = Number(value);
   return limitOptions.includes(parsed) ? parsed : 100;
+}
+
+function parseFreshnessFilter(value: string | null): FreshnessFilter {
+  return value === 'fresh' || value === 'active' || value === 'aging' || value === 'stale'
+    ? value
+    : 'all';
+}
+
+function parseCohortFilter(value: string | null): BrandSignalCohort | undefined {
+  return value === 'national_retail' || value === 'major_builder' ? value : undefined;
 }
 
 function LinkCard({ href, label, value }: { href: string; label: string; value: number }) {
@@ -67,22 +92,32 @@ export default function PermitBrandReview() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [status, setStatus] = useState<StatusFilter>(() => parseStatusFilter(searchParams.get('status')));
   const [stage, setStage] = useState<StageFilter>(() => parseStageFilter(searchParams.get('stage')));
+  const [method, setMethod] = useState<MethodFilter>(() => parseMethodFilter(searchParams.get('detection_method')));
+  const [freshness, setFreshness] = useState<FreshnessFilter>(() => parseFreshnessFilter(searchParams.get('freshness')));
   const [limit, setLimit] = useState(() => parseLimitFilter(searchParams.get('limit')));
   const { toast } = useToast();
   const { role } = useAuth();
   const canReview = role === 'admin' || role === 'editor';
+  const cohort = parseCohortFilter(searchParams.get('cohort'));
 
   useEffect(() => {
     setStatus(parseStatusFilter(searchParams.get('status')));
     setStage(parseStageFilter(searchParams.get('stage')));
+    setMethod(parseMethodFilter(searchParams.get('detection_method')));
+    setFreshness(parseFreshnessFilter(searchParams.get('freshness')));
     setLimit(parseLimitFilter(searchParams.get('limit')));
   }, [searchParams]);
 
   const params = useMemo<PermitBrandMatchListParams>(() => ({
+    brand_id: searchParams.get('brand_id') || undefined,
+    cohort,
     review_status: status === 'all' ? undefined : status,
     approval_stage: stage === 'all' ? undefined : stage,
+    detection_method: method === 'all' ? undefined : method,
+    freshness: freshness === 'all' ? undefined : freshness,
+    sort_by: 'freshness',
     limit,
-  }), [status, stage, limit]);
+  }), [searchParams, cohort, status, stage, method, freshness, limit]);
 
   const { data, isLoading, isFetching, error, refetch, review, createOpportunity } = usePermitBrandMatchQueue(params);
   const matches = data ?? [];
@@ -91,22 +126,37 @@ export default function PermitBrandReview() {
   const preApprovalCount = matches.filter((match) => match.permit.approval_stage === 'pre_approval').length;
   const approvedCount = matches.filter((match) => match.permit.approval_stage === 'approved').length;
   const highConfidenceCount = matches.filter((match) => match.confidence >= 0.9).length;
+  const stealthCount = matches.filter((match) => match.detection_method === 'historical_party').length;
 
-  const queueHref = (nextStage: StageFilter) => {
+  const queueHref = (nextStage: StageFilter, nextMethod: MethodFilter = method) => {
     const params = new URLSearchParams();
+    const brandId = searchParams.get('brand_id');
+    if (brandId) params.set('brand_id', brandId);
+    const cohort = parseCohortFilter(searchParams.get('cohort'));
+    if (cohort) params.set('cohort', cohort);
     params.set('status', status === 'all' ? 'candidate' : status);
     params.set('stage', nextStage);
+    if (nextMethod !== 'all') params.set('detection_method', nextMethod);
+    if (freshness !== 'all') params.set('freshness', freshness);
     params.set('limit', String(limit));
     return `/permit-review?${params.toString()}`;
   };
 
-  const syncQueryParams = (next: Partial<{ status: StatusFilter; stage: StageFilter; limit: number }>) => {
+  const syncQueryParams = (next: Partial<{ status: StatusFilter; stage: StageFilter; method: MethodFilter; freshness: FreshnessFilter; limit: number }>) => {
     const nextStatus = next.status ?? status;
     const nextStage = next.stage ?? stage;
+    const nextMethod = next.method ?? method;
+    const nextFreshness = next.freshness ?? freshness;
     const nextLimit = next.limit ?? limit;
     const params = new URLSearchParams();
+    const brandId = searchParams.get('brand_id');
+    if (brandId) params.set('brand_id', brandId);
+    const cohort = parseCohortFilter(searchParams.get('cohort'));
+    if (cohort) params.set('cohort', cohort);
     if (nextStatus !== 'candidate') params.set('status', nextStatus);
     if (nextStage !== 'all') params.set('stage', nextStage);
+    if (nextMethod !== 'all') params.set('detection_method', nextMethod);
+    if (nextFreshness !== 'all') params.set('freshness', nextFreshness);
     if (nextLimit !== 100) params.set('limit', String(nextLimit));
     setSearchParams(params, { replace: true });
   };
@@ -167,11 +217,13 @@ export default function PermitBrandReview() {
             <div className="flex items-center gap-2">
               <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold font-display text-foreground md:text-xl">
-                Permit Brand Review
+                {cohort === 'major_builder' ? 'Major Builder Review' : 'Permit Brand Review'}
               </h2>
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Validate retailer matches and approved-opening signals detected in municipal permit filings
+              {cohort === 'major_builder'
+                ? 'Validate major-builder development signals detected in municipal permit filings'
+                : 'Validate retailer matches and approved-opening signals detected in municipal permit filings'}
             </p>
           </div>
           <Button
@@ -187,8 +239,9 @@ export default function PermitBrandReview() {
         </div>
 
         <div className="flex flex-col gap-3 border-y bg-card px-3 py-3 md:flex-row md:items-center md:justify-between md:px-4">
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {statusFilters.map((filter) => (
+          <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center">
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {statusFilters.map((filter) => (
                 <button
                   key={filter.value}
                   type="button"
@@ -205,11 +258,51 @@ export default function PermitBrandReview() {
               >
                 {filter.label}
               </button>
-            ))}
+              ))}
+            </div>
+            <div className="flex items-center gap-1 border-l-0 pl-0 md:border-l md:pl-2" role="group" aria-label="Detection method">
+              {methodFilters.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => {
+                    setMethod(filter.value);
+                    syncQueryParams({ method: filter.value });
+                  }}
+                  className={cn(
+                    'h-8 shrink-0 rounded-md px-3 text-xs font-medium transition-colors',
+                    method === filter.value
+                      ? 'bg-secondary text-foreground'
+                      : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  )}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="hidden h-4 w-4 text-muted-foreground sm:block" />
+            <Select
+              value={freshness}
+              onValueChange={(value) => {
+                const nextFreshness = value as FreshnessFilter;
+                setFreshness(nextFreshness);
+                syncQueryParams({ freshness: nextFreshness });
+              }}
+            >
+              <SelectTrigger className="h-8 w-[142px] text-xs" aria-label="Signal freshness">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All activity</SelectItem>
+                <SelectItem value="fresh">Fresh: 0-30d</SelectItem>
+                <SelectItem value="active">Active: 31-90d</SelectItem>
+                <SelectItem value="aging">Aging: 91-180d</SelectItem>
+                <SelectItem value="stale">Dormant: 180d+</SelectItem>
+              </SelectContent>
+            </Select>
             <Select
               value={stage}
               onValueChange={(value) => {
@@ -248,10 +341,11 @@ export default function PermitBrandReview() {
         </div>
 
         {!isLoading && !error && (
-          <div className="grid grid-cols-4 divide-x rounded-md border bg-card">
+          <div className="grid grid-cols-2 divide-x divide-y rounded-md border bg-card md:grid-cols-5 md:divide-y-0">
             <LinkCard href={queueHref('pre_approval')} label="Matches shown" value={matches.length} />
             <LinkCard href={queueHref('pre_approval')} label="Pre-approval" value={preApprovalCount} />
             <LinkCard href={queueHref('approved')} label="Approved" value={approvedCount} />
+            <LinkCard href={queueHref(stage, 'historical_party')} label="Stealth inferred" value={stealthCount} />
             <LinkCard href={queueHref(stage === 'all' ? 'pre_approval' : stage)} label="90%+ confidence" value={highConfidenceCount} />
           </div>
         )}

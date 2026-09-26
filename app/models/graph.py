@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import uuid4
 
@@ -27,6 +27,10 @@ from app.models.mixins import OrgMixin
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _default_verification_due_at() -> datetime:
+    return _utcnow() + timedelta(days=90)
 
 
 class GraphEntityType(str, enum.Enum):
@@ -87,6 +91,9 @@ class GraphEntity(OrgMixin, Base):
     aliases: Mapped[List["GraphEntityAlias"]] = relationship(
         "GraphEntityAlias", back_populates="entity", cascade="all, delete-orphan"
     )
+    source_identities: Mapped[List["GraphEntitySourceIdentity"]] = relationship(
+        "GraphEntitySourceIdentity", back_populates="entity", cascade="all, delete-orphan"
+    )
     links: Mapped[List["GraphEntityLink"]] = relationship(
         "GraphEntityLink", back_populates="entity", cascade="all, delete-orphan"
     )
@@ -134,6 +141,58 @@ class GraphEntityAlias(OrgMixin, Base):
     )
 
 
+class GraphEntitySourceIdentity(OrgMixin, Base):
+    __tablename__ = "graph_entity_source_identities"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    entity_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("graph_entities.id", ondelete="CASCADE"), nullable=False
+    )
+    source_system: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    source_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    confidence: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    last_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    entity: Mapped["GraphEntity"] = relationship("GraphEntity", back_populates="source_identities")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "entity_id",
+            "source_system",
+            "source_id",
+            name="uq_graph_entity_source_identity_entity",
+        ),
+        Index(
+            "ix_graph_entity_source_identity_lookup",
+            "organization_id",
+            "source_system",
+            "source_id",
+        ),
+    )
+
+
+class GraphEntityMerge(OrgMixin, Base):
+    __tablename__ = "graph_entity_merges"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    survivor_entity_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("graph_entities.id", ondelete="RESTRICT"), nullable=False
+    )
+    merged_entity_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    entity_type: Mapped[GraphEntityType] = mapped_column(SAEnum(GraphEntityType), nullable=False)
+    merged_display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason: Mapped[str] = mapped_column(String(500), nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "merged_entity_id", name="uq_graph_entity_merge_retired"),
+        Index("ix_graph_entity_merge_survivor", "organization_id", "survivor_entity_id"),
+    )
+
+
 class GraphEntityLink(OrgMixin, Base):
     __tablename__ = "graph_entity_links"
 
@@ -169,6 +228,9 @@ class GraphRelationship(OrgMixin, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
     last_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    verification_due_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_default_verification_due_at, nullable=False
+    )
 
     source_entity: Mapped["GraphEntity"] = relationship(
         "GraphEntity", back_populates="outgoing_relationships", foreign_keys=[source_entity_id]
@@ -192,6 +254,12 @@ class GraphRelationship(OrgMixin, Base):
         ),
         Index("ix_graph_relationship_source_target", "organization_id", "source_entity_id", "target_entity_id"),
         Index("ix_graph_relationship_current", "organization_id", "is_current"),
+        Index(
+            "ix_graph_relationship_verification_queue",
+            "organization_id",
+            "is_current",
+            "verification_due_at",
+        ),
     )
 
 

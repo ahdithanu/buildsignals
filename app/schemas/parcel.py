@@ -11,7 +11,7 @@ from app.schemas.deal import DealDetailResponse
 class NearbyParcelSearchCreate(BaseModel):
     anchor_brand_match_id: str
     radius_miles: float = Field(default=2.0, ge=0.25, le=5.0)
-    persona: Literal["developer", "broker", "realtor"] = "developer"
+    persona: Literal["developer", "investor", "broker", "realtor"] = "developer"
     minimum_land_area_sq_ft: Optional[float] = Field(default=None, ge=0)
     zoning_codes: list[str] = Field(default_factory=list, max_length=50)
     land_uses: list[str] = Field(default_factory=list, max_length=50)
@@ -67,6 +67,43 @@ class ParcelSummaryResponse(BaseModel):
     zoning_code: Optional[str]
     boundary_geometry: Optional[dict[str, Any]] = None
     last_verified_at: datetime
+
+
+class ParcelLineageEvidenceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    raw_source_record_id: str
+    source_url: Optional[str]
+    excerpt: Optional[str]
+    confidence: float
+    observed_at: datetime
+    last_verified_at: datetime
+    payload: Optional[dict[str, Any]]
+
+
+class ParcelLineageParticipantResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    role: str
+    external_parcel_id: str
+    parcel_id: Optional[str]
+    parcel: Optional[ParcelSummaryResponse]
+    last_verified_at: datetime
+
+
+class ParcelLineageEventResponse(BaseModel):
+    id: str
+    source_key: str
+    external_event_id: str
+    event_type: str
+    confidence: float
+    observed_at: datetime
+    last_verified_at: datetime
+    attributes: Optional[dict[str, Any]]
+    participants: list[ParcelLineageParticipantResponse]
+    evidence: list[ParcelLineageEvidenceResponse]
 
 
 class NearbyParcelCandidateResponse(BaseModel):
@@ -131,9 +168,62 @@ class ParcelDetailResponse(BaseModel):
     search_hits: list[ParcelSearchHitResponse] = Field(default_factory=list)
     graph_entity: Optional[dict[str, Any]] = None
     graph_related: list[dict[str, Any]] = Field(default_factory=list)
+    lineage_events: list[ParcelLineageEventResponse] = Field(default_factory=list)
 
 
 class NearbyParcelOpportunityResponse(BaseModel):
     created: bool
     candidate_id: str
     deal: DealDetailResponse
+
+
+class AcquisitionRadarSignalResponse(BaseModel):
+    candidate_id: str
+    search_id: str
+    deal_id: str
+    deal_name: str
+    persona: str
+    approval_stage: Optional[str] = None
+    signal_confidence: Optional[float] = None
+    distance_miles: float
+    candidate_score: float
+    created_at: datetime
+
+
+class AcquisitionRadarItemResponse(BaseModel):
+    parcel: ParcelSummaryResponse
+    facts: list[ParcelFactResponse] = Field(default_factory=list)
+    candidate_id: str
+    acquisition_case_id: Optional[str] = None
+    radar_score: float
+    best_candidate_score: float
+    score_confidence: float
+    appearance_count: int
+    opportunity_count: int
+    personas: list[str]
+    review_status: str
+    assigned_to_user_id: Optional[str] = None
+    assigned_to_name: Optional[str] = None
+    contacted_at: Optional[datetime] = None
+    follow_up_at: Optional[datetime] = None
+    promoted_deal_id: Optional[str] = None
+    latest_signal_at: datetime
+    reasons: list[str]
+    cautions: list[str]
+    signals: list[AcquisitionRadarSignalResponse]
+
+
+class AcquisitionRadarSummaryResponse(BaseModel):
+    total_parcels: int
+    shortlisted_parcels: int
+    multi_opportunity_parcels: int
+    assigned_parcels: int
+    state_count: int
+
+
+class AcquisitionRadarResponse(BaseModel):
+    items: list[AcquisitionRadarItemResponse]
+    total: int
+    limit: int
+    offset: int
+    summary: AcquisitionRadarSummaryResponse

@@ -1,0 +1,1686 @@
+[
+  {
+    "adapter": "arcgis",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Permit_Applications_Line/FeatureServer/0",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "ApplicationNumber",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "ApplicationNumber"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "filed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationDate",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "issued_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "IssueDate",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "completed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "DateFinaled",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "approval_stage",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "IssueDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationStatus",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "StatusDesc",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "owner_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Owner",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "address",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Address",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "parcel_id",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "TAXLOT",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "valuation",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ProjectValuation",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "square_feet",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "SQFT",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "units",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Units",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "occupancy_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "UseDesc",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_subtype",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationType",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "BldgUse",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status_updated_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "LASTUPDATE",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Bend, OR",
+    "key": "bend_or_permit_applications_line",
+    "name": "Bend Permit Applications Line",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "OBJECTID",
+        "ApplicationNumber",
+        "ApplicationDate",
+        "LASTUPDATE"
+      ],
+      "canary_stage_probes": [
+        {
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"
+          },
+          "expected_stage": "pre_approval",
+          "name": "bend_permit_line_pre_approval",
+          "sample_size": 5
+        },
+        {
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"
+          },
+          "expected_stage": "approved",
+          "name": "bend_permit_line_approved",
+          "sample_size": 5
+        }
+      ],
+      "candidate_canary_completed_on": "2026-08-02",
+      "candidate_key": "bend_or_permit_applications_line",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "connector": {
+        "include_geometry": false,
+        "order_by_fields": "LASTUPDATE DESC, OBJECTID ASC",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,BuildingCategory,DeptCode,Department,Owner,Address,TAXLOT,CENTERLINEID,LASTUPDATE,OverallStatus,Shape__Length",
+        "page_size": 500,
+        "query": {
+          "f": "json",
+          "outSR": 4326
+        },
+        "where": "ApplicationNumber IS NOT NULL"
+      },
+      "defaults": {
+        "approval_stage": "pre_approval",
+        "city": "Bend",
+        "jurisdiction": "Bend",
+        "permit_type": "building_permit",
+        "state": "OR"
+      },
+      "export_policy": "derived_permit_and_planning_intelligence_only_no_raw_source_export",
+      "field_allowlist": [
+        "Address",
+        "ApplicationDate",
+        "ApplicationNumber",
+        "ApplicationStatus",
+        "ApplicationType",
+        "BldgUse",
+        "BuildingCategory",
+        "CENTERLINEID",
+        "DateFinaled",
+        "Department",
+        "DeptCode",
+        "GNCommonID",
+        "GNMasterProjectID",
+        "IssueDate",
+        "LASTUPDATE",
+        "OBJECTID",
+        "OverallStatus",
+        "Owner",
+        "PR_RecordID",
+        "ProjectValuation",
+        "SQFT",
+        "Shape__Length",
+        "StatusDesc",
+        "TAXLOT",
+        "TypeDesc",
+        "Units",
+        "UseDesc",
+        "centroid",
+        "geometry"
+      ],
+      "freshness_field": "LASTUPDATE",
+      "freshness_semantics": "record_updated_at",
+      "freshness_sla_hours": 72,
+      "license": "Custom License",
+      "license_url": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-line",
+      "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-line",
+      "reconciliation_mode": "nightly_full_snapshot",
+      "refresh_frequency": "nightly",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by Build Signals on 2026-08-02 for commercial storage, analysis, and customer-facing derived intelligence. Preserve City of Bend attribution, source links, currentness notices, and no raw source-replacement export.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "AssignedPlanner",
+        "CREATEDBY",
+        "UPDATEDBY",
+        "GlobalID",
+        "raw_geometry_export",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
+    "adapter": "arcgis",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Permit_Applications_Point/FeatureServer/0",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "ApplicationNumber",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "ApplicationNumber"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "filed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationDate",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "issued_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "IssueDate",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "completed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "DateFinaled",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "approval_stage",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "IssueDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationStatus",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationDescription",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "owner_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Owner",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "address",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Address",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "parcel_id",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "TAXLOT",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "valuation",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ProjectValuation",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "square_feet",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "SQFT",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "units",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Units",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "proposed_use",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ProposedLandUse",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "occupancy_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "UseDesc",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_subtype",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationType",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "BldgUse",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "OverallStatus",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status_updated_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "LASTUPDATE",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "latitude",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "geometry",
+        "transform": "object_path",
+        "transform_options": {
+          "path": [
+            "y"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "longitude",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__longitude",
+        "transform": "object_path",
+        "transform_options": {
+          "path": [
+            "x"
+          ],
+          "source_field": "geometry"
+        },
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Bend, OR",
+    "key": "bend_or_permit_applications_point",
+    "name": "Bend Permit Applications Point",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "OBJECTID",
+        "ApplicationNumber",
+        "ApplicationDate",
+        "LASTUPDATE"
+      ],
+      "canary_stage_probes": [
+        {
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"
+          },
+          "expected_stage": "pre_approval",
+          "name": "bend_permit_point_pre_approval",
+          "sample_size": 5
+        },
+        {
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"
+          },
+          "expected_stage": "approved",
+          "name": "bend_permit_point_approved",
+          "sample_size": 5
+        }
+      ],
+      "candidate_canary_completed_on": "2026-08-02",
+      "candidate_key": "bend_or_permit_applications_point",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "connector": {
+        "include_geometry": true,
+        "order_by_fields": "LASTUPDATE DESC, OBJECTID ASC",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,Owner,Address,TAXLOT,LASTUPDATE,OverallStatus,ApplicationDescription,ProposedLandUse",
+        "page_size": 500,
+        "query": {
+          "f": "json",
+          "outSR": 4326
+        },
+        "where": "ApplicationNumber IS NOT NULL"
+      },
+      "defaults": {
+        "approval_stage": "pre_approval",
+        "city": "Bend",
+        "jurisdiction": "Bend",
+        "permit_type": "building_permit",
+        "state": "OR"
+      },
+      "export_policy": "derived_permit_and_planning_intelligence_only_no_raw_source_export",
+      "field_allowlist": [
+        "Address",
+        "ApplicationDate",
+        "ApplicationDescription",
+        "ApplicationNumber",
+        "ApplicationStatus",
+        "ApplicationType",
+        "BldgUse",
+        "DateFinaled",
+        "GNCommonID",
+        "GNMasterProjectID",
+        "IssueDate",
+        "LASTUPDATE",
+        "OBJECTID",
+        "OverallStatus",
+        "Owner",
+        "PR_RecordID",
+        "ProjectValuation",
+        "ProposedLandUse",
+        "SQFT",
+        "StatusDesc",
+        "TAXLOT",
+        "TypeDesc",
+        "Units",
+        "UseDesc",
+        "centroid",
+        "geometry"
+      ],
+      "freshness_field": "LASTUPDATE",
+      "freshness_semantics": "record_updated_at",
+      "freshness_sla_hours": 72,
+      "license": "Custom License",
+      "license_url": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-point",
+      "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-point",
+      "reconciliation_mode": "nightly_full_snapshot",
+      "refresh_frequency": "nightly",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by Build Signals on 2026-08-02 for commercial storage, analysis, and customer-facing derived intelligence. Preserve City of Bend attribution, source links, currentness notices, and no raw source-replacement export.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "AssignedPlanner",
+        "CREATEDBY",
+        "UPDATEDBY",
+        "GlobalID",
+        "raw_geometry_export",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
+    "adapter": "arcgis",
+    "base_url": "https://services5.arcgis.com/JisFYcK2mIVg9ueP/ArcGIS/rest/services/Planning/FeatureServer/0",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "ApplicationNumber",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "ApplicationNumber"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "filed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationDate",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "approved_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "DecisionDate",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "approval_stage",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "DecisionDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "AppStatusDesc",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationDescription",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "address",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Address",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "parcel_id",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "TAXLOT",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_subtype",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ApplicationTypeCode",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "ProjectTypeCode",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "OverallStatus",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status_updated_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "LASTUPDATE",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "latitude",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "centroid",
+        "transform": "object_path",
+        "transform_options": {
+          "path": [
+            "y"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "longitude",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__longitude",
+        "transform": "object_path",
+        "transform_options": {
+          "path": [
+            "x"
+          ],
+          "source_field": "centroid"
+        },
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Bend, OR",
+    "key": "bend_or_planning_applications",
+    "name": "Bend Planning Applications",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "OBJECTID",
+        "ApplicationNumber",
+        "ApplicationDate",
+        "LASTUPDATE"
+      ],
+      "canary_stage_probes": [
+        {
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NULL"
+          },
+          "expected_stage": "pre_approval",
+          "name": "bend_planning_pre_approval",
+          "sample_size": 5
+        },
+        {
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NOT NULL"
+          },
+          "expected_stage": "approved",
+          "name": "bend_planning_approved",
+          "sample_size": 5
+        }
+      ],
+      "candidate_canary_completed_on": "2026-08-02",
+      "candidate_key": "bend_or_planning_applications",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "connector": {
+        "include_centroid": true,
+        "include_geometry": false,
+        "order_by_fields": "LASTUPDATE DESC, OBJECTID ASC",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PL_RecordID,ApplicationNumber,ApplicationDate,ApplicationDescription,ProjectTypeCode,ApplicationTypeCode,AppStatus,AppStatusDesc,Address,TAXLOT,DecisionDate,LASTUPDATE,OverallStatus",
+        "page_size": 500,
+        "query": {
+          "f": "json",
+          "outSR": 4326
+        },
+        "where": "ApplicationNumber IS NOT NULL"
+      },
+      "defaults": {
+        "approval_stage": "pre_approval",
+        "city": "Bend",
+        "jurisdiction": "Bend",
+        "permit_type": "planning_application",
+        "state": "OR"
+      },
+      "export_policy": "derived_permit_and_planning_intelligence_only_no_raw_source_export",
+      "field_allowlist": [
+        "Address",
+        "AppStatus",
+        "AppStatusDesc",
+        "ApplicationDate",
+        "ApplicationDescription",
+        "ApplicationNumber",
+        "ApplicationTypeCode",
+        "DecisionDate",
+        "GNCommonID",
+        "GNMasterProjectID",
+        "LASTUPDATE",
+        "OBJECTID",
+        "OverallStatus",
+        "PL_RecordID",
+        "ProjectTypeCode",
+        "TAXLOT",
+        "centroid",
+        "geometry"
+      ],
+      "freshness_field": "LASTUPDATE",
+      "freshness_semantics": "record_updated_at",
+      "freshness_sla_hours": 72,
+      "license": "Custom License",
+      "license_url": "https://data.bendoregon.gov/datasets/bendoregon::planning-table",
+      "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::planning-table",
+      "reconciliation_mode": "nightly_full_snapshot",
+      "refresh_frequency": "nightly",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by Build Signals on 2026-08-02 for commercial storage, analysis, and customer-facing derived intelligence. Preserve City of Bend attribution, source links, currentness notices, and no raw source-replacement export.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "AssignedPlanner",
+        "CREATEDBY",
+        "UPDATEDBY",
+        "GlobalID",
+        "raw_geometry_export",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
+    "adapter": "legistar",
+    "base_url": "https://webapi.legistar.com/v1/cityofdallas",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "source_record_id",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "event_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "event_type",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "stage",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "stage",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "title",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "title",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "summary",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "summary",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "evidence_excerpt",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "evidence_excerpt",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "agenda_item_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "agenda_item_number",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "reference_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "reference_number",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "meeting_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "meeting_name",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "governing_body",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "governing_body",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "meeting_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "meeting_at",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "published_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "published_at",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "source_url",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "source_url",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Dallas, TX",
+    "key": "dallas_tx_legistar_planning_agendas",
+    "name": "Dallas Legistar Planning Agendas",
+    "record_type": "planning",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "source_record_id",
+        "reference_number",
+        "evidence_excerpt",
+        "modified_at",
+        "source_url"
+      ],
+      "candidate_canary_completed_on": "2026-08-24",
+      "candidate_key": "dallas_tx_legistar_planning_agendas",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_priority": 80,
+      "collection_sla_hours": 48,
+      "connector": {
+        "body_names": [
+          "City Plan Commission",
+          "Board of Adjustment",
+          "Board of Adjustment, Panel A",
+          "Board of Adjustment, Panel B",
+          "Board of Adjustment, Panel C",
+          "Landmark Commission",
+          "Economic Development Committee"
+        ],
+        "endpoint": "https://webapi.legistar.com/v1/cityofdallas",
+        "event_page_size": 20,
+        "future_days": 120,
+        "lookback_days": 45,
+        "max_events": 40,
+        "max_evidence_characters": 10000,
+        "max_items_per_event": 150,
+        "max_records": 250,
+        "max_retries": 2,
+        "page_size": 25,
+        "timeout": 30
+      },
+      "defaults": {
+        "city": "Dallas",
+        "confidence": 0.9,
+        "jurisdiction": "Dallas, TX",
+        "state": "TX"
+      },
+      "export_policy": "derived_planning_intelligence_only_no_raw_source_or_document_export",
+      "field_allowlist": [
+        "source_record_id",
+        "event_type",
+        "stage",
+        "title",
+        "summary",
+        "evidence_excerpt",
+        "agenda_item_number",
+        "reference_number",
+        "meeting_name",
+        "governing_body",
+        "meeting_date",
+        "meeting_at",
+        "published_at",
+        "modified_at",
+        "source_url",
+        "legistar_event_id",
+        "legistar_event_item_id",
+        "legistar_matter_id",
+        "matter_type",
+        "matter_status",
+        "meeting_location",
+        "event_time"
+      ],
+      "freshness_field": "modified_at",
+      "freshness_semantics": "source_modified_at",
+      "freshness_sla_hours": 336,
+      "license": "Official City of Dallas public meeting records; narrow commercial SaaS storage and derived display approved on 2026-08-24 with source attribution and no raw-document redistribution",
+      "max_pages_per_run": 10,
+      "official_landing_page": "https://dallascityhall.com/government/Boards-and-Commissions/City-Plan-and-Zoning-Commission/Pages/Meetings.aspx",
+      "promotion_data_minimization_approved": true,
+      "promotion_reviewed_by": "Build Signals Owner",
+      "promotion_reviewed_on": "2026-08-24",
+      "promotion_rights_approved": true,
+      "reconciliation_mode": "bounded_legistar_event_window",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by the Build Signals owner on 2026-08-24 for bounded commercial storage and customer-facing derived intelligence from intentionally public City of Dallas meeting records exposed through the public Granicus Legistar API. Preserve City attribution and official links; do not redistribute attachments or offer a raw meeting-record replacement export.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval",
+      "suppressed_fields": [
+        "EventItemAttachments",
+        "attachment_content",
+        "raw_agenda_document",
+        "raw_minutes_document",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
+    "adapter": "arcgis",
+    "base_url": "https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/bseed_building_permit_plan_reviews/FeatureServer/0/query",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "record_id",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "record_id"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "application_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "record_id"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "filed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "submitted_date",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "approval_stage",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "task_status",
+              "operator": "in",
+              "value": "approved",
+              "values": [
+                "Plans Approved"
+              ]
+            }
+          ],
+          "default": "pre_approval"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "task_status",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status_updated_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "task_status_date",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "review_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "task",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "work_description",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "address",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "address",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "parcel_id",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "parcel_id",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "longitude",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "longitude",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "latitude",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "latitude",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Detroit, MI",
+    "key": "detroit_mi_bseed_building_plan_reviews",
+    "name": "Detroit BSEED Building Permit Plan Reviews",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "record_id",
+        "address",
+        "submitted_date",
+        "task_status",
+        "task_status_date"
+      ],
+      "candidate_canary_completed_on": "2026-08-15",
+      "candidate_key": "detroit_mi_bseed_building_plan_reviews",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "connector": {
+        "include_geometry": false,
+        "keyset_field": "ObjectId",
+        "order_by_fields": "ObjectId ASC",
+        "out_fields": "ObjectId,record_id,address,submitted_date,task,task_status,task_status_date,work_description,parcel_id,longitude,latitude",
+        "page_size": 1000,
+        "query": {
+          "outSR": 4326
+        },
+        "where": "record_id IS NOT NULL AND address IS NOT NULL AND submitted_date IS NOT NULL AND task_status IN ('Accepted - Document Review Required','Routed for Electronic Review','Plans Approved')"
+      },
+      "defaults": {
+        "city": "Detroit",
+        "jurisdiction": "Detroit",
+        "permit_type": "building_plan_review",
+        "source_url": "https://www.arcgis.com/home/item.html?id=b47bda202cac49dcbef8d477e9ecb09b",
+        "state": "MI"
+      },
+      "export_policy": "derived_plan_review_intelligence_only_no_raw_source_replacement",
+      "field_allowlist": [
+        "ObjectId",
+        "record_id",
+        "address",
+        "submitted_date",
+        "task",
+        "task_status",
+        "task_status_date",
+        "work_description",
+        "parcel_id",
+        "longitude",
+        "latitude"
+      ],
+      "freshness_field": "task_status_date",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 72,
+      "license": "City of Detroit public-domain open-portal permitting information",
+      "official_landing_page": "https://www.arcgis.com/home/item.html?id=b47bda202cac49dcbef8d477e9ecb09b",
+      "promotion_data_minimization_approved": true,
+      "promotion_reviewed_by": "Build Signals Owner",
+      "promotion_reviewed_on": "2026-08-15",
+      "promotion_rights_approved": true,
+      "reconciliation_mode": "daily_full_snapshot",
+      "refresh_frequency": "daily",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by the Build Signals owner on 2026-08-15 for commercial storage and customer-facing derived intelligence from the City of Detroit BSEED public-authoritative building permit plan-review layer. Preserve City of Detroit and BSEED attribution, official source links, retrieval timestamps, and currentness caveats. Retain only the approved plan-review identity, site, lifecycle, work-description, parcel, and coordinate fields; do not fetch contacts, attachments, document bodies, internal identifiers, raw geometry, or offer raw source-replacement exports.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "task_id",
+        "pmr_id",
+        "address_id",
+        "applicant_name",
+        "owner_name",
+        "contractor_name",
+        "architect_name",
+        "engineer_name",
+        "reviewer_name",
+        "phone_number",
+        "email_address",
+        "mailing_address",
+        "plan_file",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
+    "adapter": "civicplus_newsflash",
+    "base_url": "https://www.sanmarcostx.gov/m/newsflash",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "article_id",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "application_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "pattern": "(?i)\\b((?:ZC|AN|PDD|PSA|SNC)-\\d{2}-\\d+(?:\\([A-Z]\\))?|\\d{4}-\\d{5})\\b",
+          "source_field": "title"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "project_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "title",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "description",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "applicant_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__applicant_name",
+        "transform": "regex_extract",
+        "transform_options": {
+          "pattern": "(?is)\\b(?:has\\s*)?(?:been\\s*)?submitted by\\s+(?:the\\s+)?(.+?)(?:,?\\s*on\\s*behalf\\s+of\\b|,?\\s+for approximately\\b|,\\s*for\\b|\\.(?:\\s|$)|$)",
+          "source_field": "description"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "owner_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__owner_name",
+        "transform": "regex_extract",
+        "transform_options": {
+          "pattern": "(?is)\\bon\\s*behalf\\s+of\\s+(.+?)(?:,?\\s+for approximately\\b|,\\s*to\\b|,\\s*for\\b|\\.(?:\\s|$)|$)",
+          "source_field": "description"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "filed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "published_at",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "source_url",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "link",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "San Marcos, TX",
+    "key": "san_marcos_tx_planning_application_notices",
+    "name": "San Marcos Planning Application Notices",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "article_id",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ],
+      "candidate_canary_completed_on": "2026-08-14",
+      "candidate_key": "san_marcos_tx_planning_application_notices",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "connector": {
+        "category_id": 30,
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public NewsFlash reader)"
+        },
+        "max_description_chars": 2000,
+        "max_records": 100,
+        "page_size": 100
+      },
+      "defaults": {
+        "approval_stage": "pre_approval",
+        "city": "San Marcos",
+        "jurisdiction": "San Marcos",
+        "permit_type": "planning_application_notice",
+        "state": "TX",
+        "status": "application_notice"
+      },
+      "export_policy": "derived_planning_notice_context_only_no_raw_document_export",
+      "field_allowlist": [
+        "article_id",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ],
+      "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 336,
+      "license": "Official public notice archive",
+      "official_landing_page": "https://www.sanmarcostx.gov/1537/Public-and-Application-Notices",
+      "promotion_data_minimization_approved": true,
+      "promotion_reviewed_by": "Build Signals Owner",
+      "promotion_reviewed_on": "2026-08-14",
+      "promotion_rights_approved": true,
+      "reconciliation_mode": "newsflash_current_window",
+      "refresh_frequency": "daily",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by the Build Signals owner on 2026-08-14 for commercial storage and customer-facing derived intelligence from the City of San Marcos's intentionally published official Planning Application Notices archive. Preserve City attribution and official links; retain only bounded project summaries after connector-level contact suppression; do not fetch detail pages, linked documents, attachments, or offer raw archive replacement exports.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "email_address",
+        "phone_number",
+        "applicant_contact",
+        "planner_contact",
+        "linked_detail_body",
+        "linked_document_body",
+        "attachment",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
+    "adapter": "arcgis",
+    "base_url": "https://pub.sagis.org/arcgis/rest/services/Savannah/BuildingPermit_FC/FeatureServer/0/query",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "__source_record_id",
+        "transform": "join_fields",
+        "transform_options": {
+          "fields": [
+            "PermitNumber",
+            "Address",
+            "OBJECTID"
+          ],
+          "separator": "|"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "PermitNumber",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "application_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "PermitNumber"
+          ]
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "approval_stage",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "PermitStatus",
+              "operator": "in",
+              "value": "approved",
+              "values": [
+                "Approved",
+                "Issued"
+              ]
+            }
+          ],
+          "default": "pre_approval"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "permit_type",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "PermitType",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "work_class",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "WorkClass",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "status",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "PermitStatus",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Description",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "issued_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "IssuedDate",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "completed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "FinalizedDate",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "valuation",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Permit_Value",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "address",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "Address",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "parcel_id",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "PIN",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Savannah, GA",
+    "key": "savannah_ga_commercial_building_permits",
+    "name": "Savannah Commercial Building Permit Tracker",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "PermitNumber",
+        "PermitStatus",
+        "Address"
+      ],
+      "canary_stage_probes": [
+        {
+          "connector": {
+            "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus = 'In Review'"
+          },
+          "expected_stage": "pre_approval",
+          "name": "savannah_commercial_in_review",
+          "sample_size": 15
+        },
+        {
+          "connector": {
+            "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('Approved','Issued')"
+          },
+          "expected_stage": "approved",
+          "name": "savannah_commercial_approved",
+          "sample_size": 15
+        }
+      ],
+      "candidate_canary_completed_on": "2026-08-20",
+      "candidate_key": "savannah_ga_commercial_building_permits",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 10080,
+      "collection_sla_hours": 192,
+      "connector": {
+        "include_geometry": false,
+        "keyset_field": "OBJECTID",
+        "order_by_fields": "OBJECTID ASC",
+        "out_fields": "OBJECTID,PIN,PermitNumber,PermitType,WorkClass,PermitStatus,District,IssuedDate,FinalizedDate,Address,Description,Permit_Value",
+        "page_size": 2000,
+        "query": {
+          "outSR": 4326
+        },
+        "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('In Review','Approved','Issued')"
+      },
+      "defaults": {
+        "city": "Savannah",
+        "jurisdiction": "Savannah",
+        "source_url": "https://www.savannahga.gov/4290/Permit-Tracker",
+        "state": "GA"
+      },
+      "export_policy": "derived_commercial_permit_intelligence_only_no_raw_source_replacement",
+      "field_allowlist": [
+        "OBJECTID",
+        "PIN",
+        "PermitNumber",
+        "PermitType",
+        "WorkClass",
+        "PermitStatus",
+        "District",
+        "IssuedDate",
+        "FinalizedDate",
+        "Address",
+        "Description",
+        "Permit_Value"
+      ],
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 192,
+      "license": "Official SAGIS public-use and no-cost download posture; narrow commercial derived-intelligence scope approved by the Build Signals owner on 2026-08-21",
+      "official_landing_page": "https://www.savannahga.gov/4290/Permit-Tracker",
+      "promotion_data_minimization_approved": true,
+      "promotion_reviewed_by": "Build Signals Owner",
+      "promotion_reviewed_on": "2026-08-21",
+      "promotion_rights_approved": true,
+      "reconciliation_mode": "weekly_full_snapshot",
+      "refresh_frequency": "weekly",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by the Build Signals owner on 2026-08-21 for commercial storage and customer-facing derived intelligence from the City of Savannah Permit Tracker and SAGIS public feature service. Preserve City of Savannah and SAGIS attribution, official source links, retrieval timestamps, and weekly-currentness caveats. Do not collect contacts, documents, attachments, raw geometry, or offer raw source replacement exports.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "ApplicantName",
+        "applicant_contact",
+        "owner_name",
+        "contractor_name",
+        "architect_name",
+        "engineer_name",
+        "phone_number",
+        "email_address",
+        "mailing_address",
+        "attachment",
+        "document_body",
+        "raw_geometry",
+        "raw_source_export"
+      ]
+    }
+  },
+  {
+    "adapter": "rss",
+    "base_url": "https://www.taylortx.gov/RSSFeed.aspx?ModID=1&CID=31",
+    "field_mappings": [
+      {
+        "canonical_field": "source_record_id",
+        "is_active": true,
+        "is_required": true,
+        "source_field": "guid",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "application_number",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "__application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "pattern": "(?i)\\b(PZ\\s+\\d{4}-\\d+)\\b",
+          "source_field": "title"
+        },
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "project_name",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "title",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "description",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "description",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "filed_at",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "published_at",
+        "transform": "date",
+        "value_semantics": "unknown"
+      },
+      {
+        "canonical_field": "source_url",
+        "is_active": true,
+        "is_required": false,
+        "source_field": "link",
+        "value_semantics": "unknown"
+      }
+    ],
+    "is_active": true,
+    "jurisdiction": "Taylor, TX",
+    "key": "taylor_tx_development_notices",
+    "name": "Taylor Development Notices",
+    "record_type": "permit",
+    "settings": {
+      "attribution_required": true,
+      "canary_required_fields": [
+        "guid",
+        "title",
+        "link",
+        "published_at"
+      ],
+      "candidate_canary_completed_on": "2026-08-14",
+      "candidate_key": "taylor_tx_development_notices",
+      "candidate_status": "approved_for_production",
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 24,
+      "connector": {
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public RSS reader)"
+        },
+        "max_records": 1000,
+        "page_size": 100
+      },
+      "defaults": {
+        "approval_stage": "pre_approval",
+        "city": "Taylor",
+        "jurisdiction": "Taylor",
+        "permit_type": "development_notice",
+        "state": "TX",
+        "status": "before_action_notice"
+      },
+      "export_policy": "derived_development_notice_context_only_no_raw_document_export",
+      "field_allowlist": [
+        "guid",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ],
+      "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 336,
+      "license": "Official public notice feed",
+      "official_landing_page": "https://www.taylortx.gov/1386/Development-News-and-Notices",
+      "promotion_data_minimization_approved": true,
+      "promotion_reviewed_by": "Build Signals Owner",
+      "promotion_reviewed_on": "2026-08-14",
+      "promotion_rights_approved": true,
+      "reconciliation_mode": "rss_recent_window",
+      "refresh_frequency": "daily",
+      "retry_interval_minutes": 360,
+      "rights_basis": "Approved by the Build Signals owner on 2026-08-14 for commercial storage and customer-facing derived intelligence from the City of Taylor's intentionally published official RSS notice metadata. Preserve City attribution and official links; do not fetch linked documents, contacts, enclosures, or offer raw feed replacement exports.",
+      "schedule_mode": "automatic",
+      "signal_stage": "pre_approval_and_approved",
+      "suppressed_fields": [
+        "applicant_contact",
+        "planner_contact",
+        "linked_document_body",
+        "enclosure",
+        "raw_source_export"
+      ]
+    }
+  }
+]

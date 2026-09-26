@@ -1,4 +1,4 @@
-# DealSignal
+# BuildSignal
 
 Real-estate acquisition intelligence — a multi-tenant platform for sourcing,
 underwriting, and tracking commercial real-estate deals. FastAPI backend,
@@ -19,7 +19,7 @@ React/Vite frontend, Postgres.
 | Frontend | React 18 + Vite + TypeScript, shadcn/ui, TanStack Query |
 | Database | Postgres in production; SQLite for local dev |
 | Auth | JWT access + rotating refresh cookie, TOTP 2FA |
-| Hosting | Render (web service + static site + managed Postgres) |
+| Hosting | AWS App Runner + RDS + CloudFront, or Render |
 | Errors | Sentry (backend + frontend) |
 
 ---
@@ -60,6 +60,15 @@ npm run dev
 
 The frontend talks to `http://localhost:8000` by default
 (`VITE_API_BASE_URL`). All API routes are versioned under `/v1`.
+
+### Production frontend (Vercel)
+
+This repository is the canonical source for both the Build Signals frontend and
+backend. Vercel builds the React/Vite application from the repository root
+using `vercel.json` and publishes `dist/`. Set `VITE_API_BASE_URL` to the HTTPS
+origin of the production FastAPI service before promoting a preview. The
+separate `deal-signal-terminal` repository is superseded and receives no new
+product work. See [`docs/adr/003-unified-product-repository.md`](docs/adr/003-unified-product-repository.md).
 
 ---
 
@@ -136,6 +145,11 @@ docs/                runbooks and operational docs — see below
 
 ## Documentation
 
+Workspace admins can use **AI Evaluations** at `/admin/evals` to create evidence-based
+test datasets, run checks, compare versions, and enforce regression gates. See
+[AI evaluation platform](docs/ai-evaluation-platform.md) for supported live workflows,
+captured-output evaluation, metric limitations, and deployment instructions.
+
 | Doc | What |
 |---|---|
 | [docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md) | One-time Render provisioning from scratch |
@@ -150,7 +164,12 @@ docs/                runbooks and operational docs — see below
 | [docs/slo.md](docs/slo.md) | Service level objectives + error budget |
 | [docs/enterprise_readiness.md](docs/enterprise_readiness.md) | Production readiness checklist (living tracker) |
 | [docs/monitoring.md](docs/monitoring.md) | Dashboards, alerts, uptime setup |
-| [docs/staging.md](docs/staging.md) | Non-production environment setup |
+| [docs/observability-dashboard.md](docs/observability-dashboard.md) | Tenant-scoped evaluation and ingestion health |
+| [docs/staging.md](docs/staging.md) | Staging environment policy |
+| [docs/runbooks/staging-deploy.md](docs/runbooks/staging-deploy.md) | One-time Render staging blueprint setup |
+| [infra/README.md](infra/README.md) | Uptime URL config + staging env hints |
+| [docs/ops-log.md](docs/ops-log.md) | Ops drill and incident log |
+| [docs/templates/postmortem.md](docs/templates/postmortem.md) | Postmortem template |
 | [docs/accessibility.md](docs/accessibility.md) | Accessibility statement |
 | [VALIDATION.md](VALIDATION.md) | Frontend release gate (automated + manual QA) |
 | [CHANGELOG.md](CHANGELOG.md) | Release notes |
@@ -160,18 +179,18 @@ docs/                runbooks and operational docs — see below
 
 ## Deployment
 
-The whole stack is described by [`render.yaml`](render.yaml) — Postgres, Redis,
-the API, and the static frontend. **Standing it up the first time:**
-[docs/runbooks/first-deploy.md](docs/runbooks/first-deploy.md). **On AWS**
-(App Runner + RDS + CloudFront) instead:
-[docs/runbooks/deploy-aws.md](docs/runbooks/deploy-aws.md) — the `Dockerfile`
-runs there.
+**AWS (App Runner + RDS + CloudFront):** follow
+[`docs/runbooks/deploy-aws.md`](docs/runbooks/deploy-aws.md) — the `Dockerfile`
+image supports `serve`, `migrate`, and **`ingest`** (daily permit cron).
 
-After that, merges to `main` auto-deploy on Render; migrations run
-automatically in the pre-deploy step (`alembic upgrade head`). **Read
-[docs/runbooks/deploy.md](docs/runbooks/deploy.md) before a routine ship** — it
-covers the env-var preflight, the 2-minute smoke test, and the rollback
-decision matrix.
+**Render:** [`render.yaml`](render.yaml) blueprint —
+[`docs/runbooks/first-deploy.md`](docs/runbooks/first-deploy.md).
+
+After deploy, enable daily ingestion — on AWS see
+[deploy-aws.md §9](docs/runbooks/deploy-aws.md#9-daily-permit-ingestion-aws)
+(ECS scheduled task or GitHub Actions). Read
+[docs/runbooks/deploy.md](docs/runbooks/deploy.md) for routine ship, smoke test,
+and rollback.
 
 ## License
 

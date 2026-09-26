@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ArrowRight } from 'lucide-react';
+import { BuildSignalsLogo } from '@/components/BuildSignalsLogo';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
@@ -12,6 +10,7 @@ export default function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,7 +21,7 @@ export default function Login() {
     setError(null);
     setSubmitting(true);
     try {
-      await login({ email, password });
+      await login({ email, password, ...(totpCode ? { totp_code: totpCode } : {}) });
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -32,66 +31,82 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign in to DealSignal</CardTitle>
-          <CardDescription>Access your real estate acquisition workspace.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
+    <main className="min-h-screen bg-background">
+      <section className="mx-auto flex w-full max-w-lg flex-col px-5 py-10 sm:px-8 sm:py-16">
+        <div>
+          <BuildSignalsLogo />
+          <p className="mt-2 text-[9px] uppercase text-muted-foreground">Infrastructure opportunities. Early.</p>
+        </div>
+
+        <div className="mt-10 w-full max-w-md sm:mt-12">
+          <p className="section-label">Enterprise access</p>
+          <h1 className="mt-3 text-2xl font-semibold">Sign in</h1>
+          <p className="mt-1 text-xs text-muted-foreground">Permit, development and ownership intelligence.</p>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <label className="block">
+              <span className="section-label">Work email</span>
+              <input
                 id="email"
                 type="email"
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@firm.com"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@company.com"
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
+            </label>
+
+            <label className="block">
+              <span className="flex items-center justify-between">
+                <span className="section-label">Password</span>
+                <Link to="/forgot-password" className="text-[10px] font-medium text-destructive hover:underline">Forgot password</Link>
+              </span>
+              <input
                 id="password"
                 type="password"
                 autoComplete="current-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
               />
-              <div className="text-right">
-                <Link
-                  to="/forgot-password"
-                  className="text-xs text-muted-foreground hover:text-primary hover:underline underline-offset-4"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-            </div>
-            {error && (
-              <div className="text-sm text-destructive" role="alert">
-                {error}
-              </div>
-            )}
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Signing in…' : 'Sign in'}
-            </Button>
+            </label>
+
+            <label className="block">
+              <span className="section-label">Authenticator code (if enabled)</span>
+              <input aria-label="Authenticator code" type="text" inputMode="numeric"
+                autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6}
+                value={totpCode} onChange={(event) => setTotpCode(event.target.value)}
+                className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm focus:ring-2 focus:ring-[#1a63c7]" />
+            </label>
+
+            {error && <p className="border-l-2 border-destructive pl-3 text-xs text-destructive" role="alert">{error}</p>}
+
+            <button type="submit" disabled={submitting} className="flex h-11 w-full items-center justify-between bg-foreground px-4 text-xs font-semibold text-background disabled:opacity-50">
+              {submitting ? 'Signing in...' : 'Sign in'}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+
+            <div className="flex items-center gap-3 text-[9px] text-muted-foreground"><span className="h-px flex-1 bg-border" />OR<span className="h-px flex-1 bg-border" /></div>
+            <button type="button" className="h-11 w-full border-2 border-foreground bg-card px-4 text-left text-xs font-semibold">Continue with SSO (SAML)</button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              No account?{' '}
+              <Link to="/register" className="font-semibold text-foreground underline-offset-4 hover:underline">
+                Create account
+              </Link>
+            </p>
           </form>
-          <p className="text-sm text-muted-foreground text-center mt-4">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary underline-offset-4 hover:underline">
-              Create one
-            </Link>
-          </p>
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            <Link to="/" className="hover:underline">Continue in demo mode →</Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        <p className="mt-auto pt-8 text-[10px] text-muted-foreground">
+          Status · Security · Terms
+        </p>
+      </section>
+
+    </main>
   );
 }

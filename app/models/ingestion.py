@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -59,6 +60,9 @@ class IngestionSource(OrgMixin, Base):
     runs: Mapped[list["IngestionRun"]] = relationship("IngestionRun", back_populates="source")
     raw_records: Mapped[list["RawSourceRecord"]] = relationship("RawSourceRecord", back_populates="source")
     permit_records: Mapped[list["PermitRecord"]] = relationship("PermitRecord", back_populates="source")
+    planning_records: Mapped[list["PlanningRecord"]] = relationship(
+        "PlanningRecord", back_populates="source"
+    )
 
 
 class SourceFieldMapping(OrgMixin, Base):
@@ -76,6 +80,9 @@ class SourceFieldMapping(OrgMixin, Base):
     )
     source_field: Mapped[str] = mapped_column(String(255), nullable=False)
     canonical_field: Mapped[str] = mapped_column(String(255), nullable=False)
+    value_semantics: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="unknown", server_default="unknown"
+    )
     transform: Mapped[Optional[str]] = mapped_column(String(100))
     transform_options: Mapped[Optional[dict]] = mapped_column(JSON)
     default_value: Mapped[Optional[dict]] = mapped_column(JSON)
@@ -164,6 +171,12 @@ class RawSourceRecord(OrgMixin, Base):
         ),
         Index("ix_raw_source_record_lookup", "source_id", "external_record_id", "received_at"),
         Index("ix_raw_source_record_run", "run_id", "received_at"),
+        Index(
+            "uq_raw_source_record_id_org",
+            "id",
+            "organization_id",
+            unique=True,
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -186,12 +199,93 @@ class RawSourceRecord(OrgMixin, Base):
         "PermitRecord", back_populates="latest_raw_record", foreign_keys="[PermitRecord.latest_raw_record_id]"
     )
     permit_events: Mapped[list["PermitEvent"]] = relationship("PermitEvent", back_populates="raw_record")
+    observation: Mapped[Optional["RawSourceRecordObservation"]] = relationship(
+        "RawSourceRecordObservation",
+        back_populates="raw_record",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
+    )
 
 
 @event.listens_for(RawSourceRecord, "before_update")
 @event.listens_for(RawSourceRecord, "before_delete")
 def _prevent_raw_source_record_mutation(*_args: object) -> None:
     raise ValueError("RawSourceRecord rows are immutable")
+
+
+class RawSourceRecordObservation(OrgMixin, Base):
+    """Mutable last-seen state for an immutable raw content version."""
+
+    __tablename__ = "raw_source_record_observations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["raw_source_record_id", "organization_id"],
+            ["raw_source_records.id", "raw_source_records.organization_id"],
+            ondelete="CASCADE",
+            name="fk_raw_observation_record_org",
+        ),
+    )
+
+    raw_source_record_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+    last_observed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    raw_record: Mapped["RawSourceRecord"] = relationship(
+        "RawSourceRecord", back_populates="observation"
+    )
+
+
+class RecordExternalReference(OrgMixin, Base):
+    """Configured, exact external identity projected from a canonical record."""
+
+    __tablename__ = "record_external_references"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "record_type",
+            "record_id",
+            "namespace",
+            "normalized_value",
+            name="uq_record_external_reference_identity",
+        ),
+        Index(
+            "ix_record_external_reference_lookup",
+            "organization_id",
+            "namespace",
+            "normalized_value",
+            "record_type",
+        ),
+        Index(
+            "ix_record_external_reference_record",
+            "organization_id",
+            "record_type",
+            "record_id",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    record_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    record_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    raw_source_record_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("raw_source_records.id", ondelete="RESTRICT"), nullable=False
+    )
+    namespace: Mapped[str] = mapped_column(String(255), nullable=False)
+    normalized_value: Mapped[str] = mapped_column(String(500), nullable=False)
+    source_field: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_url: Mapped[Optional[str]] = mapped_column(String(2000))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+    last_verified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    raw_source_record: Mapped["RawSourceRecord"] = relationship("RawSourceRecord")
 
 
 class PermitRecord(OrgMixin, Base):
@@ -201,6 +295,20 @@ class PermitRecord(OrgMixin, Base):
     __table_args__ = (
         UniqueConstraint("source_id", "external_record_id", name="uq_permit_record_source_external"),
         Index("ix_permit_record_org_number", "organization_id", "permit_number"),
+        Index(
+            "ix_permit_record_application_scope",
+            "organization_id",
+            "application_number",
+            "state",
+            "city",
+        ),
+        Index(
+            "ix_permit_record_number_scope",
+            "organization_id",
+            "permit_number",
+            "state",
+            "city",
+        ),
         Index("ix_permit_record_org_status", "organization_id", "status"),
         Index("ix_permit_record_org_approval_stage", "organization_id", "approval_stage"),
         Index("ix_permit_record_source_active", "source_id", "is_active"),

@@ -40,32 +40,26 @@ from app.routes.deal_summary import router as deal_summary_router
 from app.routes.deals import router as deals_router
 from app.routes.distributions import router as distributions_router
 from app.routes.documents import router as documents_router
+from app.routes.evaluations import router as evaluations_router
 from app.routes.graph import opportunity_router as graph_opportunity_router
 from app.routes.graph import router as graph_router
 from app.routes.health import router as health_router
 from app.routes.ingestion import router as ingestion_router
+from app.routes.ingestion_onboarding import router as ingestion_onboarding_router
 from app.routes.memos import router as memos_router
+from app.routes.observability import router as observability_router
 from app.routes.organizations import router as organizations_router
 from app.routes.organizations import switch_router as auth_switch_router
 from app.routes.parcels import router as parcels_router
 from app.routes.password_reset import router as password_reset_router
 from app.routes.pipeline import router as pipeline_router
+from app.routes.planning import router as planning_router
 from app.routes.signals import router as signals_router
 from app.routes.twofa import router as twofa_router
 
 app = FastAPI(
-    title="DealSignal — Real Estate Acquisition Engine",
+    title="BuildSignals - Permit and Development Intelligence",
     version="1.0.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Organization-ID"],
-    expose_headers=["X-Request-ID"],
-    max_age=600,
 )
 
 # Resolves JWT (if any) into a per-request org/user ContextVar. Unauthenticated
@@ -77,6 +71,22 @@ app.add_middleware(AuthContextMiddleware)
 # carries an X-Request-ID for tracing. Auth routes have their own tighter
 # limits at the route layer; those still apply on top of this.
 app.add_middleware(GlobalRateLimitMiddleware)
+
+# Wrap early auth/rate-limit responses so browsers can read a 401 and refresh.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Organization-ID"],
+    expose_headers=[
+        "Content-Disposition",
+        "X-Exported-Count",
+        "X-Omitted-Count",
+        "X-Request-ID",
+    ],
+    max_age=600,
+)
 
 # API versioning: rewrite unversioned inbound paths to /v1/* and stamp
 # Deprecation + Sunset headers on the response. Sits outside AuthContext
@@ -111,6 +121,8 @@ app.include_router(activities_router, prefix=CURRENT_API_PREFIX)
 app.include_router(pipeline_router, prefix=CURRENT_API_PREFIX)
 app.include_router(signals_router, prefix=CURRENT_API_PREFIX)
 app.include_router(documents_router, prefix=CURRENT_API_PREFIX)
+app.include_router(evaluations_router, prefix=CURRENT_API_PREFIX)
+app.include_router(observability_router, prefix=CURRENT_API_PREFIX)
 app.include_router(memos_router, prefix=CURRENT_API_PREFIX)
 app.include_router(dashboard_router, prefix=CURRENT_API_PREFIX)
 app.include_router(buy_box_router, prefix=CURRENT_API_PREFIX)
@@ -126,8 +138,10 @@ app.include_router(data_portability_router, prefix=CURRENT_API_PREFIX)
 app.include_router(graph_router, prefix=CURRENT_API_PREFIX)
 app.include_router(graph_opportunity_router, prefix=CURRENT_API_PREFIX)
 app.include_router(ingestion_router, prefix=CURRENT_API_PREFIX)
+app.include_router(ingestion_onboarding_router, prefix=CURRENT_API_PREFIX)
 app.include_router(brands_router, prefix=CURRENT_API_PREFIX)
 app.include_router(parcels_router, prefix=CURRENT_API_PREFIX)
+app.include_router(planning_router, prefix=CURRENT_API_PREFIX)
 
 # NOTE: Schema is managed exclusively by Alembic. Production runs
 # `alembic upgrade head` in the Render preDeploy step (see render.yaml).

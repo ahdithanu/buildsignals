@@ -89,6 +89,21 @@ def test_public_path_matcher_exact_and_prefix():
 # ── Middleware behaviour ──────────────────────────────────────────────────
 
 
+def test_strict_unauthorized_response_allows_browser_refresh(strict_client):
+    origin = app_config.CORS_ALLOWED_ORIGINS[0]
+    response = strict_client.get("/v1/auth/me", headers={"Origin": origin})
+    assert response.status_code == 401
+    assert response.headers["access-control-allow-origin"] == origin
+    assert response.headers["access-control-allow-credentials"] == "true"
+    assert "x-request-id" in response.headers
+
+
+def test_strict_unauthorized_response_does_not_allow_untrusted_origin(strict_client):
+    response = strict_client.get("/v1/auth/me", headers={"Origin": "https://untrusted.invalid"})
+    assert response.status_code == 401
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_permissive_mode_allows_anon_to_protected(client):
     """Default test fixture runs with ALLOW_ANONYMOUS=True (legacy demo)."""
     r = client.get("/dashboard/summary")
@@ -112,6 +127,21 @@ def test_strict_mode_allows_anon_to_auth_login(strict_client):
     # invalid, but it must NOT be 401 from the middleware.
     r = strict_client.post("/auth/login", json={})
     assert r.status_code != 401
+
+
+def test_strict_mode_allows_cors_preflight_to_protected_path(strict_client):
+    r = strict_client.options(
+        "/dashboard/summary",
+        headers={
+            "Origin": "http://localhost:8080",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "Authorization",
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.headers["access-control-allow-origin"] == "http://localhost:8080"
+    assert r.headers["access-control-allow-credentials"] == "true"
 
 
 def test_strict_mode_rejects_invalid_bearer(strict_client):

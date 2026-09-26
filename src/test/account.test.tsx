@@ -68,7 +68,7 @@ describe("<Account>", () => {
     renderPage();
     expect(screen.getByText("alice@example.com")).toBeInTheDocument();
     // role rendered capitalized in the profile card
-    expect(screen.getByText("Admin")).toBeInTheDocument();
+    expect(screen.getAllByText("Admin").length).toBeGreaterThan(0);
     // name is shown both in the layout header and the profile card
     expect(screen.getAllByText("Alice Example").length).toBeGreaterThan(0);
     expect(screen.getByText("org-123")).toBeInTheDocument();

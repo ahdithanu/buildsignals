@@ -4,6 +4,26 @@ import { render, screen } from "@testing-library/react";
 import { ParcelMap } from "@/components/ParcelMap";
 
 describe("<ParcelMap>", () => {
+  it("uses unique SVG definitions when multiple maps share a page", () => {
+    const center = {
+      label: "Anchor",
+      latitude: 32.66,
+      longitude: -97.04,
+    };
+    const { container } = render(
+      <>
+        <ParcelMap center={center} />
+        <ParcelMap center={center} />
+      </>,
+    );
+
+    const patternIds = [...container.querySelectorAll("pattern")].map(
+      (pattern) => pattern.id,
+    );
+    expect(patternIds).toHaveLength(2);
+    expect(new Set(patternIds).size).toBe(2);
+  });
+
   it("renders the parcel centroid and boundary overlay", () => {
     render(
       <ParcelMap

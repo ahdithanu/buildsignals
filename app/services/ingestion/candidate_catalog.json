@@ -1,114 +1,319 @@
 [
   {
-    "key": "washington_state_lcb_local_authority_letters",
-    "name": "Washington State LCB Local Authority Letters",
-    "adapter": "socrata",
+    "key": "savannah_ga_commercial_building_permits",
+    "name": "Savannah Commercial Building Permit Tracker",
+    "adapter": "arcgis",
     "record_type": "permit",
-    "jurisdiction": "Washington State",
-    "base_url": "https://data.wa.gov/resource/vgcw-qfjm.json",
-    "official_landing_page": "https://data.wa.gov/Public-Safety/Local-Authority-Letters/vgcw-qfjm",
-    "license": "Public Domain",
+    "jurisdiction": "Savannah, GA",
+    "base_url": "https://pub.sagis.org/arcgis/rest/services/Savannah/BuildingPermit_FC/FeatureServer/0/query",
+    "official_landing_page": "https://www.savannahga.gov/4290/Permit-Tracker",
+    "license": "Official SAGIS public-use and no-cost download posture; narrow commercial derived-intelligence scope approved by the Build Signals owner on 2026-08-21",
     "status": "operational_retry",
-    "blocker_summary": "Official row API retries returned HTTP 503 on July 18, 2026; do not promote until a live row canary succeeds against the public endpoint.",
-    "early_warning_value": "Statewide pre-opening liquor, restaurant, grocery, and cannabis opening-intent context before public opening activity.",
+    "blocker_summary": "An August 20 bounded lifecycle canary fetched and validated 70 of 70 commercial tracker observations with zero failures across In Review, Approved, and Issued stages. The Build Signals owner approved the narrow production and data-minimization scope on August 21, 2026.",
+    "early_warning_value": "Commercial permits in review expose new construction, tenant buildouts, hotels, grocery stores, restaurants, changes of use, addresses, parcels, scope, and valuation before issuance.",
     "candidate_source_fields": [
-      "license",
-      "ubi",
-      "application_date",
-      "local_authority_posted_date",
-      "application_type",
-      "licensee_name",
-      "trade_name",
-      "address",
-      "city",
-      "county",
-      "zip",
-      "privilege_descriptions"
+      "OBJECTID",
+      "PIN",
+      "PermitNumber",
+      "PermitType",
+      "WorkClass",
+      "PermitStatus",
+      "District",
+      "IssuedDate",
+      "FinalizedDate",
+      "Address",
+      "Description",
+      "Permit_Value"
     ],
     "probe_settings": {
       "connector": {
-        "dataset_identifier": "vgcw-qfjm",
-        "page_size": 5,
-        "order_by": "application_date DESC",
-        "where": "application_date >= '{utc_today_minus_180}'"
+        "page_size": 40,
+        "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('In Review','Approved','Issued')",
+        "out_fields": "OBJECTID,PIN,PermitNumber,PermitType,WorkClass,PermitStatus,District,IssuedDate,FinalizedDate,Address,Description,Permit_Value",
+        "keyset_field": "OBJECTID",
+        "order_by_fields": "OBJECTID ASC",
+        "include_geometry": false,
+        "query": {
+          "outSR": 4326
+        }
       },
       "defaults": {
-        "state": "WA",
-        "approval_stage": "pre_approval",
-        "permit_type": "local_authority_letter",
-        "jurisdiction": "Washington State"
+        "city": "Savannah",
+        "state": "GA",
+        "jurisdiction": "Savannah",
+        "source_url": "https://www.savannahga.gov/4290/Permit-Tracker"
       },
       "signal_stage": "pre_approval_and_approved",
-      "record_filters": {
-        "application_type__contains_any": [
-          "new",
-          "change",
-          "privilege"
-        ]
-      }
+      "refresh_frequency": "weekly",
+      "freshness_sla_hours": 192,
+      "canary_required_fields": [
+        "PermitNumber",
+        "PermitStatus",
+        "Address"
+      ],
+      "canary_stage_probes": [
+        {
+          "name": "savannah_commercial_in_review",
+          "expected_stage": "pre_approval",
+          "sample_size": 15,
+          "connector": {
+            "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus = 'In Review'"
+          }
+        },
+        {
+          "name": "savannah_commercial_approved",
+          "expected_stage": "approved",
+          "sample_size": 15,
+          "connector": {
+            "where": "PermitNumber IS NOT NULL AND Address IS NOT NULL AND PermitStatus IN ('Approved','Issued')"
+          }
+        }
+      ]
     },
     "probe_field_mappings": [
       {
-        "source_field": "license",
+        "source_field": "__source_record_id",
         "canonical_field": "source_record_id",
-        "is_required": true,
-        "is_active": true
+        "transform": "join_fields",
+        "transform_options": {
+          "fields": ["PermitNumber", "Address", "OBJECTID"],
+          "separator": "|"
+        },
+        "is_required": true
       },
       {
-        "source_field": "license",
-        "canonical_field": "permit_number",
-        "is_active": true
+        "source_field": "PermitNumber",
+        "canonical_field": "permit_number"
       },
       {
-        "source_field": "application_date",
+        "source_field": "PermitNumber",
+        "canonical_field": "application_number"
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "PermitStatus",
+              "operator": "in",
+              "values": ["Approved", "Issued"],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {
+        "source_field": "PermitType",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "WorkClass",
+        "canonical_field": "work_class"
+      },
+      {
+        "source_field": "PermitStatus",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "Description",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "IssuedDate",
+        "canonical_field": "issued_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "FinalizedDate",
+        "canonical_field": "completed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "Permit_Value",
+        "canonical_field": "valuation"
+      },
+      {
+        "source_field": "Address",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "PIN",
+        "canonical_field": "parcel_id"
+      }
+    ],
+    "production_page_size": 2000,
+    "can_run_canary": true,
+    "last_checked_on": "2026-08-20",
+    "next_audit_on": "2026-08-20",
+    "notes": "The City of Savannah identifies the tracker as Development Services-managed, updated weekly, and intended for public permit-status access. SAGIS advertises publicly available datasets for no-cost download and public use. An August 20 bounded lifecycle canary fetched and validated 70 of 70 observations with zero failures: 18 pre-approval and 52 approved. Current 2026 rows include grocery, hotel, restaurant, change-of-use, and tenant-buildout signals. Use PermitNumber, Address, and OBJECTID as source-row identity because one permit/address pair can repeat across tracker observations; retain PermitNumber separately as the business identity. Do not fetch ApplicantName, contact details, attachments, documents, or raw geometry. The Build Signals owner approved this narrow production scope on August 21, 2026."
+  },
+  {
+    "key": "san_marcos_tx_planning_application_notices",
+    "name": "San Marcos Planning Application Notices",
+    "adapter": "civicplus_newsflash",
+    "record_type": "permit",
+    "jurisdiction": "San Marcos, TX",
+    "base_url": "https://www.sanmarcostx.gov/m/newsflash",
+    "official_landing_page": "https://www.sanmarcostx.gov/1537/Public-and-Application-Notices",
+    "license": "Official public notice feed",
+    "status": "operational_retry",
+    "blocker_summary": "The official NewsFlash archive connector passed a 10-record no-write pre-approval canary on August 14, 2026. Explicit production rights and data-minimization review remain before promotion.",
+    "early_warning_value": "Application-submitted notices for zoning, annexation, demolition, comprehensive-plan, and historic-district actions before hearings or final decisions.",
+    "candidate_source_fields": [
+      "article_id",
+      "title",
+      "link",
+      "published_at",
+      "description"
+    ],
+    "probe_settings": {
+      "connector": {
+        "category_id": 30,
+        "page_size": 25,
+        "max_records": 100,
+        "max_description_chars": 2000,
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public NewsFlash reader)"
+        }
+      },
+      "defaults": {
+        "city": "San Marcos",
+        "state": "TX",
+        "jurisdiction": "San Marcos",
+        "permit_type": "planning_application_notice",
+        "approval_stage": "pre_approval",
+        "status": "application_notice"
+      },
+      "signal_stage": "pre_approval",
+      "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at",
+      "freshness_sla_hours": 336,
+      "canary_required_fields": [
+        "article_id",
+        "title",
+        "link",
+        "published_at",
+        "description"
+      ]
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "article_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "source_field": "title",
+          "pattern": "(?i)\\b((?:ZC|AN|PDD|PSA|SNC)-\\d{2}-\\d+(?:\\([A-Z]\\))?|\\d{4}-\\d{5})\\b"
+        }
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "description",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "published_at",
         "canonical_field": "filed_at",
-        "is_active": true
+        "transform": "date"
       },
       {
-        "source_field": "local_authority_posted_date",
-        "canonical_field": "status_updated_at",
-        "is_active": true
+        "source_field": "link",
+        "canonical_field": "source_url"
+      }
+    ],
+    "production_page_size": 100,
+    "can_run_canary": true,
+    "last_checked_on": "2026-08-14",
+    "next_audit_on": "2026-08-14",
+    "notes": "The official archive showed current August 10-12 planning applications while the legacy RSS channel remained empty. An August 14 no-write canary fetched and validated 10 pre-approval records with zero failures. Use the stable CivicPlus article ID and canonical detail link, bounded current-window reconciliation, and connector-level contact suppression. Do not fetch detail pages, linked permit documents, attachments, or raw replacement exports. Production promotion still requires an explicit narrow-scope approval."
+  },
+  {
+    "key": "taylor_tx_development_notices",
+    "name": "Taylor Development Notices",
+    "adapter": "rss",
+    "record_type": "permit",
+    "jurisdiction": "Taylor, TX",
+    "base_url": "https://www.taylortx.gov/RSSFeed.aspx?ModID=1&CID=31",
+    "official_landing_page": "https://www.taylortx.gov/1386/Development-News-and-Notices",
+    "license": "Official public notice feed",
+    "status": "operational_retry",
+    "blocker_summary": "The official feed resumed with a current August 7, 2026 before-action notice and passed a bounded lifecycle canary on August 14. Explicit production rights and data-minimization review remain.",
+    "early_warning_value": "Before-action zoning, special-use, neighborhood-plan, and employment-center cases with project numbers, addresses, parcels, proposed uses, and applicant organizations.",
+    "candidate_source_fields": [
+      "guid",
+      "title",
+      "link",
+      "published_at",
+      "description"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 25,
+        "max_records": 100,
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (compatible; BuildSignals/1.0; public RSS reader)"
+        }
+      },
+      "defaults": {
+        "city": "Taylor",
+        "state": "TX",
+        "jurisdiction": "Taylor",
+        "permit_type": "development_notice",
+        "approval_stage": "pre_approval",
+        "status": "before_action_notice"
+      },
+      "signal_stage": "pre_approval",
+      "freshness_field": "published_at",
+      "freshness_semantics": "filing_event_at"
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "guid",
+        "canonical_field": "source_record_id",
+        "is_required": true
       },
       {
-        "source_field": "application_type",
-        "canonical_field": "permit_subtype",
-        "is_active": true
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "regex_extract",
+        "transform_options": {
+          "source_field": "title",
+          "pattern": "(?i)\\b(PZ\\s+\\d{4}-\\d+)\\b"
+        }
       },
       {
-        "source_field": "licensee_name",
-        "canonical_field": "owner_name",
-        "is_active": true
+        "source_field": "title",
+        "canonical_field": "project_name"
       },
       {
-        "source_field": "trade_name",
-        "canonical_field": "project_name",
-        "is_active": true
+        "source_field": "title",
+        "canonical_field": "description"
       },
       {
-        "source_field": "address",
-        "canonical_field": "address",
-        "is_active": true
+        "source_field": "published_at",
+        "canonical_field": "filed_at",
+        "transform": "date"
       },
       {
-        "source_field": "city",
-        "canonical_field": "city",
-        "is_active": true
-      },
-      {
-        "source_field": "zip",
-        "canonical_field": "postal_code",
-        "is_active": true
-      },
-      {
-        "source_field": "privilege_descriptions",
-        "canonical_field": "description",
-        "is_active": true
+        "source_field": "link",
+        "canonical_field": "source_url"
       }
     ],
     "can_run_canary": true,
-    "last_checked_on": "2026-07-18",
-    "next_audit_on": "2026-07-25",
-    "notes": "Treat new license applications, location changes, and added privileges as pre-opening or opening-intent context. Suppress designated-signee and contact-like fields. Keep separate from building-permit coverage even if promoted."
+    "last_checked_on": "2026-08-14",
+    "next_audit_on": "2026-08-14",
+    "notes": "The official RSS category resumed with PZ 2026-2715, published August 7, 2026. An August 14 no-write canary fetched one record, validated one pre-approval record, and returned zero errors with the stable feed GUID as identity. Retain only feed metadata and official links; suppress individual contacts, linked document bodies, enclosures, and raw exports."
   },
   {
     "key": "bend_or_planning_applications",
@@ -120,7 +325,7 @@
     "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::planning-table",
     "license": "Custom License",
     "status": "operational_retry",
-    "blocker_summary": "Official planning applications data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "blocker_summary": "The live lifecycle canary passed; explicit production promotion and final rights review remain before this source can write customer-facing records.",
     "early_warning_value": "City planning applications for subdivision, site plan, and review-stage activity before permits are issued.",
     "candidate_source_fields": [
       "ApplicationNumber",
@@ -128,10 +333,8 @@
       "ApplicationDescription",
       "ProjectTypeCode",
       "ApplicationTypeCode",
-      "ApplicationReviewStatusCode",
       "AppStatus",
       "AppStatusDesc",
-      "Owner",
       "Address",
       "TAXLOT",
       "DecisionDate",
@@ -141,11 +344,13 @@
       "connector": {
         "page_size": 5,
         "where": "ApplicationNumber IS NOT NULL",
-        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PL_RecordID,ApplicationNumber,ApplicationDate,ApplicationDescription,ProjectTypeCode,ApplicationTypeCode,ApplicationReviewStatusCode,AppStatus,AppStatusDesc,Owner,Address,TAXLOT,DecisionDate,LASTUPDATE,OverallStatus",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PL_RecordID,ApplicationNumber,ApplicationDate,ApplicationDescription,ProjectTypeCode,ApplicationTypeCode,AppStatus,AppStatusDesc,Address,TAXLOT,DecisionDate,LASTUPDATE,OverallStatus",
         "order_by_fields": "ApplicationNumber ASC",
-        "include_geometry": true,
+        "include_geometry": false,
+        "include_centroid": true,
         "query": {
-          "f": "json"
+          "f": "json",
+          "outSR": 4326
         }
       },
       "defaults": {
@@ -155,7 +360,11 @@
         "permit_type": "planning_application",
         "approval_stage": "pre_approval"
       },
-      "signal_stage": "pre_approval_and_approved"
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {"name": "bend_planning_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NULL"}},
+        {"name": "bend_planning_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NOT NULL"}}
+      ]
     },
     "probe_field_mappings": [
       {
@@ -180,6 +389,16 @@
         "is_active": true
       },
       {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [{"field": "DecisionDate", "operator": "present", "value": "approved"}],
+          "default": "pre_approval"
+        },
+        "is_active": true
+      },
+      {
         "source_field": "AppStatusDesc",
         "canonical_field": "status",
         "is_active": true
@@ -190,13 +409,13 @@
         "is_active": true
       },
       {
-        "source_field": "Owner",
-        "canonical_field": "owner_name",
+        "source_field": "Address",
+        "canonical_field": "address",
         "is_active": true
       },
       {
-        "source_field": "Address",
-        "canonical_field": "address",
+        "source_field": "TAXLOT",
+        "canonical_field": "parcel_id",
         "is_active": true
       },
       {
@@ -218,12 +437,26 @@
         "source_field": "LASTUPDATE",
         "canonical_field": "status_updated_at",
         "is_active": true
+      },
+      {
+        "source_field": "centroid",
+        "canonical_field": "latitude",
+        "transform": "object_path",
+        "transform_options": {"path": ["y"]},
+        "is_active": true
+      },
+      {
+        "source_field": "__longitude",
+        "canonical_field": "longitude",
+        "transform": "object_path",
+        "transform_options": {"source_field": "centroid", "path": ["x"]},
+        "is_active": true
       }
     ],
     "can_run_canary": true,
     "last_checked_on": "2026-07-23",
     "next_audit_on": "2026-07-30",
-    "notes": "Planning applications are the earliest durable public signal of retail, subdivision, and site-plan movement. Keep the source in candidate status until the connector is exercised against live rows and the permission review is complete."
+    "notes": "Planning applications are the earliest durable public signal of retail, subdivision, and site-plan movement. An August 2, 2026 canary validated 30 rows with 20 approved and 10 pre-approval observations, WGS84 centroids, tax-lot joins, and zero failures. Keep candidate status until explicit promotion and rights signoff."
   },
   {
     "key": "bend_or_permit_applications_point",
@@ -235,13 +468,15 @@
     "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-point",
     "license": "Custom License",
     "status": "operational_retry",
-    "blocker_summary": "Official permit applications data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "blocker_summary": "The live lifecycle canary passed; explicit production promotion and final rights review remain before this source can write customer-facing records.",
     "early_warning_value": "Permit applications with IssueDate and status signals that flag retailer buildouts and opening activity before completion.",
     "candidate_source_fields": [
       "ApplicationNumber",
       "ApplicationDate",
       "IssueDate",
       "DateFinaled",
+      "SQFT",
+      "Units",
       "ProjectValuation",
       "ApplicationType",
       "TypeDesc",
@@ -252,17 +487,20 @@
       "Owner",
       "Address",
       "TAXLOT",
+      "ApplicationDescription",
+      "ProposedLandUse",
       "LASTUPDATE"
     ],
     "probe_settings": {
       "connector": {
         "page_size": 5,
         "where": "ApplicationNumber IS NOT NULL",
-        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,Owner,Address,TAXLOT,LASTUPDATE,OverallStatus",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,Owner,Address,TAXLOT,LASTUPDATE,OverallStatus,ApplicationDescription,ProposedLandUse",
         "order_by_fields": "ApplicationNumber ASC",
         "include_geometry": true,
         "query": {
-          "f": "json"
+          "f": "json",
+          "outSR": 4326
         }
       },
       "defaults": {
@@ -272,7 +510,11 @@
         "permit_type": "building_permit",
         "approval_stage": "pre_approval"
       },
-      "signal_stage": "pre_approval_and_approved"
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {"name": "bend_permit_point_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"}},
+        {"name": "bend_permit_point_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"}}
+      ]
     },
     "probe_field_mappings": [
       {
@@ -302,12 +544,22 @@
         "is_active": true
       },
       {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [{"field": "IssueDate", "operator": "present", "value": "approved"}],
+          "default": "pre_approval"
+        },
+        "is_active": true
+      },
+      {
         "source_field": "ApplicationStatus",
         "canonical_field": "status",
         "is_active": true
       },
       {
-        "source_field": "StatusDesc",
+        "source_field": "ApplicationDescription",
         "canonical_field": "description",
         "is_active": true
       },
@@ -321,6 +573,12 @@
         "canonical_field": "address",
         "is_active": true
       },
+      {"source_field": "TAXLOT", "canonical_field": "parcel_id", "is_active": true},
+      {"source_field": "ProjectValuation", "canonical_field": "valuation", "is_active": true},
+      {"source_field": "SQFT", "canonical_field": "square_feet", "is_active": true},
+      {"source_field": "Units", "canonical_field": "units", "is_active": true},
+      {"source_field": "ProposedLandUse", "canonical_field": "proposed_use", "is_active": true},
+      {"source_field": "UseDesc", "canonical_field": "occupancy_type", "is_active": true},
       {
         "source_field": "ApplicationType",
         "canonical_field": "permit_subtype",
@@ -340,12 +598,14 @@
         "source_field": "LASTUPDATE",
         "canonical_field": "status_updated_at",
         "is_active": true
-      }
+      },
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}, "is_active": true},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}, "is_active": true}
     ],
     "can_run_canary": true,
     "last_checked_on": "2026-07-23",
     "next_audit_on": "2026-07-30",
-    "notes": "This layer captures public permit lifecycle motion before completion. Keep it separate from planning-review datasets so issue-stage and under-review-stage intelligence stay distinct."
+    "notes": "This layer captures public permit lifecycle motion before completion. An August 2, 2026 canary validated 30 rows with 25 approved and 5 pre-approval observations, tax-lot, valuation, size, use, WGS84 point context, and zero failures. Keep it separate from planning review and retain candidate status until explicit promotion and rights signoff."
   },
   {
     "key": "bend_or_permit_applications_line",
@@ -357,7 +617,7 @@
     "official_landing_page": "https://data.bendoregon.gov/datasets/bendoregon::permit-applications-line",
     "license": "Custom License",
     "status": "operational_retry",
-    "blocker_summary": "Official permit line data is public and updated nightly, but the source still needs a live canary and promotion review before it can be treated as a production feed.",
+    "blocker_summary": "The live lifecycle canary passed; explicit production promotion and final rights review remain before this source can write customer-facing records.",
     "early_warning_value": "Permit applications tied to street-segment geometry, useful for pre-approval retail, corridor, and buildout detection.",
     "candidate_source_fields": [
       "ApplicationNumber",
@@ -379,7 +639,7 @@
       "Owner",
       "Address",
       "TAXLOT",
-      "CENTERLINID",
+      "CENTERLINEID",
       "LASTUPDATE",
       "OverallStatus"
     ],
@@ -387,11 +647,12 @@
       "connector": {
         "page_size": 5,
         "where": "ApplicationNumber IS NOT NULL",
-        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,BuildingCategory,DeptCode,Department,Owner,Address,TAXLOT,CENTERLINID,LASTUPDATE,OverallStatus,Shape.STLength()",
+        "out_fields": "OBJECTID,GNMasterProjectID,GNCommonID,PR_RecordID,ApplicationNumber,ApplicationDate,IssueDate,DateFinaled,SQFT,Units,ProjectValuation,ApplicationType,TypeDesc,ApplicationStatus,StatusDesc,BldgUse,UseDesc,BuildingCategory,DeptCode,Department,Owner,Address,TAXLOT,CENTERLINEID,LASTUPDATE,OverallStatus,Shape__Length",
         "order_by_fields": "ApplicationNumber ASC",
-        "include_geometry": true,
+        "include_geometry": false,
         "query": {
-          "f": "json"
+          "f": "json",
+          "outSR": 4326
         }
       },
       "defaults": {
@@ -401,7 +662,11 @@
         "permit_type": "building_permit",
         "approval_stage": "pre_approval"
       },
-      "signal_stage": "pre_approval_and_approved"
+      "signal_stage": "pre_approval_and_approved",
+      "canary_stage_probes": [
+        {"name": "bend_permit_line_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"}},
+        {"name": "bend_permit_line_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"}}
+      ]
     },
     "probe_field_mappings": [
       {
@@ -431,6 +696,16 @@
         "is_active": true
       },
       {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [{"field": "IssueDate", "operator": "present", "value": "approved"}],
+          "default": "pre_approval"
+        },
+        "is_active": true
+      },
+      {
         "source_field": "ApplicationStatus",
         "canonical_field": "status",
         "is_active": true
@@ -450,6 +725,11 @@
         "canonical_field": "address",
         "is_active": true
       },
+      {"source_field": "TAXLOT", "canonical_field": "parcel_id", "is_active": true},
+      {"source_field": "ProjectValuation", "canonical_field": "valuation", "is_active": true},
+      {"source_field": "SQFT", "canonical_field": "square_feet", "is_active": true},
+      {"source_field": "Units", "canonical_field": "units", "is_active": true},
+      {"source_field": "UseDesc", "canonical_field": "occupancy_type", "is_active": true},
       {
         "source_field": "ApplicationType",
         "canonical_field": "permit_subtype",
@@ -469,7 +749,170 @@
     "can_run_canary": true,
     "last_checked_on": "2026-07-23",
     "next_audit_on": "2026-07-30",
-    "notes": "This geometry-backed view gives corridor-level context for development motion and is useful for identifying retail buildout patterns before a final issued permit arrives."
+    "notes": "This corridor-linked view gives development-motion context before final issuance. An August 2, 2026 canary validated 30 rows with 24 approved and 6 pre-approval observations plus tax-lot, valuation, size, use, and address context with zero failures. The ArcGIS line layer rejects centroid requests, so no derived coordinates are claimed. Retain candidate status until explicit promotion and rights signoff."
+  },
+  {
+    "key": "detroit_mi_bseed_building_plan_reviews",
+    "name": "Detroit BSEED Building Permit Plan Reviews",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Detroit, MI",
+    "base_url": "https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/bseed_building_permit_plan_reviews/FeatureServer/0/query",
+    "official_landing_page": "https://www.arcgis.com/home/item.html?id=b47bda202cac49dcbef8d477e9ecb09b",
+    "license": "City of Detroit open-portal permitting information is identified as public-domain; official item is public authoritative with BSEED attribution",
+    "status": "operational_retry",
+    "blocker_summary": "The August 15 no-write lifecycle canary passed 40 of 40 records across pre-approval and approved stages, and the Build Signals owner approved the narrow production scope on August 15.",
+    "early_warning_value": "Accepted, routed-for-review, and plans-approved building applications expose tenant improvements, changes of use, retail buildouts, addresses, parcels, and work descriptions before permit issuance.",
+    "candidate_source_fields": [
+      "record_id",
+      "task_id",
+      "address",
+      "submitted_date",
+      "task",
+      "task_status",
+      "task_status_date",
+      "work_description",
+      "parcel_id",
+      "longitude",
+      "latitude"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 30,
+        "where": "record_id IS NOT NULL AND address IS NOT NULL AND submitted_date IS NOT NULL",
+        "out_fields": "ObjectId,record_id,task_id,address,submitted_date,task,task_status,task_status_date,work_description,parcel_id,longitude,latitude",
+        "order_by_fields": "task_status_date DESC,ObjectId DESC",
+        "include_geometry": false,
+        "query": {
+          "f": "json",
+          "outSR": 4326
+        }
+      },
+      "defaults": {
+        "city": "Detroit",
+        "state": "MI",
+        "jurisdiction": "Detroit",
+        "permit_type": "building_plan_review"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_field": "task_status_date",
+      "freshness_semantics": "status_event_at",
+      "freshness_sla_hours": 72,
+      "canary_required_fields": [
+        "record_id",
+        "address",
+        "submitted_date",
+        "task_status",
+        "task_status_date"
+      ],
+      "canary_stage_probes": [
+        {
+          "name": "detroit_plan_review_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 15,
+          "connector": {
+            "where": "record_id IS NOT NULL AND address IS NOT NULL AND submitted_date IS NOT NULL AND task_status <> 'Plans Approved'"
+          }
+        },
+        {
+          "name": "detroit_plan_review_approved",
+          "expected_stage": "approved",
+          "sample_size": 15,
+          "connector": {
+            "where": "record_id IS NOT NULL AND address IS NOT NULL AND submitted_date IS NOT NULL AND task_status = 'Plans Approved'"
+          }
+        }
+      ]
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true,
+        "is_active": true
+      },
+      {
+        "source_field": "record_id",
+        "canonical_field": "permit_number",
+        "is_active": true
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": ["record_id"]
+        },
+        "is_active": true
+      },
+      {
+        "source_field": "submitted_date",
+        "canonical_field": "filed_at",
+        "is_active": true
+      },
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "task_status",
+              "operator": "in",
+              "values": ["Plans Approved"],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        },
+        "is_active": true
+      },
+      {
+        "source_field": "task_status",
+        "canonical_field": "status",
+        "is_active": true
+      },
+      {
+        "source_field": "task_status_date",
+        "canonical_field": "status_updated_at",
+        "is_active": true
+      },
+      {
+        "source_field": "task",
+        "canonical_field": "review_type",
+        "is_active": true
+      },
+      {
+        "source_field": "work_description",
+        "canonical_field": "description",
+        "is_active": true
+      },
+      {
+        "source_field": "address",
+        "canonical_field": "address",
+        "is_active": true
+      },
+      {
+        "source_field": "parcel_id",
+        "canonical_field": "parcel_id",
+        "is_active": true
+      },
+      {
+        "source_field": "longitude",
+        "canonical_field": "longitude",
+        "is_active": true
+      },
+      {
+        "source_field": "latitude",
+        "canonical_field": "latitude",
+        "is_active": true
+      }
+    ],
+    "production_page_size": 1000,
+    "can_run_canary": true,
+    "last_checked_on": "2026-08-15",
+    "next_audit_on": "2026-08-15",
+    "notes": "The official public-authoritative layer contained 39,489 rows and 39,489 distinct record IDs, with submitted and task-status activity through August 14, 2026. August 1-14 contained accepted, routed-for-review, and plans-approved records. An August 15 no-write canary fetched and validated 40 of 40 records with zero failures across both lifecycle stages. The Build Signals owner approved the narrow production scope on August 15. Use record_id as durable identity and join key to Detroit's issued-permit confirmation source. Retain BSEED attribution, source links, and retrieval timestamps; suppress attachments, contacts, raw geometry, and raw source-replacement exports."
   },
   {
     "key": "orlando_fl_planning_applications",
@@ -662,5 +1105,1690 @@
     "last_checked_on": "2026-07-23",
     "next_audit_on": "2026-08-06",
     "notes": "Track Evansville as a high-value hold for Indiana coverage, but keep it out of production until the backend responds reliably and commercial rights are explicit."
+  },
+  {
+    "key": "anchorage_ak_bsd_permit_lookup",
+    "name": "Anchorage Building Safety Permit Lookup",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Anchorage, AK",
+    "base_url": "https://www.muni.org/PermitCenter/Views/CDR/CDRLookUpMain.aspx",
+    "official_landing_page": "https://www.muni.org/PermitCenter/Views/CDR/CDRLookUpMain.aspx",
+    "license": "Municipality policy defines public data as open by default, license-free, and reusable; permits are not yet published as a supported bulk dataset",
+    "status": "technical_hold",
+    "blocker_summary": "The current CDR portal searches building, planning, project, and use-permit records, but there is no supported bulk/API delivery, durable enumeration contract, update watermark, deletion feed, or control total.",
+    "early_warning_value": "Application screening, discipline review, corrections, approvals, inspections, owner, contractor, parcel, and work descriptions can reveal commercial projects before issuance.",
+    "candidate_source_fields": [
+      "permit_number",
+      "permit_type",
+      "status",
+      "address",
+      "work_description",
+      "parcel",
+      "owner",
+      "contractor",
+      "review_events",
+      "inspection_events"
+    ],
+    "last_checked_on": "2026-08-15",
+    "next_audit_on": "2026-09-12",
+    "notes": "Generate the standardized source-access contract and request an official recurring export from Development Services and OIT. Do not automate portal internals, enumerate record keys, fetch attachments, or ingest personal contact details."
+  },
+  {
+    "key": "juneau_ak_civic_access_permits",
+    "name": "Juneau Civic Access Permits",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Juneau, AK",
+    "base_url": "https://cityandboroughofjuneauak-energovweb.tylerhost.net/apps/selfservice#/search",
+    "official_landing_page": "https://juneau.org/community-development",
+    "license": "Public records are available under Alaska public-records law, but no permit-specific automated commercial reuse or redistribution terms are published",
+    "status": "technical_hold",
+    "blocker_summary": "The current Civic Access portal exposes fresh application-through-final permit records and a bounded UI export, but no supported recurring API, modification cursor, deletion feed, authoritative control totals, or commercial automation grant is documented.",
+    "early_warning_value": "Submitted, documents-required, applicant-response, in-review, on-hold, and fees-due records can reveal commercial projects and named retailers before issuance.",
+    "candidate_source_fields": [
+      "record_id",
+      "permit_number",
+      "permit_type",
+      "project_name",
+      "status",
+      "applied_date",
+      "issued_date",
+      "expiration_date",
+      "finalized_date",
+      "parcel",
+      "address",
+      "description"
+    ],
+    "last_checked_on": "2026-08-15",
+    "next_audit_on": "2026-09-12",
+    "notes": "Generate the standardized source-access contract and request a supported CBJ/Tyler export. After authorization, use overlapping applied-date windows, refresh all nonterminal records, query issued/finalized ranges, and reconcile recent IDs. Do not automate undocumented portal APIs, exceed UI export limits, fetch attachments, or ingest personal contacts."
+  },
+  {
+    "key": "honolulu_hi_building_permits_2005_2025",
+    "name": "Honolulu Historical Building Permits 2005-2025",
+    "adapter": "socrata",
+    "record_type": "permit",
+    "jurisdiction": "Honolulu, HI",
+    "base_url": "https://data.honolulu.gov/resource/4vab-c87q.json",
+    "official_landing_page": "https://data.honolulu.gov/d/4vab-c87q",
+    "license": "Null dataset license; city terms defer reuse rights to dataset-specific licensing",
+    "status": "freshness_hold",
+    "blocker_summary": "The official bulk snapshot ends June 30, 2025, does not reflect later source changes, and has no published dataset license; current HNL Build records have no documented recurring bulk export.",
+    "early_warning_value": "Historical creation, plan-review, issuance, completion, parcel, applicant, contractor, proposed-use, valuation, and occupancy fields prove strong pre-approval signal if a current licensed export becomes available.",
+    "candidate_source_fields": [
+      "externalid",
+      "externalfilenum",
+      "buildingpermitno",
+      "buildingpermittype",
+      "statusdescription",
+      "createddate",
+      "datereviewscompleted",
+      "issuedate",
+      "completeddate",
+      "jobaddress",
+      "tmk",
+      "applicant",
+      "contractor",
+      "proposeduse",
+      "estimatedvalue"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-09-08",
+    "notes": "Retain as historical research only. Promotion requires a current HNL Build export, explicit commercial SaaS and derived-output rights, and field-level suppression of personal party data."
+  },
+  {
+    "key": "boise_id_development_tracker",
+    "name": "Boise Development Tracker",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Boise, ID",
+    "base_url": "https://services1.arcgis.com/WHM6qC35aMtyAAlN/arcgis/rest/services/Development_Tracker_Data/FeatureServer/0/query",
+    "official_landing_page": "https://www.cityofboise.org/departments/planning-and-development-services/planning/zoning/maps/development-tracker/",
+    "license": "City attribution and disclaimers only; no affirmative commercial redistribution grant",
+    "status": "legal_hold",
+    "blocker_summary": "The official layer is technically strong, but its terms do not authorize commercial copying, redistribution, or customer API use, and sampled business dates lag the actively maintained service.",
+    "early_warning_value": "Neighborhood meetings, interdepartmental review, awaiting-application, submitted, applicant-revision, in-review, hearing, entitlement, and appeal stages provide excellent retailer and development warning.",
+    "candidate_source_fields": [
+      "RecordID",
+      "ParentRecordID",
+      "RecordName",
+      "Status",
+      "RecordType",
+      "AddToTrackerDate",
+      "TrackerFilterDate",
+      "PropertyAddress",
+      "ReviewAuthority",
+      "NextHearingDate",
+      "Description",
+      "GlobalID",
+      "OBJECTID",
+      "last_edited_date"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-08-25",
+    "notes": "Highest-priority rights outreach in this batch. After written permission, run a freshness canary using RecordID as business identity and preserve parent-child records while suppressing representative contact details."
+  },
+  {
+    "key": "cedar_rapids_ia_building_permits",
+    "name": "Cedar Rapids Building and Trades Permits",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Cedar Rapids, IA",
+    "base_url": "https://apps2.cedar-rapids.org/BuildingPermitViewer/",
+    "official_landing_page": "https://www.cedar-rapids.org/local_government/departments_a_-_f/building_services/building_and_trades/permit_reports.php",
+    "license": "Official public viewer and reports; no affirmative commercial reuse or redistribution grant",
+    "status": "technical_hold",
+    "blocker_summary": "The live viewer exposes pending review but caps results and has no supported bulk contract; monthly workbooks are primarily issued records, and rights and complete lifecycle reconciliation remain unresolved.",
+    "early_warning_value": "Pending-review status, permit number, address, contractor, project description, work class, and valuation could identify commercial projects before issuance.",
+    "candidate_source_fields": [
+      "permit_number",
+      "address",
+      "contractor",
+      "status",
+      "permit_type",
+      "work_class",
+      "issue_date",
+      "project_description",
+      "project_name",
+      "valuation"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-09-08",
+    "notes": "Seek a supported city export with durable IDs, update and deletion semantics, full status control totals, and written commercial rights before implementing a connector."
+  },
+  {
+    "key": "mississippi_mdeq_permit_activity",
+    "name": "Mississippi MDEQ Permit Activity Search",
+    "adapter": "html_table",
+    "record_type": "permit",
+    "jurisdiction": "Mississippi",
+    "base_url": "https://opcgis.deq.state.ms.us/ensearchonline/epd-activity-search.aspx",
+    "official_landing_page": "https://www.mdeq.ms.gov/permits/environmental-permits-division/",
+    "license": "Official public permit register; no affirmative commercial reuse or redistribution grant",
+    "status": "legal_hold",
+    "blocker_summary": "The official statewide register exposes current application and decision events, but its ASP.NET query contract, pagination/control totals, durable activity identity, correction/deletion behavior, and commercial storage/display rights are not documented.",
+    "early_warning_value": "Applications for construction, air, water, stormwater, and other environmental permits reveal named companies, developers, subdivisions, industrial sites, data-center infrastructure, large energy projects, and site work before final approval.",
+    "candidate_source_fields": [
+      "county",
+      "agency_interest_name",
+      "facility_or_project_name",
+      "city",
+      "state",
+      "activity_action",
+      "permit_type",
+      "activity_date",
+      "agency_interest_number",
+      "permit_number",
+      "detail_url"
+    ],
+    "last_checked_on": "2026-09-02",
+    "next_audit_on": "2026-09-16",
+    "notes": "Prioritize a written MDEQ data-use agreement and supported recurring export/API. A production connector must assign a durable event identity, preserve application-versus-grant lifecycle evidence, reconcile amended or withdrawn events, retain official detail URLs, and suppress personal applicant/contact details. The 2026-09-02 live register included application-stage construction signals for subdivisions, industrial parks, commercial projects, Amazon Data Services infrastructure, and major builders including D.R. Horton.",
+    "can_run_canary": false
+  },
+  {
+    "key": "diberville_ms_council_planning_agendas",
+    "name": "D'Iberville Council and Planning Agendas",
+    "adapter": "planning_documents",
+    "record_type": "planning",
+    "jurisdiction": "D'Iberville, MS",
+    "base_url": "https://diberville.ms.us/council-committee-center/",
+    "official_landing_page": "https://diberville.ms.us/departments/planning-zoning/",
+    "license": "Official public agendas and minutes; city site states all rights reserved and provides no affirmative commercial reuse grant",
+    "status": "legal_hold",
+    "blocker_summary": "The city publishes a long-running dated agenda/minutes archive with linked documents, but commercial storage and derived-display rights, a supported archive API, authoritative document totals, revision/removal semantics, and stable case-document identity are not documented.",
+    "early_warning_value": "Council and planning records expose business openings, tax-sharing and development agreements, subdivisions, rezonings, conditional uses, signs, infrastructure commitments, named applicants, project sites, and Planning Commission recommendations before construction is publicly announced or permitted.",
+    "candidate_source_fields": [
+      "meeting_date",
+      "meeting_type",
+      "document_type",
+      "document_url",
+      "agenda_item_number",
+      "case_number",
+      "action_type",
+      "decision",
+      "project_name",
+      "business_name",
+      "applicant_name",
+      "address",
+      "zoning_district",
+      "parcel_id",
+      "project_description"
+    ],
+    "last_checked_on": "2026-09-02",
+    "next_audit_on": "2026-09-16",
+    "notes": "Seed evidence includes the 2026 BJ's Wholesale Club tax-sharing/development agreement, commercial-corridor activity near I-10, and planning approvals for new businesses. Use the city archive and attached agenda/minute documents as primary evidence; retain news links only as discovery corroboration. A connector must version documents, distinguish proposed agenda items from final votes, preserve local case numbers, and suppress personal contact details.",
+    "can_run_canary": false
+  },
+  {
+    "key": "biloxi_ms_development_review_agendas",
+    "name": "Biloxi Development Review Committee Agendas",
+    "adapter": "pdf",
+    "record_type": "permit",
+    "jurisdiction": "Biloxi, MS",
+    "base_url": "https://biloxi.ms.us/residents/public-meetings/",
+    "official_landing_page": "https://biloxi.ms.us/departments/community-development/",
+    "license": "Official public meeting records with no affirmative commercial reuse grant",
+    "status": "legal_hold",
+    "blocker_summary": "Recurring agendas expose valuable proposed developments, but there is no feed or index API, layouts can drift, document parsing is not implemented, and commercial storage and redistribution rights are unresolved.",
+    "early_warning_value": "New, resubmitted, and sign-off development-review agenda items reveal proposed stores, restaurants, site work, project addresses, parcels, and applicants before building permits.",
+    "candidate_source_fields": [
+      "meeting_date",
+      "appointment_time",
+      "project_number",
+      "lifecycle_label",
+      "project_name",
+      "business_name",
+      "address",
+      "parcel_number",
+      "applicant",
+      "ward",
+      "decision"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-08-25",
+    "notes": "Confirm rights and establish a stable official archive manifest before building a PDF adapter. Retain agenda evidence URLs and suppress personal representative details downstream."
+  },
+  {
+    "key": "bozeman_mt_active_planning_projects",
+    "name": "Bozeman Active Planning Projects",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Bozeman, MT",
+    "base_url": "https://gisweb.bozeman.net/arcgis/rest/services/Public/Planning_Projects_sw/FeatureServer/5/query",
+    "official_landing_page": "https://www.bozeman.net/departments/community-development/planning/project-information-portal",
+    "license": "City digital-file agreement restricts reproduction for sale and provision to other parties",
+    "status": "legal_hold",
+    "blocker_summary": "The live official layer is technically suitable, but restrictive city reuse language blocks customer-facing commercial use; duplicate polygons and the lack of a last-edited field also require reconciliation design.",
+    "early_warning_value": "Application received, preliminary review, public notice, final review, decision, project description, type, application date, and geometry provide strong pre-approval development context.",
+    "candidate_source_fields": [
+      "OBJECTID",
+      "FILE_NUMBER",
+      "DESCRIPTION",
+      "EXTENDED_DESCRIPTION",
+      "TYPE",
+      "PROJECT_STATUS",
+      "PROJECT_APPLICATION_DATE",
+      "PLANNER_NAME",
+      "HYPERLINK",
+      "geometry"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-08-25",
+    "notes": "Prioritize written permission. If cleared, aggregate geometry by FILE_NUMBER, retain each source polygon as evidence, resolve official project links, and suppress planner contact details."
+  },
+  {
+    "key": "bernalillo_county_nm_accela_permits",
+    "name": "Bernalillo County Accela Permits",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Bernalillo County, NM",
+    "base_url": "https://pdsgismaps.bernco.gov/server/rest/services/BERNCO/Accela_Permits/MapServer/142/query",
+    "official_landing_page": "https://pdsgismaps.bernco.gov/server/rest/services/BERNCO/Accela_Permits/MapServer/142",
+    "license": "Blank permit-layer license and access metadata; no affirmative commercial SaaS grant",
+    "status": "technical_hold",
+    "blocker_summary": "The layer is current and lifecycle-rich, but permit numbers repeat across workflow rows, OBJECTID is the only unique row key, and no immutable CAP identity, update watermark, deletion feed, control totals, or commercial reuse grant is documented.",
+    "early_warning_value": "Filing, task review, hearing, conditional approval, issuance, completion, project, parcel, contractor, job value, and geometry fields expose current commercial projects before approval.",
+    "candidate_source_fields": [
+      "OBJECTID",
+      "PERMIT",
+      "PERNUM",
+      "PERTYPE",
+      "B1_APP_TYPE_ALIAS",
+      "PRJ",
+      "PARCELNBR",
+      "SITEADDRESS",
+      "PERSTATUS",
+      "PERTASK",
+      "TASKSTATUS",
+      "B1_FILE_DD",
+      "PERISSUED",
+      "PERCOMPL",
+      "JOB_VALUE",
+      "geometry"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-08-25",
+    "notes": "Resolve rights and obtain an official row-grain and identity contract before canary work. Minimize contractor, licensee, and contact fields and preserve workflow rows as separate evidence."
+  },
+  {
+    "key": "tulsa_ok_development_plans",
+    "name": "Tulsa Development Plans",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Tulsa, OK",
+    "base_url": "https://services2.arcgis.com/XkZ90iCdbTJ9oNXl/ArcGIS/rest/services/DevPlans_OpenData/FeatureServer/0/query",
+    "official_landing_page": "https://www.cityoftulsa.org/government/departments/information-technology/open-tulsa/",
+    "license": "Official open-data item carries attribution and disclaimers but no affirmative commercial redistribution grant",
+    "status": "lifecycle_hold",
+    "blocker_summary": "The current machine-readable planning layer lacks case status, applicant, address, parcel, project description, decision date, and deletion semantics, while commercial product and export rights remain ambiguous.",
+    "early_warning_value": "Development-plan, PUD, zoning, subdivision, lot-split, ordinance, and polygon context can flag land development before construction when joined to a separate official lifecycle source.",
+    "candidate_source_fields": [
+      "OBJECTID",
+      "GlobalID",
+      "SP",
+      "PUD",
+      "Ordinance",
+      "ZCASE_NUM",
+      "TYPE",
+      "created_date",
+      "last_edited_date",
+      "geometry"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-09-08",
+    "notes": "Treat only as planning context, never as building-permit authority. Promotion requires written rights plus an official case-status join or an explicitly conservative lifecycle contract."
+  },
+  {
+    "key": "charleston_wv_energov_permits",
+    "name": "Charleston EnerGov Permits",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Charleston, WV",
+    "base_url": "https://charlestonwv-energovweb.tylerhost.net/apps/selfservice",
+    "official_landing_page": "https://www.charlestonwv.gov/government/city-departments/building-commission/permits",
+    "license": "Official public portal with no commercial reuse or redistribution license located",
+    "status": "technical_hold",
+    "blocker_summary": "The public portal has useful current records but no city-supported recurring export, authoritative totals, complete class history, modification cursor, tombstones, durable identity guarantee, or commercial rights.",
+    "early_warning_value": "Submitted, review, fee, hold, issued, completed, void, and expired records with descriptions, addresses, parcels, values, and review evidence can reveal named retailers before issuance.",
+    "candidate_source_fields": [
+      "record_id",
+      "permit_number",
+      "permit_type",
+      "status",
+      "description",
+      "address",
+      "parcel",
+      "declared_value",
+      "application_date",
+      "issued_date",
+      "completion_date",
+      "review_evidence"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-09-08",
+    "notes": "Do not automate undocumented Tyler browser APIs. Require a supported backfill and recurring export; derive approval from issued date rather than raw status and suppress personal contacts."
+  },
+  {
+    "key": "cheyenne_wy_opengov_permits",
+    "name": "Cheyenne OpenGov Permits and Planning",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Cheyenne, WY",
+    "base_url": "https://cheyennewy.portal.opengov.com/search",
+    "official_landing_page": "https://www.cheyennecity.org/Your-Government/Departments/Planning-and-Development-Department",
+    "license": "Official public portal with no affirmative automated commercial reuse grant",
+    "status": "technical_hold",
+    "blocker_summary": "Interactive search is capped and has no supported bulk endpoint, exact totals, change cursor, tombstones, durable identity guarantee, migration crosswalk, or commercial redistribution permission.",
+    "early_warning_value": "Pre-applications, site plans, changes of use, signs, tenant finishes, commercial permits, engineering review, parties, proposed use, and evidence documents provide high-value pre-approval signals.",
+    "candidate_source_fields": [
+      "record_id",
+      "service_type",
+      "address",
+      "status",
+      "proposed_use",
+      "application_parties",
+      "submitted_at",
+      "completed_at",
+      "evidence_documents",
+      "parent_record_id"
+    ],
+    "last_checked_on": "2026-08-11",
+    "next_audit_on": "2026-09-08",
+    "notes": "Do not automate undocumented OpenGov internals. Require licensed exports with parent-child records, lifecycle history, control totals, tombstones, and a legacy-to-current identity crosswalk; suppress personal party and document content."
+  },
+  {
+    "key": "san_jose_ca_planning_director_hearings",
+    "name": "San Jose Planning Director Hearings",
+    "adapter": "planning_documents",
+    "record_type": "planning",
+    "jurisdiction": "San Jose, CA",
+    "base_url": "https://www.sanjoseca.gov/your-government/departments-offices/planning-building-code-enforcement/planning-division/commissions-hearings-and-developers-roundtable/planning-director-hearings/planning-director-s-hearing-agendas-minutes",
+    "official_landing_page": "https://www.sanjoseca.gov/your-government/departments-offices/planning-building-code-enforcement/planning-division/commissions-hearings-and-developers-roundtable/planning-director-hearings/planning-director-s-hearing-agendas-minutes",
+    "license": "Official City of San Jose public meeting records; preserve attribution and source-document links",
+    "status": "technical_hold",
+    "blocker_summary": "The planning_documents adapter is fully configured, but the official archive returned HTTP 403 to a production-style HTTP client on 2026-08-22. Activation requires a City-supported access path or confirmation that automated retrieval is permitted; browser automation is not an acceptable workaround.",
+    "early_warning_value": "Weekly agendas expose file numbers, hearing dates, project descriptions, permit types, addresses, acreage, units or square footage, owners, environmental review, and staff recommendations before a final decision; minutes later confirm the action.",
+    "candidate_source_fields": [
+      "meeting_date",
+      "meeting_time",
+      "meeting_location",
+      "document_type",
+      "document_url",
+      "agenda_item_number",
+      "file_numbers",
+      "project_description",
+      "permit_type",
+      "address",
+      "acreage",
+      "units",
+      "square_feet",
+      "owner_name",
+      "environmental_review",
+      "staff_recommendation",
+      "decision"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://www.sanjoseca.gov/your-government/departments-offices/planning-building-code-enforcement/planning-division/commissions-hearings-and-developers-roundtable/planning-director-hearings/planning-director-s-hearing-agendas-minutes",
+        "href_pattern": "(?i)(?:/home/showpublisheddocument/|\\.pdf(?:$|[?#]))",
+        "text_pattern": "(?i)\\b(?:agenda|minutes)\\b",
+        "document_type_patterns": {
+          "agenda": "(?i)\\bagenda\\b",
+          "minutes": "(?i)\\bminutes\\b"
+        },
+        "item_pattern": "(?m)^\\s*(?P<item_number>\\d+\\.[A-Z])\\s+(?=[A-Z]{1,4}\\d{2}-\\d{3,}\\b)",
+        "file_pattern": "\\b(?P<file_number>[A-Z]{1,4}\\d{2}-\\d{3,})\\b",
+        "value_patterns": {
+          "project_description": "(?is)(?:PROJECT\\s+DESCRIPTION|DESCRIPTION)\\s*:\\s*(?P<value>.+?)(?=\\n\\s*(?:PROJECT\\s+LOCATION|LOCATION|PROPERTY\\s+OWNER|OWNER|APPLICANT|ENVIRONMENTAL\\s+REVIEW|CEQA|STAFF\\s+RECOMMENDATION|RECOMMENDATION|COUNCIL\\s+DISTRICT|PROJECT\\s+MANAGER)\\s*:|$)",
+          "address": "(?im)^(?:PROJECT\\s+LOCATION|LOCATION|ADDRESS)\\s*:\\s*(?P<value>[^\\n]+)",
+          "owner_name": "(?im)^(?:PROPERTY\\s+OWNER|OWNER)\\s*:\\s*(?P<value>[^\\n]+)",
+          "environmental_review": "(?is)(?:ENVIRONMENTAL\\s+REVIEW|CEQA)\\s*:\\s*(?P<value>.+?)(?=\\n\\s*(?:STAFF\\s+RECOMMENDATION|RECOMMENDATION|PROJECT\\s+MANAGER|PROPERTY\\s+OWNER|OWNER|APPLICANT|COUNCIL\\s+DISTRICT)\\s*:|$)",
+          "staff_recommendation": "(?is)(?:STAFF\\s+RECOMMENDATION|RECOMMENDATION)\\s*:\\s*(?P<value>.+?)(?=\\n\\s*(?:\\d+\\.[A-Z]\\s+[A-Z]{1,4}\\d{2}-\\d{3,}|PROJECT\\s+MANAGER|OPEN\\s+FORUM|ADJOURNMENT)\\b|$)"
+        },
+        "event_types": {
+          "agenda": "planning_hearing_agenda_item",
+          "minutes": "planning_hearing_decision"
+        },
+        "stages": {
+          "agenda": "hearing_scheduled",
+          "minutes": "decision_recorded"
+        },
+        "meeting_name": "Planning Director Hearing",
+        "governing_body": "City of San Jose Planning Division",
+        "document_allowed_hosts": [
+          "www.sanjoseca.gov"
+        ],
+        "page_size": 25,
+        "max_documents": 24,
+        "max_index_pages": 1,
+        "max_document_bytes": 10485760,
+        "max_items_per_document": 100,
+        "max_item_characters": 50000,
+        "max_records": 250,
+        "timeout": 30,
+        "max_retries": 2,
+        "headers": {
+          "User-Agent": "BuildSignals/1.0 (+https://buildsignals.io; public-records-ingestion)"
+        }
+      },
+      "defaults": {
+        "jurisdiction": "San Jose, CA",
+        "city": "San Jose",
+        "state": "CA",
+        "confidence": 0.95
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "address",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "owner_name",
+        "canonical_field": "owner_name"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
+    ],
+    "production_page_size": 25,
+    "last_checked_on": "2026-08-22",
+    "next_audit_on": "2026-09-05",
+    "notes": "Join each agenda item to San Jose Planning Permit Applications by normalized file number first, then FOLDERRSN when available, APN, and normalized address. The connector preserves file_numbers, project_description, address, owner_name, environmental_review, staff_recommendation, source PDF checksum, and cited pages in raw evidence even when a field has no canonical planning column. Cancelled meetings are lifecycle events, not project withdrawals. The 2026-08-22 HTTP 403 must be resolved through a supported City access path or City confirmation, never browser automation."
+  },
+  {
+    "key": "dallas_tx_legistar_planning_agendas",
+    "name": "Dallas Legistar Planning Agendas",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Dallas, TX",
+    "base_url": "https://webapi.legistar.com/v1/cityofdallas",
+    "official_landing_page": "https://dallascityhall.com/government/Boards-and-Commissions/City-Plan-and-Zoning-Commission/Pages/Meetings.aspx",
+    "license": "Official City of Dallas public meeting records; narrow commercial SaaS storage and derived display approved on 2026-08-24 with source attribution and no raw-document redistribution",
+    "status": "operational_retry",
+    "blocker_summary": "Rights and data-minimization scope were approved on 2026-08-24. Promotion remains blocked until a bounded production-style canary validates canonical planning normalization, agenda and decision lifecycle handling, stable identities, and source attribution.",
+    "early_warning_value": "Planning commission, adjustment board, landmark, and economic-development agendas can expose rezonings, site plans, variances, incentives, developers, owners, brands, and project locations before permit approval.",
+    "candidate_source_fields": [
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "legistar_matter_id",
+      "meeting_date",
+      "meeting_at",
+      "governing_body",
+      "published_at",
+      "modified_at",
+      "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/cityofdallas",
+        "body_names": [
+          "City Plan Commission",
+          "Board of Adjustment",
+          "Board of Adjustment, Panel A",
+          "Board of Adjustment, Panel B",
+          "Board of Adjustment, Panel C",
+          "Landmark Commission",
+          "Economic Development Committee"
+        ],
+        "page_size": 25,
+        "event_page_size": 20,
+        "max_events": 40,
+        "max_items_per_event": 150,
+        "max_records": 250,
+        "lookback_days": 45,
+        "future_days": 120,
+        "max_evidence_characters": 10000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Dallas, TX",
+        "city": "Dallas",
+        "state": "TX",
+        "confidence": 0.9
+      },
+      "signal_stage": "pre_approval",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 336,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 25,
+    "last_checked_on": "2026-08-24",
+    "next_audit_on": "2026-08-24",
+    "notes": "Approved scope stores bounded public agenda fields plus derived intelligence with official attribution; it suppresses attachments and raw-document redistribution. The 14-day publisher freshness SLA reflects Dallas planning-meeting publication cadence while daily collection detects changes promptly. A bounded one-year probe on 2026-08-24 found no City Plan Commission minutes/action payloads across 21 events, so this candidate is explicitly pre-approval only; existing permit feeds remain the approval/issuance confirmation layer and a separate official minutes source must be evaluated. Emit only items with a positive Legistar matter ID or an official file/reference number so procedural and accessibility boilerplate does not become a planning signal. Preserve each immutable raw version and treat cancellations or disappearance as lifecycle evidence, not project withdrawal. Atlanta was not added because its public Legistar endpoint was stale at July 2022 during the 2026-08-24 validation."
+  },
+  {
+    "key": "madison_wi_legistar_plan_commission",
+    "name": "Madison Legistar Plan Commission",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Madison, WI",
+    "base_url": "https://webapi.legistar.com/v1/madison",
+    "official_landing_page": "https://www.cityofmadison.com/city-hall/committees/plan-commission",
+    "license": "Official City of Madison public meeting records; narrow commercial SaaS storage and derived-display scope requires explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official Plan Commission schedule, public Legistar API, agenda items, and decision records were technically validated on 2026-08-25. Production activation requires explicit approval for bounded commercial storage, derived display, attribution, and the documented field-suppression scope.",
+    "early_warning_value": "Plan Commission agendas and minutes expose conditional uses, rezonings, subdivisions, annexations, demolitions, land transactions, project sponsors, locations, public decisions, and official Legistar file identities before or alongside permit issuance.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "legistar_matter_id", "meeting_date", "meeting_at", "governing_body",
+      "published_at", "decision_at", "modified_at", "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/madison",
+        "body_names": ["PLAN COMMISSION"],
+        "page_size": 25,
+        "event_page_size": 10,
+        "max_events": 20,
+        "max_items_per_event": 200,
+        "max_records": 250,
+        "lookback_days": 90,
+        "future_days": 120,
+        "max_evidence_characters": 10000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Madison, WI",
+        "city": "Madison",
+        "state": "WI",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "legistar_matter_id",
+          "namespace": "legistar:madison:legislation",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "decision_at", "canonical_field": "decision_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 25,
+    "last_checked_on": "2026-08-25",
+    "next_audit_on": "2026-09-08",
+    "notes": "A bounded live probe on 2026-08-25 processed seven Plan Commission events and emitted 67 substantive matter-backed records: 3 hearing_scheduled and 64 decision_recorded, with a current 2026-08-24 modification timestamp and zero missing matter/file identities. Join reference_number and matter links to madison_wi_current_planning_projects through ASI_LU_PInf_LndUseLegURL, ASI_LU_PInf_ReZonLegURL, ASI_LU_PInf_UDCLegURL, project record ID, and normalized address. Never fetch attachments; preserve immutable versions and official links."
+  },
+  {
+    "key": "arapahoe_county_co_legistar_planning",
+    "name": "Arapahoe County Legistar Planning Hearings",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Arapahoe County, CO",
+    "base_url": "https://webapi.legistar.com/v1/arapahoe",
+    "official_landing_page": "https://www.arapahoeco.gov/your_county/county_departments/public_works_and_development/divisions/planning_and_land_development/index.php",
+    "license": "Official Arapahoe County public meeting records; commercial SaaS storage and derived-display scope requires explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The County's official planning pages, Legistar calendar, public API, current agenda items, and recorded decisions were technically validated on 2026-08-25. Production activation requires explicit approval for bounded commercial storage, derived display, attribution, and the documented suppression scope.",
+    "early_warning_value": "Planning Commission, Board of Adjustment, and East Arapahoe County Advisory Planning Commission records expose rezonings, subdivisions, land-development-code changes, variances, named projects, hearings, and decisions before building-permit issuance.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "legistar_matter_id", "meeting_date", "meeting_at", "governing_body",
+      "published_at", "decision_at", "modified_at", "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/arapahoe",
+        "body_names": [
+          "Planning Commission",
+          "Board of Adjustment",
+          "East Arapahoe County Advisory Planning Commission"
+        ],
+        "page_size": 25,
+        "event_page_size": 10,
+        "max_events": 20,
+        "max_items_per_event": 200,
+        "max_records": 250,
+        "lookback_days": 120,
+        "future_days": 120,
+        "max_evidence_characters": 10000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Arapahoe County, CO",
+        "city": "Arapahoe County",
+        "state": "CO",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "legistar_matter_id",
+          "namespace": "legistar:arapahoe:legislation",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "decision_at", "canonical_field": "decision_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 25,
+    "last_checked_on": "2026-08-25",
+    "next_audit_on": "2026-09-08",
+    "notes": "A bounded live probe on 2026-08-25 processed 13 relevant meetings and emitted 25 substantive matter-backed records: 8 hearing_scheduled and 17 decision_recorded, including 23 Planning Commission and 2 Board of Adjustment items. Source modification was current through 2026-08-21 and no record lacked a file or matter identity. The official County planning page states that the active cases map covers land-development cases under review, and County Legistar exposes agendas, minutes, action outcomes, and official evidence links. Never fetch attachments; suppress personal contacts and raw-document redistribution. Preserve immutable versions and treat cancellations as meeting lifecycle evidence, not project withdrawal."
+  },
+  {
+    "key": "mesquite_tx_planning_zoning_agendas",
+    "name": "Mesquite Planning and Zoning Agendas",
+    "adapter": "planning_documents",
+    "record_type": "planning",
+    "jurisdiction": "Mesquite, TX",
+    "base_url": "https://www.cityofmesquite.com/AgendaCenter/Planning-Zoning-Commission-18/",
+    "official_landing_page": "https://www.cityofmesquite.com/3627/Active-Zoning-Cases",
+    "license": "Official City of Mesquite public meeting records; bounded commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official CivicEngage Planning and Zoning agenda feed was technically validated on 2026-08-27. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public applicant and organization display, and contact suppression.",
+    "early_warning_value": "Current public-hearing agendas expose exact zoning cases, applicants, companies, development requests, and locations before City Council action or downstream permit issuance, including national retailer, fueling, drone-delivery, multifamily, industrial, and data-center-related activity.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "file_numbers", "meeting_date", "meeting_at", "meeting_name",
+      "governing_body", "source_url", "source_pages", "document_hash"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://www.cityofmesquite.com/AgendaCenter/Planning-Zoning-Commission-18/",
+        "href_pattern": "/AgendaCenter/ViewFile/Agenda/_[^?]+$",
+        "text_pattern": "Planning and Zoning Commission Meeting Agenda(?: - Revised)?$",
+        "document_type_patterns": {
+          "agenda": "/AgendaCenter/ViewFile/Agenda/"
+        },
+        "item_pattern": "(?m)^(?P<item_number>[0-9]+)[.] ",
+        "file_pattern": "(?P<file_number>Z[0-9]{4}-[0-9]{4})",
+        "event_types": {
+          "agenda": "planning_hearing_agenda_item"
+        },
+        "stages": {
+          "agenda": "hearing_scheduled"
+        },
+        "suppression_patterns": [
+          "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+          "(?<![0-9])(?:[+]1[ .-]?)?(?:[(][0-9]{3}[)]|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}(?![0-9])"
+        ],
+        "meeting_name": "Planning and Zoning Commission",
+        "governing_body": "City of Mesquite",
+        "document_allowed_hosts": [
+          "www.cityofmesquite.com"
+        ],
+        "page_size": 50,
+        "max_documents": 12,
+        "max_index_pages": 1,
+        "max_document_bytes": 1048576,
+        "max_items_per_document": 50,
+        "max_item_characters": 10000,
+        "max_records": 250,
+        "timeout": 30,
+        "max_retries": 2,
+        "headers": {
+          "User-Agent": "BuildSignals/1.0 (+https://buildsignals.io; public-records-ingestion)"
+        }
+      },
+      "defaults": {
+        "jurisdiction": "Mesquite, TX",
+        "city": "Mesquite",
+        "state": "TX",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "reference_number",
+          "namespace": "mesquite:planning_case",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 504,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 50,
+    "last_checked_on": "2026-08-27",
+    "next_audit_on": "2026-09-10",
+    "notes": "A bounded no-write canary on 2026-08-27 read 12 current agenda PDFs and emitted 21 pre-approval zoning-hearing records with zero missing case identities and zero retained email or phone contacts. Exact cases reconcile through the mesquite:planning_case namespace. Current evidence included Chick-fil-A, BJ's Wholesale and Fueling, Zipline, Dominium, JPI, commercial and industrial requests, and development activity related to data-center standards. Public applicant and organization names remain for graph resolution; minutes require OCR and are excluded, as are packets, attachments, staff contacts, raw document redistribution, and source-replacement exports."
+  },
+  {
+    "key": "rockwall_tx_planning_development_cases",
+    "name": "Rockwall Planning Development Cases",
+    "adapter": "arcgis",
+    "record_type": "planning",
+    "jurisdiction": "Rockwall, TX",
+    "base_url": "https://gis.rockwall.com/arcgis/rest/services/Cityworks/CityworksMap_PLL/MapServer/2",
+    "official_landing_page": "https://www.rockwall.com/planning.asp",
+    "license": "Official City of Rockwall public GIS layer; bounded commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official current-year planning development case layer was technically validated on 2026-08-28. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public project display, derived point geometry, and parcel joins.",
+    "early_warning_value": "Current zoning and specific-use cases, site plans, plats, development types, case status, acreage, parcel cross-references, project comments, and geometry expose active development before downstream building permits.",
+    "candidate_source_fields": [
+      "OBJECTID", "ASSETID", "STATUS", "CROSS_REF", "Case_No",
+      "Case_Type", "Dev_Type", "Comments", "Acreage", "YEAR",
+      "created_date", "last_edited_date", "geometry"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 200,
+        "where": "YEAR = '2026' AND ASSETID IS NOT NULL AND Case_No IS NOT NULL AND Case_No NOT LIKE '%XXX%' AND (Case_No LIKE 'Z2026-%' OR Case_No LIKE 'SP2026-%' OR Case_No LIKE 'P2026-%')",
+        "out_fields": "OBJECTID,ASSETID,STATUS,CROSS_REF,Case_No,Case_Type,Dev_Type,Comments,Acreage,YEAR,created_date,last_edited_date",
+        "keyset_field": "OBJECTID",
+        "order_by_fields": "OBJECTID ASC",
+        "include_geometry": true,
+        "query": {
+          "outSR": 4326
+        },
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Rockwall, TX",
+        "city": "Rockwall",
+        "state": "TX",
+        "permit_type": "planning_case",
+        "approval_stage": "pre_approval",
+        "source_url": "https://gis.rockwall.com/arcgis/rest/services/Cityworks/CityworksMap_PLL/MapServer/2"
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "Case_No",
+          "namespace": "rockwall:planning_case",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "CROSS_REF",
+          "namespace": "rockwall:parcel_cross_reference",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "last_edited_date",
+      "freshness_sla_hours": 72,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "ASSETID", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "Case_No", "canonical_field": "application_number", "is_required": true},
+      {"source_field": "Case_Type", "canonical_field": "permit_type"},
+      {"source_field": "Dev_Type", "canonical_field": "work_class"},
+      {"source_field": "STATUS", "canonical_field": "status"},
+      {"source_field": "Comments", "canonical_field": "description"},
+      {"source_field": "CROSS_REF", "canonical_field": "external_parcel_id"},
+      {"source_field": "Acreage", "canonical_field": "acreage"},
+      {"source_field": "created_date", "canonical_field": "filed_at", "transform": "date"},
+      {"source_field": "last_edited_date", "canonical_field": "status_updated_at", "transform": "date"},
+      {
+        "source_field": "geometry",
+        "canonical_field": "latitude",
+        "transform": "arcgis_polygon_centroid",
+        "transform_options": {"axis": "y"}
+      },
+      {
+        "source_field": "__longitude",
+        "canonical_field": "longitude",
+        "transform": "arcgis_polygon_centroid",
+        "transform_options": {"source_field": "geometry", "axis": "x"}
+      }
+    ],
+    "production_page_size": 200,
+    "last_checked_on": "2026-08-28",
+    "next_audit_on": "2026-09-11",
+    "notes": "A bounded no-write canary on 2026-08-28 emitted 120 current-year zoning/SUP, site-plan, and plat cases after excluding placeholder IDs, historic grants, and miscellaneous records. All 120 had durable ASSETID and public case identities; 119 had valid derived WGS84 centroids, 49 carried acreage, and 12 exposed parcel cross-references or location comments. Source modification was current through 2026-08-27. Current comments surfaced Culver's, Raising Cane's, Erwin Farms, Crosspoint Community Church, and large 95.944-acre site-plan/plat activity. Polygon geometry is used transiently to derive a point and is excluded from normalized records and customer output. Detailed packets, attachments, personal contacts, raw polygons, raw layer exports, and source-replacement products are outside the proposed scope."
+  },
+  {
+    "key": "grand_prairie_tx_planning_cases",
+    "name": "Grand Prairie Planning Cases",
+    "adapter": "arcgis",
+    "record_type": "permit",
+    "jurisdiction": "Grand Prairie, TX",
+    "base_url": "https://gis.gptx.org/srv105/rest/services/EnerGov/EnergovProj/MapServer/1",
+    "official_landing_page": "https://www.gptx.org/Departments/Planning-and-Development/Planning-Division/Development-Cases",
+    "license": "Official City of Grand Prairie public planning dashboard; commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official EnerGov planning-case layer was technically validated on 2026-08-28. Its ArcGIS items have blank license metadata and disable dashboard downloads, so production activation requires explicit City approval for bounded commercial storage, analysis, attribution, derived display, and parcel joins.",
+    "early_warning_value": "Submitted and in-review zoning, specific-use, site-plan, platting, variance, and comprehensive-plan cases expose named retailers, data centers, logistics projects, builders, addresses, parcels, acreage, and status before downstream building permits.",
+    "candidate_source_fields": [
+      "OBJECTID", "APPLY_DATE", "PLAN_NUMBER", "PLAN_TYPE", "WORK_CLASS",
+      "PROJECT", "PLAN_STATUS", "MAIN_ADDRESS_LINE1", "MAIN_PARCEL_NUMBER",
+      "RequestDescription", "CaseName", "geometry"
+    ],
+    "probe_settings": {
+      "connector": {
+        "page_size": 500,
+        "where": "PLAN_NUMBER IS NOT NULL AND PLAN_TYPE IN ('Platting ','Specific Use Permit','Site Plan','Zoning ','Comprehensive Plan Amendment','Variances')",
+        "out_fields": "OBJECTID,APPLY_DATE,PLAN_NUMBER,PLAN_TYPE,WORK_CLASS,PROJECT,PLAN_STATUS,MAIN_ADDRESS_LINE1,MAIN_PARCEL_NUMBER,RequestDescription,CaseName",
+        "keyset_field": "OBJECTID",
+        "order_by_fields": "OBJECTID ASC",
+        "include_geometry": true,
+        "query": {
+          "outSR": 4326,
+          "geometryPrecision": 6
+        },
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Grand Prairie, TX",
+        "city": "Grand Prairie",
+        "state": "TX",
+        "permit_type": "planning_case",
+        "source_url": "https://gis.gptx.org/srv105/rest/services/EnerGov/EnergovProj/MapServer/1"
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "PLAN_NUMBER",
+          "namespace": "grand_prairie:planning_case",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "PROJECT",
+          "namespace": "grand_prairie:master_project",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 72,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "PLAN_NUMBER", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "__permit_number", "canonical_field": "permit_number", "transform": "first_nonempty", "transform_options": {"fields": ["PLAN_NUMBER"]}},
+      {"source_field": "__application_number", "canonical_field": "application_number", "transform": "first_nonempty", "transform_options": {"fields": ["PLAN_NUMBER"]}},
+      {"source_field": "CaseName", "canonical_field": "project_name"},
+      {"source_field": "RequestDescription", "canonical_field": "description"},
+      {"source_field": "MAIN_ADDRESS_LINE1", "canonical_field": "address"},
+      {"source_field": "MAIN_PARCEL_NUMBER", "canonical_field": "parcel_id"},
+      {"source_field": "PLAN_TYPE", "canonical_field": "permit_type"},
+      {"source_field": "WORK_CLASS", "canonical_field": "work_class"},
+      {"source_field": "PLAN_STATUS", "canonical_field": "status"},
+      {"source_field": "APPLY_DATE", "canonical_field": "filed_at", "transform": "date"},
+      {
+        "source_field": "__approval_stage",
+        "canonical_field": "approval_stage",
+        "transform": "conditional_map",
+        "transform_options": {
+          "cases": [
+            {
+              "field": "PLAN_STATUS",
+              "operator": "in",
+              "values": ["Approved", "Approved (awaiting final case close out)", "Approved with Conditions", "Complete"],
+              "value": "approved"
+            }
+          ],
+          "default": "pre_approval"
+        }
+      },
+      {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}},
+      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}}
+    ],
+    "production_page_size": 500,
+    "last_checked_on": "2026-08-28",
+    "next_audit_on": "2026-09-11",
+    "notes": "A bounded no-write canary on 2026-08-28 read 167 meaningful planning rows representing 165 unique plan numbers; two exact duplicate source rows collapse through the durable plan identity. The sample contained 47 submitted, in-review, or on-hold signals and 102 approved or complete records. All rows had addresses and valid WGS84 points, 158 carried parcel IDs, and source applications were current through 2026-08-26. Current evidence included Dutch Bros, Kohl's, IKEA, Prologis, Bubba's 33, a large retailer with gas sales and a drive-through pharmacy, drone-delivery staging, and multi-building data-center campuses. Staff assignments, raw source exports, and source-replacement products are excluded."
+  },
+  {
+    "key": "maricopa_county_az_planning_zoning_agendas",
+    "name": "Maricopa County Planning and Zoning Agendas",
+    "adapter": "planning_documents",
+    "record_type": "planning",
+    "jurisdiction": "Maricopa County, AZ",
+    "base_url": "https://www.maricopa.gov/AgendaCenter/Planning-Zoning-Commission-9",
+    "official_landing_page": "https://www.maricopa.gov/383/Planning-Zoning-Commission",
+    "license": "Official Maricopa County public meeting records; Arizona commercial-purpose approval is required before production use",
+    "status": "legal_hold",
+    "blocker_summary": "The official CivicEngage agenda index and project-level HTML agendas were technically validated on 2026-08-26. Arizona commercial-purpose public-record rules require BuildSignal to disclose the intended use and obtain County approval before commercial storage, analysis, or customer-facing display.",
+    "early_warning_value": "Planning and Zoning Commission agendas expose zoning, comprehensive-plan, special-use, temporary-use, plan-of-development, variance, and military-compatibility case numbers before final Board action or building-permit issuance.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "file_numbers", "meeting_date", "meeting_at", "meeting_name",
+      "governing_body", "source_url", "source_pages", "document_hash"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://www.maricopa.gov/AgendaCenter/Planning-Zoning-Commission-9",
+        "href_pattern": "/AgendaCenter/ViewFile/Agenda/_[^?]+[?]html=true$",
+        "text_pattern": "Planning and Zoning Commission Meeting(?! Cancelled)",
+        "document_type_patterns": {
+          "agenda": "/AgendaCenter/ViewFile/Agenda/"
+        },
+        "item_pattern": "(?m)^(?P<item_number>[0-9]+(?:[.](?:[IVX]+))?[.])$",
+        "file_pattern": "(?P<file_number>(?:CPA|MCP|SUP|TUP|POD|VAR|Z)[0-9]{6,7})",
+        "event_types": {
+          "agenda": "planning_hearing_agenda_item"
+        },
+        "stages": {
+          "agenda": "hearing_scheduled"
+        },
+        "meeting_name": "Planning and Zoning Commission",
+        "governing_body": "Maricopa County",
+        "document_allowed_hosts": [
+          "www.maricopa.gov"
+        ],
+        "page_size": 25,
+        "max_documents": 12,
+        "max_index_pages": 1,
+        "max_document_bytes": 1048576,
+        "max_items_per_document": 50,
+        "max_item_characters": 10000,
+        "max_records": 250,
+        "timeout": 30,
+        "max_retries": 2,
+        "headers": {
+          "User-Agent": "BuildSignals/1.0 (+https://buildsignals.io; public-records-ingestion)"
+        }
+      },
+      "defaults": {
+        "jurisdiction": "Maricopa County, AZ",
+        "city": "Maricopa County",
+        "state": "AZ",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "reference_number",
+          "namespace": "maricopa:planning_case",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 25,
+    "last_checked_on": "2026-08-26",
+    "next_audit_on": "2026-09-09",
+    "notes": "A bounded no-write canary on 2026-08-26 read three current HTML agendas and emitted 18 project-level hearing records with zero missing case identities. The sample contained CPA, Z, and MCP cases across the June 25, July 23, and August 6 meetings. Only the official index and HTML agenda views are read; staff reports, packets, attachments, media, contacts, and raw-document redistribution are excluded. Repeated case numbers across meetings reconcile through the maricopa:planning_case external-reference namespace. Production remains blocked until Maricopa County approves the declared commercial purpose and bounded derived-display scope."
+  },
+  {
+    "key": "jacksonville_fl_planning_commission_agendas",
+    "name": "Jacksonville Planning Commission Agendas and Results",
+    "adapter": "planning_documents",
+    "record_type": "planning",
+    "jurisdiction": "Jacksonville, FL",
+    "base_url": "https://www.jacksonville.gov/departments/planning-department/current-planning-division/planning-commission",
+    "official_landing_page": "https://www.jacksonville.gov/departments/planning-department/current-planning-division/planning-commission",
+    "license": "Official City of Jacksonville public meeting records; City website copyright requires explicit commercial reuse approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official current Planning Commission agenda and results PDFs were technically validated on 2026-08-26. Jacksonville states that website material is City-owned copyright; production activation requires explicit approval for bounded commercial storage, analysis, attribution, and derived customer display.",
+    "early_warning_value": "Planning Commission agendas expose exceptions, variances, liquor-location waivers, administrative deviations, land-use amendments, companion rezonings, conventional rezonings, and PUD changes with addresses, requests, staff recommendations, and later commission outcomes.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "file_numbers", "address", "project_description", "staff_recommendation",
+      "decision", "meeting_date", "meeting_at", "meeting_name",
+      "governing_body", "source_url", "source_pages", "document_hash"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://www.jacksonville.gov/departments/planning-department/current-planning-division/planning-commission",
+        "href_pattern": "/getContentAsset/.+[.]pdf[?]language=en$",
+        "text_pattern": "(?:Meeting|Results) Agenda",
+        "document_type_patterns": {
+          "minutes": "Results Agenda",
+          "agenda": "Meeting Agenda"
+        },
+        "item_pattern": "(?m)^(?:Ex-Parte[ ]+)?(?P<item_number>[0-9]+)[.][ ]+(?=(?:(?:E|V|WLD|WAAR|AD|MM)-[0-9]{2}-[0-9]{2,3}|L-[0-9]{4}-[0-9]{2}[A-Z]?|[0-9]{4}-[0-9]{4})[^\\n]*\\nCouncil District-)",
+        "file_pattern": "(?P<file_number>(?:(?:E|V|WLD|WAAR|AD|MM)-[0-9]{2}-[0-9]{2,3}|L-[0-9]{4}-[0-9]{2}[A-Z]?|[0-9]{4}-[0-9]{4}))",
+        "value_patterns": {
+          "address": "Planning District-[0-9]+[ ]+(?P<value>.+?)[ ]+Signs Posted:",
+          "project_description": "^Request:[ ]*(?P<value>.+)$",
+          "staff_recommendation": "^Staff Recommendation:[ ]*(?P<value>.+)$",
+          "decision": "^Planning Commission Recommendation:[ ]*(?P<value>.+)$"
+        },
+        "event_types": {
+          "agenda": "planning_hearing_agenda_item",
+          "minutes": "planning_hearing_decision"
+        },
+        "stages": {
+          "agenda": "hearing_scheduled",
+          "minutes": "decision_recorded"
+        },
+        "suppression_patterns": [
+          "^Owner[(]s[)]:.*$"
+        ],
+        "meeting_name": "Planning Commission",
+        "governing_body": "City of Jacksonville",
+        "document_allowed_hosts": [
+          "www.jacksonville.gov"
+        ],
+        "page_size": 50,
+        "max_documents": 2,
+        "max_index_pages": 1,
+        "max_document_bytes": 1048576,
+        "max_items_per_document": 100,
+        "max_item_characters": 20000,
+        "max_records": 200,
+        "timeout": 30,
+        "max_retries": 2,
+        "headers": {
+          "User-Agent": "BuildSignals/1.0 (+https://buildsignals.io; public-records-ingestion)"
+        }
+      },
+      "defaults": {
+        "jurisdiction": "Jacksonville, FL",
+        "city": "Jacksonville",
+        "state": "FL",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "reference_number",
+          "namespace": "jacksonville:planning_case",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "address", "canonical_field": "address"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 50,
+    "last_checked_on": "2026-08-26",
+    "next_audit_on": "2026-09-09",
+    "notes": "A bounded no-write canary on 2026-08-26 read the current agenda and results PDFs and emitted 38 project records: 19 hearing_scheduled and 19 decision_recorded, with zero missing case identities and zero retained owner or agent lines. The source includes project addresses, land-use requests, staff recommendations, commission outcomes, document hashes, page provenance, and official evidence links. General ordinances without a project address are excluded. Repeated cases reconcile through the jacksonville:planning_case external-reference namespace. Production remains blocked until the City approves the bounded commercial reuse and derived-display scope."
+  },
+  {
+    "key": "hillsborough_county_fl_legistar_land_use",
+    "name": "Hillsborough County Land Use Hearings",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Hillsborough County, FL",
+    "base_url": "https://webapi.legistar.com/v1/hillsboroughcounty",
+    "official_landing_page": "https://hcfl.gov/government/meeting-information/agendas-recaps-and-minutes",
+    "license": "Official Hillsborough County public meeting records; commercial SaaS storage and derived-display scope requires explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The County's official Legistar land-use bodies, current matter records, actions, and evidence links were technically validated on 2026-08-27. Production activation requires explicit approval for bounded commercial storage, derived display, attribution, public applicant/entity retention, and contact suppression.",
+    "early_warning_value": "BOCC Land Use, Zoning Hearing Master, and Land Use Hearing Officer records expose rezonings, planned developments, minor modifications, special uses, folios, acreage, locations, continuances, withdrawals, and decisions before building-permit issuance, including national retail expansion signals.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "legistar_matter_id", "meeting_date", "meeting_at", "governing_body",
+      "published_at", "decision_at", "modified_at", "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/hillsboroughcounty",
+        "body_names": [
+          "BOCC Land Use",
+          "Zoning Hearing Master",
+          "Land Use Hearing Officer"
+        ],
+        "record_stages": [
+          "decision_recorded"
+        ],
+        "suppression_patterns": [
+          "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+          "(?<![0-9])(?:[+]1[ .-]?)?(?:[(][0-9]{3}[)]|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}(?![0-9])"
+        ],
+        "page_size": 50,
+        "event_page_size": 10,
+        "max_events": 30,
+        "max_items_per_event": 250,
+        "max_records": 500,
+        "lookback_days": 120,
+        "future_days": 120,
+        "max_evidence_characters": 10000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Hillsborough County, FL",
+        "city": "Hillsborough County",
+        "state": "FL",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "legistar_matter_id",
+          "namespace": "legistar:hillsboroughcounty:legislation",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "reference_number",
+          "namespace": "hillsborough:land_use_case",
+          "transform": "scalar"
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "decision_at", "canonical_field": "decision_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 50,
+    "last_checked_on": "2026-08-27",
+    "next_audit_on": "2026-09-10",
+    "notes": "A bounded no-write canary on 2026-08-27 processed 30 current land-use meetings and emitted 330 decision-backed planning records across BOCC Land Use, Zoning Hearing Master, and Land Use Hearing Officer. All 330 had a matter or case identity, source modification was current through 2026-08-25, and configured suppression left zero email or phone contacts in titles or evidence. Current evidence included Ashley Global Retail, McDonald's, ACG BBQ, large planned developments, applicants, folios, acreage, locations, continuances, withdrawals, and official actions before downstream construction permits. Public applicant and organization names are retained for graph resolution; attachments, direct contact details, raw document redistribution, and source-replacement exports are outside the proposed scope."
+  },
+  {
+    "key": "port_st_lucie_fl_legistar_planning",
+    "name": "Port St. Lucie Planning and Zoning Hearings",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Port St. Lucie, FL",
+    "base_url": "https://webapi.legistar.com/v1/psl",
+    "official_landing_page": "https://psl.legistar.com/Calendar.aspx",
+    "license": "Official City of Port St. Lucie public meeting records; bounded commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official Planning and Zoning Board Legistar feed was technically validated on 2026-08-27. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public applicant and organization display, and contact suppression.",
+    "early_warning_value": "Planning and Zoning Board hearings expose comprehensive-plan amendments, rezonings, PUD and MPUD amendments, special exceptions, variances, sign programs, locations, legal descriptions, applicants, project names, and decisions before downstream construction permits.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "legistar_matter_id", "matter_type", "matter_status", "action_name",
+      "meeting_date", "meeting_at", "governing_body", "published_at",
+      "decision_at", "modified_at", "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/psl",
+        "body_names": [
+          "Planning and Zoning Board"
+        ],
+        "matter_types": [
+          "Public Hearing",
+          "Public Hearing - Quasi Judicial"
+        ],
+        "suppression_patterns": [
+          "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+          "(?<![0-9])(?:[+]1[ .-]?)?(?:[(][0-9]{3}[)]|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}(?![0-9])"
+        ],
+        "page_size": 100,
+        "event_page_size": 10,
+        "max_events": 20,
+        "max_items_per_event": 250,
+        "max_records": 300,
+        "lookback_days": 120,
+        "future_days": 120,
+        "max_evidence_characters": 6000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Port St. Lucie, FL",
+        "city": "Port St. Lucie",
+        "state": "FL",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "legistar_matter_id",
+          "namespace": "legistar:psl:legislation",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "reference_number",
+          "namespace": "legistar:psl:file",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "title",
+          "namespace": "psl:planning_project",
+          "transform": "regex_extract",
+          "pattern": "\\b(P[0-9]{2}-[0-9]{3}(?:-A[0-9]+)?)\\b",
+          "group": 1
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 168,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "matter_type", "canonical_field": "matter_type"},
+      {"source_field": "matter_status", "canonical_field": "matter_status"},
+      {"source_field": "action_name", "canonical_field": "action_name"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "decision_at", "canonical_field": "decision_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 100,
+    "last_checked_on": "2026-08-27",
+    "next_audit_on": "2026-09-10",
+    "notes": "A bounded no-write canary on 2026-08-27 processed 20 current meeting slots and emitted 31 project hearing records: 7 hearing_scheduled and 24 decision_recorded. Public Hearing and Public Hearing - Quasi Judicial filters excluded minutes and administrative business. Every record had a Legistar matter ID, legislative file, and exact P-number project identity; source modification was current through 2026-08-25 and configured suppression left zero email or phone contacts. Current evidence included Pollo Tropical, Dollar Tree, Verano South, Riverland, Legacy Park, Tradition, Wilson Groves, Founders Crossing, applicants, locations, legal descriptions, requests, and actions. The Site Plan Review Committee API currently returns no consistent project-item payloads and is excluded pending a separately validated document path. Public applicant and organization names remain for graph resolution; attachments, packets, direct contacts, raw document redistribution, and source-replacement exports are outside the proposed scope."
+  },
+  {
+    "key": "ocala_fl_legistar_planning_zoning",
+    "name": "Ocala Planning and Zoning Hearings",
+    "adapter": "legistar",
+    "record_type": "planning",
+    "jurisdiction": "Ocala, FL",
+    "base_url": "https://webapi.legistar.com/v1/ocala",
+    "official_landing_page": "https://ocala.legistar.com/Calendar.aspx",
+    "license": "Official City of Ocala public meeting records; bounded commercial storage and derived display require explicit approval",
+    "status": "legal_hold",
+    "blocker_summary": "The official Planning and Zoning Commission Legistar feed was technically validated on 2026-08-27. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public applicant and organization display, and contact suppression.",
+    "early_warning_value": "Planning and Zoning Commission records expose subdivisions, rezonings, planned developments, future-land-use changes, annexations, abrogations, parcel IDs, acreage, addresses, local cases, and commission decisions before downstream construction permits.",
+    "candidate_source_fields": [
+      "source_record_id", "event_type", "stage", "title", "summary",
+      "evidence_excerpt", "agenda_item_number", "reference_number",
+      "legistar_matter_id", "matter_type", "matter_status", "action_name",
+      "meeting_date", "meeting_at", "governing_body", "published_at",
+      "decision_at", "modified_at", "source_url"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://webapi.legistar.com/v1/ocala",
+        "body_names": [
+          "Planning & Zoning Commission"
+        ],
+        "matter_types": [
+          "P&Z Subdivision",
+          "P&Z Rezoning",
+          "P&Z Land Use Change",
+          "P&Z Abrogation",
+          "P&Z Annexation"
+        ],
+        "suppression_patterns": [
+          "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+          "(?<![0-9])(?:[+]1[ .-]?)?(?:[(][0-9]{3}[)]|[0-9]{3})[ .-]?[0-9]{3}[ .-]?[0-9]{4}(?![0-9])"
+        ],
+        "page_size": 100,
+        "event_page_size": 10,
+        "max_events": 20,
+        "max_items_per_event": 250,
+        "max_records": 300,
+        "lookback_days": 120,
+        "future_days": 120,
+        "max_evidence_characters": 6000,
+        "timeout": 30,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Ocala, FL",
+        "city": "Ocala",
+        "state": "FL",
+        "confidence": 0.95
+      },
+      "external_reference_extractors": [
+        {
+          "source_field": "legistar_matter_id",
+          "namespace": "legistar:ocala:legislation",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "reference_number",
+          "namespace": "legistar:ocala:file",
+          "transform": "scalar"
+        },
+        {
+          "source_field": "title",
+          "namespace": "ocala:planning_case",
+          "transform": "regex_extract",
+          "pattern": "\\b([A-Z]{2,6}[0-9]{2}-[0-9]{4})\\b",
+          "group": 1
+        }
+      ],
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_semantics": "source_modified_at",
+      "freshness_field": "modified_at",
+      "freshness_sla_hours": 336,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 48
+    },
+    "probe_field_mappings": [
+      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
+      {"source_field": "event_type", "canonical_field": "event_type"},
+      {"source_field": "stage", "canonical_field": "stage"},
+      {"source_field": "title", "canonical_field": "title", "is_required": true},
+      {"source_field": "summary", "canonical_field": "summary"},
+      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
+      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
+      {"source_field": "reference_number", "canonical_field": "reference_number"},
+      {"source_field": "matter_type", "canonical_field": "matter_type"},
+      {"source_field": "matter_status", "canonical_field": "matter_status"},
+      {"source_field": "action_name", "canonical_field": "action_name"},
+      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
+      {"source_field": "governing_body", "canonical_field": "governing_body"},
+      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
+      {"source_field": "published_at", "canonical_field": "published_at"},
+      {"source_field": "decision_at", "canonical_field": "decision_at"},
+      {"source_field": "source_url", "canonical_field": "source_url"}
+    ],
+    "production_page_size": 100,
+    "last_checked_on": "2026-08-27",
+    "next_audit_on": "2026-09-10",
+    "notes": "A bounded no-write canary on 2026-08-27 processed 20 current meeting slots and emitted 23 project-level Planning and Zoning Commission decision records. Every record had a Legistar matter ID, legislative file, and exact local case number; source modification was current through 2026-08-17. The matter-type allowlist excludes minutes, advertising proofs, generic ordinances, and administrative business. Current evidence included Kinward at Heathbrook, TBMI Commercial Outparcel Development, New Ocala MOB, Ocala 52 Partners, Mockingbird Ridge, subdivisions, planned developments, commercial and industrial rezonings, parcels, acreage, addresses, land-use changes, annexations, and abrogations. Public applicant and organization names remain for graph resolution; configured suppression removes emails and phone numbers, and attachments, packets, direct contacts, raw document redistribution, and source-replacement exports are outside the proposed scope."
+  },
+  {
+    "key": "san_jose_ca_large_energy_projects",
+    "name": "San Jose Data Center and Large Energy Use Applications",
+    "adapter": "html_table",
+    "record_type": "planning",
+    "jurisdiction": "San Jose, CA",
+    "base_url": "https://www.sanjoseca.gov/your-government/departments-offices/planning-building-code-enforcement/planning-division/data-center-and-other-large-energy-use-projects",
+    "official_landing_page": "https://www.sanjoseca.gov/your-government/departments-offices/planning-building-code-enforcement/planning-division/data-center-and-other-large-energy-use-projects",
+    "license": "Official City of San Jose public application index; preserve attribution and linked-record evidence",
+    "status": "technical_hold",
+    "blocker_summary": "The city publishes a compact structured HTML table and linked permit/environmental records, but the connector library does not yet support versioned HTML-table extraction or disappearance detection.",
+    "early_warning_value": "The monthly application list identifies data centers and other large energy users while applications are on file, including file number, location, detailed scope, submitted date, permit details, and environmental-review status.",
+    "candidate_source_fields": [
+      "file_number",
+      "location",
+      "description",
+      "submitted_date",
+      "permit_detail_url",
+      "environmental_review_url",
+      "environmental_review_status",
+      "page_updated_at"
+    ],
+    "last_checked_on": "2026-08-22",
+    "next_audit_on": "2026-09-05",
+    "notes": "Use file number as the natural identity and join to the existing San Jose planning-permit source. Snapshot rows so additions, edits, and removals remain auditable; a removed row must not be interpreted as cancellation without confirming evidence."
+  },
+  {
+    "key": "citrus_county_fl_accela_permits",
+    "name": "Citrus County Accela Building and Planning Applications",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Citrus County, FL",
+    "base_url": "https://aca-prod.accela.com/CITRUS/Default.aspx",
+    "official_landing_page": "https://portal.citrusbocc.com/how-to-apply-for-a-permit",
+    "license": "Official Citrus County public permit portal; no supported recurring export or commercial redistribution terms located",
+    "status": "technical_hold",
+    "blocker_summary": "Accela exposes public building, planning, and license searches, but production activation requires a supported bulk or incremental interface, stable record identity, modification semantics, backfill completeness, and explicit commercial-use review.",
+    "early_warning_value": "Applications, review results, inspections, applicant organizations, contractors, addresses, parcels, descriptions, and pre-issuance statuses can identify commercial construction and named tenants before approval.",
+    "candidate_source_fields": [
+      "record_id",
+      "permit_number",
+      "record_type",
+      "status",
+      "description",
+      "address",
+      "parcel_id",
+      "applicant_organization",
+      "contractor",
+      "applied_at",
+      "issued_at",
+      "review_evidence",
+      "inspection_evidence"
+    ],
+    "last_checked_on": "2026-09-04",
+    "next_audit_on": "2026-09-18",
+    "notes": "Do not automate undocumented Accela browser endpoints. Prefer an agency-supported export or official API agreement; suppress personal contact data and preserve source links and observed timestamps."
+  },
+  {
+    "key": "highlands_county_fl_etrakit_permits",
+    "name": "Highlands County eTRAKiT Permits and Planning",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Highlands County, FL",
+    "base_url": "https://www.highlandsfl.gov/etrakit/index.php",
+    "official_landing_page": "https://www.highlandsfl.gov/departments/development_services/building/index.php",
+    "license": "Official Highlands County public permitting portal; no supported recurring export or commercial redistribution terms located",
+    "status": "technical_hold",
+    "blocker_summary": "The county moved current records to eTRAKiT on April 30, 2026 and retains earlier records in a legacy eGov portal. Production coverage needs supported access to both systems, cross-system identity rules, complete history, and modification or disappearance semantics.",
+    "early_warning_value": "Applied building permits, planning review, development review, project status, addresses, parcels, contractors, and scope can surface commercial activity across the Sebring market before issuance.",
+    "candidate_source_fields": [
+      "record_id",
+      "permit_number",
+      "project_number",
+      "permit_type",
+      "status",
+      "description",
+      "address",
+      "parcel_id",
+      "contractor",
+      "applied_at",
+      "issued_at",
+      "review_evidence"
+    ],
+    "last_checked_on": "2026-09-04",
+    "next_audit_on": "2026-09-18",
+    "notes": "This is county coverage for the Sebring market, not City of Sebring municipal coverage. Preserve the April 30, 2026 system boundary and never infer that a record missing from one portal was cancelled."
+  },
+  {
+    "key": "sebring_fl_building_permit_records",
+    "name": "City of Sebring Building Permit Records",
+    "adapter": "manual_export",
+    "record_type": "permit",
+    "jurisdiction": "Sebring, FL",
+    "base_url": "https://www.mysebring.com/174/Building",
+    "official_landing_page": "https://www.mysebring.com/174/Building",
+    "license": "Official City of Sebring building department records; recurring commercial use requires a public-record export agreement",
+    "status": "technical_hold",
+    "blocker_summary": "The City states that it has no online permit portal and accepts applications by email. Production ingestion therefore requires a recurring public-record export with fields, cadence, backfill, corrections, and redaction rules agreed with the City.",
+    "early_warning_value": "A recurring application register could reveal commercial scopes, addresses, applicants, contractors, valuations, and review status before permits are issued.",
+    "candidate_source_fields": [
+      "application_number",
+      "permit_number",
+      "permit_type",
+      "status",
+      "scope_of_work",
+      "address",
+      "parcel_id",
+      "applicant_organization",
+      "contractor",
+      "valuation",
+      "applied_at",
+      "issued_at"
+    ],
+    "last_checked_on": "2026-09-04",
+    "next_audit_on": "2026-09-18",
+    "notes": "Request a bounded CSV or spreadsheet register from building@mysebring.com. Do not ingest application email inboxes or personal contact fields."
+  },
+  {
+    "key": "hernando_county_fl_energov_permits",
+    "name": "Hernando County Civic Access Permits",
+    "adapter": "portal",
+    "record_type": "permit",
+    "jurisdiction": "Hernando County, FL",
+    "base_url": "https://hernandocountyfl-energovweb.tylerhost.net/apps/selfservice#/home",
+    "official_landing_page": "https://www.hernandocounty.us/building-development/building/",
+    "license": "Official Hernando County public permit and property portal; no supported recurring export or commercial redistribution terms located",
+    "status": "technical_hold",
+    "blocker_summary": "Current applications moved to Tyler Civic Access on March 3, 2026 while older permits remain in the legacy portal. Production activation requires supported incremental and backfill access, cross-system identity, correction handling, and commercial-use review.",
+    "early_warning_value": "Current application status, property history, owners, addresses, parcel IDs, contractors, business names, descriptions, and review states can surface commercial projects before issuance.",
+    "candidate_source_fields": [
+      "record_id",
+      "permit_number",
+      "permit_type",
+      "status",
+      "description",
+      "address",
+      "parcel_id",
+      "owner_name",
+      "contractor",
+      "business_name",
+      "applied_at",
+      "issued_at",
+      "review_evidence"
+    ],
+    "last_checked_on": "2026-09-04",
+    "next_audit_on": "2026-09-18",
+    "notes": "Treat March 3, 2026 as a source-system boundary and retain the official legacy portal as the pre-transition backfill lane. Do not automate undocumented Tyler browser APIs or collect personal contact data."
   }
 ]

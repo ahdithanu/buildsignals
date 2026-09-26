@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -38,6 +38,30 @@ class BrandProfileResponse(BaseModel):
     scale: Optional[str]
     priority: int
     is_active: bool
+    signal_cohort: str
+
+
+class BrandExpansionMarketResponse(BaseModel):
+    city: Optional[str] = None
+    state: Optional[str] = None
+    signal_count: int
+    planning_count: int
+    pre_approval_count: int
+    approved_count: int
+    latest_signal_at: datetime
+
+
+class BrandExpansionSummaryResponse(BaseModel):
+    brand: BrandProfileResponse
+    signal_count: int
+    planning_count: int
+    pre_approval_count: int
+    approved_count: int
+    market_count: int
+    parcel_candidate_count: int
+    average_confidence: float
+    latest_signal_at: datetime
+    markets: list[BrandExpansionMarketResponse] = Field(default_factory=list)
 
 
 class BrandPermitSummary(BaseModel):
@@ -50,6 +74,7 @@ class BrandPermitSummary(BaseModel):
     approval_stage: Optional[Literal["pre_approval", "approved"]]
     status: Optional[str]
     project_name: Optional[str]
+    applicant_name: Optional[str]
     description: Optional[str]
     address: Optional[str]
     city: Optional[str]
@@ -62,6 +87,8 @@ class BrandPermitSummary(BaseModel):
     latitude: Optional[float]
     longitude: Optional[float]
     filed_at: Optional[datetime]
+    status_updated_at: Optional[datetime]
+    last_observed_at: datetime = Field(validation_alias="last_seen_at")
     source_url: Optional[str]
 
 
@@ -91,7 +118,18 @@ class PermitBrandMatchResponse(BaseModel):
 
     @computed_field
     @property
+    def detection_method(self) -> str:
+        return "historical_party" if self.matched_field == "historical_parties" else "direct_alias"
+
+    @computed_field
+    @property
     def signal_quality(self) -> str:
+        if self.matched_field == "historical_parties":
+            return "historical_party"
+        if self.matched_field == "applicant_name":
+            if "applicant_business_dba_source" in self.rule_ids:
+                return "applicant_dba"
+            return "applicant_legal_entity"
         if self.matched_field == "project_name" and self.permit.permit_type == "Restaurant permit applicant":
             return "applicant_dba"
         if self.matched_field == "project_name":
@@ -105,9 +143,11 @@ class PermitBrandMatchResponse(BaseModel):
     def signal_quality_label(self) -> str:
         labels = {
             "applicant_dba": "Applicant DBA",
+            "applicant_legal_entity": "Applicant legal entity",
             "direct_project_name": "Direct project name",
             "description_context": "Description context",
             "supporting_context": "Supporting context",
+            "historical_party": "Stealth party inference",
         }
         return labels[self.signal_quality]
 
@@ -116,11 +156,64 @@ class PermitBrandMatchResponse(BaseModel):
     def signal_quality_note(self) -> str:
         notes = {
             "applicant_dba": "Brand appears as the applicant or establishment name before approval activity.",
+            "applicant_legal_entity": (
+                "Brand appears as the applicant's declared legal entity before approval activity."
+            ),
             "direct_project_name": "Brand appears in the project or business name field.",
             "description_context": "Brand appears in work-description text and needs human review.",
             "supporting_context": "Brand appears in a supporting permit context field.",
+            "historical_party": "Multiple project parties repeat a distinctive pattern from human-confirmed brand permits.",
         }
         return notes[self.signal_quality]
+
+    @computed_field
+    @property
+    def freshness_date(self) -> datetime:
+        future_limit = datetime.now(timezone.utc) + timedelta(days=1)
+        for value in (self.permit.status_updated_at, self.permit.filed_at):
+            if value is None:
+                continue
+            timestamp = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+            if timestamp.astimezone(timezone.utc) <= future_limit:
+                return value
+        return self.first_seen_at
+
+    @computed_field
+    @property
+    def signal_age_days(self) -> int:
+        value = self.freshness_date
+        timestamp = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - timestamp.astimezone(timezone.utc)
+        return max(0, age.days)
+
+    @computed_field
+    @property
+    def freshness(self) -> Literal["fresh", "active", "aging", "stale"]:
+        value = self.freshness_date
+        timestamp = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - timestamp.astimezone(timezone.utc)
+        if age <= timedelta(days=30):
+            return "fresh"
+        if age <= timedelta(days=90):
+            return "active"
+        if age <= timedelta(days=180):
+            return "aging"
+        return "stale"
+
+    @computed_field
+    @property
+    def freshness_label(self) -> str:
+        return {
+            "fresh": "Fresh filing",
+            "active": "Active filing",
+            "aging": "Aging filing",
+            "stale": "Dormant filing",
+        }[self.freshness]
+
+    @computed_field
+    @property
+    def needs_reverification(self) -> bool:
+        return self.review_status == "confirmed" and not self.permit.is_active
 
 
 class PermitBrandMatchReview(BaseModel):
@@ -144,16 +237,31 @@ class BrandMatchRawEvidence(BaseModel):
     external_record_id: str
     content_hash: str
     received_at: datetime
+    last_observed_at: datetime
+    observation_recorded: bool = True
     source_updated_at: Optional[datetime]
     source_key: str
     source_name: str
     source_url: Optional[str]
     payload_excerpt: dict[str, Any]
+    source_timestamp_semantics: Literal[
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+        "ingestion_observed_at",
+        "unclassified_source_timestamp",
+    ] = "ingestion_observed_at"
+    source_timestamp_label: str = "Source timestamp"
 
     @computed_field
     @property
     def received_age_hours(self) -> Optional[float]:
         return _age_hours(self.received_at)
+
+    @computed_field
+    @property
+    def last_observed_age_hours(self) -> Optional[float]:
+        return _age_hours(self.last_observed_at)
 
     @computed_field
     @property
@@ -194,6 +302,16 @@ class BrandMatchGraphContext(BaseModel):
     evidence_preview: Optional[EvidencePreview] = None
 
 
+class BrandPartyFingerprintEvidence(BaseModel):
+    party_type: str
+    display_name: str
+    state: Optional[str]
+    evidence_count: int
+    source_match_ids: list[str] = Field(default_factory=list)
+    confidence: float
+    last_verified_at: datetime
+
+
 class PermitBrandMatchEvidenceResponse(BaseModel):
     id: str
     brand: BrandProfileResponse
@@ -209,12 +327,15 @@ class PermitBrandMatchEvidenceResponse(BaseModel):
     signal_quality_note: str
     rule_ids: list[str] = Field(default_factory=list)
     detector_version: str
+    detection_method: Literal["direct_alias", "historical_party"]
+    needs_reverification: bool = False
     first_seen_at: datetime
     last_seen_at: datetime
     linked_deals: list[LinkedDealSummary] = Field(default_factory=list)
     first_evidence: BrandMatchRawEvidence
     latest_evidence: BrandMatchRawEvidence
     graph_context: list[BrandMatchGraphContext] = Field(default_factory=list)
+    inference_evidence: list[BrandPartyFingerprintEvidence] = Field(default_factory=list)
 
 
 def _age_hours(value: Optional[datetime]) -> Optional[float]:

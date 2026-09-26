@@ -1,0 +1,56 @@
+name: uptime
+
+# Probes production API health every 5 minutes.
+#
+# URL resolution (first match wins):
+#   1. GitHub secret UPTIME_BASE_URL
+#   2. infra/uptime.env in the repo
+#
+# Skips cleanly when the API is not deployed yet (404/000) so you don't get
+# false-red builds before first deploy.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve API base URL
+        id: base
+        env:
+          SECRET_URL: ${{ secrets.UPTIME_BASE_URL }}
+        run: |
+          BASE=""
+          if [[ -n "$SECRET_URL" ]]; then
+            BASE="$SECRET_URL"
+          elif [[ -f infra/uptime.env ]]; then
+            # shellcheck disable=SC1091
+            source infra/uptime.env
+            BASE="${UPTIME_BASE_URL:-}"
+          fi
+          if [[ -z "$BASE" ]]; then
+            echo "No UPTIME_BASE_URL configured — set infra/uptime.env or GitHub secret."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "Probing $BASE"
+
+      - name: Deep health check
+        if: steps.base.outputs.skip != 'true'
+        env:
+          BASE: ${{ steps.base.outputs.base }}
+        run: |
+          chmod +x scripts/uptime-check.sh
+          code=$(curl -s -o /dev/null -w '%{http_code}' "${BASE}/health" || echo "000")
+          if [[ "$code" == "404" || "$code" == "000" ]]; then
+            echo "API not live at ${BASE} (HTTP ${code}) — skipping until first deploy."
+            exit 0
+          fi
+          ./scripts/uptime-check.sh --deep

@@ -6,7 +6,10 @@ import {
   FileEdit,
   Kanban,
   Radio,
+  Radar,
   Settings,
+  ShieldCheck,
+  Store,
   User,
   Users,
   Zap,
@@ -34,9 +37,13 @@ const navItems = [
   { title: "Memo Generator", url: "/memo", icon: FileEdit },
   { title: "Pipeline", url: "/pipeline", icon: Kanban },
   { title: "Market Signals", url: "/signals", icon: Radio },
+  { title: "Retailer Signals", url: "/permit-review", icon: Store },
+  { title: "Acquisition Radar", url: "/acquisition-radar", icon: Radar },
+  { title: "Graph Verification", url: "/graph/verification", icon: ShieldCheck, reviewOnly: true },
   { title: "Team", url: "/team", icon: Users },
   { title: "Account", url: "/account", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
+  { title: "AI Evaluations", url: "/admin/evals", icon: ShieldCheck, adminOnly: true },
 ];
 
 function initials(name: string | null | undefined): string {
@@ -65,7 +72,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div>
               <h1 className="text-sm font-semibold text-sidebar-accent-foreground font-display tracking-tight">
-                DealSignal
+                BuildSignals
               </h1>
               <p className="text-[11px] text-sidebar-muted">Acquisition intelligence</p>
             </div>
@@ -77,7 +84,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {navItems.filter((item) => (!item.adminOnly || role === "admin") && (!item.reviewOnly || role === "admin" || role === "editor")).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="default">
                     <NavLink

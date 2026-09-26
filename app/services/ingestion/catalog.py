@@ -12,13 +12,16 @@ from sqlalchemy.orm import Session
 from app.models.ingestion import IngestionSource
 from app.schemas.ingestion import IngestionSourceCreate, IngestionSourceUpdate
 from app.schemas.ingestion_candidate import IngestionSourceCandidate
+from app.services.ingestion.scheduling import source_schedule_policy
 from app.services.ingestion.service import create_source, update_source
 from app.utils.org_scope import active_query
 
 DEFAULT_CATALOG_PATH = Path(__file__).with_name("catalog.json")
+PROMOTED_CATALOG_PATH = Path(__file__).with_name("promoted_catalog.json")
 DEFAULT_CANDIDATE_CATALOG_PATH = Path(__file__).with_name("candidate_catalog.json")
 _CATALOG_ADAPTER = TypeAdapter(list[IngestionSourceCreate])
 _CANDIDATE_CATALOG_ADAPTER = TypeAdapter(list[IngestionSourceCandidate])
+_CATALOG_ACTIVE_SETTING = "_catalog_is_active"
 US_STATE_CODES = (
     "AL",
     "AK",
@@ -125,6 +128,17 @@ _STATE_BY_NAME = {
     "washington state": "WA",
 }
 _STATE_SUFFIX = re.compile(r",\s*([A-Z]{2})\s*$")
+ROLLOUT_CLUSTERS = {
+    "TX": (1, "Texas, Washington, New York"),
+    "WA": (1, "Texas, Washington, New York"),
+    "NY": (1, "Texas, Washington, New York"),
+    "CA": (2, "California, North Carolina, Florida"),
+    "NC": (2, "California, North Carolina, Florida"),
+    "FL": (2, "California, North Carolina, Florida"),
+    "CO": (3, "Colorado, Massachusetts, Maryland"),
+    "MA": (3, "Colorado, Massachusetts, Maryland"),
+    "MD": (3, "Colorado, Massachusetts, Maryland"),
+}
 
 
 @dataclass(frozen=True)
@@ -142,6 +156,22 @@ class StateCoverageBucket:
     retailer_opening_sources: int
     pre_approval_sources: int
     approved_only_sources: int
+    priority_score: int
+    priority_reasons: list[str]
+
+
+@dataclass(frozen=True)
+class StateRolloutItem:
+    state: str
+    rollout_cluster: int
+    rollout_label: str
+    coverage_status: str
+    live_sources: int
+    candidate_sources: int
+    jurisdiction_count: int
+    priority_score: int
+    next_action: str
+    next_action_label: str
 
 
 @dataclass(frozen=True)
@@ -178,8 +208,13 @@ class IngestionCoverageSummary:
     top_jurisdictions: list[CoverageJurisdictionBucket]
     state_buckets: list[StateCoverageBucket]
     activation_queue: list[StateCoverageBucket]
+    rollout_queue: list[StateRolloutItem]
     candidate_only_state_count: int
     candidate_only_states: list[str]
+    researched_state_count: int
+    unresearched_state_count: int
+    researched_states: list[str]
+    unresearched_states: list[str]
     covered_state_count: int
     missing_state_count: int
     covered_states: list[str]
@@ -196,7 +231,24 @@ class CatalogSyncResult:
 def load_catalog(path: Path | str | None = None) -> list[IngestionSourceCreate]:
     catalog_path = Path(path) if path else DEFAULT_CATALOG_PATH
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    if path is None and PROMOTED_CATALOG_PATH.exists():
+        promoted = json.loads(PROMOTED_CATALOG_PATH.read_text(encoding="utf-8"))
+        if not isinstance(promoted, list):
+            raise ValueError("Promoted ingestion catalog must contain a JSON list")
+        payload.extend(promoted)
     entries = _CATALOG_ADAPTER.validate_python(payload)
+    return validate_catalog_entries(
+        entries,
+        require_freshness_contract=path is None,
+    )
+
+
+def validate_catalog_entries(
+    entries: Iterable[IngestionSourceCreate],
+    *,
+    require_freshness_contract: bool = True,
+) -> list[IngestionSourceCreate]:
+    entries = list(entries)
     keys = [entry.key for entry in entries]
     duplicates = sorted({key for key in keys if keys.count(key) > 1})
     if duplicates:
@@ -224,14 +276,25 @@ def load_catalog(path: Path | str | None = None) -> list[IngestionSourceCreate]:
             )
         _validate_suppressed_fields(entry)
         _validate_field_allowlist(entry)
-        _validate_freshness_metadata(entry)
+        _validate_freshness_metadata(
+            entry,
+            require_contract=require_freshness_contract and entry.record_type == "permit",
+        )
         _validate_opening_signal_metadata(entry)
+        source_schedule_policy(entry)
     return entries
 
 
-def load_candidate_catalog(path: Path | str | None = None) -> list[IngestionSourceCandidate]:
+def load_candidate_catalog(
+    path: Path | str | None = None,
+    *,
+    include_promoted: bool = False,
+) -> list[IngestionSourceCandidate]:
     catalog_path = Path(path) if path else DEFAULT_CANDIDATE_CATALOG_PATH
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    if path is None and not include_promoted:
+        production_keys = {entry.key for entry in load_catalog()}
+        payload = [entry for entry in payload if entry.get("key") not in production_keys]
     entries = _CANDIDATE_CATALOG_ADAPTER.validate_python(payload)
     keys = [entry.key for entry in entries]
     duplicates = sorted({key for key in keys if keys.count(key) > 1})
@@ -246,12 +309,13 @@ def load_candidate_catalog(path: Path | str | None = None) -> list[IngestionSour
     }
     if duplicate_urls:
         raise ValueError(f"Duplicate candidate catalog base URLs: {duplicate_urls}")
-    production_keys = {entry.key for entry in load_catalog()}
-    overlap = sorted(production_keys & set(keys))
-    if overlap:
-        raise ValueError(
-            f"Candidate catalog keys already exist in production catalog: {overlap}"
-        )
+    if path is not None or not include_promoted:
+        production_keys = {entry.key for entry in load_catalog()}
+        overlap = sorted(production_keys & set(keys))
+        if overlap:
+            raise ValueError(
+                f"Candidate catalog keys already exist in production catalog: {overlap}"
+            )
     for entry in entries:
         if entry.next_audit_on < entry.last_checked_on:
             raise ValueError(
@@ -261,17 +325,78 @@ def load_candidate_catalog(path: Path | str | None = None) -> list[IngestionSour
     return entries
 
 
-def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
-    live_catalog = load_catalog()
-    candidates = load_candidate_catalog()
+def catalog_source_for_candidate(
+    candidate: IngestionSourceCandidate,
+    entries: Iterable[IngestionSourceCreate] | None = None,
+) -> IngestionSourceCreate | None:
+    available_entries = entries if entries is not None else load_catalog()
+    production = next(
+        (entry for entry in available_entries if entry.key == candidate.key),
+        None,
+    )
+    if production is None:
+        return None
+    settings = production.settings or {}
+    if settings.get("candidate_key") != candidate.key:
+        raise ValueError(
+            f"Production catalog source {candidate.key} is missing candidate provenance"
+        )
+    if settings.get("candidate_status") != "approved_for_production":
+        raise ValueError(
+            f"Production catalog source {candidate.key} is not approved for production"
+        )
+    drift: list[str] = []
+    if production.adapter.casefold() != candidate.adapter.casefold():
+        drift.append("adapter")
+    if production.record_type != candidate.record_type:
+        drift.append("record_type")
+    if production.base_url.strip().rstrip("/").casefold() != (
+        candidate.base_url.strip().rstrip("/").casefold()
+    ):
+        drift.append("base_url")
+    if drift:
+        raise ValueError(
+            f"Production catalog source {candidate.key} drifted from its candidate: {drift}"
+        )
+    return production
+
+
+def summarize_coverage(
+    limit: int = 10,
+    live_sources: Iterable[IngestionSource] | None = None,
+) -> IngestionCoverageSummary:
+    catalog_by_key: dict[str, IngestionSourceCreate] = {
+        entry.key: entry for entry in load_catalog()
+    }
+    live_by_key: dict[str, IngestionSourceCreate | IngestionSource]
+    if live_sources is None:
+        live_by_key = dict(catalog_by_key)
+    else:
+        live_by_key = {
+            source.key: source
+            for source in live_sources
+            if source.is_active and source.key in catalog_by_key
+        }
+    live_catalog = list(live_by_key.values())
+    candidates = [
+        entry
+        for entry in load_candidate_catalog(include_promoted=True)
+        if entry.key not in live_by_key
+    ]
     live_signal_stage_counts: dict[str, int] = {}
     live_signal_sources_by_stage: dict[str, list[RetailerOpeningCoverageSource]] = {}
     candidate_status_counts: dict[str, int] = {}
     jurisdictions: dict[str, dict[str, int]] = {}
     state_buckets: dict[str, dict[str, int]] = {}
+    state_jurisdictions: dict[str, set[str]] = {}
     retailer_opening_sources: list[RetailerOpeningCoverageSource] = []
     approved_only_sources: list[ApprovedOnlyCoverageSource] = []
-    covered_states: set[str] = set()
+    live_states: set[str] = set()
+    researched_states: set[str] = {
+        state_code
+        for entry in catalog_by_key.values()
+        if (state_code := extract_state_code(entry.jurisdiction, entry.settings or {}))
+    }
     retailer_opening_source_count = 0
     pre_approval_source_count = 0
     approved_only_source_count = 0
@@ -317,7 +442,9 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         bucket["live_sources"] += 1
         state_code = extract_state_code(entry.jurisdiction, entry.settings or {})
         if state_code:
-            covered_states.add(state_code)
+            live_states.add(state_code)
+            researched_states.add(state_code)
+            state_jurisdictions.setdefault(state_code, set()).add(jurisdiction)
             state_bucket = state_buckets.setdefault(
                 state_code,
                 {
@@ -326,6 +453,7 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
                     "retailer_opening_sources": 0,
                     "pre_approval_sources": 0,
                     "approved_only_sources": 0,
+                    "candidate_status_counts": {},
                 },
             )
             state_bucket["live_sources"] += 1
@@ -343,7 +471,8 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         bucket["candidate_sources"] += 1
         state_code = extract_state_code(entry.jurisdiction, entry.model_dump())
         if state_code:
-            covered_states.add(state_code)
+            researched_states.add(state_code)
+            state_jurisdictions.setdefault(state_code, set()).add(jurisdiction)
             state_bucket = state_buckets.setdefault(
                 state_code,
                 {
@@ -352,9 +481,17 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
                     "retailer_opening_sources": 0,
                     "pre_approval_sources": 0,
                     "approved_only_sources": 0,
+                    "candidate_status_counts": {},
                 },
             )
             state_bucket["candidate_sources"] += 1
+            candidate_status_counts_by_state = state_bucket["candidate_status_counts"]
+            candidate_status_counts_by_state[entry.status] = candidate_status_counts_by_state.get(entry.status, 0) + 1
+
+    scored_states: list[tuple[str, dict[str, int], int, list[str]]] = []
+    for state, bucket in state_buckets.items():
+        score, reasons = _score_state_bucket(bucket)
+        scored_states.append((state, bucket, score, reasons))
 
     sorted_jurisdictions = sorted(
         jurisdictions.items(),
@@ -370,12 +507,8 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         for jurisdiction, bucket in sorted_jurisdictions[:limit]
     ]
     sorted_states = sorted(
-        state_buckets.items(),
-        key=lambda item: (
-            item[1]["live_sources"] + item[1]["candidate_sources"],
-            item[1]["retailer_opening_sources"],
-            item[0],
-        ),
+        scored_states,
+        key=lambda item: (item[2], item[1]["live_sources"] + item[1]["candidate_sources"], item[0]),
         reverse=True,
     )
     state_buckets_list = [
@@ -386,13 +519,10 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
             retailer_opening_sources=bucket["retailer_opening_sources"],
             pre_approval_sources=bucket["pre_approval_sources"],
             approved_only_sources=bucket["approved_only_sources"],
+            priority_score=score,
+            priority_reasons=reasons,
         )
-        for state, bucket in sorted_states[:limit]
-    ]
-    candidate_only_states = [
-        state
-        for state, bucket in sorted_states
-        if bucket["candidate_sources"] > 0 and bucket["live_sources"] == 0
+        for state, bucket, score, reasons in sorted_states[:limit]
     ]
     activation_queue = [
         StateCoverageBucket(
@@ -402,11 +532,18 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
             retailer_opening_sources=bucket["retailer_opening_sources"],
             pre_approval_sources=bucket["pre_approval_sources"],
             approved_only_sources=bucket["approved_only_sources"],
+            priority_score=score,
+            priority_reasons=reasons,
         )
-        for state, bucket in sorted_states
+        for state, bucket, score, reasons in sorted_states
         if bucket["candidate_sources"] > 0 and bucket["live_sources"] == 0
     ]
-    missing_states = [state for state in US_STATE_CODES if state not in covered_states]
+    candidate_only_states = [bucket.state for bucket in activation_queue]
+    missing_states = [state for state in US_STATE_CODES if state not in live_states]
+    unresearched_states = [
+        state for state in US_STATE_CODES if state not in researched_states
+    ]
+    rollout_queue = _build_rollout_queue(state_buckets, state_jurisdictions)
     return IngestionCoverageSummary(
         live_source_count=len(live_catalog),
         candidate_count=len(candidates),
@@ -422,13 +559,148 @@ def summarize_coverage(limit: int = 10) -> IngestionCoverageSummary:
         top_jurisdictions=top_jurisdictions,
         state_buckets=state_buckets_list,
         activation_queue=activation_queue,
+        rollout_queue=rollout_queue,
         candidate_only_state_count=len(activation_queue),
         candidate_only_states=candidate_only_states,
-        covered_state_count=len(covered_states),
+        researched_state_count=len(researched_states),
+        unresearched_state_count=len(unresearched_states),
+        researched_states=sorted(researched_states),
+        unresearched_states=unresearched_states,
+        covered_state_count=len(live_states),
         missing_state_count=len(missing_states),
-        covered_states=sorted(covered_states),
+        covered_states=sorted(live_states),
         missing_states=missing_states,
     )
+
+
+def _build_rollout_queue(
+    state_buckets: dict[str, dict[str, int]],
+    state_jurisdictions: dict[str, set[str]],
+) -> list[StateRolloutItem]:
+    items: list[StateRolloutItem] = []
+    for state in US_STATE_CODES:
+        bucket = state_buckets.get(
+            state,
+            {
+                "live_sources": 0,
+                "candidate_sources": 0,
+                "retailer_opening_sources": 0,
+                "pre_approval_sources": 0,
+                "approved_only_sources": 0,
+                "candidate_status_counts": {},
+            },
+        )
+        score, _ = _score_state_bucket(bucket)
+        cluster, label = ROLLOUT_CLUSTERS.get(state, (4, "Nationwide expansion queue"))
+        next_action, next_action_label = _state_next_action(bucket)
+        live_sources = int(bucket["live_sources"])
+        candidate_sources = int(bucket["candidate_sources"])
+        coverage_status = (
+            "live"
+            if live_sources > 0
+            else "candidate"
+            if candidate_sources > 0
+            else "uncovered"
+        )
+        items.append(
+            StateRolloutItem(
+                state=state,
+                rollout_cluster=cluster,
+                rollout_label=label,
+                coverage_status=coverage_status,
+                live_sources=live_sources,
+                candidate_sources=candidate_sources,
+                jurisdiction_count=len(state_jurisdictions.get(state, set())),
+                priority_score=score,
+                next_action=next_action,
+                next_action_label=next_action_label,
+            )
+        )
+    return sorted(
+        items,
+        key=lambda item: (
+            item.rollout_cluster,
+            -_next_action_priority(item.next_action),
+            -item.priority_score,
+            item.state,
+        ),
+    )
+
+
+def _state_next_action(bucket: dict[str, int | dict[str, int]]) -> tuple[str, str]:
+    live_sources = int(bucket["live_sources"])
+    candidate_sources = int(bucket["candidate_sources"])
+    retailer_opening_sources = int(bucket["retailer_opening_sources"])
+    pre_approval_sources = int(bucket["pre_approval_sources"])
+    statuses = bucket.get("candidate_status_counts", {})
+    if isinstance(statuses, dict) and int(statuses.get("operational_retry", 0)) > 0:
+        return "run_candidate_canary", "Run candidate canary"
+    if live_sources == 0 and candidate_sources > 0:
+        return "resolve_candidate_blocker", "Resolve candidate blocker"
+    if live_sources == 0:
+        return "discover_first_source", "Discover first official source"
+    if pre_approval_sources == 0:
+        return "add_pre_approval_source", "Add pre-approval source"
+    if retailer_opening_sources == 0:
+        return "add_retailer_opening_source", "Add retailer-opening source"
+    return "add_secondary_jurisdiction", "Add secondary jurisdiction"
+
+
+def _next_action_priority(action: str) -> int:
+    return {
+        "run_candidate_canary": 6,
+        "resolve_candidate_blocker": 5,
+        "add_pre_approval_source": 4,
+        "add_retailer_opening_source": 3,
+        "add_secondary_jurisdiction": 2,
+        "discover_first_source": 1,
+    }.get(action, 0)
+
+
+def _score_state_bucket(bucket: dict[str, int | dict[str, int]]) -> tuple[int, list[str]]:
+    live_sources = int(bucket["live_sources"])
+    candidate_sources = int(bucket["candidate_sources"])
+    retailer_opening_sources = int(bucket["retailer_opening_sources"])
+    pre_approval_sources = int(bucket["pre_approval_sources"])
+    approved_only_sources = int(bucket["approved_only_sources"])
+    candidate_status_counts = bucket.get("candidate_status_counts", {})
+    score = 0
+    reasons: list[str] = []
+
+    if live_sources > 0:
+        score += live_sources * 60
+        reasons.append(f"{live_sources} live source{'s' if live_sources != 1 else ''}")
+    if candidate_sources > 0:
+        score += candidate_sources * 100
+        reasons.append(f"{candidate_sources} candidate source{'s' if candidate_sources != 1 else ''}")
+    if retailer_opening_sources > 0:
+        score += retailer_opening_sources * 40
+        reasons.append(f"{retailer_opening_sources} retailer-opening source{'s' if retailer_opening_sources != 1 else ''}")
+    if pre_approval_sources > 0:
+        score += pre_approval_sources * 25
+        reasons.append(f"{pre_approval_sources} pre-approval source{'s' if pre_approval_sources != 1 else ''}")
+    if approved_only_sources > 0:
+        score += approved_only_sources * 10
+        reasons.append(f"{approved_only_sources} approved-only source{'s' if approved_only_sources != 1 else ''}")
+
+    status_weights = {
+        "operational_retry": 50,
+        "queued": 30,
+        "freshness_hold": 20,
+        "lifecycle_hold": 10,
+        "technical_hold": 5,
+        "legal_hold": 1,
+    }
+    if isinstance(candidate_status_counts, dict):
+        for status, weight in status_weights.items():
+            count = int(candidate_status_counts.get(status, 0))
+            if count > 0:
+                score += count * weight
+                reasons.append(f"{count} {status.replace('_', ' ')}")
+
+    if not reasons:
+        reasons.append("No coverage signals yet")
+    return score, reasons
 
 
 def normalize_state_code(value: str | None) -> str | None:
@@ -554,12 +826,28 @@ def _validate_field_allowlist(entry: IngestionSourceCreate) -> None:
             )
 
 
-def _validate_freshness_metadata(entry: IngestionSourceCreate) -> None:
+def _validate_freshness_metadata(
+    entry: IngestionSourceCreate,
+    *,
+    require_contract: bool = False,
+) -> None:
     settings = entry.settings or {}
     freshness_field = settings.get("freshness_field")
+    freshness_semantics = settings.get("freshness_semantics")
     candidate = settings.get("freshness_field_candidate")
     hold = settings.get("freshness_enforcement_hold")
     freshness_probe = settings.get("canary_freshness_probe")
+    sla_hours = settings.get("freshness_sla_hours")
+
+    valid_sla = (
+        isinstance(sla_hours, (int, float))
+        and not isinstance(sla_hours, bool)
+        and sla_hours > 0
+    )
+    if require_contract and not valid_sla:
+        raise ValueError(
+            f"Catalog source {entry.key} requires positive freshness_sla_hours"
+        )
 
     if freshness_probe is not None:
         if not isinstance(freshness_probe, dict):
@@ -604,6 +892,15 @@ def _validate_freshness_metadata(entry: IngestionSourceCreate) -> None:
                 f"Catalog source {entry.key} freshness_field_candidate requires a "
                 "freshness_enforcement_hold"
             )
+        if require_contract and freshness_semantics not in {
+            "record_updated_at",
+            "dataset_refreshed_at",
+            "filing_event_at",
+        }:
+            raise ValueError(
+                f"Catalog source {entry.key} freshness_field_candidate requires "
+                "freshness_semantics"
+            )
         _validate_fetched_field(entry, candidate, "freshness_field_candidate")
         return
 
@@ -614,15 +911,27 @@ def _validate_freshness_metadata(entry: IngestionSourceCreate) -> None:
         )
 
     if freshness_field is None:
+        if freshness_semantics not in (None, "ingestion_observed_at"):
+            raise ValueError(
+                f"Catalog source {entry.key} without freshness_field must use "
+                "freshness_semantics ingestion_observed_at"
+            )
         return
     if not isinstance(freshness_field, str) or not freshness_field.strip():
         raise ValueError(
             f"Catalog source {entry.key} freshness_field must be a non-empty string"
         )
-    sla_hours = settings.get("freshness_sla_hours")
-    if not isinstance(sla_hours, (int, float)) or sla_hours <= 0:
+    if valid_sla is False:
         raise ValueError(
             f"Catalog source {entry.key} freshness_field requires positive freshness_sla_hours"
+        )
+    if require_contract and freshness_semantics not in {
+        "record_updated_at",
+        "dataset_refreshed_at",
+        "filing_event_at",
+    }:
+        raise ValueError(
+            f"Catalog source {entry.key} freshness_field requires freshness_semantics"
         )
     _validate_fetched_field(entry, freshness_field, "freshness_field")
 
@@ -632,10 +941,13 @@ def _validate_opening_signal_metadata(entry: IngestionSourceCreate) -> None:
     if settings.get("retailer_opening_signal") is not True:
         return
 
-    if settings.get("signal_stage") != "approved_only":
+    if settings.get("signal_stage") not in {
+        "approved_only",
+        "pre_approval_and_approved",
+    }:
         raise ValueError(
             f"Catalog source {entry.key} retailer_opening_signal sources must be "
-            "approved_only"
+            "approved_only or pre_approval_and_approved"
         )
 
     opening_field = settings.get("opening_signal_date_field")
@@ -718,20 +1030,28 @@ def sync_catalog(
 ) -> CatalogSyncResult:
     created = updated = unchanged = 0
     for entry in entries:
+        managed_entry = _entry_with_catalog_state(entry)
         source = active_query(db.query(IngestionSource), IngestionSource).filter(
             IngestionSource.key == entry.key
         ).first()
         if source is None:
             created += 1
             if not dry_run:
-                create_source(db, entry)
+                create_source(db, managed_entry)
             continue
 
         if source.adapter != entry.adapter.lower() or source.record_type != entry.record_type:
             raise ValueError(
                 f"Catalog cannot change adapter or record type for existing source: {entry.key}"
             )
-        if _source_snapshot(source) == _payload_snapshot(entry):
+        previous_catalog_active = (source.settings or {}).get(
+            _CATALOG_ACTIVE_SETTING
+        )
+        tenant_paused = not source.is_active and previous_catalog_active is not False
+        desired_is_active = entry.is_active and not tenant_paused
+        if _source_snapshot(source) == _payload_snapshot(
+            managed_entry, is_active=desired_is_active
+        ):
             unchanged += 1
             continue
 
@@ -741,16 +1061,29 @@ def sync_catalog(
                 db,
                 source,
                 IngestionSourceUpdate(
-                    name=entry.name,
-                    jurisdiction=entry.jurisdiction,
-                    base_url=entry.base_url,
-                    settings=entry.settings,
-                    is_active=entry.is_active,
+                    name=managed_entry.name,
+                    jurisdiction=managed_entry.jurisdiction,
+                    base_url=managed_entry.base_url,
+                    settings=managed_entry.settings,
+                    is_active=desired_is_active,
                     field_mappings=entry.field_mappings,
                 ),
             )
 
     return CatalogSyncResult(created=created, updated=updated, unchanged=unchanged)
+
+
+def _entry_with_catalog_state(
+    entry: IngestionSourceCreate,
+) -> IngestionSourceCreate:
+    return entry.model_copy(
+        update={
+            "settings": {
+                **(entry.settings or {}),
+                _CATALOG_ACTIVE_SETTING: entry.is_active,
+            }
+        }
+    )
 
 
 def _mapping_snapshot(mapping: object) -> dict:
@@ -759,6 +1092,7 @@ def _mapping_snapshot(mapping: object) -> dict:
     return {
         "source_field": mapping.source_field,
         "canonical_field": mapping.canonical_field,
+        "value_semantics": mapping.value_semantics,
         "transform": mapping.transform,
         "transform_options": mapping.transform_options,
         "default_value": mapping.default_value,
@@ -767,13 +1101,17 @@ def _mapping_snapshot(mapping: object) -> dict:
     }
 
 
-def _payload_snapshot(payload: IngestionSourceCreate) -> dict:
+def _payload_snapshot(
+    payload: IngestionSourceCreate,
+    *,
+    is_active: bool | None = None,
+) -> dict:
     return {
         "name": payload.name,
         "jurisdiction": payload.jurisdiction,
         "base_url": payload.base_url,
         "settings": payload.settings or None,
-        "is_active": payload.is_active,
+        "is_active": payload.is_active if is_active is None else is_active,
         "field_mappings": sorted(
             (_mapping_snapshot(mapping) for mapping in payload.field_mappings),
             key=lambda mapping: mapping["source_field"],

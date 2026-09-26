@@ -17,6 +17,16 @@ PARCEL_FIELDS = {
     "land_value", "improvement_value", "total_assessed_value", "land_use",
     "zoning_code",
 }
+MANAGED_FACT_TYPES = {
+    "ownership",
+    "last_sale",
+    "tax_status",
+    "vacancy",
+    "zoning",
+    "land_use",
+    "improvements",
+    "valuation",
+}
 
 
 @dataclass(frozen=True)
@@ -101,6 +111,18 @@ def upsert_parcel_snapshot(
         action = "updated"
     db.flush()
 
+    incoming_fact_types = {fact.fact_type for fact in facts}
+    if snapshot_id is not None:
+        omitted_fact_types = MANAGED_FACT_TYPES - incoming_fact_types
+        omitted = active_query(db.query(ParcelFact), ParcelFact).filter(
+            ParcelFact.parcel_id == parcel.id,
+            ParcelFact.fact_type.in_(omitted_fact_types),
+            ParcelFact.is_current.is_(True),
+        ).all()
+        for fact in omitted:
+            fact.is_current = False
+            fact.valid_to = now
+
     for incoming in facts:
         if not incoming.fact_type.strip():
             raise ValueError("Parcel fact_type is required")
@@ -114,7 +136,8 @@ def upsert_parcel_snapshot(
         unchanged = next(
             (
                 fact for fact in current
-                if fact.raw_source_record_id == raw_record.id and fact.value == incoming.value
+                if fact.raw_source_record_id == raw_record.id
+                and fact.value == incoming.value
             ),
             None,
         )
@@ -138,7 +161,7 @@ def upsert_parcel_snapshot(
             confidence=incoming.confidence,
             observed_at=observed_at,
             last_verified_at=now,
-            valid_from=observed_at,
+            valid_from=now,
             is_current=True,
         ))
     db.flush()
