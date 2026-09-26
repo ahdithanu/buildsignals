@@ -9,6 +9,52 @@ const recordActivity = vi.fn();
 let currentRole = 'admin';
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
+  useZip3Heatmap: () => ({
+    data: {
+      items: [{
+        zip3: '787',
+        score: 98.4,
+        signal_count: 4,
+        pre_approval_signals: 3,
+        approved_signals: 1,
+        mapped_signals: 4,
+        parcel_candidate_count: 12,
+        shortlisted_parcel_count: 2,
+        verified_for_sale_count: 0,
+        candidate_not_listing_count: 12,
+        states: ['TX'],
+        cities: ['Austin'],
+        sample_signals: [{
+          id: 'permit-1',
+          title: 'Starbucks Coffee build-out',
+          stage: 'pre_approval',
+          status: 'Under Review',
+          city: 'Austin',
+          state: 'TX',
+          source_url: null,
+        }],
+        sample_parcels: [{
+          id: 'parcel-heat-1',
+          external_parcel_id: 'P-HEAT-1',
+          address: '210 Congress Ave',
+          city: 'Austin',
+          state: 'TX',
+          review_status: 'shortlisted',
+          candidate_score: 86,
+          availability_label: 'nearby_candidate_not_verified_for_sale',
+        }],
+        latest_signal_at: '2026-08-08T12:00:00Z',
+      }],
+      limit: 12,
+      generated_at: '2026-08-08T12:00:00Z',
+      method_version: 'zip3-opportunity-heat-v1',
+      state: 'TX',
+      for_sale_semantics: {
+        nearby_candidate: 'Public parcel or ranked nearby result near a signal; not a listing.',
+        verified_for_sale: 'Requires listing, broker, owner, or explicit availability evidence.',
+      },
+    },
+  }),
   useAcquisitionRadar: () => ({
     data: {
       items: [{
@@ -76,6 +122,10 @@ describe('<AcquisitionRadar>', () => {
     render(<MemoryRouter><AcquisitionRadar /></MemoryRouter>);
 
     expect(screen.getByRole('heading', { name: 'Acquisition Radar' })).toBeInTheDocument();
+    expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('ZIP3 787');
+    expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('Candidate parcels are not verified listings');
+    expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('Starbucks Coffee build-out');
+    expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('210 Congress Ave');
     const summary = screen.getByLabelText('Acquisition radar summary');
     expect(within(summary).getByText('Cross-signal')).toBeInTheDocument();
     expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();

@@ -6,6 +6,7 @@ import {
   CalendarClock,
   Check,
   CircleDollarSign,
+  Flame,
   Mail,
   MapPinned,
   Radar,
@@ -30,7 +31,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAcquisitionRadar } from '@/hooks/useAcquisitionRadar';
+import { useAcquisitionRadar, useZip3Heatmap } from '@/hooks/useAcquisitionRadar';
 import { useOrganizationMembers } from '@/hooks/useOrganizationMembers';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,7 @@ import type {
   AcquisitionCaseStatus,
   AcquisitionRadarItem,
   ParcelPersona,
+  Zip3HeatmapItem,
 } from '@/types/parcel';
 
 const PAGE_SIZE = 50;
@@ -172,6 +174,84 @@ function RadarRow({
   );
 }
 
+function Zip3OpportunityHeat({ items, semantics }: {
+  items: Zip3HeatmapItem[];
+  semantics?: { nearby_candidate: string; verified_for_sale: string };
+}) {
+  const topScore = Math.max(...items.map((item) => item.score), 1);
+  if (items.length === 0) {
+    return (
+      <section className="rounded-md border bg-card p-4" aria-label="ZIP3 opportunity heatmap">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Flame className="h-4 w-4 text-amber-600" />ZIP3 opportunity heatmap
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          No ZIP3 clusters yet. Run geocoded permit/planning ingestion and nearby-parcel searches to populate this investor lens.
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className="rounded-md border bg-card p-4" aria-label="ZIP3 opportunity heatmap">
+      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Flame className="h-4 w-4 text-amber-600" />ZIP3 opportunity heatmap
+          </div>
+          <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
+            Ranks markets where development signals overlap with ranked nearby parcel candidates. Candidate parcels are not verified listings.
+          </p>
+        </div>
+        <Badge variant="outline">Investor lens</Badge>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        {items.slice(0, 6).map((item) => {
+          const width = `${Math.max(12, Math.round((item.score / topScore) * 100))}%`;
+          return (
+            <article key={item.zip3} className="rounded-md border p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-lg font-semibold tabular-nums text-foreground">ZIP3 {item.zip3}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {[item.cities[0], item.states[0]].filter(Boolean).join(', ') || 'Market cluster'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold tabular-nums">{item.score}</p>
+                  <p className="text-[11px] text-muted-foreground">heat score</p>
+                </div>
+              </div>
+              <div className="mt-3 h-2 rounded-full bg-secondary">
+                <div className="h-2 rounded-full bg-amber-500" style={{ width }} />
+              </div>
+              <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                <div><dt className="text-muted-foreground">Pre-approval</dt><dd className="font-semibold tabular-nums">{item.pre_approval_signals}</dd></div>
+                <div><dt className="text-muted-foreground">Candidates</dt><dd className="font-semibold tabular-nums">{item.parcel_candidate_count}</dd></div>
+                <div><dt className="text-muted-foreground">For sale</dt><dd className="font-semibold tabular-nums">{item.verified_for_sale_count}</dd></div>
+              </dl>
+              {item.sample_signals[0] && (
+                <p className="mt-3 line-clamp-2 text-[11px] text-muted-foreground">
+                  Signal: <span className="font-medium text-foreground">{item.sample_signals[0].title}</span>
+                </p>
+              )}
+              {item.sample_parcels[0] && (
+                <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
+                  Nearby parcel: <span className="font-medium text-foreground">{item.sample_parcels[0].address || item.sample_parcels[0].external_parcel_id}</span>
+                </p>
+              )}
+            </article>
+          );
+        })}
+      </div>
+      {semantics && (
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          {semantics.nearby_candidate} {semantics.verified_for_sale}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function AcquisitionRadar() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -197,6 +277,7 @@ export default function AcquisitionRadar() {
     offset,
   }), [assignment, offset, persona, query, state, status]);
   const { data, isLoading, error, refetch, updateCase, recordActivity, promote } = useAcquisitionRadar(params);
+  const { data: zip3Heatmap } = useZip3Heatmap({ state: state.trim().toUpperCase() || undefined, limit: 12 });
   const canManage = role === 'admin' || role === 'editor';
   const summary = data?.summary;
   const metrics: Array<{ label: string; value: number; icon: LucideIcon }> = [
@@ -255,6 +336,8 @@ export default function AcquisitionRadar() {
         <section className="grid grid-cols-2 gap-px overflow-hidden rounded-md border bg-border lg:grid-cols-5" aria-label="Acquisition radar summary">
           {metrics.map(({ label, value, icon: Icon }) => <div key={label} className="min-w-0 bg-card px-4 py-3"><div className="flex items-center gap-2 text-muted-foreground"><Icon className="h-3.5 w-3.5" /><span className="text-[11px]">{label}</span></div><p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{value}</p></div>)}
         </section>
+
+        <Zip3OpportunityHeat items={zip3Heatmap?.items ?? []} semantics={zip3Heatmap?.for_sale_semantics} />
 
         <section className="rounded-md border bg-card p-4">
           <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_90px_140px_140px_140px_auto] md:items-end">

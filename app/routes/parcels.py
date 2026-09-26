@@ -52,6 +52,7 @@ from app.services.parcel_service import (
     promote_nearby_parcel_candidate_to_deal,
     review_nearby_parcel_candidate,
 )
+from app.services.zip3_heatmap import zip3_heatmap
 from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
@@ -73,6 +74,17 @@ def get_map_signals(
 def get_map_readiness(response: Response, db: Session = Depends(get_db)):
     response.headers["Cache-Control"] = "no-store"
     return map_readiness(db)
+
+
+@router.get("/acquisition-map/zip3-heatmap", dependencies=[Depends(get_current_user)])
+def get_zip3_heatmap(
+    response: Response,
+    limit: int = Query(default=50, ge=1, le=100),
+    state: str | None = Query(default=None, pattern="^[A-Za-z]{2}$"),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "no-store"
+    return zip3_heatmap(db, limit=limit, state=state)
 
 
 def _lineage_response(event) -> dict:

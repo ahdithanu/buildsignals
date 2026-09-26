@@ -91,7 +91,7 @@ function AcquisitionScreenContent({ dealId }: { dealId: string }) {
             <p className="mt-1 text-xs text-muted-foreground">{c.value == null ? 'Not established' : `Recorded: ${c.value}`} · {c.reason}</p>
             {!!c.reviewed_observations?.length && <ul className="mt-2 space-y-1 border-l pl-3 text-xs">
               {c.reviewed_observations.slice(0, 3).map((item, index) => <li key={`${item.observation.metric}:${item.observation.as_of}:${index}`}>
-                <span className="font-semibold">Reviewed observation:</span> {item.observation.value} {item.observation.metric.replaceAll('_', ' ')}
+                <span className="font-semibold">Reviewed observation:</span> {item.observation.value} {item.observation.metric.split('_').join(' ')}
                 {' '}as of {item.observation.as_of} ({item.observation.scope}, {item.assessment}; does not change status)
               </li>)}
             </ul>}

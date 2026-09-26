@@ -406,6 +406,23 @@ planning record presentation. A missing or failed detail request remains an erro
 not a silent fallback to unrelated records. Explicit browsing clears record focus.
 Planning browser-cache keys include organization and user identity.
 
+## ZIP3 opportunity heatmap
+
+GET /acquisition-map/zip3-heatmap is authenticated, tenant-scoped, read-only,
+and no-store. It aggregates active permit signals and saved nearby-parcel
+candidates into ZIP3 buckets so Acquisition Radar can show where development
+signals overlap with parcels worth investigating. Scoring favors pre-approval
+signals, mapped records, candidate density, and reviewed shortlists. The
+response includes sample signals, sample nearby parcels, and explicit
+availability semantics.
+
+This is an investor lens, not a listing feed. `nearby_candidate` means a public
+parcel or ranked nearby result near a signal. `verified_for_sale` remains zero
+unless a listing, broker, owner, or explicit availability source is present. The
+UI repeats that distinction so BuildSignals can help users find where to look
+without implying a parcel is on-market from public permit or assessor data
+alone.
+
 Leaflet is lazy-loaded. OpenStreetMap raster tiles load only for the visible map,
 with attribution and an origin referrer. There is no bulk fetch or offline cache.
 Tile failures show a notice without hiding source records. Public tiles have no

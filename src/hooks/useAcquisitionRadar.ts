@@ -8,6 +8,15 @@ import type {
   ParcelAcquisitionCaseUpdate,
 } from '@/types/parcel';
 
+export function useZip3Heatmap(params: { state?: string; limit?: number } = {}) {
+  const { organizationId, user } = useAuth();
+  return useQuery({
+    queryKey: ['zip3-heatmap', organizationId, user?.id, params],
+    enabled: !!organizationId && !!user,
+    queryFn: () => parcelsApi.zip3Heatmap(params),
+  });
+}
+
 export function useAcquisitionRadar(params: AcquisitionRadarParams) {
   const { organizationId, user } = useAuth();
   const queryClient = useQueryClient();

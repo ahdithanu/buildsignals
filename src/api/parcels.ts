@@ -15,12 +15,18 @@ import type {
   ParcelAcquisitionActivityCreate,
   ParcelAcquisitionCase,
   ParcelAcquisitionCaseUpdate,
+  Zip3HeatmapResponse,
 } from '@/types/parcel';
 
 export const parcelsApi = {
   radar: (params?: AcquisitionRadarParams): Promise<AcquisitionRadarResponse> =>
     apiClient.get<AcquisitionRadarResponse>(
       '/acquisition-radar',
+      params as Record<string, string | number | boolean | undefined>,
+    ),
+  zip3Heatmap: (params?: { state?: string; limit?: number }): Promise<Zip3HeatmapResponse> =>
+    apiClient.get<Zip3HeatmapResponse>(
+      '/acquisition-map/zip3-heatmap',
       params as Record<string, string | number | boolean | undefined>,
     ),
   acquisitionCase: (caseId: string): Promise<ParcelAcquisitionCase> =>

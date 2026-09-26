@@ -225,6 +225,57 @@ export interface AcquisitionRadarParams {
   offset?: number;
 }
 
+export interface Zip3HeatmapSignal {
+  id: string;
+  title?: string | null;
+  stage?: string | null;
+  status?: string | null;
+  city?: string | null;
+  state?: string | null;
+  source_url?: string | null;
+}
+
+export interface Zip3HeatmapParcel {
+  id: string;
+  external_parcel_id: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  review_status: string;
+  candidate_score: number;
+  availability_label: 'nearby_candidate_not_verified_for_sale';
+}
+
+export interface Zip3HeatmapItem {
+  zip3: string;
+  score: number;
+  signal_count: number;
+  pre_approval_signals: number;
+  approved_signals: number;
+  mapped_signals: number;
+  parcel_candidate_count: number;
+  shortlisted_parcel_count: number;
+  verified_for_sale_count: number;
+  candidate_not_listing_count: number;
+  states: string[];
+  cities: string[];
+  sample_signals: Zip3HeatmapSignal[];
+  sample_parcels: Zip3HeatmapParcel[];
+  latest_signal_at?: string | null;
+}
+
+export interface Zip3HeatmapResponse {
+  items: Zip3HeatmapItem[];
+  limit: number;
+  generated_at: string;
+  method_version: string;
+  state?: string | null;
+  for_sale_semantics: {
+    nearby_candidate: string;
+    verified_for_sale: string;
+  };
+}
+
 export interface ParcelAcquisitionSource {
   id: string;
   candidate_id: string;
