@@ -290,6 +290,10 @@ services:
       # frontend calls localhost and every request fails in production.
       - key: VITE_API_BASE_URL
         sync: false
+      # Render static hosting has no /v1 reverse proxy. Keep direct API mode
+      # there; the canonical Vercel deployment uses the same-origin proxy.
+      - key: VITE_API_SAME_ORIGIN
+        value: "false"
       - key: VITE_SENTRY_DSN
         sync: false
       - key: VITE_SENTRY_ENVIRONMENT
