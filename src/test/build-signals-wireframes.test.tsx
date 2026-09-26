@@ -112,7 +112,7 @@ describe('Build Signals wireframe screens', () => {
         password: 'secret-password',
       });
     });
-    expect(screen.queryByRole('button', { name: /SSO/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /SSO/i })).toBeInTheDocument();
   });
 
   it('opens demo mode from the login screen', async () => {
