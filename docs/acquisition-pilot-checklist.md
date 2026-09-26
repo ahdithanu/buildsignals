@@ -17,6 +17,10 @@ Verification: 45 focused backend tests pass across diligence observations,
 diligence reviews, and acquisition screening. No migration, source activation,
 production change, push, merge, or deployment occurred.
 
+The opportunity screening panel now displays those reviewed observations beneath
+the matching criterion as contextual measurements while preserving the unknown
+screening status. Four focused frontend tests pass for the panel.
+
 ### Structured diligence observations (2026-09-21)
 
 Reviews now optionally retain a structured numeric observation in their existing

@@ -18,6 +18,18 @@ it('shows unknown diligence explicitly rather than a fabricated fit score', asyn
   expect(screen.getByText(/Not established/)).toHaveTextContent('Rent roll required');
 });
 
+it('shows reviewed observations without presenting them as verified fits', async () => {
+  vi.mocked(apiClient.get).mockResolvedValue({ status: 'needs_diligence', counts: { pass: 0, fail: 0, unknown: 1 }, criteria: [
+    { key: 'occupancy', label: 'Occupancy', target: '80-100%', status: 'unknown', value: null, reason: 'Rent roll required',
+      reviewed_observations: [{ assessment: 'supports', changes_screening_result: false, independently_verified: false,
+        observation: { metric: 'leased_area_occupancy_percent', value: 82, as_of: '2026-09-01', scope: 'partial', methodology: 'Measured from supplied rent roll excerpt.' } }] },
+  ] });
+  render(<QueryClientProvider client={new QueryClient()}><AcquisitionScreenPanel dealId="d" /></QueryClientProvider>);
+  expect(await screen.findByText(/82 leased area occupancy percent/)).toBeInTheDocument();
+  expect(screen.getByText(/does not change status/)).toBeInTheDocument();
+  expect(screen.getByText(/0 pass, 0 fail, 1 unknown/)).toBeInTheDocument();
+});
+
 it('downloads the applied profile and market using the authenticated client', async () => {
   vi.mocked(apiClient.get).mockResolvedValue({ status: 'needs_diligence', counts: { pass: 0, fail: 0, unknown: 1 }, criteria: [] });
   vi.mocked(apiClient.download).mockResolvedValue({ blob: new Blob(['{}']), filename: null, exportedCount: null, omittedCount: null });

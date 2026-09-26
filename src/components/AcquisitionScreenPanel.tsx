@@ -10,7 +10,12 @@ interface Screen {
   status: string;
   counts: { pass: number; fail: number; unknown: number };
   criteria: { key: string; label: string; target: string; status: string;
-    value: string | number | null; basis: string | null; reason: string }[];
+    value: string | number | null; basis: string | null; reason: string;
+    reviewed_observations?: {
+      observation: { metric: string; value: number; as_of: string; scope: string; methodology: string };
+      assessment: string; changes_screening_result: boolean; independently_verified: boolean;
+    }[];
+  }[];
 }
 
 export function AcquisitionScreenPanel({ dealId }: { dealId: string }) {
@@ -84,6 +89,12 @@ function AcquisitionScreenContent({ dealId }: { dealId: string }) {
             <div className="flex items-start justify-between gap-3"><span className="font-semibold">{c.label}</span><span className="shrink-0 uppercase">{c.status}</span></div>
             <p className="mt-1">{c.target}</p>
             <p className="mt-1 text-xs text-muted-foreground">{c.value == null ? 'Not established' : `Recorded: ${c.value}`} · {c.reason}</p>
+            {!!c.reviewed_observations?.length && <ul className="mt-2 space-y-1 border-l pl-3 text-xs">
+              {c.reviewed_observations.slice(0, 3).map((item, index) => <li key={`${item.observation.metric}:${item.observation.as_of}:${index}`}>
+                <span className="font-semibold">Reviewed observation:</span> {item.observation.value} {item.observation.metric.replaceAll('_', ' ')}
+                {' '}as of {item.observation.as_of} ({item.observation.scope}, {item.assessment}; does not change status)
+              </li>)}
+            </ul>}
           </li>)}
         </ul>
       </>}
