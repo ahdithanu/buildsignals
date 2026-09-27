@@ -455,9 +455,11 @@ See https://operations.osmfoundation.org/policies/tiles/ and
 https://leafletjs.com/reference.html for the basemap policy and library reference.
 
 Remaining pilot gaps: production counts and auth verification, qualified nearby
-parcel inventory, reliable geocoding, reviewed brand relevance, richer geography
-filters/pagination, and unified signal-to-parcel selection. Two maps currently
-separate source-record geography from saved ranked parcel results.
+parcel inventory, reliable geocoding, reviewed brand relevance, deeper geography
+pagination, and unified signal-to-parcel selection. The acquisition map now
+shares backend state filtering with ZIP3 heat and can filter for source-backed
+verified availability, but source-record geography and saved ranked parcel
+results still live in separate map sections.
 
 ## Initial acquisition screening
 
