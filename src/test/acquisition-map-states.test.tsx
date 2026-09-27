@@ -11,12 +11,13 @@ vi.mock('@/components/SignalMapExplorer', () => ({
   SignalMapExplorer: ({ state, onStateChange, onRecordSelect }: {
     state?: string;
     onStateChange?: (state: string) => void;
-    onRecordSelect?: (record: { id: string; kind: 'permit'; title: string; latitude: number; longitude: number }) => void;
+    onRecordSelect?: (record: { id: string; kind: 'permit' | 'planning'; title: string; latitude: number; longitude: number; city?: string; state?: string }) => void;
   }) => (
     <div>
       <p>Signal geography</p>
       <button type="button" onClick={() => onStateChange?.('TX')}>Set signal geography state</button>
       <button type="button" onClick={() => onRecordSelect?.({ id: 'permit:permit-787', kind: 'permit', title: 'Retail source permit', latitude: 30.2672, longitude: -97.7431 })}>Select source permit</button>
+      <button type="button" onClick={() => onRecordSelect?.({ id: 'planning:plan-787', kind: 'planning', title: 'Austin planning hearing', latitude: 30.2672, longitude: -97.7431, city: 'Austin', state: 'TX' })}>Select planning source</button>
       <span>Signal state {state || 'all'}</span>
     </div>
   ),
@@ -224,6 +225,10 @@ describe('<AcquisitionMap> states', () => {
     expect(screen.getByText(/Retail source permit/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear source' }));
     expect(screen.queryByText(/Source-linked parcels:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Select planning source' }));
+    expect(screen.getByText(/Planning market filter:/)).toBeInTheDocument();
+    expect(screen.getByText(/not a direct planning-to-parcel search/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear source' }));
     fireEvent.change(screen.getByLabelText(/filter acquisition map by state/i), { target: { value: 'tx' } });
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear state' }));

@@ -65,8 +65,20 @@ export default function AcquisitionMap() {
   const selectedSourcePermitId = selectedSourceRecord?.kind === 'permit'
     ? selectedSourceRecord.id.replace(/^permit:/, '')
     : '';
+  const selectedPlanningMarket = selectedSourceRecord?.kind === 'planning'
+    ? {
+      city: selectedSourceRecord.city?.trim().toLowerCase() || '',
+      state: selectedSourceRecord.state?.trim().toUpperCase() || '',
+    }
+    : null;
   const connectedItems = selectedSourcePermitId
     ? items.filter((item) => item.signals.some((signal) => signal.anchor_permit_id === selectedSourcePermitId))
+    : selectedPlanningMarket
+      ? items.filter((item) => {
+        const stateMatches = !selectedPlanningMarket.state || item.parcel.state?.toUpperCase() === selectedPlanningMarket.state;
+        const cityMatches = !selectedPlanningMarket.city || item.parcel.city?.trim().toLowerCase() === selectedPlanningMarket.city;
+        return stateMatches && cityMatches;
+      })
     : activeSignalId
     ? items.filter((item) => item.signals.some((signal) => signal.deal_id === activeSignalId))
     : items;
@@ -305,6 +317,14 @@ export default function AcquisitionMap() {
                 <div className="border border-foreground bg-card px-3 py-2 text-[10px]">
                   <span className="font-semibold">Source-linked parcels:</span>{' '}
                   {selectedSourceRecord?.title || selectedSourcePermitId}
+                  <button type="button" className="ml-2 font-semibold underline" onClick={() => setSelectedSourceRecord(null)}>Clear source</button>
+                </div>
+              )}
+              {selectedPlanningMarket && !selectedSourcePermitId && (
+                <div className="border border-foreground bg-card px-3 py-2 text-[10px]">
+                  <span className="font-semibold">Planning market filter:</span>{' '}
+                  {selectedSourceRecord?.title || [selectedSourceRecord?.city, selectedSourceRecord?.state].filter(Boolean).join(', ')}
+                  <span className="ml-1 text-muted-foreground">Matched by city/state; not a direct planning-to-parcel search.</span>
                   <button type="button" className="ml-2 font-semibold underline" onClick={() => setSelectedSourceRecord(null)}>Clear source</button>
                 </div>
               )}

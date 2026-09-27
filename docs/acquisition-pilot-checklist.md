@@ -461,8 +461,10 @@ shares backend state filtering with ZIP3 heat and can filter for source-backed
 verified availability. Signal geography and ranked parcel geography now share
 one page-level state filter, and selecting a permit source record narrows the
 ranked parcel map to nearby candidates generated from that exact anchor permit
-when those saved searches exist. Planning-source-to-parcel linkage, deeper
-pagination, and a single combined map surface remain open.
+when those saved searches exist. Selecting a planning source record now narrows
+ranked parcels by the same city/state market with an explicit caveat that this
+is not a direct planning-to-parcel search. Direct planning-source-to-parcel
+searches, deeper pagination, and a single combined map surface remain open.
 
 ## Initial acquisition screening
 
