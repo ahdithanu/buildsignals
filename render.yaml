@@ -78,6 +78,15 @@ services:
       #   emails are logged instead of sent.
       - key: RESEND_API_KEY
         sync: false
+      # Demo mode is intentionally opt-in. Set the flag plus the seeded
+      # workspace credentials in the dashboard; the frontend never receives
+      # the password and the API returns 404 when this is incomplete.
+      - key: BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS
+        sync: false
+      - key: BUILD_SIGNALS_DEMO_EMAIL
+        sync: false
+      - key: BUILD_SIGNALS_DEMO_PASSWORD
+        sync: false
       # SENTRY_DSN: backend error tracking. Leave unset to disable Sentry.
       - key: SENTRY_DSN
         sync: false

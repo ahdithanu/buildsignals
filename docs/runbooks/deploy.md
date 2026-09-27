@@ -36,6 +36,12 @@ in the Render dashboard).
         `true` in production; see `app/config.py`)
       - `ENVIRONMENT=production` — set in `render.yaml`, but confirm it
         wasn't overridden in the dashboard
+      Demo-mode optional, but required for the public "Enter demo mode" CTA:
+      - `BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS=true`
+      - `BUILD_SIGNALS_DEMO_EMAIL` — seeded demo user email
+      - `BUILD_SIGNALS_DEMO_PASSWORD` — seeded demo user password
+      If these are missing or incomplete, `/v1/auth/demo` intentionally
+      returns `404` so the password is never exposed through frontend config.
 - [ ] **Migration safety** — if this release includes a new migration,
       read it and check:
       - No `ALTER TABLE ... SET NOT NULL` on a large table without a

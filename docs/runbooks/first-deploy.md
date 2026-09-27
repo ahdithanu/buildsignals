@@ -52,6 +52,9 @@ fill them in up front, or set placeholders and correct them in step 5.
 | `CORS_ALLOWED_ORIGINS` | the frontend URL, e.g. `https://dealsignal-frontend.onrender.com` (no trailing slash, no `*`) |
 | `APP_BASE_URL` | same frontend URL — used in password-reset links |
 | `RESEND_API_KEY` | your Resend key (or leave blank to disable email) |
+| `BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS` | `true` only when the seeded demo workspace should be available |
+| `BUILD_SIGNALS_DEMO_EMAIL` | seeded demo user email, for example `admin@buildsignals.ai` |
+| `BUILD_SIGNALS_DEMO_PASSWORD` | seeded demo user password; keep server-side only |
 | `SENTRY_DSN` | backend Sentry DSN (or blank) |
 | `INGESTION_ALLOWED_HOSTS` | exact reviewed worker host list from `catalog host-audit --print-required-hosts` |
 | `INGESTION_HOST_POLICY_EXECUTOR` | leave blank until the API list is confirmed identical to the worker; then set the worker service name |
@@ -66,6 +69,10 @@ fill them in up front, or set placeholders and correct them in step 5.
 
 > ⚠ `VITE_*` vars are baked in at **build time**. If you set or change one
 > later, you must trigger a **rebuild** of the frontend, not just a restart.
+
+> Demo mode is backend-gated. If `/v1/auth/demo` returns `404`, confirm all
+> three `BUILD_SIGNALS_*DEMO*` variables above are set on the API service and
+> redeploy the API.
 
 ---
 
