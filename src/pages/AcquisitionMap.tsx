@@ -30,7 +30,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { AcquisitionRadarItem } from '@/types/parcel';
 
-const evidenceFilters = ['Shortlisted', 'Owner evidence', 'Held 10+ yrs', 'Tax evidence'];
+const evidenceFilters = ['Shortlisted', 'Verified availability', 'Owner evidence', 'Held 10+ yrs', 'Tax evidence'];
 const GeographicMap = lazy(() => import('@/components/GeographicMap'));
 
 function acres(item: AcquisitionRadarItem) {
@@ -71,6 +71,7 @@ export default function AcquisitionMap() {
     }
     if (activeOnly && item.review_status === 'dismissed') return false;
     if (activeFilters.has('Shortlisted') && item.review_status !== 'shortlisted') return false;
+    if (activeFilters.has('Verified availability') && !availabilityEvidenceSource(item.facts ?? [])) return false;
     if (activeFilters.has('Owner evidence') && !ownerName(item.facts ?? [])) return false;
     if (activeFilters.has('Held 10+ yrs') && (ownershipTenureYears(item) ?? 0) < 10) return false;
     if (activeFilters.has('Tax evidence') && !hasTaxEvidence(item.facts ?? [])) return false;

@@ -215,5 +215,9 @@ describe('<AcquisitionMap> states', () => {
     );
     expect(screen.getByRole('link', { name: /review parcel evidence/i })).toHaveAttribute('href', '/parcels/parcel-787');
     expect(screen.queryByText('10 State St')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verified availability' }));
+    expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
+    expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
   });
 });
