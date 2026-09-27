@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAcquisitionRadar, useZip3Heatmap } from '@/hooks/useAcquisitionRadar';
 import { useToast } from '@/hooks/use-toast';
 import {
+  availabilitySummary,
   hasTaxEvidence,
   lastSale,
   ownerName,
@@ -357,6 +358,7 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
       <div className="mt-3 border-t-2 border-foreground">
         <ParcelFact label="Workflow" value={workflowLabel(item.review_status)} />
         <ParcelFact label="Owner evidence" value={owner || 'Not available in admitted parcel facts'} />
+        <ParcelFact label="Availability" value={availabilitySummary(facts)} />
         <ParcelFact label="Evidence" value={sourceLabel(facts)} />
         <ParcelFact label="Last transfer" value={sale ? [sale.price, formatDate(sale.date)].filter(Boolean).join(' · ') : 'No admitted sale fact'} />
         <ParcelFact label="Last verified" value={formatDate(item.parcel.last_verified_at)} />

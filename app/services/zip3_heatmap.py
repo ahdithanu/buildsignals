@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.parcel import NearbyParcelCandidate, ParcelRecord
 from app.models.ingestion import PermitRecord
+from app.services.parcel_availability import availability_label, verified_availability_fact
 from app.utils.org_scope import active_query
 
 
@@ -98,13 +99,14 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
             })
 
     candidate_query = active_query(db.query(NearbyParcelCandidate), NearbyParcelCandidate).options(
-        joinedload(NearbyParcelCandidate.parcel),
+        joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts),
     ).join(ParcelRecord, NearbyParcelCandidate.parcel_id == ParcelRecord.id)
     if state_filter:
         candidate_query = candidate_query.filter(ParcelRecord.state.ilike(state_filter))
     candidates = candidate_query.order_by(NearbyParcelCandidate.created_at.desc(), NearbyParcelCandidate.id).limit(10_000).all()
     seen_parcels_by_zip: dict[str, set[str]] = defaultdict(set)
     shortlisted_by_zip: dict[str, set[str]] = defaultdict(set)
+    verified_for_sale_by_zip: dict[str, set[str]] = defaultdict(set)
     for candidate in candidates:
         parcel = candidate.parcel
         key = _zip3(parcel.postal_code)
@@ -114,6 +116,9 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
         seen_parcels_by_zip[key].add(parcel.id)
         if candidate.review_status == "shortlisted":
             shortlisted_by_zip[key].add(parcel.id)
+        availability_fact = verified_availability_fact(parcel.facts)
+        if availability_fact is not None:
+            verified_for_sale_by_zip[key].add(parcel.id)
         if parcel.state:
             bucket["states"].add(parcel.state.upper())
         if parcel.city:
@@ -134,16 +139,20 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
                 "state": parcel.state,
                 "review_status": candidate.review_status,
                 "candidate_score": candidate.score,
-                "availability_label": "nearby_candidate_not_verified_for_sale",
+                "availability_label": availability_label(parcel.facts),
+                "availability_source_url": availability_fact.source_url if availability_fact else None,
             })
 
     for key, bucket in buckets.items():
         candidate_count = len(seen_parcels_by_zip.get(key, set()))
         shortlisted_count = len(shortlisted_by_zip.get(key, set()))
+        verified_count = len(verified_for_sale_by_zip.get(key, set()))
         bucket["parcel_candidate_count"] = candidate_count
         bucket["shortlisted_parcel_count"] = shortlisted_count
-        bucket["candidate_not_listing_count"] = candidate_count
+        bucket["verified_for_sale_count"] = verified_count
+        bucket["candidate_not_listing_count"] = max(0, candidate_count - verified_count)
         bucket["score"] += log1p(candidate_count) * 2.0 + log1p(shortlisted_count) * 2.0
+        bucket["score"] += log1p(verified_count) * 2.5
 
     items = sorted(
         buckets.values(),

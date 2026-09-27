@@ -243,7 +243,8 @@ export interface Zip3HeatmapParcel {
   state?: string | null;
   review_status: string;
   candidate_score: number;
-  availability_label: 'nearby_candidate_not_verified_for_sale';
+  availability_label: 'nearby_candidate_not_verified_for_sale' | 'verified_for_sale';
+  availability_source_url?: string | null;
 }
 
 export interface Zip3HeatmapItem {

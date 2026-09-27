@@ -114,7 +114,17 @@ describe('<AcquisitionMap> states', () => {
             latest_signal_at: '2026-09-27T00:00:00Z',
             reasons: ['Near a pre-approval retail signal'],
             cautions: [],
-            facts: [],
+            facts: [{
+              id: 'fact-availability',
+              fact_type: 'availability',
+              value: { status: 'for_sale', evidence_type: 'broker', asking_price: 2250000 },
+              source_url: 'https://broker.example/listing/P-787',
+              field_path: 'listing.status',
+              excerpt: 'Broker listing marks the parcel available for sale.',
+              confidence: 0.88,
+              observed_at: '2026-09-27T00:00:00Z',
+              last_verified_at: '2026-09-27T00:00:00Z',
+            }],
             signals: [{ candidate_id: 'candidate-787', search_id: 'search-1', deal_id: 'deal-1', deal_name: 'Retail signal', persona: 'developer', approval_stage: 'pre_approval', signal_confidence: 0.9, distance_miles: 0.4, candidate_score: 86, created_at: '2026-09-27T00:00:00Z' }],
           },
           {
@@ -198,6 +208,7 @@ describe('<AcquisitionMap> states', () => {
 
     expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
     expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
+    expect(screen.getByText('Verified availability evidence: broker')).toBeInTheDocument();
     expect(screen.queryByText('10 State St')).not.toBeInTheDocument();
   });
 });

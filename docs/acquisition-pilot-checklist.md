@@ -423,6 +423,14 @@ UI repeats that distinction so BuildSignals can help users find where to look
 without implying a parcel is on-market from public permit or assessor data
 alone.
 
+Verified availability is represented as a current parcel fact, not a candidate
+review status. BuildSignals only treats a parcel as `verified_for_sale` when a
+current `availability`, `listing`, `broker_listing`, `owner_availability`, or
+`sale_availability` fact has a recognized available/listed status, a listing /
+broker / owner / auction evidence type, confidence of at least 0.7, and source
+evidence such as a URL or excerpt. Nearby parcel proximity, assessor fields,
+high land value, or user shortlist actions do not satisfy this contract.
+
 The acquisition map consumes the same ZIP3 heat output as centroid bubbles sized
 by score. Selecting a ZIP3 clears the single-signal focus and filters the ranked
 parcel table to candidate parcels in that market cluster. These centroids are

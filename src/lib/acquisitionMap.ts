@@ -73,6 +73,33 @@ export function hasTaxEvidence(facts: ParcelFact[]) {
   return facts.some((fact) => /tax|delinquen|lien/.test(fact.fact_type.toLowerCase()));
 }
 
+function availabilityValue(fact: ParcelFact) {
+  return fact.value && typeof fact.value === 'object' && !Array.isArray(fact.value)
+    ? fact.value as Record<string, unknown>
+    : {};
+}
+
+export function verifiedAvailabilityFact(facts: ParcelFact[]) {
+  return facts.find((fact) => {
+    if (!['availability', 'listing', 'broker_listing', 'owner_availability', 'sale_availability'].includes(fact.fact_type)) return false;
+    const value = availabilityValue(fact);
+    const status = String(value.status || value.availability_status || '').toLowerCase();
+    const evidenceType = String(value.evidence_type || value.source_type || '').toLowerCase();
+    return ['available', 'for_sale', 'listed', 'broker_listed', 'owner_indicated_available'].includes(status)
+      && ['listing', 'broker', 'owner', 'auction'].includes(evidenceType)
+      && fact.confidence >= 0.7
+      && Boolean(fact.source_url || fact.excerpt);
+  }) || null;
+}
+
+export function availabilitySummary(facts: ParcelFact[]) {
+  const fact = verifiedAvailabilityFact(facts);
+  if (!fact) return 'Nearby candidate, not a verified listing';
+  const value = availabilityValue(fact);
+  const source = String(value.evidence_type || value.source_type || fact.fact_type).replace(/_/g, ' ');
+  return `Verified availability evidence: ${source}`;
+}
+
 export function workflowLabel(status: AcquisitionCaseStatus) {
   const labels: Record<AcquisitionCaseStatus, string> = {
     candidate: 'Candidate',
