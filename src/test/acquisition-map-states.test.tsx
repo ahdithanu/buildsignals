@@ -201,6 +201,10 @@ describe('<AcquisitionMap> states', () => {
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
 
     expect(screen.getByText('ZIP3 opportunity heat')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/filter acquisition map by state/i), { target: { value: 'tx' } });
+    expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear state' }));
+    expect(screen.getByLabelText(/filter acquisition map by state/i)).toHaveValue('');
     expect(screen.getByRole('button', { name: /ZIP3 787 2 pre-approval .* 8 candidates/i })).toBeInTheDocument();
     expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
 

@@ -46,8 +46,10 @@ function formatDate(value: string | null | undefined) {
 export default function AcquisitionMap() {
   const { role } = useAuth();
   const { toast } = useToast();
-  const { data, isLoading, error, refetch, exportSearch } = useAcquisitionRadar({ limit: 100, offset: 0 });
-  const { data: heatmap } = useZip3Heatmap({ limit: 25 });
+  const [stateFilter, setStateFilter] = useState('');
+  const selectedState = stateFilter.trim().toUpperCase() || undefined;
+  const { data, isLoading, error, refetch, exportSearch } = useAcquisitionRadar({ state: selectedState, limit: 100, offset: 0 });
+  const { data: heatmap } = useZip3Heatmap({ state: selectedState, limit: 25 });
   const [selectedSignalId, setSelectedSignalId] = useState('');
   const [selectedParcelId, setSelectedParcelId] = useState('');
   const [selectedZip3, setSelectedZip3] = useState('');
@@ -189,6 +191,40 @@ export default function AcquisitionMap() {
 
         <div className="flex min-w-0 flex-col">
           <section className="border-b-2 border-foreground">
+            <div className="flex flex-wrap items-end gap-2 border-b border-border p-3">
+              <label className="text-[10px] font-semibold uppercase text-muted-foreground">
+                State
+                <input
+                  value={stateFilter}
+                  onChange={(event) => {
+                    setStateFilter(event.target.value.slice(0, 2).toUpperCase());
+                    setSelectedSignalId('');
+                    setSelectedParcelId('');
+                    setSelectedZip3('');
+                  }}
+                  placeholder="All"
+                  aria-label="Filter acquisition map by state"
+                  className="mt-1 h-8 w-20 border border-foreground bg-card px-2 text-xs font-semibold uppercase text-foreground"
+                />
+              </label>
+              {stateFilter && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStateFilter('');
+                    setSelectedSignalId('');
+                    setSelectedParcelId('');
+                    setSelectedZip3('');
+                  }}
+                  className="h-8 border border-foreground px-2 text-[10px] font-semibold"
+                >
+                  Clear state
+                </button>
+              )}
+              <p className="text-[10px] text-muted-foreground">
+                Filters ranked parcels and ZIP3 heat using the same tenant-scoped backend queries.
+              </p>
+            </div>
             <select
               value={activeSignalId}
               onChange={(event) => { setSelectedSignalId(event.target.value); setSelectedParcelId(''); }}
