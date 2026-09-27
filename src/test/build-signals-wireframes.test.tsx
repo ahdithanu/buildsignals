@@ -8,6 +8,7 @@ import Register from '@/pages/Register';
 import { signalStageFor } from '@/lib/signalStage';
 
 const login = vi.fn();
+const demoLogin = vi.fn();
 const register = vi.fn();
 const exportSearch = { mutate: vi.fn(), isPending: false };
 
@@ -65,6 +66,7 @@ vi.mock('@/contexts/AuthContext', () => ({
     isAuthenticated: false,
     isLoading: false,
     login,
+    demoLogin,
     register,
     logout: vi.fn(),
   }),
@@ -110,7 +112,17 @@ describe('Build Signals wireframe screens', () => {
         password: 'secret-password',
       });
     });
-    expect(screen.queryByRole('button', { name: /SSO/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /SSO/i })).toBeInTheDocument();
+  });
+
+  it('opens demo mode from the login screen', async () => {
+    demoLogin.mockResolvedValueOnce(undefined);
+    render(<MemoryRouter initialEntries={['/login']}><Login /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole('button', { name: /enter demo mode/i }));
+
+    await waitFor(() => expect(demoLogin).toHaveBeenCalledTimes(1));
+    expect(login).not.toHaveBeenCalled();
   });
 
   it('submits an authenticator code and permits retry after rejection', async () => {

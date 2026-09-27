@@ -74,7 +74,8 @@ def _seed_deals(session, org_a: str, org_b: str) -> tuple[str, str]:
     # Orgs first (no RLS on organizations) — satisfies the deals FK.
     for oid in (org_a, org_b):
         session.execute(
-            text("INSERT INTO organizations (id, name, slug) VALUES (:id, :n, :s)"),
+            text("INSERT INTO organizations (id, name, slug, created_at, updated_at) "
+                 "VALUES (:id, :n, :s, '2026-09-01 12:00:00+00', '2026-09-01 12:00:00+00')"),
             {"id": oid, "n": f"Org {oid}", "s": oid},
         )
     session.commit()
@@ -85,8 +86,8 @@ def _seed_deals(session, org_a: str, org_b: str) -> tuple[str, str]:
     )
     session.execute(
         text(
-            "INSERT INTO deals (id, name, organization_id, status) "
-            "VALUES (:id, :n, :o, 'new')"
+            "INSERT INTO deals (id, name, organization_id, status, created_at, updated_at) "
+            "VALUES (:id, :n, :o, 'new', '2026-09-01 12:00:00+00', '2026-09-01 12:00:00+00')"
         ),
         {"id": deal_a, "n": "A-deal", "o": org_a},
     )
@@ -98,8 +99,8 @@ def _seed_deals(session, org_a: str, org_b: str) -> tuple[str, str]:
     )
     session.execute(
         text(
-            "INSERT INTO deals (id, name, organization_id, status) "
-            "VALUES (:id, :n, :o, 'new')"
+            "INSERT INTO deals (id, name, organization_id, status, created_at, updated_at) "
+            "VALUES (:id, :n, :o, 'new', '2026-09-01 12:00:00+00', '2026-09-01 12:00:00+00')"
         ),
         {"id": deal_b, "n": "B-deal", "o": org_b},
     )
@@ -148,8 +149,8 @@ def test_rls_blocks_writes_with_wrong_org(pg_session):
     with pytest.raises(DBAPIError) as error:
         pg_session.execute(
             text(
-                "INSERT INTO deals (id, name, organization_id, status) "
-                "VALUES (:id, 'evil', :o, 'new')"
+                "INSERT INTO deals (id, name, organization_id, status, created_at, updated_at) "
+                "VALUES (:id, 'evil', :o, 'new', '2026-09-01 12:00:00+00', '2026-09-01 12:00:00+00')"
             ),
             {"id": str(uuid.uuid4()), "o": org_b},
         )
@@ -280,7 +281,8 @@ def test_raw_record_trigger_blocks_direct_mutation_but_allows_org_erasure(
     raw_id = str(uuid.uuid4())
 
     pg_session.execute(
-        text("INSERT INTO organizations (id, name, slug) VALUES (:id, :n, :s)"),
+        text("INSERT INTO organizations (id, name, slug, created_at, updated_at) "
+             "VALUES (:id, :n, :s, '2026-09-01 12:00:00+00', '2026-09-01 12:00:00+00')"),
         {"id": org_id, "n": "Raw Guard", "s": org_id},
     )
     pg_session.commit()

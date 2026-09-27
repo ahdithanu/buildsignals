@@ -7,12 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [openingDemo, setOpeningDemo] = useState(false);
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
 
@@ -30,6 +31,23 @@ export default function Login() {
     }
   }
 
+  async function handleDemoLogin() {
+    setError(null);
+    setOpeningDemo(true);
+    try {
+      await demoLogin();
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Demo mode is not available on this deployment.',
+      );
+    } finally {
+      setOpeningDemo(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <section className="mx-auto flex w-full max-w-lg flex-col px-5 py-10 sm:px-8 sm:py-16">
@@ -43,7 +61,23 @@ export default function Login() {
           <h1 className="mt-3 text-2xl font-semibold">Sign in</h1>
           <p className="mt-1 text-xs text-muted-foreground">Permit, development and ownership intelligence.</p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          <button
+            type="button"
+            disabled={openingDemo || submitting}
+            onClick={handleDemoLogin}
+            className="mt-6 flex h-11 w-full items-center justify-between bg-foreground px-4 text-xs font-semibold text-background disabled:opacity-50"
+          >
+            {openingDemo ? 'Opening demo mode...' : 'Enter demo mode'}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
+          <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            <span>or use enterprise access</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <label className="block">
               <span className="section-label">Work email</span>
               <input

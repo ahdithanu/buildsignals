@@ -1,72 +1,95 @@
 # End-to-end tests (Playwright)
 
-Browser-level tests covering the critical user journeys: register → land on
-the dashboard, log out / log back in, bad-password rejection, and creating a
-deal through the modal.
-
-## ⚠️ Status: written but never executed
-
-These specs were authored against the source (real element ids, button text,
-and select option values read from `src/pages/` and `src/components/`) but
-**have not been run against the app** — the machine they were written on had
-Node 10, and Playwright needs Node 18+. They couldn't even be type-checked
-locally.
-
-**On the first real run, budget time to fix a selector or two.** The auth
-spec is the most stable (fixed `#email` / `#password` / `#fullName` ids). The
-deal spec is the most fragile — its Asset Type / Market fields are radix
-`<Select>` components driven via `role="combobox"` + `role="option"`, which
-are the likeliest to need adjustment.
+Browser-level critical journeys cover registration, login/logout, deal creation,
+dashboard activity, organization-scoped ingestion inventory, and AI evaluations.
 
 ## Requirements
 
-- Node 18+
-- Python backend deps installed (the config boots the API itself)
+- Node 22 and npm dependencies installed (`npm ci`).
+- Python backend dependencies installed from `requirements.txt`.
+- Playwright Chromium installed (`npm run e2e:install`).
+- Ports 8000 and 8080 available. Do not stop unrelated services to free them.
+
+When another agent is updating dependencies in a shared checkout, wait for its
+explicit ready signal before starting the app or running tests.
 
 ## Running
 
 ```bash
-# One-time: install the browser binary.
-npm run e2e:install
-
-# Run everything. The config boots BOTH servers automatically:
-#   backend  — FastAPI on :8000 (fresh migrated SQLite DB, rate limits raised)
-#   frontend — Vite dev server on :8080
+# All specs; the config starts and stops BOTH servers.
 npm run e2e
 
-# Headed / debug:
-npx playwright test -c e2e/playwright.config.ts --headed
-npx playwright test -c e2e/playwright.config.ts --debug
+# Evaluation dashboard only.
+npm run e2e -- evaluations.spec.ts
+
+# Select an installed Python interpreter if python3 is not suitable.
+PYTHON=/path/to/python npm run e2e -- evaluations.spec.ts
+
+# Interactive sessions, still using the isolated backend.
+npx playwright test -c e2e/playwright.config.ts evaluations.spec.ts --headed
+npx playwright test -c e2e/playwright.config.ts evaluations.spec.ts --debug
 ```
 
-The backend boots against a throwaway `e2e-test.db` (gitignored via `*.db`)
-and raises the auth rate limits so repeated register/login from one IP isn't
-429'd — the same gotcha documented in `loadtest/README.md`.
+The repository config starts FastAPI on `127.0.0.1:8000` through `e2e/backend.py`
+and Vite on port 8080. The backend creates a fresh SQLite database in a
+`TemporaryDirectory`, runs Alembic migrations, and overrides inherited database
+and service credentials. It raises auth rate limits for repeated local
+registration and disables configured email, Redis, and Sentry integrations.
+Both servers set `reuseExistingServer: false`; a localhost URL alone is not
+proof that a pre-existing server uses disposable data.
 
-## CI
+Do not replace this setup with staging/production URLs, a persistent database,
+or manually started servers. No deployment is part of these tests. Staging
+deployment is documented separately in `docs/staging.md` and
+`docs/runbooks/staging-deploy.md`, using `render-staging.yaml`.
 
-Workflow lives at `.github/workflows/e2e.yml`. It's **manual-trigger only**
-(`workflow_dispatch`) right now — run it from the Actions tab. Once the specs
-pass on a real run, uncomment the `pull_request` trigger in that file to gate
-PRs on them.
+## Evaluation Journey
 
-It's kept separate from `ci.yml` on purpose: E2E is slow (two servers + a real
-browser) and shouldn't block every push. The job does setup-node@20 +
-setup-python@3.11, installs both dependency trees, `npm run e2e:install` for
-the browser, then `npm run e2e` (the config's `webServer` boots both servers),
-and uploads `playwright-report/` as an artifact.
+`tests/evaluations.spec.ts` uses `registerAndLogin()` and `uniqueEmail()` to
+create a new organization and admin through the real registration UI. It uses
+the desktop Admin menu, verifies the empty state, seeds four synthetic datasets,
+and checks repeat seeding does not duplicate them. It runs the Copilot example
+replay, checks the passing gate, evidence/rubric/citations, heuristic confidence,
+and explicitly unknown tokens, cost, and latency. No API mocking or live LLM
+generation is used.
 
-First-run note: the artifact path assumes the HTML report lands at repo-root
-`playwright-report/`. If Playwright writes it elsewhere (e.g. under `e2e/`),
-fix the `path:` in the upload step — a one-line change the first run surfaces.
+A second replay is loaded again after a page reload and compared with the
+baseline. Both runs must be compatible, with zero metric deltas and no gate or
+case regression. At 390px, the test navigates through the Account menu and
+exercises comparison controls again, including same-run rejection. Both document
+and main-container horizontal overflow are checked. Desktop/mobile screenshots
+are written via `testInfo.outputPath()` into the test results directory.
+
+Passing synthetic replays verify the dashboard integration, not production AI
+quality. This spec does not cover live evaluation runners or non-admin access;
+those contracts have separate API/component tests.
+
+Verified locally on 2026-09-23 with Node 22, Anaconda Python, and Chromium:
+the focused evaluation journey passed, and the full suite passed all eight
+tests after the Router 7 upgrade. Desktop (1440px) and mobile (390px) screenshots
+were visually inspected, including mobile output, unknown telemetry, and
+comparison detail. Each invocation used a newly migrated temporary database.
+
+## CI And Artifacts
+
+The browser workflow is `.github/workflows/e2e.yml`; consult that file for its
+current triggers and runtime versions. It installs backend/frontend dependencies
+and Chromium, then runs the repository E2E command. The config enables the
+GitHub and HTML reporters in CI, with a trace on first retry and a screenshot on
+failure. HTML reports are written to `playwright-report/` and per-test outputs
+to `test-results/` by default.
 
 ## Layout
 
-```
+```text
 e2e/
-  playwright.config.ts   # boots both servers, chromium project
+  backend.py                  # migrated temporary SQLite backend
+  playwright.config.ts        # owns both servers; Chromium project
   tests/
-    helpers.ts           # registerAndLogin(), uniqueEmail(), PASSWORD
-    auth.spec.ts         # register / login / logout / bad-password
-    deal.spec.ts         # create a deal via the AddDealModal
+    helpers.ts                # isolated registration and sign-out helpers
+    auth.spec.ts               # registration/login/logout/bad password
+    deal.spec.ts               # create a deal through the modal
+    dashboard-activity.spec.ts # browser-only activity fixture, desktop/mobile
+    measured-inventory.spec.ts # real organization-scoped inventory
+    evaluations.spec.ts        # real synthetic replay and comparison journey
 ```

@@ -196,6 +196,10 @@ class NearbyParcelCandidate(OrgMixin, Base):
         UniqueConstraint("search_id", "parcel_id", name="uq_nearby_parcel_candidate_search_parcel"),
         Index("ix_nearby_parcel_candidate_search_rank", "search_id", "rank"),
         Index("ix_nearby_parcel_candidate_org_status", "organization_id", "review_status"),
+        Index(
+            "ix_nearby_parcel_candidate_assigned_to",
+            "organization_id", "assigned_to_user_id", "review_status",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))

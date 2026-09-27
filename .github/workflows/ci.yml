@@ -18,6 +18,7 @@ jobs:
       # as a non-superuser — exactly how the app connects in production.
       TEST_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
       TEST_EVAL_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
+      TEST_SCHEMA_RECONCILIATION_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
     services:
       postgres:
         # Nearby-parcel migrations require PostGIS (geography centroid + GIST index).
@@ -73,33 +74,9 @@ jobs:
         run: alembic upgrade head
 
       - name: Alembic drift check (no un-migrated model changes)
-        run: |
-          set -e
-          # Try `alembic check` (Alembic >= 1.9). If unavailable or it errors out
-          # with the wrong signature, fall back to autogenerate + diff inspection.
-          if alembic check 2>&1 | tee /tmp/alembic_check.log; then
-            echo "alembic check passed"
-          else
-            echo "alembic check failed or unavailable; falling back to autogenerate diff"
-            alembic revision --autogenerate -m ci_drift_check 2>&1 | tee /tmp/alembic_autogen.log
-            GENERATED=$(ls -t alembic/versions/*ci_drift_check*.py | head -n1)
-            if [ -z "$GENERATED" ]; then
-              echo "No autogenerate file produced — treating as no drift."
-              exit 0
-            fi
-            # If the generated migration's upgrade body only contains `pass`, no drift.
-            if grep -E "^\s*pass\s*$" "$GENERATED" > /dev/null && \
-               ! grep -E "op\.(create|drop|add|alter|rename)" "$GENERATED" > /dev/null; then
-              echo "No schema drift detected."
-              rm -f "$GENERATED"
-              exit 0
-            else
-              echo "Schema drift detected — model changes lack a migration."
-              cat "$GENERATED"
-              rm -f "$GENERATED"
-              exit 1
-            fi
-          fi
+        # Piping this through tee without pipefail previously hid drift failures.
+        # Alembic is pinned to a version supporting check; no success fallback.
+        run: python -m alembic check
 
       # Provision the Postgres DB for the gated tests. `appuser` is a
       # NON-superuser and RUNS the migrations, so it owns the tables — which
@@ -112,12 +89,17 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -d dealsignal_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE EXTENSION IF NOT EXISTS postgis;
+          CREATE EXTENSION IF NOT EXISTS postgis_topology;
           CREATE ROLE appuser LOGIN PASSWORD 'app';
           GRANT ALL ON SCHEMA public TO appuser;
           -- Eval RLS tests isolate their fixtures in a disposable schema.
           GRANT CREATE ON DATABASE dealsignal_test TO appuser;
           SQL
           DATABASE_URL="$TEST_POSTGRES_URL" alembic upgrade head
+
+      - name: PostgreSQL schema drift check
+        run: DATABASE_URL="$TEST_POSTGRES_URL" python -m alembic check
 
       # Coverage gate: floor is set below current (~88%) so it passes with
       # headroom but fails if a meaningful chunk of new code lands untested.

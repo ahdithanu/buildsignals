@@ -142,6 +142,24 @@ if IS_DEPLOYED and ALLOW_ANONYMOUS:
         "(staging and production are fail-closed)"
     )
 
+# One-click demo login. Disabled by default, and when enabled it authenticates
+# against a real seeded account without exposing the password to frontend code.
+DEMO_LOGIN_ENABLED: bool = _parse_bool(
+    os.environ.get("BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS")
+    or os.environ.get("DST_EXPOSE_DEMO_CREDENTIALS"),
+    default=False,
+)
+DEMO_LOGIN_EMAIL = (
+    os.environ.get("BUILD_SIGNALS_DEMO_EMAIL")
+    or os.environ.get("DST_BOOTSTRAP_EMAIL")
+    or ""
+).strip()
+DEMO_LOGIN_PASSWORD = (
+    os.environ.get("BUILD_SIGNALS_DEMO_PASSWORD")
+    or os.environ.get("DST_BOOTSTRAP_PASSWORD")
+    or ""
+)
+
 # Secure flag on the refresh cookie. Resolved BEFORE the production guards
 # below, which reference it — defining it after them would make the
 # SAMESITE=none guard raise NameError instead of its intended RuntimeError.
@@ -185,12 +203,14 @@ PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     # /auth/* to /v1/auth/*. Unversioned forms are kept for defense-in-depth
     # in case the middleware chain is ever reordered.
     "/auth/login",
+    "/auth/demo",
     "/auth/register",
     "/auth/refresh",
     "/auth/logout",
     "/auth/password/forgot",
     "/auth/password/reset",
     "/v1/auth/login",
+    "/v1/auth/demo",
     "/v1/auth/register",
     "/v1/auth/refresh",
     "/v1/auth/logout",
