@@ -209,6 +209,11 @@ describe('<AcquisitionMap> states', () => {
     expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
     expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
     expect(screen.getByText('Verified availability evidence: broker')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /open availability evidence/i })).toHaveAttribute(
+      'href',
+      'https://broker.example/listing/P-787',
+    );
+    expect(screen.getByRole('link', { name: /review parcel evidence/i })).toHaveAttribute('href', '/parcels/parcel-787');
     expect(screen.queryByText('10 State St')).not.toBeInTheDocument();
   });
 });

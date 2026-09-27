@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAcquisitionRadar, useZip3Heatmap } from '@/hooks/useAcquisitionRadar';
 import { useToast } from '@/hooks/use-toast';
 import {
+  availabilityEvidenceSource,
   availabilitySummary,
   hasTaxEvidence,
   lastSale,
@@ -349,6 +350,7 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
   const facts = item.facts ?? [];
   const owner = ownerName(facts);
   const sale = lastSale(facts);
+  const availabilityEvidence = availabilityEvidenceSource(facts);
   const area = acres(item);
   return (
     <>
@@ -363,9 +365,23 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
         <ParcelFact label="Last transfer" value={sale ? [sale.price, formatDate(sale.date)].filter(Boolean).join(' · ') : 'No admitted sale fact'} />
         <ParcelFact label="Last verified" value={formatDate(item.parcel.last_verified_at)} />
       </div>
+      {availabilityEvidence && (
+        <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-[10px] text-emerald-950">
+          <p className="font-semibold capitalize">{availabilityEvidence.evidenceType} availability source</p>
+          <p className="mt-1 text-emerald-900">
+            {Math.round(availabilityEvidence.confidence * 100)}% confidence
+            {availabilityEvidence.excerpt ? ` · ${availabilityEvidence.excerpt}` : ''}
+          </p>
+          {availabilityEvidence.url && (
+            <a href={availabilityEvidence.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold underline">
+              Open availability evidence <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+      )}
       <div className="mt-3 flex flex-wrap gap-1.5">
         <Link to={`/parcels/${item.parcel.id}`} className="inline-flex h-8 items-center gap-1.5 bg-foreground px-2.5 text-[9px] font-semibold text-background">
-          <ExternalLink className="h-3.5 w-3.5" /> Open parcel record
+          <ExternalLink className="h-3.5 w-3.5" /> Review parcel evidence
         </Link>
         {item.signals[0] && <Link to={`/deal/${item.signals[0].deal_id}`} className="inline-flex h-8 items-center border border-foreground px-2.5 text-[9px] font-semibold">Open opportunity</Link>}
       </div>

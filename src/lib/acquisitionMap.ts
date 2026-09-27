@@ -100,6 +100,18 @@ export function availabilitySummary(facts: ParcelFact[]) {
   return `Verified availability evidence: ${source}`;
 }
 
+export function availabilityEvidenceSource(facts: ParcelFact[]) {
+  const fact = verifiedAvailabilityFact(facts);
+  if (!fact) return null;
+  const value = availabilityValue(fact);
+  return {
+    url: fact.source_url || null,
+    excerpt: fact.excerpt || null,
+    evidenceType: String(value.evidence_type || value.source_type || fact.fact_type).replace(/_/g, ' '),
+    confidence: fact.confidence,
+  };
+}
+
 export function workflowLabel(status: AcquisitionCaseStatus) {
   const labels: Record<AcquisitionCaseStatus, string> = {
     candidate: 'Candidate',
