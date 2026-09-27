@@ -47,6 +47,9 @@ def _empty_bucket(zip3: str) -> dict[str, Any]:
         "sample_signals": [],
         "sample_parcels": [],
         "latest_signal_at": None,
+        "_latitude_sum": 0.0,
+        "_longitude_sum": 0.0,
+        "_coordinate_count": 0,
     }
 
 
@@ -72,6 +75,9 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
             bucket["approved_signals"] += 1
         if _valid_coordinate(permit.latitude, permit.longitude):
             bucket["mapped_signals"] += 1
+            bucket["_latitude_sum"] += permit.latitude
+            bucket["_longitude_sum"] += permit.longitude
+            bucket["_coordinate_count"] += 1
         if permit.state:
             bucket["states"].add(permit.state.upper())
         if permit.city:
@@ -112,6 +118,10 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
             bucket["states"].add(parcel.state.upper())
         if parcel.city:
             bucket["cities"].add(parcel.city)
+        if _valid_coordinate(parcel.latitude, parcel.longitude):
+            bucket["_latitude_sum"] += parcel.latitude
+            bucket["_longitude_sum"] += parcel.longitude
+            bucket["_coordinate_count"] += 1
         bucket["score"] += max(0.0, candidate.score) * 0.35
         if candidate.review_status == "shortlisted":
             bucket["score"] += 1.5
@@ -144,6 +154,11 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
         item["score"] = round(item["score"], 2)
         item["states"] = sorted(item["states"])
         item["cities"] = sorted(item["cities"])[:8]
+        coordinate_count = item.pop("_coordinate_count", 0)
+        latitude_sum = item.pop("_latitude_sum", 0.0)
+        longitude_sum = item.pop("_longitude_sum", 0.0)
+        item["latitude"] = round(latitude_sum / coordinate_count, 6) if coordinate_count else None
+        item["longitude"] = round(longitude_sum / coordinate_count, 6) if coordinate_count else None
         latest = item["latest_signal_at"]
         item["latest_signal_at"] = latest.isoformat() if isinstance(latest, datetime) else None
 

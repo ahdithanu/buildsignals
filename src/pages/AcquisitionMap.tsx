@@ -14,7 +14,7 @@ import { SignalMapExplorer } from '@/components/SignalMapExplorer';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAcquisitionRadar } from '@/hooks/useAcquisitionRadar';
+import { useAcquisitionRadar, useZip3Heatmap } from '@/hooks/useAcquisitionRadar';
 import { useToast } from '@/hooks/use-toast';
 import {
   hasTaxEvidence,
@@ -45,20 +45,28 @@ export default function AcquisitionMap() {
   const { role } = useAuth();
   const { toast } = useToast();
   const { data, isLoading, error, refetch, exportSearch } = useAcquisitionRadar({ limit: 100, offset: 0 });
+  const { data: heatmap } = useZip3Heatmap({ limit: 25 });
   const [selectedSignalId, setSelectedSignalId] = useState('');
   const [selectedParcelId, setSelectedParcelId] = useState('');
+  const [selectedZip3, setSelectedZip3] = useState('');
   const [assemblage, setAssemblage] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [activeOnly, setActiveOnly] = useState(true);
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const signals = useMemo(() => radarSignals(items), [items]);
-  const activeSignalId = selectedSignalId || signals[0]?.id || '';
+  const activeSignalId = selectedZip3 && !selectedSignalId ? '' : selectedSignalId || signals[0]?.id || '';
   const selectedSignal = signals.find((signal) => signal.id === activeSignalId);
   const connectedItems = activeSignalId
     ? items.filter((item) => item.signals.some((signal) => signal.deal_id === activeSignalId))
     : items;
+  const heatItems = heatmap?.items ?? [];
+  const topHeatScore = Math.max(...heatItems.map((item) => item.score), 1);
   const visibleItems = connectedItems.filter((item) => {
+    if (selectedZip3) {
+      const digits = (item.parcel.postal_code || '').replace(/\D/g, '');
+      if (!digits.startsWith(selectedZip3)) return false;
+    }
     if (activeOnly && item.review_status === 'dismissed') return false;
     if (activeFilters.has('Shortlisted') && item.review_status !== 'shortlisted') return false;
     if (activeFilters.has('Owner evidence') && !ownerName(item.facts ?? [])) return false;
@@ -188,12 +196,56 @@ export default function AcquisitionMap() {
             </select>
 
             <Suspense fallback={<p>Loading parcel map...</p>}>
-              <GeographicMap points={visibleItems.map(item => ({ id: item.parcel.id,
+              <GeographicMap points={[
+                ...heatItems
+                  .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+                  .map((item) => ({
+                    id: `zip3:${item.zip3}`,
+                    title: `ZIP3 ${item.zip3}: ${item.pre_approval_signals} pre-approval signals, ${item.parcel_candidate_count} nearby candidates`,
+                    latitude: item.latitude as number,
+                    longitude: item.longitude as number,
+                    kind: 'heat' as const,
+                    weight: 12 + (item.score / topHeatScore) * 16,
+                  })),
+                ...visibleItems.map(item => ({ id: item.parcel.id,
                 title: item.parcel.address || item.parcel.external_parcel_id,
                 latitude: item.parcel.latitude, longitude: item.parcel.longitude, kind: 'parcel' as const,
-              }))} onSelect={setSelectedParcelId} />
+              })),
+              ]} onSelect={(id) => {
+                if (id.startsWith('zip3:')) {
+                  setSelectedZip3(id.slice(5));
+                  setSelectedSignalId('');
+                  setSelectedParcelId('');
+                } else {
+                  setSelectedParcelId(id);
+                }
+              }} />
             </Suspense>
-            <div className="p-3">
+            <div className="space-y-3 p-3">
+              {!!heatItems.length && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="section-label text-foreground">ZIP3 opportunity heat</p>
+                    {selectedZip3 && <button type="button" className="text-[10px] font-semibold underline" onClick={() => setSelectedZip3('')}>Clear ZIP3</button>}
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {heatItems.slice(0, 10).map((item) => (
+                      <button
+                        key={item.zip3}
+                        type="button"
+                        onClick={() => { setSelectedZip3(item.zip3); setSelectedSignalId(''); setSelectedParcelId(''); }}
+                        className={cn(
+                          'shrink-0 border border-input bg-card px-3 py-2 text-left text-[10px]',
+                          selectedZip3 === item.zip3 && 'border-foreground bg-foreground text-background',
+                        )}
+                      >
+                        <span className="block text-xs font-semibold">ZIP3 {item.zip3}</span>
+                        <span className="mt-1 block">{item.pre_approval_signals} pre-approval · {item.parcel_candidate_count} candidates</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setActiveOnly((value) => !value)}
@@ -203,7 +255,7 @@ export default function AcquisitionMap() {
               </button>
             </div>
             <div className="px-3 pb-3 text-xs text-muted-foreground">
-              {selectedSignal?.market || 'National'} · {connectedItems.length} ranked parcels · {visibleItems.length} shown
+              {selectedSignal?.market || 'National'}{selectedZip3 ? ` · ZIP3 ${selectedZip3}` : ''} · {connectedItems.length} ranked parcels · {visibleItems.length} shown
             </div>
           </section>
 

@@ -30,6 +30,8 @@ def test_zip3_heatmap_separates_candidates_from_verified_for_sale(client, db, tm
     result = zip3_heatmap(db)
     top = result["items"][0]
     assert top["zip3"] == "787"
+    assert top["latitude"] == 30.2672
+    assert round(top["longitude"], 3) == -97.739
     assert top["pre_approval_signals"] == 1
     assert top["parcel_candidate_count"] == 1
     assert top["shortlisted_parcel_count"] == 1

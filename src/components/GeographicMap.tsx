@@ -7,7 +7,8 @@ export interface GeographicPoint {
   title: string;
   latitude: number;
   longitude: number;
-  kind: 'permit' | 'planning' | 'parcel';
+  kind: 'permit' | 'planning' | 'parcel' | 'heat';
+  weight?: number;
   location_method?: 'source_coordinate' | 'census_address_range_estimate';
 }
 
@@ -73,9 +74,9 @@ export default function GeographicMap({ points, boundaries = [], initialCenter, 
       const label = document.createElement('span');
       label.textContent = groupPoints.length > 1 ? `${groupPoints.length} ${point.kind} records at this coordinate` : point.title;
       const marker = L.circleMarker([point.latitude, point.longitude], {
-        radius: groupPoints.length > 1 ? 14 : 8,
-        color: point.kind === 'planning' ? '#047857' : point.kind === 'parcel' ? '#9f1239' : point.location_method === 'census_address_range_estimate' ? '#a16207' : '#1d4ed8',
-        fillOpacity: 0.8, weight: 2,
+        radius: point.kind === 'heat' ? Math.max(12, Math.min(28, point.weight ?? 12)) : groupPoints.length > 1 ? 14 : 8,
+        color: point.kind === 'heat' ? '#f59e0b' : point.kind === 'planning' ? '#047857' : point.kind === 'parcel' ? '#9f1239' : point.location_method === 'census_address_range_estimate' ? '#a16207' : '#1d4ed8',
+        fillOpacity: point.kind === 'heat' ? 0.38 : 0.8, weight: point.kind === 'heat' ? 3 : 2,
       }).bindPopup(label).on('click', () => selection.current(point.id)).addTo(group);
       if (groupPoints.length > 1) marker.bindTooltip(String(groupPoints.length), {
         permanent: true, direction: 'center', className: 'geographic-map-count',

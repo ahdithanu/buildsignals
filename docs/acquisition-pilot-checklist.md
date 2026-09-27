@@ -423,6 +423,12 @@ UI repeats that distinction so BuildSignals can help users find where to look
 without implying a parcel is on-market from public permit or assessor data
 alone.
 
+The acquisition map consumes the same ZIP3 heat output as centroid bubbles sized
+by score. Selecting a ZIP3 clears the single-signal focus and filters the ranked
+parcel table to candidate parcels in that market cluster. These centroids are
+derived from admitted source coordinates and nearby parcel coordinates; they are
+not licensed ZIP boundary polygons.
+
 Leaflet is lazy-loaded. OpenStreetMap raster tiles load only for the visible map,
 with attribution and an origin referrer. There is no bulk fetch or offline cache.
 Tile failures show a notice without hiding source records. Public tiles have no

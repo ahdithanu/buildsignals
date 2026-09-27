@@ -259,6 +259,8 @@ export interface Zip3HeatmapItem {
   candidate_not_listing_count: number;
   states: string[];
   cities: string[];
+  latitude?: number | null;
+  longitude?: number | null;
   sample_signals: Zip3HeatmapSignal[];
   sample_parcels: Zip3HeatmapParcel[];
   latest_signal_at?: string | null;
