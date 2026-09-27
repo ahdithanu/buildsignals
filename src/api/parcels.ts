@@ -15,6 +15,8 @@ import type {
   ParcelAcquisitionActivityCreate,
   ParcelAcquisitionCase,
   ParcelAcquisitionCaseUpdate,
+  ParcelAvailabilityEvidenceCreate,
+  ParcelFact,
   Zip3HeatmapResponse,
 } from '@/types/parcel';
 
@@ -52,6 +54,11 @@ export const parcelsApi = {
     apiClient.download(`/nearby-parcel-searches/${searchId}/export`, 'POST'),
   detail: (parcelId: string): Promise<ParcelDetail> =>
     apiClient.get<ParcelDetail>(`/parcels/${parcelId}`),
+  createAvailabilityEvidence: (
+    parcelId: string,
+    payload: ParcelAvailabilityEvidenceCreate,
+  ): Promise<ParcelFact> =>
+    apiClient.post<ParcelFact>(`/parcels/${parcelId}/availability-evidence`, payload),
   create: (dealId: string, payload: NearbyParcelSearchCreate): Promise<NearbyParcelSearch> =>
     apiClient.post<NearbyParcelSearch>(`/deals/${dealId}/nearby-parcel-searches`, payload),
   review: (candidateId: string, reviewStatus: ParcelReviewStatus): Promise<NearbyParcelCandidate> =>

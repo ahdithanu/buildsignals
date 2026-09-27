@@ -431,6 +431,16 @@ broker / owner / auction evidence type, confidence of at least 0.7, and source
 evidence such as a URL or excerpt. Nearby parcel proximity, assessor fields,
 high land value, or user shortlist actions do not satisfy this contract.
 
+Admin/editor users can now add reviewed parcel availability evidence from the
+parcel detail page or `POST /parcels/{parcel_id}/availability-evidence`. The
+endpoint creates a tenant-scoped manual ingestion source, completed ingestion
+run, raw source record, immutable audit event, and current `availability` parcel
+fact. It requires recognized availability status, broker/listing/owner/auction
+evidence type, confidence of at least 0.7, and a source URL or excerpt. This is
+for source-backed broker or owner evidence collection while automated listing
+feeds remain unadmitted; it does not let a reviewer mark nearby candidates as
+for sale without evidence.
+
 The acquisition map consumes the same ZIP3 heat output as centroid bubbles sized
 by score. Selecting a ZIP3 clears the single-signal focus and filters the ranked
 parcel table to candidate parcels in that market cluster. These centroids are

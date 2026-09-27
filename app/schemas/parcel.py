@@ -30,6 +30,18 @@ class NearbyParcelOpportunityCreate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
 
 
+class ParcelAvailabilityEvidenceCreate(BaseModel):
+    status: Literal["available", "for_sale", "listed", "broker_listed", "owner_indicated_available"]
+    evidence_type: Literal["listing", "broker", "owner", "auction"]
+    source_url: Optional[str] = Field(default=None, max_length=2000)
+    excerpt: Optional[str] = Field(default=None, min_length=1, max_length=5000)
+    confidence: float = Field(ge=0.7, le=1.0)
+    observed_at: Optional[datetime] = None
+    asking_price: Optional[float] = Field(default=None, ge=0)
+    contact_name: Optional[str] = Field(default=None, max_length=255)
+    contact_company: Optional[str] = Field(default=None, max_length=255)
+
+
 class ParcelFactResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

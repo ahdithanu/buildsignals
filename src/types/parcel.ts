@@ -18,6 +18,18 @@ export interface ParcelFact {
   last_verified_at: string;
 }
 
+export interface ParcelAvailabilityEvidenceCreate {
+  status: 'available' | 'for_sale' | 'listed' | 'broker_listed' | 'owner_indicated_available';
+  evidence_type: 'listing' | 'broker' | 'owner' | 'auction';
+  source_url?: string | null;
+  excerpt?: string | null;
+  confidence: number;
+  observed_at?: string | null;
+  asking_price?: number | null;
+  contact_name?: string | null;
+  contact_company?: string | null;
+}
+
 export type ParcelLineageEventType = 'split' | 'merge' | 'replat' | 'correction';
 
 export interface ParcelLineageEvidence {

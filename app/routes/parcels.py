@@ -27,7 +27,9 @@ from app.schemas.parcel import (
     NearbyParcelSearchCreate,
     NearbyParcelSearchResponse,
     NearbyParcelSearchSummary,
+    ParcelAvailabilityEvidenceCreate,
     ParcelDetailResponse,
+    ParcelFactResponse,
     ParcelLineageEventResponse,
     ParcelSearchHitResponse,
 )
@@ -41,6 +43,7 @@ from app.services.graph_service import relationships_for_entity
 from app.services.map_readiness import map_readiness
 from app.services.map_signals import list_map_signals
 from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
+from app.services.parcel_availability_ingestion import create_availability_evidence
 from app.services.parcel_lineage import get_lineage_event, lineage_events_for_parcel
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,
@@ -85,6 +88,44 @@ def get_zip3_heatmap(
 ):
     response.headers["Cache-Control"] = "no-store"
     return zip3_heatmap(db, limit=limit, state=state)
+
+
+@router.post(
+    "/parcels/{parcel_id}/availability-evidence",
+    response_model=ParcelFactResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def create_parcel_availability_evidence(
+    parcel_id: str,
+    payload: ParcelAvailabilityEvidenceCreate,
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        fact = create_availability_evidence(
+            db,
+            parcel_id=parcel_id,
+            status=payload.status,
+            evidence_type=payload.evidence_type,
+            source_url=payload.source_url,
+            excerpt=payload.excerpt,
+            confidence=payload.confidence,
+            observed_at=payload.observed_at,
+            asking_price=payload.asking_price,
+            contact_name=payload.contact_name,
+            contact_company=payload.contact_company,
+            actor_user_id=principal["user_id"],
+        )
+        db.commit()
+        db.refresh(fact)
+        return fact
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 def _lineage_response(event) -> dict:
