@@ -458,7 +458,8 @@ Remaining pilot gaps: production counts and auth verification, qualified nearby
 parcel inventory, reliable geocoding, reviewed brand relevance, deeper geography
 pagination, and unified signal-to-parcel selection. The acquisition map now
 shares backend state filtering with ZIP3 heat and can filter for source-backed
-verified availability, but source-record geography and saved ranked parcel
+verified availability. Signal geography and ranked parcel geography now share
+one page-level state filter, but source-record geography and saved ranked parcel
 results still live in separate map sections.
 
 ## Initial acquisition screening

@@ -7,7 +7,15 @@ import AcquisitionMap from '@/pages/AcquisitionMap';
 const refetch = vi.fn();
 let radarState: Record<string, unknown>;
 let heatmapState: Record<string, unknown>;
-vi.mock('@/components/SignalMapExplorer', () => ({ SignalMapExplorer: () => <div>Signal geography</div> }));
+vi.mock('@/components/SignalMapExplorer', () => ({
+  SignalMapExplorer: ({ state, onStateChange }: { state?: string; onStateChange?: (state: string) => void }) => (
+    <div>
+      <p>Signal geography</p>
+      <button type="button" onClick={() => onStateChange?.('TX')}>Set signal geography state</button>
+      <span>Signal state {state || 'all'}</span>
+    </div>
+  ),
+}));
 
 vi.mock('@/components/MapReadiness', () => ({ MapReadiness: () => <div>Workspace diagnostics</div> }));
 
@@ -201,6 +209,11 @@ describe('<AcquisitionMap> states', () => {
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
 
     expect(screen.getByText('ZIP3 opportunity heat')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Set signal geography state' }));
+    expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
+    expect(screen.getByText('Signal state TX')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear state' }));
+    expect(screen.getByText('Signal state all')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/filter acquisition map by state/i), { target: { value: 'tx' } });
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear state' }));

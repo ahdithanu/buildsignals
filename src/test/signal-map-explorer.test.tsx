@@ -8,8 +8,8 @@ import { apiClient } from '@/api/client';
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ organizationId: 'org-a' }) }));
 vi.mock('@/api/client', () => ({ apiClient: { get: vi.fn() } }));
 vi.mock('@/components/GeographicMap', () => ({ default: () => <div>Geographic map</div> }));
-function show() {
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><SignalMapExplorer /></MemoryRouter></QueryClientProvider>);
+function show(node = <SignalMapExplorer />) {
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter>{node}</MemoryRouter></QueryClientProvider>);
 }
 describe('independent signal map', () => {
   it('deep-links the selected planning evidence instead of the general first page', async () => {
@@ -33,5 +33,14 @@ describe('independent signal map', () => {
     show();
     expect(await screen.findByRole('alert')).toHaveTextContent('Signal locations could not be loaded');
     expect(screen.queryByText(/No geocoded records/)).not.toBeInTheDocument();
+  });
+  it('can delegate state changes to a parent map shell', async () => {
+    const onStateChange = vi.fn();
+    vi.mocked(apiClient.get).mockResolvedValue({ items: [], truncated_layers: [], limit_per_layer: 100 });
+    show(<SignalMapExplorer state="" onStateChange={onStateChange} />);
+
+    fireEvent.change(screen.getByLabelText('State abbreviation'), { target: { value: 'tx' } });
+
+    expect(onStateChange).toHaveBeenCalledWith('TX');
   });
 });

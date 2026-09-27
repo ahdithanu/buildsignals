@@ -17,12 +17,25 @@ interface MapSignal extends GeographicPoint {
 }
 interface MapResponse { items: MapSignal[]; truncated_layers: string[]; limit_per_layer: number }
 
-export function SignalMapExplorer() {
+export function SignalMapExplorer({
+  state,
+  onStateChange,
+}: {
+  state?: string;
+  onStateChange?: (state: string) => void;
+}) {
   const { organizationId } = useAuth();
   const [layer, setLayer] = useState('all');
-  const [state, setState] = useState('');
+  const [internalState, setInternalState] = useState('');
   const [selected, setSelected] = useState('');
-  const stateFilter = state.length === 2 ? state : '';
+  const selectedState = (state ?? internalState).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+  const stateFilter = selectedState.length === 2 ? selectedState : '';
+  const setSelectedState = (value: string) => {
+    const normalized = value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+    setSelected('');
+    if (onStateChange) onStateChange(normalized);
+    else setInternalState(normalized);
+  };
   const { data, error, isPending, refetch } = useQuery({
     queryKey: ['map-signals', organizationId, stateFilter], enabled: !!organizationId,
     queryFn: () => apiClient.get<MapResponse>('/acquisition-map/signals', { limit: 100, state: stateFilter || undefined }),
@@ -36,7 +49,7 @@ export function SignalMapExplorer() {
       <label className="text-sm">Layer <select className="border bg-background p-2" value={layer} onChange={e => setLayer(e.target.value)}>
         <option value="all">All records</option><option value="permit">Permits</option><option value="planning">Planning</option>
       </select></label>
-      <label className="text-sm">State <input aria-label="State abbreviation" className="w-16 border bg-background p-2" maxLength={2} value={state} onChange={e => setState(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))} onBlur={() => { if (state.length === 1) setState(''); }} /></label>
+      <label className="text-sm">State <input aria-label="State abbreviation" className="w-16 border bg-background p-2" maxLength={2} value={selectedState} onChange={e => setSelectedState(e.target.value)} onBlur={() => { if (selectedState.length === 1) setSelectedState(''); }} /></label>
     </div>
     {error ? <p role="alert">Signal locations could not be loaded. <button className="underline" onClick={() => refetch()}>Retry signals</button></p>
       : isPending ? <p role="status">Loading signal locations...</p>

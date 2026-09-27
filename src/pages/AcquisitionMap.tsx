@@ -130,12 +130,14 @@ export default function AcquisitionMap() {
     });
   }
 
-  if (isLoading) return <Layout><SignalMapExplorer /><LoadingState message="Loading acquisition map..." /></Layout>;
-  if (error) return <Layout><SignalMapExplorer /><ErrorState message="The acquisition map could not be loaded." onRetry={() => refetch()} /></Layout>;
+  const signalMap = <SignalMapExplorer state={stateFilter} onStateChange={setStateFilter} />;
+
+  if (isLoading) return <Layout>{signalMap}<LoadingState message="Loading acquisition map..." /></Layout>;
+  if (error) return <Layout>{signalMap}<ErrorState message="The acquisition map could not be loaded." onRetry={() => refetch()} /></Layout>;
   if (!items.length) {
     return (
       <Layout>
-        <SignalMapExplorer />
+        {signalMap}
         <EmptyState
           title="No ranked parcels yet"
           description="Run a nearby-parcel search from a geocoded opportunity to populate this workspace."
@@ -148,7 +150,7 @@ export default function AcquisitionMap() {
 
   return (
     <Layout>
-      <SignalMapExplorer />
+      {signalMap}
       <div className="grid min-h-[calc(100vh-48px)] lg:grid-cols-[320px_1fr]">
         <aside className="hidden min-h-0 border-r-2 border-foreground bg-card lg:flex lg:flex-col">
           <div className="border-b-2 border-foreground p-3">
