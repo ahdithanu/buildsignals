@@ -459,8 +459,10 @@ parcel inventory, reliable geocoding, reviewed brand relevance, deeper geography
 pagination, and unified signal-to-parcel selection. The acquisition map now
 shares backend state filtering with ZIP3 heat and can filter for source-backed
 verified availability. Signal geography and ranked parcel geography now share
-one page-level state filter, but source-record geography and saved ranked parcel
-results still live in separate map sections.
+one page-level state filter, and selecting a permit source record narrows the
+ranked parcel map to nearby candidates generated from that exact anchor permit
+when those saved searches exist. Planning-source-to-parcel linkage, deeper
+pagination, and a single combined map surface remain open.
 
 ## Initial acquisition screening
 

@@ -10,7 +10,7 @@ import {
 
 import { Layout } from '@/components/Layout';
 import { MapReadiness } from '@/components/MapReadiness';
-import { SignalMapExplorer } from '@/components/SignalMapExplorer';
+import { SignalMapExplorer, type MapSignal } from '@/components/SignalMapExplorer';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,6 +47,7 @@ export default function AcquisitionMap() {
   const { role } = useAuth();
   const { toast } = useToast();
   const [stateFilter, setStateFilter] = useState('');
+  const [selectedSourceRecord, setSelectedSourceRecord] = useState<MapSignal | null>(null);
   const selectedState = stateFilter.trim().toUpperCase() || undefined;
   const { data, isLoading, error, refetch, exportSearch } = useAcquisitionRadar({ state: selectedState, limit: 100, offset: 0 });
   const { data: heatmap } = useZip3Heatmap({ state: selectedState, limit: 25 });
@@ -61,7 +62,12 @@ export default function AcquisitionMap() {
   const signals = useMemo(() => radarSignals(items), [items]);
   const activeSignalId = selectedZip3 && !selectedSignalId ? '' : selectedSignalId || signals[0]?.id || '';
   const selectedSignal = signals.find((signal) => signal.id === activeSignalId);
-  const connectedItems = activeSignalId
+  const selectedSourcePermitId = selectedSourceRecord?.kind === 'permit'
+    ? selectedSourceRecord.id.replace(/^permit:/, '')
+    : '';
+  const connectedItems = selectedSourcePermitId
+    ? items.filter((item) => item.signals.some((signal) => signal.anchor_permit_id === selectedSourcePermitId))
+    : activeSignalId
     ? items.filter((item) => item.signals.some((signal) => signal.deal_id === activeSignalId))
     : items;
   const heatItems = heatmap?.items ?? [];
@@ -130,7 +136,13 @@ export default function AcquisitionMap() {
     });
   }
 
-  const signalMap = <SignalMapExplorer state={stateFilter} onStateChange={setStateFilter} />;
+  const signalMap = (
+    <SignalMapExplorer
+      state={stateFilter}
+      onStateChange={setStateFilter}
+      onRecordSelect={setSelectedSourceRecord}
+    />
+  );
 
   if (isLoading) return <Layout>{signalMap}<LoadingState message="Loading acquisition map..." /></Layout>;
   if (error) return <Layout>{signalMap}<ErrorState message="The acquisition map could not be loaded." onRetry={() => refetch()} /></Layout>;
@@ -203,6 +215,7 @@ export default function AcquisitionMap() {
                     setSelectedSignalId('');
                     setSelectedParcelId('');
                     setSelectedZip3('');
+                    setSelectedSourceRecord(null);
                   }}
                   placeholder="All"
                   aria-label="Filter acquisition map by state"
@@ -217,6 +230,7 @@ export default function AcquisitionMap() {
                     setSelectedSignalId('');
                     setSelectedParcelId('');
                     setSelectedZip3('');
+                    setSelectedSourceRecord(null);
                   }}
                   className="h-8 border border-foreground px-2 text-[10px] font-semibold"
                 >
@@ -285,6 +299,13 @@ export default function AcquisitionMap() {
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+              {selectedSourcePermitId && (
+                <div className="border border-foreground bg-card px-3 py-2 text-[10px]">
+                  <span className="font-semibold">Source-linked parcels:</span>{' '}
+                  {selectedSourceRecord?.title || selectedSourcePermitId}
+                  <button type="button" className="ml-2 font-semibold underline" onClick={() => setSelectedSourceRecord(null)}>Clear source</button>
                 </div>
               )}
               <button

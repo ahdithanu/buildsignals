@@ -182,6 +182,7 @@ export interface AcquisitionRadarSignal {
   search_id: string;
   deal_id: string;
   deal_name: string;
+  anchor_permit_id?: string | null;
   persona: ParcelPersona;
   approval_stage?: string | null;
   signal_confidence?: number | null;

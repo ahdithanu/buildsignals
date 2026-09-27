@@ -194,6 +194,7 @@ class AcquisitionRadarSignalResponse(BaseModel):
     search_id: str
     deal_id: str
     deal_name: str
+    anchor_permit_id: Optional[str] = None
     persona: str
     approval_stage: Optional[str] = None
     signal_confidence: Optional[float] = None

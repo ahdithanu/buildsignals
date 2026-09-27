@@ -8,10 +8,15 @@ const refetch = vi.fn();
 let radarState: Record<string, unknown>;
 let heatmapState: Record<string, unknown>;
 vi.mock('@/components/SignalMapExplorer', () => ({
-  SignalMapExplorer: ({ state, onStateChange }: { state?: string; onStateChange?: (state: string) => void }) => (
+  SignalMapExplorer: ({ state, onStateChange, onRecordSelect }: {
+    state?: string;
+    onStateChange?: (state: string) => void;
+    onRecordSelect?: (record: { id: string; kind: 'permit'; title: string; latitude: number; longitude: number }) => void;
+  }) => (
     <div>
       <p>Signal geography</p>
       <button type="button" onClick={() => onStateChange?.('TX')}>Set signal geography state</button>
+      <button type="button" onClick={() => onRecordSelect?.({ id: 'permit:permit-787', kind: 'permit', title: 'Retail source permit', latitude: 30.2672, longitude: -97.7431 })}>Select source permit</button>
       <span>Signal state {state || 'all'}</span>
     </div>
   ),
@@ -133,7 +138,7 @@ describe('<AcquisitionMap> states', () => {
               observed_at: '2026-09-27T00:00:00Z',
               last_verified_at: '2026-09-27T00:00:00Z',
             }],
-            signals: [{ candidate_id: 'candidate-787', search_id: 'search-1', deal_id: 'deal-1', deal_name: 'Retail signal', persona: 'developer', approval_stage: 'pre_approval', signal_confidence: 0.9, distance_miles: 0.4, candidate_score: 86, created_at: '2026-09-27T00:00:00Z' }],
+            signals: [{ candidate_id: 'candidate-787', search_id: 'search-1', deal_id: 'deal-1', deal_name: 'Retail signal', anchor_permit_id: 'permit-787', persona: 'developer', approval_stage: 'pre_approval', signal_confidence: 0.9, distance_miles: 0.4, candidate_score: 86, created_at: '2026-09-27T00:00:00Z' }],
           },
           {
             parcel: {
@@ -162,7 +167,7 @@ describe('<AcquisitionMap> states', () => {
             reasons: ['Secondary candidate'],
             cautions: [],
             facts: [],
-            signals: [{ candidate_id: 'candidate-606', search_id: 'search-2', deal_id: 'deal-2', deal_name: 'Chicago signal', persona: 'developer', approval_stage: 'approved', signal_confidence: 0.8, distance_miles: 0.8, candidate_score: 70, created_at: '2026-09-27T00:00:00Z' }],
+            signals: [{ candidate_id: 'candidate-606', search_id: 'search-2', deal_id: 'deal-2', deal_name: 'Chicago signal', anchor_permit_id: 'permit-606', persona: 'developer', approval_stage: 'approved', signal_confidence: 0.8, distance_miles: 0.8, candidate_score: 70, created_at: '2026-09-27T00:00:00Z' }],
           },
         ],
         total: 2,
@@ -214,6 +219,11 @@ describe('<AcquisitionMap> states', () => {
     expect(screen.getByText('Signal state TX')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear state' }));
     expect(screen.getByText('Signal state all')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Select source permit' }));
+    expect(screen.getByText(/Source-linked parcels:/)).toBeInTheDocument();
+    expect(screen.getByText(/Retail source permit/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear source' }));
+    expect(screen.queryByText(/Source-linked parcels:/)).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/filter acquisition map by state/i), { target: { value: 'tx' } });
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear state' }));

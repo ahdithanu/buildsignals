@@ -43,4 +43,22 @@ describe('independent signal map', () => {
 
     expect(onStateChange).toHaveBeenCalledWith('TX');
   });
+  it('notifies the parent when a source record is selected', async () => {
+    const onRecordSelect = vi.fn();
+    vi.mocked(apiClient.get).mockResolvedValue({
+      items: [{ id: 'p1', kind: 'permit', title: 'Expansion filing', latitude: 40, longitude: -83, raw_record_id: 'raw1' }],
+      truncated_layers: [],
+      limit_per_layer: 100,
+    });
+    show(<SignalMapExplorer onRecordSelect={onRecordSelect} />);
+    await screen.findByText(/1 geocoded source records/);
+
+    fireEvent.change(screen.getByLabelText('Source record'), { target: { value: 'permit:p1' } });
+
+    expect(onRecordSelect).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'permit:p1',
+      kind: 'permit',
+      title: 'Expansion filing',
+    }));
+  });
 });

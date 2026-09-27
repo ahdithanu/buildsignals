@@ -271,6 +271,7 @@ def list_acquisition_radar(
                 "search_id": candidate.search_id,
                 "deal_id": candidate.search.deal_id,
                 "deal_name": candidate.search.deal.name,
+                "anchor_permit_id": permit.id if permit else None,
                 "persona": candidate.search.persona,
                 "approval_stage": permit.approval_stage if permit else None,
                 "signal_confidence": match.confidence if match else None,
