@@ -97,6 +97,11 @@ current filtered queue URL for demos, analyst handoff, and manager review.
 Focused frontend tests verify the copied link preserves active availability,
 signal-overlap, follow-up, and status filters.
 
+Latest focused verification: backend parcel/radar/availability/ZIP3 regression
+suite passes 30 tests; frontend Radar, Radar isolation, map-state, and
+wireframe regression suite passes 15 tests. TypeScript check passes. Existing
+warnings are limited to Starlette/httpx and React Router future-flag notices.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
