@@ -18,6 +18,19 @@ Verification: the backend demo security/read-path suite passes 51 tests, focused
 passes. This does not activate production ingestion, qualify Franklin
 County/Columbus parcel rights, or create live inventory.
 
+### Daily acquisition workflow strip (2026-09-28)
+
+Acquisition Radar now shows the operating workflow explicitly above the parcel
+queue: Alert, Evidence, Review, Owner, and Saved. The strip uses existing
+tenant-scoped queue counts and promoted-state indicators so users can see how a
+development signal becomes source context, nearby parcel review, team ownership,
+and a saved opportunity/export workflow. The copy repeats that these counts are
+queue state, not market coverage or for-sale inventory.
+
+Verification: focused Acquisition Radar frontend tests pass with two cases, and
+TypeScript typecheck passes. This is UI workflow clarity over existing data; it
+does not replace real source-backed acceptance.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
