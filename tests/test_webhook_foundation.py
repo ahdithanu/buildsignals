@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -174,12 +175,68 @@ def test_admin_can_view_webhook_delivery_summary(client, db):
     assert summary["pending"] == 1
     assert summary["delivered"] == 1
     assert summary["failed"] == 1
+    assert summary["dead_lettered"] == 1
     assert summary["subscriptions_active"] == 1
     assert summary["subscriptions_disabled"] == 1
     assert summary["failure_rate"] == 0.5
     assert summary["latest_attempted_at"]
     assert summary["latest_created_at"]
     assert summary["last_error_message"] == "Target returned 500"
+
+
+def test_admin_can_list_and_acknowledge_webhook_dead_letters(client, db):
+    identity = _register(client, email="webhook-dead-letter@example.com", org_name="Webhook Dead Letter")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+    subscription = WebhookSubscription(
+        organization_id=org_id,
+        name="Dead letters",
+        target_url="https://example.test/dead-letter",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    failed = WebhookDelivery(
+        organization_id=org_id,
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="failed",
+        payload={},
+        status="failed",
+        attempt_count=8,
+        error_message="Webhook target returned HTTP 500",
+    )
+    pending = WebhookDelivery(
+        organization_id=org_id,
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="pending",
+        payload={},
+        status="pending",
+    )
+    db.add_all([failed, pending])
+    db.commit()
+
+    listed = client.get(f"/organizations/{org_id}/webhook-dead-letters", headers=headers)
+    acknowledged = client.post(
+        f"/organizations/{org_id}/webhook-dead-letters/{failed.id}/acknowledge",
+        headers=headers,
+        json={"note": "Customer fixed receiver and replayed separately."},
+    )
+    conflict = client.post(
+        f"/organizations/{org_id}/webhook-dead-letters/{pending.id}/acknowledge",
+        headers=headers,
+        json={},
+    )
+
+    assert listed.status_code == 200, listed.text
+    assert [row["id"] for row in listed.json()] == [failed.id]
+    assert acknowledged.status_code == 200, acknowledged.text
+    assert acknowledged.json()["status"] == "failed"
+    assert conflict.status_code == 409
+    audit = db.query(AuditLog).filter_by(entity_type="webhook_delivery", action="acknowledge_dead_letter").one()
+    assert json.loads(audit.new_values)["note"] == "Customer fixed receiver and replayed separately."
 
 
 def test_admin_can_replay_failed_webhook_delivery(client, db):

@@ -33,9 +33,11 @@ which preserves user-facing latency and avoids turning customer endpoint downtim
 - `PATCH /v1/organizations/{org_id}/webhook-subscriptions/{subscription_id}`
 - `GET /v1/organizations/{org_id}/webhook-deliveries`
 - `GET /v1/organizations/{org_id}/webhook-delivery-summary`
+- `GET /v1/organizations/{org_id}/webhook-dead-letters`
 - `POST /v1/organizations/{org_id}/webhook-test-events`
 - `POST /v1/organizations/{org_id}/webhook-deliveries/{delivery_id}/attempt`
 - `POST /v1/organizations/{org_id}/webhook-deliveries/{delivery_id}/replay`
+- `POST /v1/organizations/{org_id}/webhook-dead-letters/{delivery_id}/acknowledge`
 
 Only organization admins can manage subscriptions or inspect deliveries. All records are organization-scoped and
 covered by Postgres row-level security in production.
@@ -54,8 +56,8 @@ The queue is processed by a tenant-scoped worker that signs payloads using the c
 bounded retries, and records success or failure without blocking the originating workflow.
 
 `GET /v1/organizations/{org_id}/webhook-delivery-summary` provides an admin health rollup with total, pending,
-delivered, and failed deliveries, active/disabled subscription counts, failure rate, latest timestamps, and the most
-recent error message. Use it as the dashboard source before drilling into individual delivery rows.
+delivered, failed, and dead-lettered deliveries, active/disabled subscription counts, failure rate, latest timestamps,
+and the most recent error message. Use it as the dashboard source before drilling into individual delivery rows.
 
 ## Delivery Attempts
 
@@ -78,6 +80,14 @@ subscriptions fail pending deliveries instead of posting to stale customer endpo
 Admins can replay a failed or pending delivery after the customer fixes their receiving endpoint. Replay clears the
 current response/error fields and makes the row immediately eligible for the worker while preserving the original
 payload and attempt count. Delivered webhooks cannot be replayed.
+
+## Dead Letters
+
+Failed deliveries are the webhook dead-letter queue. Admins can list them with
+`GET /v1/organizations/{org_id}/webhook-dead-letters` and acknowledge triage with
+`POST /v1/organizations/{org_id}/webhook-dead-letters/{delivery_id}/acknowledge`. Acknowledgement writes an audit log
+with an optional note; it does not mutate the delivery payload, status, response excerpt, or error evidence. Replay is
+the recovery action when the customer receiver is ready for another attempt.
 
 ## Worker Runner
 

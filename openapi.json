@@ -14731,6 +14731,24 @@
         "title": "VersionRead",
         "type": "object"
       },
+      "WebhookDeadLetterAcknowledgeRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "WebhookDeadLetterAcknowledgeRequest",
+        "type": "object"
+      },
       "WebhookDeliveryResponse": {
         "properties": {
           "attempt_count": {
@@ -14861,6 +14879,10 @@
       },
       "WebhookDeliverySummaryResponse": {
         "properties": {
+          "dead_lettered": {
+            "title": "Dead Lettered",
+            "type": "integer"
+          },
           "delivered": {
             "title": "Delivered",
             "type": "integer"
@@ -14935,6 +14957,7 @@
           "pending",
           "delivered",
           "failed",
+          "dead_lettered",
           "subscriptions_active",
           "subscriptions_disabled",
           "failure_rate",
@@ -22813,6 +22836,165 @@
           }
         },
         "summary": "Update Member Role",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/v1/organizations/{org_id}/webhook-dead-letters": {
+      "get": {
+        "operationId": "list_webhook_dead_letters_v1_organizations__org_id__webhook_dead_letters_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WebhookDeliveryResponse"
+                  },
+                  "title": "Response List Webhook Dead Letters V1 Organizations  Org Id  Webhook Dead Letters Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Webhook Dead Letters",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/v1/organizations/{org_id}/webhook-dead-letters/{delivery_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledge_webhook_dead_letter_v1_organizations__org_id__webhook_dead_letters__delivery_id__acknowledge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": {
+              "title": "Delivery Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookDeadLetterAcknowledgeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeliveryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acknowledge Webhook Dead Letter",
         "tags": [
           "organizations"
         ]

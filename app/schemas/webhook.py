@@ -112,12 +112,17 @@ class WebhookDeliverySummaryResponse(BaseModel):
     pending: int
     delivered: int
     failed: int
+    dead_lettered: int
     subscriptions_active: int
     subscriptions_disabled: int
     failure_rate: float
     latest_attempted_at: datetime | None
     latest_created_at: datetime | None
     last_error_message: str | None
+
+
+class WebhookDeadLetterAcknowledgeRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=500)
 
 
 class WebhookTestEventRequest(BaseModel):

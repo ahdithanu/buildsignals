@@ -25,6 +25,7 @@ from app.schemas.organization import (
     UpdateMemberRequest,
 )
 from app.schemas.webhook import (
+    WebhookDeadLetterAcknowledgeRequest,
     WebhookDeliveryResponse,
     WebhookDeliverySummaryResponse,
     WebhookSubscriptionCreate,
@@ -44,6 +45,8 @@ from app.services.webhook_service import (
     attempt_webhook_delivery,
     create_subscription,
     enqueue_webhook_event,
+    get_failed_webhook_delivery,
+    list_dead_letter_webhook_deliveries,
     replay_webhook_delivery,
     summarize_webhook_deliveries,
     update_subscription,
@@ -494,6 +497,19 @@ def get_webhook_delivery_summary(
     return summarize_webhook_deliveries(db, organization_id=org_id)
 
 
+@router.get("/{org_id}/webhook-dead-letters", response_model=list[WebhookDeliveryResponse])
+def list_webhook_dead_letters(
+    org_id: str,
+    limit: int = 50,
+    skip: int = 0,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return list_dead_letter_webhook_deliveries(db, organization_id=org_id, limit=limit, skip=skip)
+
+
 @router.post("/{org_id}/webhook-test-events", response_model=list[WebhookDeliveryResponse], status_code=201)
 def create_webhook_test_event(
     org_id: str,
@@ -587,6 +603,33 @@ def replay_organization_webhook_delivery(
     db.commit()
     db.refresh(replayed)
     return replayed
+
+
+@router.post("/{org_id}/webhook-dead-letters/{delivery_id}/acknowledge", response_model=WebhookDeliveryResponse)
+def acknowledge_webhook_dead_letter(
+    org_id: str,
+    delivery_id: str,
+    payload: WebhookDeadLetterAcknowledgeRequest,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    delivery = get_failed_webhook_delivery(db, organization_id=org_id, delivery_id=delivery_id)
+    log_change(
+        db,
+        "webhook_delivery",
+        delivery.id,
+        "acknowledge_dead_letter",
+        actor_id=principal["user_id"],
+        organization_id=org_id,
+        new_values={
+            "status": delivery.status,
+            "attempt_count": delivery.attempt_count,
+            "note": payload.note,
+        },
+    )
+    db.commit()
+    db.refresh(delivery)
+    return delivery
 
 
 # ── switch active org ──────────────────────────────────────────────────────
