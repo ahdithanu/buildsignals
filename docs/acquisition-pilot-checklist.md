@@ -474,15 +474,16 @@ https://leafletjs.com/reference.html for the basemap policy and library referenc
 
 Remaining pilot gaps: production counts and auth verification, qualified nearby
 parcel inventory, reliable geocoding, reviewed brand relevance, deeper geography
-pagination, and unified signal-to-parcel selection. The acquisition map now
+pagination, and broader cross-page signal-to-parcel navigation. The acquisition map now
 shares backend state filtering with ZIP3 heat and can filter for source-backed
 verified availability. Signal geography and ranked parcel geography now share
 one page-level state filter, and selecting a permit source record narrows the
 ranked parcel map to nearby candidates generated from that exact anchor permit
 when those saved searches exist. Selecting a planning source record now narrows
-ranked parcels by the same city/state market with an explicit caveat that this
-is not a direct planning-to-parcel search. Direct planning-source-to-parcel
-searches, deeper pagination, and a single combined map surface remain open.
+ranked parcels to exact planning-anchored searches when those saved searches
+exist, or by the same city/state market with an explicit caveat before a direct
+search has been run. Deeper pagination and a single combined map surface remain
+open.
 
 ## Initial acquisition screening
 
