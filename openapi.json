@@ -556,6 +556,28 @@
             "title": "Name",
             "type": "string"
           },
+          "rate_limit_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit Limit"
+          },
+          "rate_limit_window_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit Window Seconds"
+          },
           "revoked_at": {
             "anyOf": [
               {
@@ -589,6 +611,23 @@
           "secret": {
             "title": "Secret",
             "type": "string"
+          },
+          "usage_last_called_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage Last Called At"
+          },
+          "usage_total_calls": {
+            "default": 0,
+            "title": "Usage Total Calls",
+            "type": "integer"
           }
         },
         "required": [
@@ -648,6 +687,28 @@
             "title": "Name",
             "type": "string"
           },
+          "rate_limit_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit Limit"
+          },
+          "rate_limit_window_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit Window Seconds"
+          },
           "revoked_at": {
             "anyOf": [
               {
@@ -677,6 +738,23 @@
             },
             "title": "Scopes",
             "type": "array"
+          },
+          "usage_last_called_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage Last Called At"
+          },
+          "usage_total_calls": {
+            "default": 0,
+            "title": "Usage Total Calls",
+            "type": "integer"
           }
         },
         "required": [
@@ -691,6 +769,91 @@
           "last_used_at"
         ],
         "title": "ApiKeyResponse",
+        "type": "object"
+      },
+      "ApiKeyUsageEndpointSummary": {
+        "properties": {
+          "last_called_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Called At"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "total_calls": {
+            "title": "Total Calls",
+            "type": "integer"
+          },
+          "total_items": {
+            "title": "Total Items",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "method",
+          "total_calls",
+          "total_items",
+          "last_called_at"
+        ],
+        "title": "ApiKeyUsageEndpointSummary",
+        "type": "object"
+      },
+      "ApiKeyUsageSummary": {
+        "properties": {
+          "api_key_id": {
+            "title": "Api Key Id",
+            "type": "string"
+          },
+          "endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyUsageEndpointSummary"
+            },
+            "title": "Endpoints",
+            "type": "array"
+          },
+          "last_called_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Called At"
+          },
+          "total_calls": {
+            "title": "Total Calls",
+            "type": "integer"
+          },
+          "total_items": {
+            "title": "Total Items",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "api_key_id",
+          "total_calls",
+          "total_items",
+          "last_called_at",
+          "endpoints"
+        ],
+        "title": "ApiKeyUsageSummary",
         "type": "object"
       },
       "ApprovedOnlyCoverageSourceResponse": {
@@ -21516,6 +21679,73 @@
           }
         },
         "summary": "Revoke Organization Api Key",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/v1/organizations/{org_id}/api-keys/{key_id}/usage": {
+      "get": {
+        "operationId": "get_organization_api_key_usage_v1_organizations__org_id__api_keys__key_id__usage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyUsageSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Organization Api Key Usage",
         "tags": [
           "organizations"
         ]
