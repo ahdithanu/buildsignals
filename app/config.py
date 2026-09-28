@@ -216,6 +216,9 @@ PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     "/v1/auth/logout",
     "/v1/auth/password/forgot",
     "/v1/auth/password/reset",
+    # Public API routes perform their own organization API-key validation.
+    "/public",
+    "/v1/public",
     "/docs",
     "/redoc",
     "/openapi.json",

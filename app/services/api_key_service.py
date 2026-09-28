@@ -83,3 +83,26 @@ def revoke_api_key(db: Session, *, api_key: OrganizationApiKey, actor_id: str) -
         api_key.revoked_by = actor_id
         db.add(api_key)
     return api_key
+
+
+def authenticate_api_key(db: Session, *, secret: str) -> OrganizationApiKey | None:
+    api_key = db.query(OrganizationApiKey).filter(
+        OrganizationApiKey.key_hash == hash_api_key(secret),
+        OrganizationApiKey.revoked_at.is_(None),
+    ).first()
+    if api_key is None:
+        return None
+    api_key.last_used_at = datetime.now(timezone.utc)
+    db.add(api_key)
+    db.commit()
+    db.refresh(api_key)
+    return api_key
+
+
+def has_scope(api_key: OrganizationApiKey, required_scope: str) -> bool:
+    scopes = set(parse_scopes(api_key.scopes))
+    if "admin" in scopes:
+        return True
+    if required_scope == "read" and "write" in scopes:
+        return True
+    return required_scope in scopes

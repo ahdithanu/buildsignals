@@ -55,6 +55,7 @@ from app.routes.password_reset import router as password_reset_router
 from app.routes.pipeline import router as pipeline_router
 from app.routes.planning import router as planning_router
 from app.routes.prompt_registry import router as prompt_registry_router
+from app.routes.public_api import router as public_api_router
 from app.routes.signals import router as signals_router
 from app.routes.twofa import router as twofa_router
 
@@ -79,7 +80,7 @@ app.add_middleware(
     allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Organization-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Request-ID", "X-Organization-ID"],
     expose_headers=[
         "Content-Disposition",
         "X-Exported-Count",
@@ -144,6 +145,7 @@ app.include_router(ingestion_onboarding_router, prefix=CURRENT_API_PREFIX)
 app.include_router(brands_router, prefix=CURRENT_API_PREFIX)
 app.include_router(parcels_router, prefix=CURRENT_API_PREFIX)
 app.include_router(planning_router, prefix=CURRENT_API_PREFIX)
+app.include_router(public_api_router, prefix=CURRENT_API_PREFIX)
 
 # NOTE: Schema is managed exclusively by Alembic. Production runs
 # `alembic upgrade head` in the Render preDeploy step (see render.yaml).
