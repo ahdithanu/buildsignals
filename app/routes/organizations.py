@@ -8,6 +8,7 @@ from app.models.api_key import OrganizationApiKey
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
+from app.models.webhook import WebhookDelivery, WebhookSubscription
 from app.routes.auth import _set_refresh_cookie
 from app.schemas.auth import TokenResponse
 from app.schemas.organization import (
@@ -23,6 +24,13 @@ from app.schemas.organization import (
     SwitchOrgRequest,
     UpdateMemberRequest,
 )
+from app.schemas.webhook import (
+    WebhookDeliveryResponse,
+    WebhookSubscriptionCreate,
+    WebhookSubscriptionResponse,
+    WebhookSubscriptionUpdate,
+    WebhookTestEventRequest,
+)
 from app.services.api_key_service import create_api_key, revoke_api_key, to_response
 from app.services.api_usage_service import (
     get_api_key_usage_totals,
@@ -31,6 +39,11 @@ from app.services.api_usage_service import (
 )
 from app.services.audit_service import log_change
 from app.services.security import create_access_token
+from app.services.webhook_service import (
+    create_subscription,
+    enqueue_webhook_event,
+    update_subscription,
+)
 from app.utils.auth_deps import get_current_user, require_role_of
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -385,6 +398,122 @@ def rebuild_organization_api_key_usage_rollups(
     )
     db.commit()
     return ApiKeyUsageRollupRebuildResponse(api_key_id=key_id, rebuilt_events=rebuilt_events)
+
+
+# ── webhook subscriptions ─────────────────────────────────────────────────
+
+@router.get("/{org_id}/webhook-subscriptions", response_model=list[WebhookSubscriptionResponse])
+def list_webhook_subscriptions(
+    org_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return (
+        db.query(WebhookSubscription)
+        .filter(WebhookSubscription.organization_id == org_id)
+        .order_by(WebhookSubscription.created_at.desc(), WebhookSubscription.id.desc())
+        .all()
+    )
+
+
+@router.post("/{org_id}/webhook-subscriptions", response_model=WebhookSubscriptionResponse, status_code=201)
+def create_webhook_subscription(
+    org_id: str,
+    payload: WebhookSubscriptionCreate,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return create_subscription(
+        db,
+        organization_id=org_id,
+        payload=payload,
+        actor_id=principal["user_id"],
+    )
+
+
+@router.patch("/{org_id}/webhook-subscriptions/{subscription_id}", response_model=WebhookSubscriptionResponse)
+def update_webhook_subscription(
+    org_id: str,
+    subscription_id: str,
+    payload: WebhookSubscriptionUpdate,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return update_subscription(
+        db,
+        organization_id=org_id,
+        subscription_id=subscription_id,
+        payload=payload,
+        actor_id=principal["user_id"],
+    )
+
+
+@router.get("/{org_id}/webhook-deliveries", response_model=list[WebhookDeliveryResponse])
+def list_webhook_deliveries(
+    org_id: str,
+    subscription_id: str | None = None,
+    status: str | None = None,
+    limit: int = 50,
+    skip: int = 0,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    query = db.query(WebhookDelivery).filter(WebhookDelivery.organization_id == org_id)
+    if subscription_id:
+        query = query.filter(WebhookDelivery.subscription_id == subscription_id)
+    if status:
+        query = query.filter(WebhookDelivery.status == status)
+    return (
+        query.order_by(WebhookDelivery.created_at.desc(), WebhookDelivery.id.desc())
+        .offset(skip)
+        .limit(min(max(limit, 1), 100))
+        .all()
+    )
+
+
+@router.post("/{org_id}/webhook-test-events", response_model=list[WebhookDeliveryResponse], status_code=201)
+def create_webhook_test_event(
+    org_id: str,
+    payload: WebhookTestEventRequest,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    deliveries = enqueue_webhook_event(
+        db,
+        organization_id=org_id,
+        event_type=payload.event_type,
+        event_id=payload.event_id,
+        payload={
+            **payload.payload,
+            "event_type": payload.event_type,
+            "event_id": payload.event_id,
+            "organization_id": org_id,
+            "triggered_by": principal["user_id"],
+        },
+    )
+    log_change(
+        db,
+        "webhook_delivery",
+        payload.event_id,
+        "enqueue_test_event",
+        actor_id=principal["user_id"],
+        organization_id=org_id,
+        new_values={"event_type": payload.event_type, "delivery_count": len(deliveries)},
+    )
+    db.commit()
+    for delivery in deliveries:
+        db.refresh(delivery)
+    return deliveries
 
 
 # ── switch active org ──────────────────────────────────────────────────────

@@ -71,6 +71,40 @@ and data warehouse sync without allowing external systems to mutate approvals.
 **Target:** Usage-based billing for AI enrichment, memo generation, seat count.
 
 **Stub path:** Emit usage events and daily aggregate rollups for API keys; add nightly aggregate job for AI workflow usage;
+
+---
+
+## Event-driven integrations (I7)
+
+**Target:** Push Build Signals workflow events into customer warehouses, CRMs,
+and governance systems without requiring constant polling.
+
+**Implemented foundation:** Organization admins can create, update, list, and
+disable webhook subscriptions with a validated event type allowlist and optional
+secret reference. Matching events can be queued into durable
+`webhook_deliveries` rows with pending/delivered/failed metadata, attempt
+counts, response excerpts, and retry scheduling fields. Test events can be
+enqueued from the admin API to verify customer configuration without touching
+production workflows.
+
+**Current event types:**
+
+- `deal.created`
+- `deal.updated`
+- `signal.created`
+- `assessment.revision.created`
+- `assessment.review.created`
+- `assessment.publication.created`
+- `eval.run.completed`
+- `eval.run.failed`
+
+**Tradeoff:** The first release persists queue rows but does not perform
+outbound HTTP calls synchronously inside app requests. A worker should own
+signing, retries, per-customer concurrency, and dead-letter handling.
+
+**Scaling path:** Move delivery to a dedicated worker pool with batched queue
+reads, idempotency keys, exponential backoff, dead-letter retention, and
+per-customer concurrency limits while preserving the subscription API.
 Stripe Billing integration for invoices.
 
 ---
