@@ -60,9 +60,34 @@ export class BuildSignalsClient {
     return this.request<JsonRecord>(`/public/deals/${dealId}/graph-context`);
   }
 
+  getWorkflowHistory(dealId: string, params: { limitPerSignal?: number } = {}): Promise<JsonRecord> {
+    return this.request<JsonRecord>(`/public/deals/${dealId}/workflow-history`, {
+      limit_per_signal: params.limitPerSignal ?? 25,
+    });
+  }
+
   listSignals(params: { dealId: string; limit?: number }): Promise<JsonRecord[]> {
     return this.request<JsonRecord[]>("/public/signals", {
       deal_id: params.dealId,
+      limit: params.limit ?? 25,
+    });
+  }
+
+  listSignalAssessmentRevisions(params: { signalId: string; limit?: number; skip?: number }): Promise<JsonRecord[]> {
+    return this.request<JsonRecord[]>(`/public/signals/${params.signalId}/assessment-revisions`, {
+      limit: params.limit ?? 25,
+      skip: params.skip ?? 0,
+    });
+  }
+
+  listRevisionReviews(params: { revisionId: string; limit?: number }): Promise<JsonRecord[]> {
+    return this.request<JsonRecord[]>(`/public/assessment-revisions/${params.revisionId}/reviews`, {
+      limit: params.limit ?? 25,
+    });
+  }
+
+  listRevisionPublications(params: { revisionId: string; limit?: number }): Promise<JsonRecord[]> {
+    return this.request<JsonRecord[]>(`/public/assessment-revisions/${params.revisionId}/publication`, {
       limit: params.limit ?? 25,
     });
   }
@@ -95,14 +120,33 @@ async function main() {
 
   const deal = await client.getDeal(String(deals[0].id));
   const graph = await client.getGraphContext(String(deal.id));
+  const workflow = await client.getWorkflowHistory(String(deal.id));
   const evalRuns = await client.listEvalRuns({ limit: 5 });
+  const graphBuckets = [
+    "companies",
+    "developers",
+    "parcels",
+    "owners",
+    "contractors",
+    "architects",
+    "engineers",
+    "permits",
+    "cities",
+    "lenders",
+    "brokers",
+    "other",
+  ];
   console.log(
     JSON.stringify(
       {
         deal: deal.name,
         city: deal.city,
-        relatedEntityCount: Array.isArray(graph.entities) ? graph.entities.length : 0,
-        relationshipCount: Array.isArray(graph.relationships) ? graph.relationships.length : 0,
+        rootEntityCount: Array.isArray(graph.root_entities) ? graph.root_entities.length : 0,
+        relationshipCount: graphBuckets.reduce((sum, bucket) => {
+          const rows = graph[bucket];
+          return sum + (Array.isArray(rows) ? rows.length : 0);
+        }, 0),
+        workflowSignalCount: Array.isArray(workflow.signals) ? workflow.signals.length : 0,
         recentEvalRuns: evalRuns.length,
       },
       null,
