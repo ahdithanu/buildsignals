@@ -6,6 +6,7 @@ import type {
   NearbyParcelCandidateAssignment,
   NearbyParcelOpportunityCreate,
   NearbyParcelSearchCreate,
+  PlanningNearbyParcelSearchCreate,
   ParcelPersona,
   ParcelReviewStatus,
 } from '@/types/parcel';
@@ -50,6 +51,17 @@ export function useNearbyParcels(dealId: string | undefined, persona: ParcelPers
       await refreshRadar();
     },
   });
+  const createFromPlanning = useMutation({
+    mutationFn: ({ planningRecordId, payload }: {
+      planningRecordId: string;
+      payload: PlanningNearbyParcelSearchCreate;
+    }) => parcelsApi.createFromPlanning(dealId!, planningRecordId, payload),
+    onSuccess: async (created) => {
+      queryClient.setQueryData([...queryKeys.parcels.search(created.id), ...scope], created);
+      await queryClient.invalidateQueries({ queryKey: [...queryKeys.parcels.history(dealId || ''), ...scope] });
+      await refreshRadar();
+    },
+  });
   const review = useMutation({
     mutationFn: ({ candidateId, status }: { candidateId: string; status: ParcelReviewStatus }) =>
       parcelsApi.review(candidateId, status),
@@ -81,5 +93,5 @@ export function useNearbyParcels(dealId: string | undefined, persona: ParcelPers
   const exportSearch = useMutation({
     mutationFn: (searchId: string) => parcelsApi.exportSearch(searchId),
   });
-  return { history, search, create, review, assign, promote, exportSearch };
+  return { history, search, create, createFromPlanning, review, assign, promote, exportSearch };
 }

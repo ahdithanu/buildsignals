@@ -182,7 +182,7 @@ export default function DealDetail() {
             </motion.div>
 
             <motion.div {...fadeIn} transition={{ delay: 0.12 }}>
-              <NearbyParcelsPanel dealId={id} />
+              <NearbyParcelsPanel dealId={id} deal={deal} />
             </motion.div>
 
             <motion.div {...fadeIn} transition={{ delay: 0.12 }}>

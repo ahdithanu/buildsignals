@@ -14,8 +14,11 @@ the UI continues to show the explicit city/state market fallback rather than
 pretending that nearby parcels are directly linked.
 
 Verification: focused backend parcel/availability/ZIP3 tests, focused
-acquisition-map frontend tests, and TypeScript checks pass. This does not
-activate any new parcel source or qualify Columbus/Franklin County rights.
+acquisition-map and nearby-parcel-panel frontend tests, and TypeScript checks
+pass. The opportunity detail nearby-parcels panel now lists geocoded planning
+records from the deal market as selectable anchors and calls the planning
+nearby-parcel endpoint. This does not activate any new parcel source or qualify
+Columbus/Franklin County rights.
 
 ### Full regional rollout visibility (2026-09-26)
 

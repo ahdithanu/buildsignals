@@ -13,6 +13,9 @@ vi.mock("@/hooks/useNearbyParcels", () => ({
 vi.mock("@/hooks/useOrganizationMembers", () => ({
   useOrganizationMembers: vi.fn(),
 }));
+vi.mock("@/hooks/usePlanningSignals", () => ({
+  usePlanningSignals: vi.fn(),
+}));
 const authState = vi.hoisted(() => ({ role: "admin" }));
 
 vi.mock("@/contexts/AuthContext", () => ({
@@ -28,10 +31,12 @@ vi.mock("@/contexts/AuthContext", () => ({
 import { usePermitBrandMatches } from "@/hooks/usePermitBrandMatches";
 import { useNearbyParcels } from "@/hooks/useNearbyParcels";
 import { useOrganizationMembers } from "@/hooks/useOrganizationMembers";
+import { usePlanningSignals } from "@/hooks/usePlanningSignals";
 
 describe("<NearbyParcelsPanel>", () => {
   beforeEach(() => {
     authState.role = "admin";
+    (usePlanningSignals as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ data: [] });
   });
 
   it("shows the buyer-lens parcel workflow for a geocoded pre-approval signal", () => {
@@ -104,6 +109,7 @@ describe("<NearbyParcelsPanel>", () => {
         error: null,
       },
       create: { isPending: false, mutate: vi.fn(), error: null },
+      createFromPlanning: { isPending: false, mutate: vi.fn(), error: null },
       review: { isPending: false, mutate: vi.fn() },
       assign: { isPending: false, mutate: vi.fn(), error: null },
       promote: { isPending: false, mutate: vi.fn(), error: null },
@@ -237,6 +243,7 @@ describe("<NearbyParcelsPanel>", () => {
         error: null,
       },
       create: { isPending: false, mutate: vi.fn(), error: null },
+      createFromPlanning: { isPending: false, mutate: vi.fn(), error: null },
       review: { isPending: false, mutate: vi.fn() },
       assign: { isPending: false, mutate: vi.fn(), error: null },
       promote: { isPending: false, mutate: vi.fn(), error: null },
@@ -290,6 +297,7 @@ describe("<NearbyParcelsPanel>", () => {
         error: null,
       },
       create: { isPending: false, mutate: createMutate, error: null },
+      createFromPlanning: { isPending: false, mutate: vi.fn(), error: null },
       review: { isPending: false, mutate: vi.fn() },
       assign: { isPending: false, mutate: vi.fn(), error: null },
       promote: { isPending: false, mutate: vi.fn(), error: null },
@@ -318,6 +326,135 @@ describe("<NearbyParcelsPanel>", () => {
       minimum_land_area_sq_ft: 50000,
       zoning_codes: ["CS", "MU"],
       land_uses: ["Retail", "Office"],
+    });
+  });
+
+  it("runs a planning-anchored nearby parcel search from a geocoded planning signal", () => {
+    const createFromPlanning = vi.fn();
+    (usePermitBrandMatches as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ data: [] });
+    (usePlanningSignals as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: [
+        {
+          id: "planning-1",
+          source_id: "source-1",
+          external_record_id: "PLAN-1",
+          event_type: "planning_hearing_agenda_item",
+          stage: "pre_approval",
+          title: "Rezoning for neighborhood retail",
+          address: "200 Main St",
+          city: "Austin",
+          state: "TX",
+          latitude: 30.27,
+          longitude: -97.74,
+          signal_categories: ["retail"],
+          priority_reasons: [],
+          priority_score: 82,
+          confidence: 0.9,
+          first_seen_at: "2026-09-01T00:00:00Z",
+          last_seen_at: "2026-09-01T00:00:00Z",
+          latest_raw_record: {
+            id: "raw-1",
+            external_record_id: "PLAN-1",
+            content_hash: "hash",
+            received_at: "2026-09-01T00:00:00Z",
+          },
+          company_matches: [],
+        },
+      ],
+    });
+    (useNearbyParcels as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      history: { data: [] },
+      search: {
+        data: null,
+        isLoading: false,
+        error: null,
+      },
+      create: { isPending: false, mutate: vi.fn(), error: null },
+      createFromPlanning: { isPending: false, mutate: createFromPlanning, error: null },
+      review: { isPending: false, mutate: vi.fn() },
+      assign: { isPending: false, mutate: vi.fn(), error: null },
+      promote: { isPending: false, mutate: vi.fn(), error: null },
+      exportSearch: { isPending: false, mutate: vi.fn(), error: null },
+    });
+    (useOrganizationMembers as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ data: [] });
+
+    render(
+      <MemoryRouter>
+        <NearbyParcelsPanel
+          dealId="deal-1"
+          deal={{
+            id: "deal-1",
+            name: "Austin retail pursuit",
+            address: "200 Main St",
+            market: "Austin, TX",
+            assetClass: "retail",
+            askingPrice: 0,
+            noi: null,
+            dealScore: 0,
+            projectedIrr: null,
+            equityMultiple: null,
+            riskLevel: "medium",
+            status: "new",
+            source: "",
+            broker: "",
+            yearBuilt: 0,
+            units: 0,
+            squareFeet: 0,
+            summary: "",
+            thesis: "",
+            risks: [],
+            riskFlags: [],
+            nextSteps: [],
+            signals: [],
+            documents: [],
+            assumptions: {
+              purchasePrice: 0,
+              closingCosts: 0,
+              renovationCost: 0,
+              exitCapRate: 0,
+              holdPeriod: 0,
+              rentGrowth: 0,
+              vacancy: 0,
+              opexRatio: 0,
+              ltv: 0,
+              interestRate: 0,
+              stabilizationMonths: 0,
+            },
+            memo: {
+              executiveSummary: "",
+              whyThisDeal: "",
+              propertyOverview: "",
+              marketOverview: "",
+              financialSummary: "",
+              risksAndMitigants: "",
+              valueCreationPlan: "",
+              recommendedAction: "",
+            },
+            activity: [],
+            lastUpdated: "",
+            dueDate: "",
+            owner: "",
+            cashOnCash: null,
+            subscores: null,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("option", { name: /Planning · Rezoning for neighborhood retail/i })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/signal anchor/i), { target: { value: "planning:planning-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /search nearby parcels/i }));
+
+    expect(createFromPlanning).toHaveBeenCalledWith({
+      planningRecordId: "planning-1",
+      payload: {
+        radius_miles: 2,
+        persona: "developer",
+        limit: 50,
+        minimum_land_area_sq_ft: undefined,
+        zoning_codes: [],
+        land_uses: [],
+      },
     });
   });
 
@@ -381,6 +518,7 @@ describe("<NearbyParcelsPanel>", () => {
         error: null,
       },
       create: { isPending: false, mutate: vi.fn(), error: null },
+      createFromPlanning: { isPending: false, mutate: vi.fn(), error: null },
       review: { isPending: false, mutate: vi.fn() },
       assign: { isPending: false, mutate: assign, error: null },
       promote: { isPending: false, mutate: vi.fn(), error: null },
@@ -466,6 +604,7 @@ describe("<NearbyParcelsPanel>", () => {
         error: null,
       },
       create: { isPending: false, mutate: vi.fn(), error: null },
+      createFromPlanning: { isPending: false, mutate: vi.fn(), error: null },
       review: { isPending: false, mutate: vi.fn() },
       assign: { isPending: false, mutate: vi.fn(), error: null },
       promote: { isPending: false, mutate: promote, error: null },
