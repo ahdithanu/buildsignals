@@ -44,6 +44,8 @@ def test_signals_limit_and_authentication(client, db):
     assert client.get('/acquisition-map/signals').status_code == 401
     with pytest.raises(ValueError):
         list_map_signals(db, limit=101)
+    with pytest.raises(ValueError):
+        list_map_signals(db, offset=-1)
 
 
 def test_truncation_is_reported_per_layer(db):
@@ -59,3 +61,32 @@ def test_truncation_is_reported_per_layer(db):
     result = list_map_signals(db, limit=1)
     assert len(result['items']) == 1
     assert result['truncated_layers'] == ['planning']
+    assert result['next_offset'] == 1
+    assert result['previous_offset'] is None
+
+
+def test_signals_support_bounded_offsets(db):
+    source, _, _, _, permit = fixture_records(db)
+    first = PlanningRecord(
+        id='planning-a',
+        organization_id='default-org', source_id=source.id,
+        latest_raw_record_id=permit.latest_raw_record_id, external_record_id='agenda-a',
+        normalization_hash='e' * 64, title='A Hearing', event_type='hearing',
+        latitude=40, longitude=-83,
+    )
+    second = PlanningRecord(
+        id='planning-b',
+        organization_id='default-org', source_id=source.id,
+        latest_raw_record_id=permit.latest_raw_record_id, external_record_id='agenda-b',
+        normalization_hash='f' * 64, title='B Hearing', event_type='hearing',
+        latitude=40, longitude=-83,
+    )
+    db.add_all([first, second])
+    db.flush()
+
+    first_page = list_map_signals(db, limit=1)
+    second_page = list_map_signals(db, limit=1, offset=1)
+
+    assert first_page['next_offset'] == 1
+    assert second_page['previous_offset'] == 0
+    assert first_page['items'][0]['id'] != second_page['items'][0]['id']

@@ -6,9 +6,17 @@ from app.models.planning import PlanningRecord
 from app.utils.org_scope import active_query
 
 
-def list_map_signals(db: Session, *, limit: int = 100, state: str | None = None) -> dict:
+def list_map_signals(
+    db: Session,
+    *,
+    limit: int = 100,
+    offset: int = 0,
+    state: str | None = None,
+) -> dict:
     if not 1 <= limit <= 100:
         raise ValueError("Limit must be between 1 and 100")
+    if offset < 0:
+        raise ValueError("Offset must be greater than or equal to 0")
     items, truncated = [], []
     for kind, model in (("permit", PermitRecord), ("planning", PlanningRecord)):
         query = active_query(db.query(model), model).filter(
@@ -18,7 +26,7 @@ def list_map_signals(db: Session, *, limit: int = 100, state: str | None = None)
             query = query.filter(model.is_active.is_(True))
         if state:
             query = query.filter(model.state.ilike(state.strip()))
-        rows = query.order_by(model.updated_at.desc(), model.id).limit(limit + 1).all()
+        rows = query.order_by(model.updated_at.desc(), model.id).offset(offset).limit(limit + 1).all()
         if len(rows) > limit:
             truncated.append(kind)
         for row in rows[:limit]:
@@ -32,4 +40,11 @@ def list_map_signals(db: Session, *, limit: int = 100, state: str | None = None)
                 "source_id": row.source_id, "raw_record_id": row.latest_raw_record_id,
                 "source_url": row.source_url, "updated_at": row.updated_at,
             })
-    return {"items": items, "limit_per_layer": limit, "truncated_layers": truncated}
+    return {
+        "items": items,
+        "limit_per_layer": limit,
+        "offset_per_layer": offset,
+        "next_offset": offset + limit if truncated else None,
+        "previous_offset": max(0, offset - limit) if offset else None,
+        "truncated_layers": truncated,
+    }

@@ -68,11 +68,12 @@ router = APIRouter(tags=["nearby parcels"])
 def get_map_signals(
     response: Response,
     limit: int = Query(default=100, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=100000),
     state: str | None = Query(default=None, pattern="^[A-Za-z]{2}$"),
     db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "no-store"
-    return list_map_signals(db, limit=limit, state=state)
+    return list_map_signals(db, limit=limit, offset=offset, state=state)
 
 
 @router.get("/acquisition-map/readiness", dependencies=[Depends(get_current_user)])

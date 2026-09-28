@@ -61,4 +61,34 @@ describe('independent signal map', () => {
       title: 'Expansion filing',
     }));
   });
+  it('requests the next bounded page when more source records exist', async () => {
+    vi.mocked(apiClient.get)
+      .mockResolvedValueOnce({
+        items: [{ id: 'p1', kind: 'permit', title: 'Expansion filing', latitude: 40, longitude: -83, raw_record_id: 'raw1' }],
+        truncated_layers: ['permit'],
+        limit_per_layer: 100,
+        offset_per_layer: 0,
+        next_offset: 100,
+        previous_offset: null,
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: 'p2', kind: 'permit', title: 'Older filing', latitude: 40, longitude: -83, raw_record_id: 'raw2' }],
+        truncated_layers: [],
+        limit_per_layer: 100,
+        offset_per_layer: 100,
+        next_offset: null,
+        previous_offset: 0,
+      });
+    show();
+    await screen.findByText(/Expansion filing/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByText(/Older filing/)).toBeInTheDocument();
+    expect(apiClient.get).toHaveBeenLastCalledWith('/acquisition-map/signals', {
+      limit: 100,
+      offset: 100,
+      state: undefined,
+    });
+  });
 });
