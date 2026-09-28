@@ -27,7 +27,7 @@ PyJWT==2.13.0
 cryptography==50.0.1
 sentry-sdk[fastapi]==2.18.0
 pyotp==2.9.0
-prometheus-client==0.25.0
+prometheus-client==0.26.0
 resend>=2.32.2
 redis==5.0.7
 # Pure-Python PDF text extraction for public planning agendas and minutes.
