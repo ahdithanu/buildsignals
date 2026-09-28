@@ -145,6 +145,12 @@ describe('<AcquisitionRadar>', () => {
     expect(screen.getByRole('link', { name: 'Retail Shell Project' })).toHaveAttribute('href', '/deal/deal-2');
     expect(screen.getByRole('link', { name: '125 Congress Ave' })).toHaveAttribute('href', '/parcels/parcel-1');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Follow-up' }));
+    expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
+    fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Review' }));
+    expect(screen.getByLabelText('Case status')).toHaveValue('shortlisted');
+    expect(screen.getByLabelText('Follow-up')).toHaveValue('');
+
     fireEvent.click(screen.getByRole('button', { name: 'Shortlist' }));
     expect(updateCase).toHaveBeenCalledWith(
       { caseId: 'case-1', payload: { status: 'shortlisted' } },

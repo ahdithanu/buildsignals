@@ -67,6 +67,12 @@ The Radar summary now distinguishes scheduled follow-ups from due follow-ups:
 uses the due count so the daily queue reflects work to do now, not future
 reminders. Focused backend/frontend tests and TypeScript pass.
 
+The Radar workflow strip is now actionable: Alert clears queue filters, Review
+filters to shortlisted parcels, Owner to assigned cases, Outreach to contacted
+cases, Follow-up to due next actions, and Saved to promoted opportunities.
+Evidence remains informational until a cross-signal-only server filter exists.
+Focused frontend tests verify these one-click filters.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with

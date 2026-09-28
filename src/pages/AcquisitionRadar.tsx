@@ -260,6 +260,7 @@ function AcquisitionWorkflowStrip({
   contactedParcels,
   dueFollowUpParcels,
   promotedCount,
+  onStepSelect,
 }: {
   totalParcels: number;
   crossSignalParcels: number;
@@ -268,45 +269,53 @@ function AcquisitionWorkflowStrip({
   contactedParcels: number;
   dueFollowUpParcels: number;
   promotedCount: number;
+  onStepSelect: (step: 'alert' | 'review' | 'owner' | 'outreach' | 'follow_up' | 'saved') => void;
 }) {
   const steps = [
     {
+      key: 'alert' as const,
       label: 'Alert',
       value: totalParcels,
       detail: 'Ranked nearby parcels found around permit or planning signals.',
       icon: Radar,
     },
     {
+      key: undefined,
       label: 'Evidence',
       value: crossSignalParcels,
       detail: 'Parcels recurring across multiple source-backed opportunities.',
       icon: Search,
     },
     {
+      key: 'review' as const,
       label: 'Review',
       value: shortlistedParcels,
       detail: 'Shortlisted candidates ready for owner, broker, or diligence follow-up.',
       icon: Check,
     },
     {
+      key: 'owner' as const,
       label: 'Owner',
       value: assignedParcels,
       detail: 'Cases assigned to a team member for outreach and next action.',
       icon: Users,
     },
     {
+      key: 'outreach' as const,
       label: 'Outreach',
       value: contactedParcels,
       detail: 'Parcels with recorded owner, broker, or diligence contact.',
       icon: Mail,
     },
     {
+      key: 'follow_up' as const,
       label: 'Follow-up',
       value: dueFollowUpParcels,
       detail: 'Parcels with a due or overdue next step after outreach.',
       icon: CalendarClock,
     },
     {
+      key: 'saved' as const,
       label: 'Saved',
       value: promotedCount,
       detail: 'Parcel candidates promoted into saved opportunities.',
@@ -325,14 +334,22 @@ function AcquisitionWorkflowStrip({
         <Badge variant="outline">Operational view</Badge>
       </div>
       <ol className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-7">
-        {steps.map(({ label, value, detail, icon: Icon }, index) => (
+        {steps.map(({ key, label, value, detail, icon: Icon }, index) => (
           <li key={label} className="relative min-w-0 rounded-md border p-3">
             {index > 0 && <span className="absolute -left-3 top-1/2 hidden h-px w-3 bg-border md:block" aria-hidden="true" />}
-            <div className="flex items-center gap-2 text-[11px] font-medium uppercase text-muted-foreground">
-              <Icon className="h-3.5 w-3.5" />{label}
-            </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value.toLocaleString()}</p>
-            <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{detail}</p>
+            <button
+              type="button"
+              disabled={!key}
+              onClick={() => key && onStepSelect(key)}
+              className="block w-full rounded-sm text-left disabled:cursor-default enabled:focus-visible:outline-none enabled:focus-visible:ring-2 enabled:focus-visible:ring-ring"
+              aria-label={key ? `Filter acquisition radar by ${label}` : undefined}
+            >
+              <span className="flex items-center gap-2 text-[11px] font-medium uppercase text-muted-foreground">
+                <Icon className="h-3.5 w-3.5" />{label}
+              </span>
+              <span className="mt-2 block text-2xl font-semibold tabular-nums text-foreground">{value.toLocaleString()}</span>
+              <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">{detail}</span>
+            </button>
           </li>
         ))}
       </ol>
@@ -379,6 +396,20 @@ export default function AcquisitionRadar() {
   ];
   const resetFilters = () => {
     setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setFollowUpFilter(''); setOffset(0);
+  };
+  const selectWorkflowStep = (step: 'alert' | 'review' | 'owner' | 'outreach' | 'follow_up' | 'saved') => {
+    setQuery('');
+    setState('');
+    setPersona('');
+    setStatus('');
+    setAssignment('');
+    setFollowUpFilter('');
+    setOffset(0);
+    if (step === 'review') setStatus('shortlisted');
+    if (step === 'owner') setAssignment('assigned');
+    if (step === 'outreach') setStatus('contacted');
+    if (step === 'follow_up') setFollowUpFilter('due');
+    if (step === 'saved') setStatus('promoted');
   };
   const update = (item: AcquisitionRadarItem, payload: { status?: AcquisitionCaseStatus; assigned_to_user_id?: string | null }) => {
     if (!item.acquisition_case_id) return;
@@ -436,6 +467,7 @@ export default function AcquisitionRadar() {
           contactedParcels={summary?.contacted_parcels ?? 0}
           dueFollowUpParcels={summary?.due_follow_up_parcels ?? 0}
           promotedCount={summary?.promoted_parcels ?? 0}
+          onStepSelect={selectWorkflowStep}
         />
 
         <section className="rounded-md border bg-card p-4">
