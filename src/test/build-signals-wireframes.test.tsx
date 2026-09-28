@@ -16,6 +16,18 @@ vi.mock('@/components/SignalMapExplorer', () => ({ SignalMapExplorer: () => null
 vi.mock('@/components/GeographicMap', () => ({ default: () => null }));
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
+  useZip3Heatmap: () => ({
+    data: {
+      items: [],
+      limit: 12,
+      generated_at: '2026-08-12T12:00:00Z',
+      method_version: 'zip3-opportunity-heat-v1',
+      for_sale_semantics: {
+        nearby_candidate: 'Nearby candidate is not a listing.',
+        verified_for_sale: 'Verified for sale requires listing evidence.',
+      },
+    },
+  }),
   useAcquisitionRadar: () => ({
     data: {
       items: [
@@ -52,7 +64,7 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
         },
       ],
       total: 2, limit: 100, offset: 0,
-      summary: { total_parcels: 2, shortlisted_parcels: 1, multi_opportunity_parcels: 0, assigned_parcels: 0, state_count: 1 },
+      summary: { total_parcels: 2, shortlisted_parcels: 1, multi_opportunity_parcels: 0, assigned_parcels: 0, promoted_parcels: 0, state_count: 1 },
     },
     isLoading: false,
     error: null,

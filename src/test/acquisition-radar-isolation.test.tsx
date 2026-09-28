@@ -13,7 +13,7 @@ vi.mock('@/api/parcels', () => ({ parcelsApi: { radar: vi.fn() } }));
 function response(total: number): AcquisitionRadarResponse {
   return { items: [], total, limit: 50, offset: 0, summary: {
     total_parcels: total, shortlisted_parcels: 0, multi_opportunity_parcels: 0,
-    assigned_parcels: 0, state_count: 0,
+    assigned_parcels: 0, promoted_parcels: 0, state_count: 0,
   } };
 }
 

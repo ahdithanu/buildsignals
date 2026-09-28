@@ -90,7 +90,7 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
       total: 1,
       limit: 100,
       offset: 0,
-      summary: { total_parcels: 1, shortlisted_parcels: 0, multi_opportunity_parcels: 1, assigned_parcels: 0, state_count: 1 },
+      summary: { total_parcels: 1, shortlisted_parcels: 0, multi_opportunity_parcels: 1, assigned_parcels: 0, promoted_parcels: 0, state_count: 1 },
     },
     isLoading: false,
     error: null,

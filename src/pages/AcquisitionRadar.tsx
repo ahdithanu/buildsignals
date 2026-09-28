@@ -359,7 +359,6 @@ export default function AcquisitionRadar() {
     { label: 'Assigned', value: summary?.assigned_parcels ?? 0, icon: Users },
     { label: 'Markets', value: summary?.state_count ?? 0, icon: CircleDollarSign },
   ];
-  const promotedCount = data?.items.filter((item) => item.review_status === 'promoted' || !!item.promoted_deal_id).length ?? 0;
   const resetFilters = () => {
     setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setOffset(0);
   };
@@ -416,7 +415,7 @@ export default function AcquisitionRadar() {
           crossSignalParcels={summary?.multi_opportunity_parcels ?? 0}
           shortlistedParcels={summary?.shortlisted_parcels ?? 0}
           assignedParcels={summary?.assigned_parcels ?? 0}
-          promotedCount={promotedCount}
+          promotedCount={summary?.promoted_parcels ?? 0}
         />
 
         <section className="rounded-md border bg-card p-4">

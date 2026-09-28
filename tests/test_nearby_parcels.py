@@ -782,6 +782,7 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
         "shortlisted_parcels": 1,
         "multi_opportunity_parcels": 1,
         "assigned_parcels": 0,
+        "promoted_parcels": 0,
         "state_count": 1,
     }
     item = body["items"][0]
@@ -970,6 +971,11 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     assert body["candidate_id"] == candidate_id
     assert body["deal"]["name"] == "125 Main St Opportunity"
     assert body["deal"]["address"] == "P-PROMOTE Congress Ave"
+
+    radar = client.get("/acquisition-radar", headers=headers)
+    assert radar.status_code == 200, radar.text
+    assert radar.json()["summary"]["promoted_parcels"] == 1
+    assert radar.json()["items"][0]["promoted_deal_id"] == body["deal"]["id"]
 
     graph = client.get(f"/deals/{body['deal']['id']}/graph-context", headers=headers)
     assert graph.status_code == 200, graph.text

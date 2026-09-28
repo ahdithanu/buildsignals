@@ -235,6 +235,7 @@ export interface AcquisitionRadarResponse {
     shortlisted_parcels: number;
     multi_opportunity_parcels: number;
     assigned_parcels: number;
+    promoted_parcels: number;
     state_count: number;
   };
 }

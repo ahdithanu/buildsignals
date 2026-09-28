@@ -152,6 +152,11 @@ def list_acquisition_radar(
         ).isnot(None), 1), else_=0)).label(
             "assigned_count"
         ),
+        func.sum(case((func.coalesce(
+            ParcelAcquisitionCase.status, NearbyParcelCandidate.review_status
+        ) == "promoted", 1), else_=0)).label(
+            "promoted_count"
+        ),
     ).group_by(ParcelRecord.id, ParcelRecord.state).subquery()
 
     opportunity_points = case(
@@ -178,6 +183,7 @@ def list_acquisition_radar(
         func.sum(case((grouped.c.shortlisted_count > 0, 1), else_=0)),
         func.sum(case((grouped.c.opportunity_count > 1, 1), else_=0)),
         func.sum(case((grouped.c.assigned_count > 0, 1), else_=0)),
+        func.sum(case((grouped.c.promoted_count > 0, 1), else_=0)),
         func.count(func.distinct(grouped.c.state)),
     ).one()
     ranked_rows = db.query(grouped, radar_score).order_by(
@@ -195,7 +201,8 @@ def list_acquisition_radar(
                 "shortlisted_parcels": int(summary_row[0] or 0),
                 "multi_opportunity_parcels": int(summary_row[1] or 0),
                 "assigned_parcels": int(summary_row[2] or 0),
-                "state_count": int(summary_row[3] or 0),
+                "promoted_parcels": int(summary_row[3] or 0),
+                "state_count": int(summary_row[4] or 0),
             },
         }
 
@@ -324,7 +331,8 @@ def list_acquisition_radar(
             "shortlisted_parcels": int(summary_row[0] or 0),
             "multi_opportunity_parcels": int(summary_row[1] or 0),
             "assigned_parcels": int(summary_row[2] or 0),
-            "state_count": int(summary_row[3] or 0),
+            "promoted_parcels": int(summary_row[3] or 0),
+            "state_count": int(summary_row[4] or 0),
         },
     }
 
