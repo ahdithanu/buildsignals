@@ -35,6 +35,13 @@ beforeEach(() => {
 it('describes populated demo surfaces without claiming live parcel inventory', async () => {
   render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DemoWorkspace /></MemoryRouter></QueryClientProvider>);
   expect(await screen.findByText(/2,049 permit and site records/)).toBeInTheDocument();
+  expect(screen.getByText('Acquisition workflow readiness')).toBeInTheDocument();
+  expect(screen.getByText('Signal intake')).toBeInTheDocument();
+  expect(screen.getByText('Graph context')).toBeInTheDocument();
+  expect(screen.getByText('Mapped locations')).toBeInTheDocument();
+  expect(screen.getByText('Parcel candidates')).toBeInTheDocument();
+  expect(screen.getByText(/qualified parcel geometry\/centroids are not loaded/)).toBeInTheDocument();
+  expect(screen.getByText(/Where can capital move/)).toBeInTheDocument();
   expect(screen.getByText(/evidence graph relationships, reported parcel references/)).toHaveTextContent(
     'does not claim live planning coverage',
   );

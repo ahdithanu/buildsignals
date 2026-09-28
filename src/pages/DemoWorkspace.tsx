@@ -27,11 +27,17 @@ type MapPoint = GeographicPoint & { source_url?: string | null; matched_address?
   filing_number?: string; status?: string | null; external_parcel_id?: string };
 type MapParcel = MapPoint & { boundary: GeographicBoundary['geometry'] | null };
 type MapData = { permits: MapPoint[]; parcels: MapParcel[]; limit_per_layer: number };
+type ReadinessItem = { label: string; value: string; status: 'ready' | 'partial' | 'blocked'; detail: string; action: Section };
 const sections: { id: Section; label: string }[] = [
   { id: 'overview', label: 'Overview' }, { id: 'permits', label: 'Filings' },
   { id: 'graph', label: 'Graph' }, { id: 'parcels', label: 'Parcels' }, { id: 'map', label: 'Map' },
 ];
 const date = (value?: string | null) => value ? new Date(value).toLocaleDateString() : 'Unknown';
+const statusClass = {
+  ready: 'border-emerald-700 bg-emerald-50 text-emerald-950',
+  partial: 'border-amber-700 bg-amber-50 text-amber-950',
+  blocked: 'border-zinc-300 bg-zinc-50 text-zinc-700',
+};
 
 export default function DemoWorkspace() {
   const { isDemo } = useAuth();
@@ -59,6 +65,44 @@ export default function DemoWorkspace() {
   const current = detail.data;
   const mapPoints = useMemo(() => [...(showFilings ? locations.data?.permits ?? [] : []), ...(showParcels ? locations.data?.parcels ?? [] : [])], [locations.data, showFilings, showParcels]);
   const mapItem = mapPoints.find(item => item.id === selectedMap);
+  const readiness = useMemo<ReadinessItem[]>(() => {
+    const data = summary.data;
+    if (!data) return [];
+    return [
+      {
+        label: 'Signal intake',
+        value: data.permit_records.toLocaleString(),
+        status: data.permit_records > 0 ? 'ready' : 'blocked',
+        detail: 'Historical Columbus permit and site filings are available for evidence review.',
+        action: 'permits',
+      },
+      {
+        label: 'Graph context',
+        value: data.relationships.toLocaleString(),
+        status: data.relationships > 0 ? 'ready' : 'blocked',
+        detail: 'Source-backed relationships connect filings to reported applicants, properties, parcel IDs, and the city.',
+        action: 'graph',
+      },
+      {
+        label: 'Mapped locations',
+        value: data.mapped_permits.toLocaleString(),
+        status: data.mapped_permits > 0 ? 'ready' : data.derived_geocoded_permits > 0 ? 'partial' : 'blocked',
+        detail: data.mapped_permits > 0
+          ? 'Located filings can be inspected on the map; estimated pins remain labeled separately from source coordinates.'
+          : 'No filing coordinates are qualified yet, so the map cannot show permit proximity in this demo cohort.',
+        action: 'map',
+      },
+      {
+        label: 'Parcel candidates',
+        value: data.mapped_parcels.toLocaleString(),
+        status: data.mapped_parcels > 0 ? 'partial' : 'blocked',
+        detail: data.mapped_parcels > 0
+          ? 'Mapped parcels are context candidates only until zoning, ownership, availability, and source rights are verified.'
+          : 'Reported parcel IDs exist, but qualified parcel geometry/centroids are not loaded for ranked nearby candidates.',
+        action: 'parcels',
+      },
+    ];
+  }, [summary.data]);
   const boundaries = useMemo(() => (showParcels ? locations.data?.parcels ?? [] : []).filter(item => item.boundary).map(item => ({
     id: item.id, title: item.title, geometry: item.boundary!,
   })), [locations.data, showParcels]);
@@ -79,6 +123,28 @@ export default function DemoWorkspace() {
       </dl>}
       {summary.isError && <ErrorState message="Demo overview could not be loaded." onRetry={() => void summary.refetch()} />}
       {section === 'overview' && <section className="space-y-5" aria-label="Product overview">
+        {readiness.length > 0 && <section aria-label="Demo acquisition workflow" className="border-y py-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-semibold">Acquisition workflow readiness</h2>
+              <p className="mt-1 text-sm text-muted-foreground">How this demo moves from public evidence to an investor lens. Green is usable now; amber is context-only; gray needs qualified source data before we should claim it.</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            {readiness.map(item => <button key={item.label} type="button" onClick={() => setSection(item.action)}
+              className={`min-h-[10rem] border p-3 text-left text-sm hover:border-foreground ${statusClass[item.status]}`}>
+              <span className="block text-[11px] font-semibold uppercase">{item.status === 'ready' ? 'Ready' : item.status === 'partial' ? 'Review needed' : 'Needs data'}</span>
+              <span className="mt-2 block text-2xl font-semibold tabular-nums">{item.value}</span>
+              <span className="mt-1 block font-semibold">{item.label}</span>
+              <span className="mt-2 block text-xs leading-5">{item.detail}</span>
+            </button>)}
+          </div>
+          <div className="mt-4 grid gap-3 border-t pt-4 text-sm md:grid-cols-3">
+            <div><h3 className="font-semibold">What changed?</h3><p className="mt-1 text-muted-foreground">Use filings and source dates to find development activity before it becomes a polished broker story.</p></div>
+            <div><h3 className="font-semibold">Why does it matter?</h3><p className="mt-1 text-muted-foreground">Use the graph to see repeated applicants, properties, and parcel IDs with evidence and confidence instead of keyword-only search.</p></div>
+            <div><h3 className="font-semibold">Where can capital move?</h3><p className="mt-1 text-muted-foreground">The product is ready to score nearby lots once qualified parcel geometry, zoning, access, ownership, and availability are loaded.</p></div>
+          </div>
+        </section>}
         <div className="grid gap-5 md:grid-cols-2">
           <div className="border-b pb-4"><h2 className="font-semibold">Source activity</h2><p className="mt-2 text-sm">{summary.data?.permit_records.toLocaleString() ?? '...'} permit and site records, captured {date(summary.data?.captured_at)}.</p><button className="mt-3 text-sm font-medium underline" onClick={() => setSection('permits')}>Browse filings</button></div>
           <div className="border-b pb-4"><h2 className="font-semibold">Evidence graph</h2><p className="mt-2 text-sm">{summary.data?.relationships.toLocaleString() ?? '...'} relationships connect filings, reported applicants, properties, parcel references, and the city.</p><button className="mt-3 text-sm font-medium underline" onClick={() => setSection('graph')}>Inspect relationships</button></div>
