@@ -13,9 +13,10 @@ status, or live planning coverage. The Map tab regression now clicks through
 from the overview and verifies that geocoded filings and source parcel rows
 render together with separate Census-estimate and parcel-centroid labels.
 
-Verification: focused `demo-workspace` frontend tests pass with two cases, and
-TypeScript typecheck passes. This does not activate production ingestion,
-qualify Franklin County/Columbus parcel rights, or create live inventory.
+Verification: the backend demo security/read-path suite passes 51 tests, focused
+`demo-workspace` frontend tests pass with two cases, and TypeScript typecheck
+passes. This does not activate production ingestion, qualify Franklin
+County/Columbus parcel rights, or create live inventory.
 
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
