@@ -66,6 +66,21 @@ class AttentionItem(BaseModel):
     href: str
 
 
+class DeploymentReadinessCheck(BaseModel):
+    code: str
+    label: str
+    status: str
+    summary: str
+    action: str | None = None
+
+
+class DeploymentReadiness(BaseModel):
+    environment: str
+    database_provider: str
+    overall_status: str
+    checks: list[DeploymentReadinessCheck]
+
+
 class ObservabilityOverview(BaseModel):
     generated_at: datetime
     window_start: datetime
@@ -73,4 +88,5 @@ class ObservabilityOverview(BaseModel):
     days: int
     evaluations: EvaluationCounts
     ingestion: IngestionCounts
+    deployment: DeploymentReadiness
     attention: list[AttentionItem]

@@ -65,6 +65,7 @@ export function Layout({ children }: LayoutProps) {
               <DropdownMenuItem asChild><Link to="/team">Team</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/audit">Audit log</Link></DropdownMenuItem>
               {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/evals">AI Evaluations</Link></DropdownMenuItem>}
+              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/observability">Observability</Link></DropdownMenuItem>}
               {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/prompts">Prompt registry</Link></DropdownMenuItem>}
               <DropdownMenuItem asChild><Link to="/settings">Settings</Link></DropdownMenuItem>
             </DropdownMenuContent>

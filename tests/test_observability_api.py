@@ -69,6 +69,8 @@ def test_overview_requires_admin_and_valid_window(client):
     data = empty.json()
     assert data["evaluations"]["cost_usd_known"] is None
     assert data["evaluations"]["runs"] == 0
+    assert data["deployment"]["environment"]
+    assert any(check["code"] == "demo_workspace" for check in data["deployment"]["checks"])
 
 
 @pytest.mark.parametrize("role", [MemberRole.editor, MemberRole.viewer])
@@ -123,3 +125,13 @@ def test_known_zero_cost_is_reported_and_partial_is_separate(db):
     assert summary.ingestion.partial_with_errors == 1
     assert summary.ingestion.failed == 0
     assert any(item.code == "partial_ingestion_errors" for item in summary.attention)
+
+
+def test_deployment_readiness_reports_demo_without_exposing_secret(db, monkeypatch):
+    monkeypatch.setattr("app.services.observability_service.DEMO_LOGIN_ENABLED", True)
+    monkeypatch.setattr("app.services.observability_service.DEMO_LOGIN_EMAIL", "demo@example.com")
+    monkeypatch.setattr("app.services.observability_service.DEMO_LOGIN_PASSWORD", "super-secret-demo-password")
+    summary = get_overview(db, _id(), 7)
+    demo = next(check for check in summary.deployment.checks if check.code == "demo_workspace")
+    assert demo.status == "pass"
+    assert "super-secret-demo-password" not in summary.model_dump_json()
