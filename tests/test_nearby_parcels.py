@@ -658,6 +658,9 @@ def test_parcel_acquisition_case_tracks_provenance_status_and_outreach(
     scheduled = client.get("/acquisition-radar?follow_up=scheduled", headers=headers)
     assert scheduled.status_code == 200, scheduled.text
     assert scheduled.json()["total"] == 1
+    due = client.get("/acquisition-radar?follow_up=due", headers=headers)
+    assert due.status_code == 200, due.text
+    assert due.json()["total"] == 1
     unscheduled = client.get("/acquisition-radar?follow_up=none", headers=headers)
     assert unscheduled.status_code == 200, unscheduled.text
     assert unscheduled.json()["items"] == []

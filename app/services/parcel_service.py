@@ -108,7 +108,9 @@ def _radar_candidate_query(
             ParcelAcquisitionCase.assigned_to_user_id.is_(None),
             NearbyParcelCandidate.assigned_to_user_id.is_(None),
         )
-    if follow_up == "scheduled":
+    if follow_up == "due":
+        rows = rows.filter(ParcelAcquisitionCase.follow_up_at <= utcnow())
+    elif follow_up == "scheduled":
         rows = rows.filter(ParcelAcquisitionCase.follow_up_at.isnot(None))
     elif follow_up == "none":
         rows = rows.filter(ParcelAcquisitionCase.follow_up_at.is_(None))

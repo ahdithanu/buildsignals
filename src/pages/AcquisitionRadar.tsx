@@ -362,7 +362,7 @@ export default function AcquisitionRadar() {
     persona: (persona || undefined) as ParcelPersona | undefined,
     review_status: (status || undefined) as AcquisitionCaseStatus | undefined,
     assignment: (assignment || undefined) as 'assigned' | 'unassigned' | undefined,
-    follow_up: (followUpFilter || undefined) as 'scheduled' | 'none' | undefined,
+    follow_up: (followUpFilter || undefined) as 'due' | 'scheduled' | 'none' | undefined,
     limit: PAGE_SIZE,
     offset,
   }), [assignment, followUpFilter, offset, persona, query, state, status]);
@@ -445,7 +445,7 @@ export default function AcquisitionRadar() {
             <label className="text-xs text-muted-foreground">Buyer lens<select value={persona} onChange={(event) => { setPersona(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">All lenses</option><option value="developer">Developer</option><option value="investor">Investor</option><option value="broker">Broker</option><option value="realtor">Realtor</option></select></label>
             <label className="text-xs text-muted-foreground">Case status<select value={status} onChange={(event) => { setStatus(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">All statuses</option><option value="candidate">Candidate</option><option value="shortlisted">Shortlisted</option><option value="contacted">Contacted</option><option value="promoted">Promoted</option><option value="dismissed">Dismissed</option></select></label>
             <label className="text-xs text-muted-foreground">Assignment<select value={assignment} onChange={(event) => { setAssignment(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any owner</option><option value="assigned">Assigned</option><option value="unassigned">Unassigned</option></select></label>
-            <label className="text-xs text-muted-foreground">Follow-up<select value={followUpFilter} onChange={(event) => { setFollowUpFilter(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any follow-up</option><option value="scheduled">Scheduled</option><option value="none">No follow-up</option></select></label>
+            <label className="text-xs text-muted-foreground">Follow-up<select value={followUpFilter} onChange={(event) => { setFollowUpFilter(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any follow-up</option><option value="due">Due now</option><option value="scheduled">Scheduled</option><option value="none">No follow-up</option></select></label>
             <Button type="button" variant="outline" size="sm" className="h-9" disabled={!query && !state && !persona && !status && !assignment && !followUpFilter} onClick={resetFilters}><X className="h-4 w-4" />Clear</Button>
           </div>
         </section>

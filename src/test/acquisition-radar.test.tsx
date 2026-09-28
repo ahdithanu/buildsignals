@@ -137,6 +137,7 @@ describe('<AcquisitionRadar>', () => {
     const summary = screen.getByLabelText('Acquisition radar summary');
     expect(within(summary).getByText('Cross-signal')).toBeInTheDocument();
     expect(screen.getByLabelText('Follow-up')).toHaveTextContent('Any follow-up');
+    expect(screen.getByLabelText('Follow-up')).toHaveTextContent('Due now');
     expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
     expect(screen.getByText('91')).toBeInTheDocument();
     expect(screen.getByText('2 opportunities')).toBeInTheDocument();

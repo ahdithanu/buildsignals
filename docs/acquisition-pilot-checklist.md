@@ -57,6 +57,10 @@ so daily outreach views and aggregate counts are scoped consistently. Focused
 backend tests verify scheduled/no-follow-up query results after an outreach
 activity, and the frontend radar tests verify the new control.
 
+The follow-up filter also supports `due`, giving analysts a daily outreach queue
+for parcels whose scheduled next step is now due or overdue. Focused backend
+and frontend tests verify the due filter and UI option, with TypeScript passing.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
