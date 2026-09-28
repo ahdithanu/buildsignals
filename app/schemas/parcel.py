@@ -243,6 +243,7 @@ class AcquisitionRadarSummaryResponse(BaseModel):
     multi_opportunity_parcels: int
     assigned_parcels: int
     promoted_parcels: int
+    contacted_parcels: int
     state_count: int
 
 

@@ -257,12 +257,14 @@ function AcquisitionWorkflowStrip({
   crossSignalParcels,
   shortlistedParcels,
   assignedParcels,
+  contactedParcels,
   promotedCount,
 }: {
   totalParcels: number;
   crossSignalParcels: number;
   shortlistedParcels: number;
   assignedParcels: number;
+  contactedParcels: number;
   promotedCount: number;
 }) {
   const steps = [
@@ -291,6 +293,12 @@ function AcquisitionWorkflowStrip({
       icon: Users,
     },
     {
+      label: 'Outreach',
+      value: contactedParcels,
+      detail: 'Parcels with recorded owner, broker, or diligence contact.',
+      icon: Mail,
+    },
+    {
       label: 'Saved',
       value: promotedCount,
       detail: 'Parcel candidates promoted into saved opportunities.',
@@ -308,7 +316,7 @@ function AcquisitionWorkflowStrip({
         </div>
         <Badge variant="outline">Operational view</Badge>
       </div>
-      <ol className="mt-4 grid gap-3 md:grid-cols-5">
+      <ol className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         {steps.map(({ label, value, detail, icon: Icon }, index) => (
           <li key={label} className="relative min-w-0 rounded-md border p-3">
             {index > 0 && <span className="absolute -left-3 top-1/2 hidden h-px w-3 bg-border md:block" aria-hidden="true" />}
@@ -415,6 +423,7 @@ export default function AcquisitionRadar() {
           crossSignalParcels={summary?.multi_opportunity_parcels ?? 0}
           shortlistedParcels={summary?.shortlisted_parcels ?? 0}
           assignedParcels={summary?.assigned_parcels ?? 0}
+          contactedParcels={summary?.contacted_parcels ?? 0}
           promotedCount={summary?.promoted_parcels ?? 0}
         />
 
