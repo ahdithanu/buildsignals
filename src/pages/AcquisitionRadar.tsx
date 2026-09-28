@@ -252,6 +252,78 @@ function Zip3OpportunityHeat({ items, semantics }: {
   );
 }
 
+function AcquisitionWorkflowStrip({
+  totalParcels,
+  crossSignalParcels,
+  shortlistedParcels,
+  assignedParcels,
+  promotedCount,
+}: {
+  totalParcels: number;
+  crossSignalParcels: number;
+  shortlistedParcels: number;
+  assignedParcels: number;
+  promotedCount: number;
+}) {
+  const steps = [
+    {
+      label: 'Alert',
+      value: totalParcels,
+      detail: 'Ranked nearby parcels found around permit or planning signals.',
+      icon: Radar,
+    },
+    {
+      label: 'Evidence',
+      value: crossSignalParcels,
+      detail: 'Parcels recurring across multiple source-backed opportunities.',
+      icon: Search,
+    },
+    {
+      label: 'Review',
+      value: shortlistedParcels,
+      detail: 'Shortlisted candidates ready for owner, broker, or diligence follow-up.',
+      icon: Check,
+    },
+    {
+      label: 'Owner',
+      value: assignedParcels,
+      detail: 'Cases assigned to a team member for outreach and next action.',
+      icon: Users,
+    },
+    {
+      label: 'Saved',
+      value: promotedCount,
+      detail: 'Parcel candidates promoted into saved opportunities.',
+      icon: CircleDollarSign,
+    },
+  ];
+  return (
+    <section className="rounded-md border bg-card p-4" aria-label="Daily acquisition workflow">
+      <div className="flex flex-col gap-1 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Daily workflow</h3>
+          <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
+            Alert → source evidence → project context → nearby parcels → saved opportunity/export. Counts are live queue state, not market coverage or for-sale inventory.
+          </p>
+        </div>
+        <Badge variant="outline">Operational view</Badge>
+      </div>
+      <ol className="mt-4 grid gap-3 md:grid-cols-5">
+        {steps.map(({ label, value, detail, icon: Icon }, index) => (
+          <li key={label} className="relative min-w-0 rounded-md border p-3">
+            {index > 0 && <span className="absolute -left-3 top-1/2 hidden h-px w-3 bg-border md:block" aria-hidden="true" />}
+            <div className="flex items-center gap-2 text-[11px] font-medium uppercase text-muted-foreground">
+              <Icon className="h-3.5 w-3.5" />{label}
+            </div>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value.toLocaleString()}</p>
+            <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{detail}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export default function AcquisitionRadar() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -287,6 +359,7 @@ export default function AcquisitionRadar() {
     { label: 'Assigned', value: summary?.assigned_parcels ?? 0, icon: Users },
     { label: 'Markets', value: summary?.state_count ?? 0, icon: CircleDollarSign },
   ];
+  const promotedCount = data?.items.filter((item) => item.review_status === 'promoted' || !!item.promoted_deal_id).length ?? 0;
   const resetFilters = () => {
     setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setOffset(0);
   };
@@ -338,6 +411,13 @@ export default function AcquisitionRadar() {
         </section>
 
         <Zip3OpportunityHeat items={zip3Heatmap?.items ?? []} semantics={zip3Heatmap?.for_sale_semantics} />
+        <AcquisitionWorkflowStrip
+          totalParcels={summary?.total_parcels ?? 0}
+          crossSignalParcels={summary?.multi_opportunity_parcels ?? 0}
+          shortlistedParcels={summary?.shortlisted_parcels ?? 0}
+          assignedParcels={summary?.assigned_parcels ?? 0}
+          promotedCount={promotedCount}
+        />
 
         <section className="rounded-md border bg-card p-4">
           <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_90px_140px_140px_140px_auto] md:items-end">

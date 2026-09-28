@@ -126,6 +126,12 @@ describe('<AcquisitionRadar>', () => {
     expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('Candidate parcels are not verified listings');
     expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('Starbucks Coffee build-out');
     expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('210 Congress Ave');
+    const workflow = screen.getByLabelText('Daily acquisition workflow');
+    expect(workflow).toHaveTextContent('Alert');
+    expect(workflow).toHaveTextContent('Evidence');
+    expect(workflow).toHaveTextContent('Review');
+    expect(workflow).toHaveTextContent('Saved');
+    expect(workflow).toHaveTextContent('not market coverage or for-sale inventory');
     const summary = screen.getByLabelText('Acquisition radar summary');
     expect(within(summary).getByText('Cross-signal')).toBeInTheDocument();
     expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
