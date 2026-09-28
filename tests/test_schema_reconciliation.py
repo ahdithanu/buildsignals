@@ -27,9 +27,14 @@ from app.db import Base
 ROOT = Path(__file__).resolve().parents[1]
 PREVIOUS = "20260920_0001"
 REVISION = "20260923_0001"
-HEAD_REVISION = "20260924_0001"
+HEAD_REVISION = "20260928_0001"
 PG_URL = os.environ.get("TEST_SCHEMA_RECONCILIATION_POSTGRES_URL")
 PATH = ROOT / "alembic/versions/20260923_0001_reconcile_schema.py"
+POST_RECONCILIATION_TABLES = {
+    "organization_api_keys",
+    "prompt_template",
+    "prompt_version",
+}
 
 
 def _migration():
@@ -163,8 +168,8 @@ def _snapshot(engine):
         for tenant in ("a", "b"):
             _org(connection, tenant)
             for name, table in Base.metadata.tables.items():
-                if name in {"prompt_template", "prompt_version"}:
-                    continue  # A later registry migration is outside this revision's data snapshot.
+                if name in POST_RECONCILIATION_TABLES:
+                    continue  # Later migrations are outside this revision's data snapshot.
                 # Explicit model columns exclude PostGIS's generated centroid.
                 statement = sa.select(table).order_by(*table.primary_key.columns)
                 if "organization_id" in table.c:
@@ -185,7 +190,7 @@ def _schema(engine):
         inspector = sa.inspect(connection)
         result = {"tables": sorted(inspector.get_table_names())}
         for table in Base.metadata.tables:
-            if table in {"prompt_template", "prompt_version"}:
+            if table in POST_RECONCILIATION_TABLES:
                 continue
             result[table] = (
                 [(c["name"], str(c["type"]), c["nullable"], c["default"])
