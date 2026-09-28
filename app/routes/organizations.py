@@ -40,6 +40,7 @@ from app.services.api_usage_service import (
 from app.services.audit_service import log_change
 from app.services.security import create_access_token
 from app.services.webhook_service import (
+    attempt_webhook_delivery,
     create_subscription,
     enqueue_webhook_event,
     update_subscription,
@@ -514,6 +515,39 @@ def create_webhook_test_event(
     for delivery in deliveries:
         db.refresh(delivery)
     return deliveries
+
+
+@router.post("/{org_id}/webhook-deliveries/{delivery_id}/attempt", response_model=WebhookDeliveryResponse)
+def attempt_organization_webhook_delivery(
+    org_id: str,
+    delivery_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    delivery = (
+        db.query(WebhookDelivery)
+        .filter(WebhookDelivery.organization_id == org_id, WebhookDelivery.id == delivery_id)
+        .first()
+    )
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Webhook delivery not found")
+    attempted = attempt_webhook_delivery(db, delivery_id=delivery.id)
+    log_change(
+        db,
+        "webhook_delivery",
+        attempted.id,
+        "attempt",
+        actor_id=principal["user_id"],
+        organization_id=org_id,
+        new_values={
+            "status": attempted.status,
+            "attempt_count": attempted.attempt_count,
+            "response_status_code": attempted.response_status_code,
+        },
+    )
+    db.commit()
+    db.refresh(attempted)
+    return attempted
 
 
 # ── switch active org ──────────────────────────────────────────────────────

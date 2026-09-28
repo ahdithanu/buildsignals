@@ -34,6 +34,7 @@ failures.
 - `PATCH /v1/organizations/{org_id}/webhook-subscriptions/{subscription_id}`
 - `GET /v1/organizations/{org_id}/webhook-deliveries`
 - `POST /v1/organizations/{org_id}/webhook-test-events`
+- `POST /v1/organizations/{org_id}/webhook-deliveries/{delivery_id}/attempt`
 
 Only organization admins can manage subscriptions or inspect deliveries. All records are organization-scoped and
 covered by Postgres row-level security in production.
@@ -51,8 +52,27 @@ covered by Postgres row-level security in production.
 The queue is designed for a future worker that signs payloads using the configured secret reference, performs
 bounded retries, and records success or failure without blocking the originating workflow.
 
+## Delivery Attempts
+
+The delivery service posts a canonical JSON body containing `event_id`, `event_type`, `delivery_id`,
+`organization_id`, and the event `payload`. Delivery attempts send:
+
+- `X-Build-Signals-Delivery`
+- `X-Build-Signals-Event`
+- `X-Build-Signals-Timestamp`
+- `X-Build-Signals-Signature` when the subscription has a resolvable secret reference
+
+The signature is `v1=` plus an HMAC-SHA256 digest over `{timestamp}.{canonical_body}`. Secret references are
+resolved from deployment environment variables when they use `env:NAME` or `vercel:NAME`; raw signing secrets are
+not stored in the subscription row.
+
+2xx responses mark a delivery as `delivered`. Non-2xx responses and network errors leave the row `pending` with a
+bounded response excerpt, error message, incremented attempt count, and an exponential retry timestamp. Disabled
+subscriptions fail pending deliveries instead of posting to stale customer endpoints.
+
 ## Scaling Path
 
-For 1 million opportunities, webhook delivery should move to a dedicated worker pool backed by batched queue reads,
-idempotency keys, exponential backoff, dead-letter retention, and per-customer concurrency limits. The current table
-shape already supports those additions without changing customer-facing subscription APIs.
+For 1 million opportunities, webhook delivery should move from the manual attempt endpoint to a dedicated worker
+pool backed by batched queue reads, idempotency keys, exponential backoff, dead-letter retention, and per-customer
+concurrency limits. The current table shape already supports those additions without changing customer-facing
+subscription APIs.
