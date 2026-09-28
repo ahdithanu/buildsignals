@@ -79,6 +79,16 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
         opportunity_count: 2,
         personas: ['broker', 'developer'],
         review_status: 'candidate',
+        facts: [{
+          id: 'fact-availability',
+          fact_type: 'availability',
+          value: { status: 'for_sale', evidence_type: 'broker' },
+          source_url: 'https://broker.example/listing/P-100',
+          excerpt: 'Broker listing marks the parcel available for sale.',
+          confidence: 0.88,
+          observed_at: '2026-08-08T12:00:00Z',
+          last_verified_at: '2026-08-08T12:00:00Z',
+        }],
         latest_signal_at: '2026-08-08T12:00:00Z',
         reasons: ['Best parcel fit is 88/100', 'Appears near 2 opportunities'],
         cautions: [],
@@ -150,6 +160,7 @@ describe('<AcquisitionRadar>', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Follow-up' }));
     expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
     expect(screen.getByLabelText('Signals')).toHaveValue('');
+    expect(screen.getByText('Verified availability')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Review' }));
     expect(screen.getByLabelText('Case status')).toHaveValue('shortlisted');
     expect(screen.getByLabelText('Follow-up')).toHaveValue('');

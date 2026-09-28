@@ -74,6 +74,11 @@ Evidence now filters to cross-signal parcels backed by more than one opportunity
 The API supports `signal_overlap=multi|single`, and focused backend/frontend
 tests verify the aggregate filter and one-click workflow control.
 
+Acquisition Radar rows now surface a `Verified availability` badge only when the
+parcel has source-backed availability evidence accepted by the shared availability
+contract. This reuses the map's evidence helper, so proximity/shortlisting still
+does not imply a parcel is for sale. Focused radar tests and TypeScript pass.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
