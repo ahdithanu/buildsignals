@@ -215,3 +215,8 @@ REFRESH_WINDOW = _int_env("REFRESH_RATE_WINDOW_SECONDS", 60 * 60)  # but tab sto
 # a runaway client burn the API bill.
 AI_LIMIT = _int_env("AI_RATE_LIMIT", 30)
 AI_WINDOW = _int_env("AI_RATE_WINDOW_SECONDS", 60)   # seconds
+
+# Public API keys are intended for partner/customer integrations. Keep this
+# generous enough for exports while still preventing accidental runaway loops.
+PUBLIC_API_KEY_LIMIT = _int_env("PUBLIC_API_KEY_RATE_LIMIT", 120)
+PUBLIC_API_KEY_WINDOW = _int_env("PUBLIC_API_KEY_RATE_WINDOW_SECONDS", 60)

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.api_key import OrganizationApiKey
 from app.schemas.organization import ApiKeyResponse
+from app.services.rate_limiter import PUBLIC_API_KEY_LIMIT, PUBLIC_API_KEY_WINDOW
 
 KEY_PREFIX = "bs_live"
 
@@ -42,7 +43,12 @@ def parse_scopes(raw: str) -> list[str]:
     return sorted(str(scope) for scope in value)
 
 
-def to_response(api_key: OrganizationApiKey) -> ApiKeyResponse:
+def to_response(
+    api_key: OrganizationApiKey,
+    *,
+    usage_total_calls: int = 0,
+    usage_last_called_at: datetime | None = None,
+) -> ApiKeyResponse:
     return ApiKeyResponse(
         id=api_key.id,
         name=api_key.name,
@@ -53,6 +59,10 @@ def to_response(api_key: OrganizationApiKey) -> ApiKeyResponse:
         revoked_at=api_key.revoked_at,
         revoked_by=api_key.revoked_by,
         last_used_at=api_key.last_used_at,
+        usage_total_calls=usage_total_calls,
+        usage_last_called_at=usage_last_called_at,
+        rate_limit_limit=PUBLIC_API_KEY_LIMIT,
+        rate_limit_window_seconds=PUBLIC_API_KEY_WINDOW,
     )
 
 

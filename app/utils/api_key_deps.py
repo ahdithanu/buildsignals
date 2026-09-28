@@ -3,12 +3,13 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.api_key import OrganizationApiKey
 from app.services.api_key_service import authenticate_api_key, has_scope
+from app.services.rate_limiter import PUBLIC_API_KEY_LIMIT, PUBLIC_API_KEY_WINDOW, limiter
 
 
 def _extract_api_key(authorization: Optional[str], x_api_key: Optional[str]) -> str | None:
@@ -29,6 +30,7 @@ def require_api_key_scope(required_scope: str):
     """Require a non-revoked organization API key with the requested scope."""
 
     def _checker(
+        response: Response,
         authorization: Optional[str] = Header(None),
         x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
         db: Session = Depends(get_db),
@@ -52,6 +54,23 @@ def require_api_key_scope(required_scope: str):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"API key requires {required_scope!r} scope",
+            )
+        decision = limiter.check(
+            key=f"public-api-key:{api_key.id}",
+            limit=PUBLIC_API_KEY_LIMIT,
+            window_seconds=PUBLIC_API_KEY_WINDOW,
+        )
+        response.headers["X-API-Key-RateLimit-Limit"] = str(PUBLIC_API_KEY_LIMIT)
+        response.headers["X-API-Key-RateLimit-Remaining"] = str(decision.remaining)
+        if not decision.allowed:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="API key rate limit exceeded",
+                headers={
+                    "Retry-After": str(decision.retry_after),
+                    "X-API-Key-RateLimit-Limit": str(PUBLIC_API_KEY_LIMIT),
+                    "X-API-Key-RateLimit-Remaining": "0",
+                },
             )
         return api_key
 

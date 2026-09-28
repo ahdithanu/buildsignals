@@ -32,6 +32,10 @@ export interface ApiKeyResponse {
   revoked_at: string | null;
   revoked_by: string | null;
   last_used_at: string | null;
+  usage_total_calls: number;
+  usage_last_called_at: string | null;
+  rate_limit_limit: number | null;
+  rate_limit_window_seconds: number | null;
 }
 
 export interface ApiKeyCreateRequest {

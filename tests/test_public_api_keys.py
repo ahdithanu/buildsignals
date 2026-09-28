@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pytest
 
+import app.utils.api_key_deps as api_key_deps
 from app.models.api_key import OrganizationApiKey
+from app.models.api_usage import OrganizationApiKeyUsageEvent
 from app.models.deal import Deal
 from app.models.signal import Signal
 from app.services.api_key_service import create_api_key, revoke_api_key
@@ -95,6 +97,17 @@ def test_public_api_key_reads_only_own_organization(client, db):
 
     db.refresh(api_key)
     assert api_key.last_used_at is not None
+    usage_events = (
+        db.query(OrganizationApiKeyUsageEvent)
+        .filter_by(api_key_id=api_key.id)
+        .order_by(OrganizationApiKeyUsageEvent.created_at.asc())
+        .all()
+    )
+    assert [(event.method, event.path, event.response_items) for event in usage_events] == [
+        ("GET", "/public/deals", 1),
+        ("GET", "/public/deals/{deal_id}", 1),
+        ("GET", "/public/signals", 1),
+    ]
 
 
 def test_public_api_rejects_missing_revoked_or_under_scoped_keys(client, db):
@@ -122,3 +135,57 @@ def test_public_api_rejects_missing_revoked_or_under_scoped_keys(client, db):
     db.commit()
     revoked = client.get("/public/deals", headers={"Authorization": f"Bearer {secret}"})
     assert revoked.status_code == 401
+
+
+def test_public_api_key_rate_limit_headers_and_enforcement(client, db, monkeypatch):
+    identity = _register(client, email="public-rate@example.com", org_name="Public Rate")
+    _seed_deal(db, org_id=identity["organization_id"], name="Rate-limited warehouse")
+    _, secret = _issue_key(
+        db,
+        org_id=identity["organization_id"],
+        user_id=identity["user_id"],
+        scopes=["read"],
+    )
+    monkeypatch.setattr(api_key_deps, "PUBLIC_API_KEY_LIMIT", 1)
+    monkeypatch.setattr(api_key_deps, "PUBLIC_API_KEY_WINDOW", 60)
+
+    first = client.get("/public/deals", headers={"Authorization": f"Bearer {secret}"})
+    assert first.status_code == 200, first.text
+    assert first.headers["X-API-Key-RateLimit-Limit"] == "1"
+    assert first.headers["X-API-Key-RateLimit-Remaining"] == "0"
+
+    limited = client.get("/public/deals", headers={"Authorization": f"Bearer {secret}"})
+    assert limited.status_code == 429
+    assert limited.headers["Retry-After"]
+
+
+def test_admin_can_view_api_key_usage_summary(client, db):
+    identity = _register(client, email="public-usage@example.com", org_name="Public Usage")
+    _seed_deal(db, org_id=identity["organization_id"], name="Usage warehouse")
+    api_key, secret = _issue_key(
+        db,
+        org_id=identity["organization_id"],
+        user_id=identity["user_id"],
+        scopes=["read"],
+    )
+    for _ in range(2):
+        response = client.get("/public/deals", headers={"Authorization": f"Bearer {secret}"})
+        assert response.status_code == 200
+
+    headers = {"Authorization": f"Bearer {identity['access_token']}"}
+    listed = client.get(f"/organizations/{identity['organization_id']}/api-keys", headers=headers)
+    assert listed.status_code == 200, listed.text
+    [listed_key] = listed.json()
+    assert listed_key["usage_total_calls"] == 2
+    assert listed_key["usage_last_called_at"]
+    assert listed_key["rate_limit_limit"] > 0
+
+    usage = client.get(
+        f"/organizations/{identity['organization_id']}/api-keys/{api_key.id}/usage",
+        headers=headers,
+    )
+    assert usage.status_code == 200, usage.text
+    body = usage.json()
+    assert body["total_calls"] == 2
+    assert body["total_items"] == 2
+    assert body["endpoints"][0]["path"] == "/public/deals"
