@@ -110,6 +110,38 @@ def test_public_api_key_reads_only_own_organization(client, db):
     ]
 
 
+def test_public_api_list_routes_include_pagination_headers(client, db):
+    identity = _register(client, email="public-page@example.com", org_name="Public Page")
+    for index in range(3):
+        _seed_deal(db, org_id=identity["organization_id"], name=f"Paged warehouse {index}")
+    _, secret = _issue_key(
+        db,
+        org_id=identity["organization_id"],
+        user_id=identity["user_id"],
+        scopes=["read"],
+    )
+
+    deals = client.get(
+        "/public/deals?skip=1&limit=1",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert deals.status_code == 200, deals.text
+    assert len(deals.json()) == 1
+    assert deals.headers["X-Total-Count"] == "3"
+    assert deals.headers["X-Page-Skip"] == "1"
+    assert deals.headers["X-Page-Limit"] == "1"
+    assert deals.headers["X-Next-Skip"] == "2"
+
+    signals = client.get(
+        "/public/signals?skip=2&limit=1",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert signals.status_code == 200, signals.text
+    assert len(signals.json()) == 1
+    assert signals.headers["X-Total-Count"] == "3"
+    assert signals.headers["X-Next-Skip"] == ""
+
+
 def test_public_api_rejects_missing_revoked_or_under_scoped_keys(client, db):
     identity = _register(client, email="public-scope@example.com", org_name="Public Scope")
     api_key, secret = _issue_key(

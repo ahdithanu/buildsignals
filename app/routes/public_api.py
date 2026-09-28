@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -16,8 +16,24 @@ router = APIRouter(prefix="/public", tags=["public-api"])
 read_api_key = require_api_key_scope("read")
 
 
+def _set_pagination_headers(
+    response: Response,
+    *,
+    total_count: int,
+    skip: int,
+    limit: int,
+    returned: int,
+) -> None:
+    next_skip = skip + returned
+    response.headers["X-Total-Count"] = str(total_count)
+    response.headers["X-Page-Skip"] = str(skip)
+    response.headers["X-Page-Limit"] = str(limit)
+    response.headers["X-Next-Skip"] = str(next_skip if next_skip < total_count else "")
+
+
 @router.get("/deals", response_model=list[DealResponse])
 def list_public_deals(
+    response: Response,
     status: DealStatus | None = Query(None),
     city: str | None = Query(None, max_length=100),
     skip: int = Query(0, ge=0),
@@ -31,7 +47,15 @@ def list_public_deals(
         query = query.filter(Deal.status == status.value)
     if city:
         query = query.filter(Deal.city == city)
+    total_count = query.count()
     rows = query.order_by(Deal.created_at.desc()).offset(skip).limit(limit).all()
+    _set_pagination_headers(
+        response,
+        total_count=total_count,
+        skip=skip,
+        limit=limit,
+        returned=len(rows),
+    )
     record_api_key_usage(
         db,
         api_key=api_key,
@@ -71,6 +95,7 @@ def get_public_deal(
 
 @router.get("/signals", response_model=list[SignalResponse])
 def list_public_signals(
+    response: Response,
     deal_id: str | None = None,
     signal_type: str | None = Query(None, max_length=100),
     skip: int = Query(0, ge=0),
@@ -84,7 +109,15 @@ def list_public_signals(
         query = query.filter(Signal.deal_id == deal_id)
     if signal_type:
         query = query.filter(Signal.signal_type == signal_type)
+    total_count = query.count()
     rows = query.order_by(Signal.created_at.desc()).offset(skip).limit(limit).all()
+    _set_pagination_headers(
+        response,
+        total_count=total_count,
+        skip=skip,
+        limit=limit,
+        returned=len(rows),
+    )
     record_api_key_usage(
         db,
         api_key=api_key,
