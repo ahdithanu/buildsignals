@@ -14,6 +14,8 @@ X-API-Key: bs_live_...
 - `GET /v1/public/deals`
 - `GET /v1/public/deals/{deal_id}`
 - `GET /v1/public/deals/{deal_id}/graph-context`
+- `GET /v1/public/eval-runs`
+- `GET /v1/public/eval-runs/{run_id}`
 - `GET /v1/public/signals`
 
 All public responses are scoped to the API key's organization. A key with `write` or `admin` scope can read;
@@ -22,6 +24,11 @@ keys without read-compatible scope receive `403`.
 `/deals/{deal_id}/graph-context` returns connected developers, parcels, owners, contractors, architects,
 engineers, permits, cities, lenders, brokers, and relationship evidence for one deal. It is read-only and never
 builds graph state on demand, so missing graph coverage is returned as empty context rather than invented facts.
+
+`/eval-runs` and `/eval-runs/{run_id}` export AI quality history for customer governance workflows. The list
+endpoint returns run-level metadata, thresholds, summaries, gate status, model, and prompt version. The detail
+endpoint includes case-level actual outputs, retrieved context, latency, token/cost metadata when captured, and
+normalized metrics such as citation accuracy, hallucination risk, factual coverage, and quality.
 
 ## Pagination
 
@@ -91,6 +98,7 @@ show the common production path:
 2. Fetch one deal detail.
 3. Fetch its graph context with relationship evidence.
 4. Fetch deal-level source signals.
+5. Export recent evaluation runs for AI governance.
 
 Use these snippets as integration scaffolding rather than a generated SDK. When the public API surface stabilizes,
 Build Signals can generate versioned packages from `openapi.json`.

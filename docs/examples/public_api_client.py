@@ -55,6 +55,21 @@ class BuildSignalsClient:
     def list_signals(self, *, deal_id: str, limit: int = 25) -> list[dict[str, Any]]:
         return self._request("/public/signals", {"deal_id": deal_id, "limit": limit})
 
+    def list_eval_runs(
+        self,
+        *,
+        status: str | None = "completed",
+        limit: int = 25,
+        skip: int = 0,
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {"limit": limit, "skip": skip}
+        if status:
+            params["status"] = status
+        return self._request("/public/eval-runs", params)
+
+    def get_eval_run(self, run_id: str) -> dict[str, Any]:
+        return self._request(f"/public/eval-runs/{run_id}")
+
 
 def main() -> None:
     api_key = os.environ["BUILD_SIGNALS_API_KEY"]
@@ -66,6 +81,7 @@ def main() -> None:
 
     deal = client.get_deal(deals[0]["id"])
     graph = client.get_graph_context(deal["id"])
+    eval_runs = client.list_eval_runs(limit=5)
     print(
         json.dumps(
             {
@@ -73,6 +89,7 @@ def main() -> None:
                 "city": deal.get("city"),
                 "related_entity_count": len(graph.get("entities", [])),
                 "relationship_count": len(graph.get("relationships", [])),
+                "recent_eval_runs": len(eval_runs),
             },
             indent=2,
         )

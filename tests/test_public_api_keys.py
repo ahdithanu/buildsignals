@@ -8,6 +8,7 @@ import app.utils.api_key_deps as api_key_deps
 from app.models.api_key import OrganizationApiKey
 from app.models.api_usage import OrganizationApiKeyUsageEvent
 from app.models.deal import Deal
+from app.models.evaluation import EvalCase, EvalDataset, EvalMetric, EvalResult, EvalRun
 from app.models.graph import (
     GraphEntity,
     GraphEntityLink,
@@ -131,6 +132,104 @@ def _seed_graph_context(db, *, org_id: str, deal: Deal, developer_name: str) -> 
     db.commit()
 
 
+def _seed_eval_run(db, *, org_id: str, name: str, gate_passed: bool = True) -> EvalRun:
+    dataset = EvalDataset(
+        organization_id=org_id,
+        name=f"{name} dataset",
+        workflow="copilot_answer",
+    )
+    db.add(dataset)
+    db.flush()
+    case = EvalCase(
+        organization_id=org_id,
+        dataset_id=dataset.id,
+        name=f"{name} case",
+        input_json={"question": "Why does this opportunity matter?"},
+        expected_output={"required_phrases": ["permit"], "forbidden_phrases": []},
+        retrieved_context=[{"id": "permit-a", "text": "Permit evidence"}],
+        critical=True,
+    )
+    db.add(case)
+    db.flush()
+    run = EvalRun(
+        organization_id=org_id,
+        dataset_id=dataset.id,
+        mode="replay",
+        model="gpt-test",
+        prompt_version="prompt-v1",
+        status="completed",
+        dataset_fingerprint="fixture",
+        thresholds={
+            "minimum_quality": 0.8,
+            "minimum_citation_accuracy": 1.0,
+            "minimum_factual_coverage": 0.8,
+            "maximum_hallucination_risk": 0.0,
+        },
+        summary={
+            "metrics": {
+                "quality": 0.93,
+                "citation_accuracy": 1.0,
+                "hallucination_risk": 0.0,
+                "factual_coverage": 0.91,
+                "rule_compliance": 1.0,
+            },
+            "case_count": 1,
+            "passed_count": 1,
+            "error_count": 0,
+            "critical_failed": False,
+        },
+        gate_passed=gate_passed,
+    )
+    db.add(run)
+    db.flush()
+    result = EvalResult(
+        organization_id=org_id,
+        run_id=run.id,
+        case_id=case.id,
+        case_snapshot={
+            "id": case.id,
+            "dataset_id": dataset.id,
+            "name": case.name,
+            "input_json": case.input_json,
+            "expected_output": case.expected_output,
+            "retrieved_context": case.retrieved_context,
+            "critical": case.critical,
+            "created_at": case.created_at.isoformat(),
+        },
+        actual_output={
+            "text": "Permit evidence supports the opportunity.",
+            "citations": [{"source_id": "permit-a", "quote": "Permit evidence"}],
+        },
+        retrieved_context=case.retrieved_context,
+        status="passed",
+        model=run.model,
+        prompt_version=run.prompt_version,
+        latency_ms=1200,
+        tokens_input=100,
+        tokens_output=80,
+        cost_usd=0.01,
+    )
+    db.add(result)
+    db.flush()
+    db.add_all([
+        EvalMetric(
+            organization_id=org_id,
+            result_id=result.id,
+            name="quality",
+            value=0.93,
+        ),
+        EvalMetric(
+            organization_id=org_id,
+            result_id=result.id,
+            name="citation_accuracy",
+            value=1.0,
+        ),
+    ])
+    db.commit()
+    db.refresh(run)
+    return run
+
+
 def test_public_api_key_reads_only_own_organization(client, db):
     first = _register(client, email="public-first@example.com", org_name="Public First")
     second = _register(client, email="public-second@example.com", org_name="Public Second")
@@ -243,6 +342,52 @@ def test_public_api_returns_tenant_scoped_graph_context(client, db):
         headers={"Authorization": f"Bearer {secret}"},
     )
     assert cross_org.status_code == 404
+
+
+def test_public_api_returns_tenant_scoped_eval_runs(client, db):
+    first = _register(client, email="public-eval-first@example.com", org_name="Public Eval First")
+    second = _register(client, email="public-eval-second@example.com", org_name="Public Eval Second")
+    first_run = _seed_eval_run(db, org_id=first["organization_id"], name="First")
+    second_run = _seed_eval_run(db, org_id=second["organization_id"], name="Second")
+    api_key, secret = _issue_key(
+        db,
+        org_id=first["organization_id"],
+        user_id=first["user_id"],
+        scopes=["read"],
+    )
+
+    listed = client.get("/public/eval-runs", headers={"Authorization": f"Bearer {secret}"})
+    assert listed.status_code == 200, listed.text
+    assert [row["id"] for row in listed.json()] == [first_run.id]
+    assert listed.headers["X-Total-Count"] == "1"
+
+    detail = client.get(
+        f"/public/eval-runs/{first_run.id}",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+    assert body["id"] == first_run.id
+    assert body["summary"]["metrics"]["citation_accuracy"] == 1.0
+    assert body["results"][0]["metrics"]["quality"] == 0.93
+    assert body["results"][0]["actual_output"]["citations"][0]["source_id"] == "permit-a"
+
+    cross_org = client.get(
+        f"/public/eval-runs/{second_run.id}",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert cross_org.status_code == 404
+
+    usage_events = (
+        db.query(OrganizationApiKeyUsageEvent)
+        .filter_by(api_key_id=api_key.id)
+        .order_by(OrganizationApiKeyUsageEvent.created_at.asc())
+        .all()
+    )
+    assert [(event.method, event.path, event.response_items) for event in usage_events] == [
+        ("GET", "/public/eval-runs", 1),
+        ("GET", "/public/eval-runs/{run_id}", 2),
+    ]
 
 
 def test_public_api_rejects_missing_revoked_or_under_scoped_keys(client, db):

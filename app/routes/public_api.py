@@ -4,10 +4,12 @@ from sqlalchemy.orm import Session, joinedload
 from app.db import get_db
 from app.models.api_key import OrganizationApiKey
 from app.models.deal import Deal
+from app.models.evaluation import EvalRun
 from app.models.graph import GraphEntity, GraphEntityLink, GraphRelationship
 from app.models.signal import Signal
 from app.routes.deals import _deal_to_detail
 from app.schemas.deal import DealDetailResponse, DealResponse, DealStatus
+from app.schemas.evaluation import RunDetail, RunRead
 from app.schemas.graph import (
     GraphEntityResponse,
     GraphRelatedEntityResponse,
@@ -15,6 +17,7 @@ from app.schemas.graph import (
     OpportunityGraphContextResponse,
 )
 from app.schemas.signal import SignalResponse
+from app.services import evaluation_service
 from app.services.api_usage_service import record_api_key_usage, start_usage_timer
 from app.services.graph_service import CONTEXT_BUCKETS
 from app.utils.api_key_deps import require_api_key_scope
@@ -261,3 +264,65 @@ def list_public_signals(
         response_items=len(rows),
     )
     return rows
+
+
+@router.get("/eval-runs", response_model=list[RunRead])
+def list_public_eval_runs(
+    response: Response,
+    dataset_id: str | None = Query(None, max_length=36),
+    status: str | None = Query(None, pattern="^(running|completed|failed)$"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    api_key: OrganizationApiKey = Depends(read_api_key),
+    db: Session = Depends(get_db),
+):
+    started_at = start_usage_timer()
+    query = db.query(EvalRun).filter(EvalRun.organization_id == api_key.organization_id)
+    if dataset_id:
+        query = query.filter(EvalRun.dataset_id == dataset_id)
+    if status:
+        query = query.filter(EvalRun.status == status)
+    total_count = query.count()
+    rows = (
+        query.order_by(EvalRun.started_at.desc(), EvalRun.id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    _set_pagination_headers(
+        response,
+        total_count=total_count,
+        skip=skip,
+        limit=limit,
+        returned=len(rows),
+    )
+    record_api_key_usage(
+        db,
+        api_key=api_key,
+        method="GET",
+        path="/public/eval-runs",
+        status_code=200,
+        started_at=started_at,
+        response_items=len(rows),
+    )
+    return rows
+
+
+@router.get("/eval-runs/{run_id}", response_model=RunDetail)
+def get_public_eval_run(
+    run_id: str,
+    api_key: OrganizationApiKey = Depends(read_api_key),
+    db: Session = Depends(get_db),
+):
+    started_at = start_usage_timer()
+    detail = evaluation_service.run_detail(db, api_key.organization_id, run_id)
+    record_api_key_usage(
+        db,
+        api_key=api_key,
+        method="GET",
+        path="/public/eval-runs/{run_id}",
+        status_code=200,
+        started_at=started_at,
+        response_items=1 + len(detail.results),
+    )
+    return detail

@@ -66,6 +66,18 @@ export class BuildSignalsClient {
       limit: params.limit ?? 25,
     });
   }
+
+  listEvalRuns(params: { status?: string; limit?: number; skip?: number } = {}): Promise<JsonRecord[]> {
+    return this.request<JsonRecord[]>("/public/eval-runs", {
+      status: params.status ?? "completed",
+      limit: params.limit ?? 25,
+      skip: params.skip ?? 0,
+    });
+  }
+
+  getEvalRun(runId: string): Promise<JsonRecord> {
+    return this.request<JsonRecord>(`/public/eval-runs/${runId}`);
+  }
 }
 
 async function main() {
@@ -83,6 +95,7 @@ async function main() {
 
   const deal = await client.getDeal(String(deals[0].id));
   const graph = await client.getGraphContext(String(deal.id));
+  const evalRuns = await client.listEvalRuns({ limit: 5 });
   console.log(
     JSON.stringify(
       {
@@ -90,6 +103,7 @@ async function main() {
         city: deal.city,
         relatedEntityCount: Array.isArray(graph.entities) ? graph.entities.length : 0,
         relationshipCount: Array.isArray(graph.relationships) ? graph.relationships.length : 0,
+        recentEvalRuns: evalRuns.length,
       },
       null,
       2,
