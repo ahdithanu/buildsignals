@@ -7,12 +7,12 @@ Set BUILD_SIGNALS_API_KEY before running:
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
-import json
 
 
 @dataclass(frozen=True)

@@ -6,7 +6,6 @@ import py_compile
 import subprocess
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_EXAMPLE = ROOT / "docs" / "examples" / "public_api_client.py"
 TYPESCRIPT_EXAMPLE = ROOT / "docs" / "examples" / "public_api_client.ts"
