@@ -75,3 +75,22 @@ curl -sS "https://buildsignals.ai/v1/public/signals?deal_id=deal_123&limit=25" \
 
 The response body is a JSON array of signals. Missing evidence or private tenant data is never returned across
 organization boundaries.
+
+## Client Snippets
+
+Copy-ready client examples are available for implementation teams that need to export deals, signals, and graph
+context into internal tooling:
+
+- [Python public API client](examples/public_api_client.py)
+- [TypeScript public API client](examples/public_api_client.ts)
+
+Both examples use the same tenant-scoped API key model as the curl examples, avoid storing secrets in code, and
+show the common production path:
+
+1. List accessible deals.
+2. Fetch one deal detail.
+3. Fetch its graph context with relationship evidence.
+4. Fetch deal-level source signals.
+
+Use these snippets as integration scaffolding rather than a generated SDK. When the public API surface stabilizes,
+Build Signals can generate versioned packages from `openapi.json`.

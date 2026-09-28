@@ -43,11 +43,16 @@ admin visibility.
 
 - `GET /v1/public/deals`
 - `GET /v1/public/deals/{deal_id}`
+- `GET /v1/public/deals/{deal_id}/graph-context`
 - `GET /v1/public/signals`
+
+**Implemented integration polish:** Copy-ready Python and TypeScript client
+snippets live in `docs/examples/` and are linked from `docs/public-api.md`.
 
 **Remaining path:**
 1. Expand public endpoints for opportunities and eval results.
-2. Add generated SDK snippets for Python and TypeScript.
+2. Generate versioned Python and TypeScript SDK packages from OpenAPI once the
+   API surface stabilizes.
 
 ---
 
