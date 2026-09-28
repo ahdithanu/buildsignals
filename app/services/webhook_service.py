@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
+import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from fastapi import HTTPException
@@ -9,6 +16,81 @@ from sqlalchemy.orm import Session
 from app.models.webhook import WebhookDelivery, WebhookSubscription
 from app.schemas.webhook import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
 from app.services.audit_service import log_change
+
+WEBHOOK_USER_AGENT = "BuildSignals-Webhooks/1.0"
+MAX_RESPONSE_EXCERPT = 2000
+
+
+@dataclass(frozen=True)
+class WebhookTransportResponse:
+    status_code: int
+    body: str
+
+
+def resolve_secret_reference(secret_reference: str | None) -> str | None:
+    if not secret_reference:
+        return None
+    if ":" not in secret_reference:
+        return None
+    provider, name = secret_reference.split(":", 1)
+    if provider.strip().lower() not in {"env", "vercel"}:
+        return None
+    return os.environ.get(name.strip())
+
+
+def canonical_webhook_body(delivery: WebhookDelivery) -> str:
+    return json.dumps(
+        {
+            "event_id": delivery.event_id,
+            "event_type": delivery.event_type,
+            "delivery_id": delivery.id,
+            "organization_id": delivery.organization_id,
+            "payload": delivery.payload,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+
+
+def webhook_signature(*, secret: str, timestamp: str, body: str) -> str:
+    signed = f"{timestamp}.{body}".encode("utf-8")
+    digest = hmac.new(secret.encode("utf-8"), signed, hashlib.sha256).hexdigest()
+    return f"v1={digest}"
+
+
+def build_delivery_headers(delivery: WebhookDelivery, *, secret: str | None, timestamp: str, body: str) -> dict[str, str]:
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": WEBHOOK_USER_AGENT,
+        "X-Build-Signals-Delivery": delivery.id,
+        "X-Build-Signals-Event": delivery.event_type,
+        "X-Build-Signals-Timestamp": timestamp,
+    }
+    if secret:
+        headers["X-Build-Signals-Signature"] = webhook_signature(
+            secret=secret,
+            timestamp=timestamp,
+            body=body,
+        )
+    return headers
+
+
+def urllib_webhook_transport(url: str, *, body: str, headers: dict[str, str], timeout_seconds: int) -> WebhookTransportResponse:
+    request = Request(url, data=body.encode("utf-8"), headers=headers, method="POST")
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            return WebhookTransportResponse(
+                status_code=response.status,
+                body=response.read(MAX_RESPONSE_EXCERPT).decode("utf-8", errors="replace"),
+            )
+    except HTTPError as exc:
+        return WebhookTransportResponse(
+            status_code=exc.code,
+            body=exc.read(MAX_RESPONSE_EXCERPT).decode("utf-8", errors="replace"),
+        )
+    except URLError as exc:
+        raise RuntimeError(str(exc.reason)) from exc
 
 
 def create_subscription(
@@ -137,3 +219,80 @@ def enqueue_webhook_event(
         deliveries.append(delivery)
     db.flush()
     return deliveries
+
+
+def mark_delivery_attempt(
+    delivery: WebhookDelivery,
+    *,
+    status: str,
+    response_status_code: int | None = None,
+    response_body_excerpt: str | None = None,
+    error_message: str | None = None,
+) -> None:
+    now = datetime.now(timezone.utc)
+    delivery.status = status
+    delivery.attempt_count += 1
+    delivery.last_attempted_at = now
+    delivery.updated_at = now
+    delivery.response_status_code = response_status_code
+    delivery.response_body_excerpt = (
+        response_body_excerpt[:MAX_RESPONSE_EXCERPT] if response_body_excerpt is not None else None
+    )
+    delivery.error_message = error_message[:MAX_RESPONSE_EXCERPT] if error_message is not None else None
+    if status == "pending":
+        delay_seconds = min(60 * (2 ** max(delivery.attempt_count - 1, 0)), 3600)
+        delivery.next_attempt_at = datetime.fromtimestamp(now.timestamp() + delay_seconds, tz=timezone.utc)
+    else:
+        delivery.next_attempt_at = None
+
+
+def attempt_webhook_delivery(
+    db: Session,
+    *,
+    delivery_id: str,
+    transport=None,
+    timeout_seconds: int = 10,
+) -> WebhookDelivery:
+    delivery = db.get(WebhookDelivery, delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Webhook delivery not found")
+    if delivery.status == "delivered":
+        return delivery
+    subscription = delivery.subscription
+    if subscription is None or subscription.status != "active":
+        mark_delivery_attempt(
+            delivery,
+            status="failed",
+            error_message="Webhook subscription is not active",
+        )
+        db.commit()
+        db.refresh(delivery)
+        return delivery
+    body = canonical_webhook_body(delivery)
+    timestamp = str(int(datetime.now(timezone.utc).timestamp()))
+    secret = resolve_secret_reference(subscription.secret_reference)
+    headers = build_delivery_headers(delivery, secret=secret, timestamp=timestamp, body=body)
+    sender = transport or urllib_webhook_transport
+    try:
+        response = sender(subscription.target_url, body=body, headers=headers, timeout_seconds=timeout_seconds)
+    except Exception as exc:
+        mark_delivery_attempt(delivery, status="pending", error_message=str(exc))
+    else:
+        if 200 <= response.status_code < 300:
+            mark_delivery_attempt(
+                delivery,
+                status="delivered",
+                response_status_code=response.status_code,
+                response_body_excerpt=response.body,
+            )
+        else:
+            mark_delivery_attempt(
+                delivery,
+                status="pending",
+                response_status_code=response.status_code,
+                response_body_excerpt=response.body,
+                error_message=f"Webhook target returned HTTP {response.status_code}",
+            )
+    db.commit()
+    db.refresh(delivery)
+    return delivery

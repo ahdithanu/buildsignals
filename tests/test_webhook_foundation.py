@@ -1,6 +1,13 @@
 from app.models.audit_log import AuditLog
 from app.models.webhook import WebhookDelivery, WebhookSubscription
-from app.services.webhook_service import enqueue_webhook_event
+from app.services.webhook_service import (
+    WebhookTransportResponse,
+    attempt_webhook_delivery,
+    build_delivery_headers,
+    canonical_webhook_body,
+    enqueue_webhook_event,
+    webhook_signature,
+)
 
 STRONG_PW = "CorrectHorseBattery42"
 
@@ -178,3 +185,135 @@ def test_enqueue_webhook_event_matches_active_subscriptions_only(db):
     assert deliveries[0].subscription_id == active.id
     assert deliveries[0].status == "pending"
     assert db.query(WebhookDelivery).count() == 1
+
+
+def test_webhook_signature_uses_timestamp_and_canonical_body(db, monkeypatch):
+    monkeypatch.setenv("BUILD_SIGNALS_WEBHOOK_SECRET", "super-secret")
+    subscription = WebhookSubscription(
+        organization_id="org-signature",
+        name="Signed",
+        target_url="https://example.test/signed",
+        event_types=["deal.created"],
+        status="active",
+        secret_reference="env:BUILD_SIGNALS_WEBHOOK_SECRET",
+    )
+    db.add(subscription)
+    db.flush()
+    delivery = WebhookDelivery(
+        organization_id="org-signature",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="deal-1",
+        payload={"deal_id": "deal-1"},
+    )
+    db.add(delivery)
+    db.commit()
+
+    body = canonical_webhook_body(delivery)
+    headers = build_delivery_headers(delivery, secret="super-secret", timestamp="123", body=body)
+
+    assert headers["X-Build-Signals-Signature"] == webhook_signature(
+        secret="super-secret",
+        timestamp="123",
+        body=body,
+    )
+    assert '"event_type":"deal.created"' in body
+    assert '"payload":{"deal_id":"deal-1"}' in body
+
+
+def test_attempt_webhook_delivery_marks_success_and_sends_headers(db, monkeypatch):
+    monkeypatch.setenv("BUILD_SIGNALS_WEBHOOK_SECRET", "super-secret")
+    subscription = WebhookSubscription(
+        organization_id="org-delivery",
+        name="Delivery",
+        target_url="https://example.test/webhook",
+        event_types=["deal.created"],
+        status="active",
+        secret_reference="env:BUILD_SIGNALS_WEBHOOK_SECRET",
+    )
+    db.add(subscription)
+    db.flush()
+    delivery = WebhookDelivery(
+        organization_id="org-delivery",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="deal-1",
+        payload={"deal_id": "deal-1"},
+    )
+    db.add(delivery)
+    db.commit()
+    calls = []
+
+    def transport(url, *, body, headers, timeout_seconds):
+        calls.append((url, body, headers, timeout_seconds))
+        return WebhookTransportResponse(status_code=204, body="accepted")
+
+    result = attempt_webhook_delivery(db, delivery_id=delivery.id, transport=transport, timeout_seconds=3)
+
+    assert result.status == "delivered"
+    assert result.attempt_count == 1
+    assert result.response_status_code == 204
+    assert result.next_attempt_at is None
+    assert calls[0][0] == "https://example.test/webhook"
+    assert calls[0][2]["X-Build-Signals-Signature"].startswith("v1=")
+    assert calls[0][3] == 3
+
+
+def test_attempt_webhook_delivery_schedules_retry_on_http_error(db):
+    subscription = WebhookSubscription(
+        organization_id="org-retry",
+        name="Retry",
+        target_url="https://example.test/webhook",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    delivery = WebhookDelivery(
+        organization_id="org-retry",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="deal-1",
+        payload={"deal_id": "deal-1"},
+    )
+    db.add(delivery)
+    db.commit()
+
+    def transport(*_args, **_kwargs):
+        return WebhookTransportResponse(status_code=503, body="try later")
+
+    result = attempt_webhook_delivery(db, delivery_id=delivery.id, transport=transport)
+
+    assert result.status == "pending"
+    assert result.attempt_count == 1
+    assert result.response_status_code == 503
+    assert result.error_message == "Webhook target returned HTTP 503"
+    assert result.next_attempt_at is not None
+    assert result.next_attempt_at > result.last_attempted_at
+
+
+def test_attempt_webhook_delivery_fails_disabled_subscription(db):
+    subscription = WebhookSubscription(
+        organization_id="org-disabled",
+        name="Disabled",
+        target_url="https://example.test/webhook",
+        event_types=["deal.created"],
+        status="disabled",
+    )
+    db.add(subscription)
+    db.flush()
+    delivery = WebhookDelivery(
+        organization_id="org-disabled",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="deal-1",
+        payload={"deal_id": "deal-1"},
+    )
+    db.add(delivery)
+    db.commit()
+
+    result = attempt_webhook_delivery(db, delivery_id=delivery.id, transport=lambda *_args, **_kwargs: None)
+
+    assert result.status == "failed"
+    assert result.attempt_count == 1
+    assert result.error_message == "Webhook subscription is not active"
