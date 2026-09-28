@@ -433,3 +433,30 @@ def summarize_webhook_deliveries(db: Session, *, organization_id: str) -> Webhoo
         latest_created_at=latest_created_at,
         last_error_message=last_error_message,
     )
+
+
+def replay_webhook_delivery(
+    db: Session,
+    *,
+    organization_id: str,
+    delivery_id: str,
+) -> WebhookDelivery:
+    delivery = (
+        db.query(WebhookDelivery)
+        .filter(WebhookDelivery.organization_id == organization_id, WebhookDelivery.id == delivery_id)
+        .first()
+    )
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Webhook delivery not found")
+    if delivery.status == "delivered":
+        raise HTTPException(status_code=409, detail="Delivered webhooks cannot be replayed")
+    now = datetime.now(timezone.utc)
+    delivery.status = "pending"
+    delivery.next_attempt_at = None
+    delivery.response_status_code = None
+    delivery.response_body_excerpt = None
+    delivery.error_message = None
+    delivery.updated_at = now
+    db.commit()
+    db.refresh(delivery)
+    return delivery

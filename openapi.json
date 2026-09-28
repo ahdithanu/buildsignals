@@ -22999,6 +22999,73 @@
         ]
       }
     },
+    "/v1/organizations/{org_id}/webhook-deliveries/{delivery_id}/replay": {
+      "post": {
+        "operationId": "replay_organization_webhook_delivery_v1_organizations__org_id__webhook_deliveries__delivery_id__replay_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": {
+              "title": "Delivery Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeliveryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replay Organization Webhook Delivery",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
     "/v1/organizations/{org_id}/webhook-delivery-summary": {
       "get": {
         "operationId": "get_webhook_delivery_summary_v1_organizations__org_id__webhook_delivery_summary_get",

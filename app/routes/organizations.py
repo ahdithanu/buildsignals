@@ -44,6 +44,7 @@ from app.services.webhook_service import (
     attempt_webhook_delivery,
     create_subscription,
     enqueue_webhook_event,
+    replay_webhook_delivery,
     summarize_webhook_deliveries,
     update_subscription,
 )
@@ -561,6 +562,31 @@ def attempt_organization_webhook_delivery(
     db.commit()
     db.refresh(attempted)
     return attempted
+
+
+@router.post("/{org_id}/webhook-deliveries/{delivery_id}/replay", response_model=WebhookDeliveryResponse)
+def replay_organization_webhook_delivery(
+    org_id: str,
+    delivery_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    replayed = replay_webhook_delivery(db, organization_id=org_id, delivery_id=delivery_id)
+    log_change(
+        db,
+        "webhook_delivery",
+        replayed.id,
+        "replay",
+        actor_id=principal["user_id"],
+        organization_id=org_id,
+        new_values={
+            "status": replayed.status,
+            "attempt_count": replayed.attempt_count,
+        },
+    )
+    db.commit()
+    db.refresh(replayed)
+    return replayed
 
 
 # ── switch active org ──────────────────────────────────────────────────────

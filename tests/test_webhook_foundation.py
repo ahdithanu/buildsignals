@@ -1,7 +1,11 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from app.models.audit_log import AuditLog
 from app.models.webhook import WebhookDelivery, WebhookSubscription
+from app.services.account_lockout import lockout
+from app.services.rate_limiter import limiter
 from app.services.webhook_service import (
     WebhookTransportResponse,
     attempt_webhook_delivery,
@@ -13,6 +17,15 @@ from app.services.webhook_service import (
 )
 
 STRONG_PW = "CorrectHorseBattery42"
+
+
+@pytest.fixture(autouse=True)
+def _reset_auth_throttles():
+    limiter.clear()
+    lockout.clear()
+    yield
+    limiter.clear()
+    lockout.clear()
 
 
 def _register(client, *, email: str, org_name: str) -> dict:
@@ -167,6 +180,91 @@ def test_admin_can_view_webhook_delivery_summary(client, db):
     assert summary["latest_attempted_at"]
     assert summary["latest_created_at"]
     assert summary["last_error_message"] == "Target returned 500"
+
+
+def test_admin_can_replay_failed_webhook_delivery(client, db):
+    identity = _register(client, email="webhook-replay@example.com", org_name="Webhook Replay")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+    subscription = WebhookSubscription(
+        organization_id=org_id,
+        name="Replay",
+        target_url="https://example.test/replay",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    delivery = WebhookDelivery(
+        organization_id=org_id,
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="failed",
+        payload={"deal_id": "failed"},
+        status="failed",
+        attempt_count=3,
+        response_status_code=500,
+        response_body_excerpt="broken",
+        error_message="Target returned 500",
+    )
+    db.add(delivery)
+    db.commit()
+
+    response = client.post(f"/organizations/{org_id}/webhook-deliveries/{delivery.id}/replay", headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["status"] == "pending"
+    assert payload["attempt_count"] == 3
+    assert payload["next_attempt_at"] is None
+    assert payload["response_status_code"] is None
+    assert payload["response_body_excerpt"] is None
+    assert payload["error_message"] is None
+    assert db.query(AuditLog).filter_by(entity_type="webhook_delivery", action="replay").count() == 1
+
+
+def test_replay_webhook_delivery_rejects_delivered_and_cross_tenant_rows(client, db):
+    first = _register(client, email="webhook-replay-first@example.com", org_name="Webhook Replay First")
+    second = _register(client, email="webhook-replay-second@example.com", org_name="Webhook Replay Second")
+    subscription = WebhookSubscription(
+        organization_id=first["organization_id"],
+        name="Replay",
+        target_url="https://example.test/replay",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    delivered = WebhookDelivery(
+        organization_id=first["organization_id"],
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="delivered",
+        payload={},
+        status="delivered",
+    )
+    failed = WebhookDelivery(
+        organization_id=first["organization_id"],
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="failed",
+        payload={},
+        status="failed",
+    )
+    db.add_all([delivered, failed])
+    db.commit()
+
+    conflict = client.post(
+        f"/organizations/{first['organization_id']}/webhook-deliveries/{delivered.id}/replay",
+        headers=_headers(first),
+    )
+    cross_tenant = client.post(
+        f"/organizations/{second['organization_id']}/webhook-deliveries/{failed.id}/replay",
+        headers=_headers(second),
+    )
+
+    assert conflict.status_code == 409
+    assert cross_tenant.status_code == 404
 
 
 def test_webhook_config_rejects_unknown_events_and_raw_secret_like_urls(client):

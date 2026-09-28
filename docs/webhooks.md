@@ -35,6 +35,7 @@ which preserves user-facing latency and avoids turning customer endpoint downtim
 - `GET /v1/organizations/{org_id}/webhook-delivery-summary`
 - `POST /v1/organizations/{org_id}/webhook-test-events`
 - `POST /v1/organizations/{org_id}/webhook-deliveries/{delivery_id}/attempt`
+- `POST /v1/organizations/{org_id}/webhook-deliveries/{delivery_id}/replay`
 
 Only organization admins can manage subscriptions or inspect deliveries. All records are organization-scoped and
 covered by Postgres row-level security in production.
@@ -73,6 +74,10 @@ not stored in the subscription row.
 2xx responses mark a delivery as `delivered`. Non-2xx responses and network errors leave the row `pending` with a
 bounded response excerpt, error message, incremented attempt count, and an exponential retry timestamp. Disabled
 subscriptions fail pending deliveries instead of posting to stale customer endpoints.
+
+Admins can replay a failed or pending delivery after the customer fixes their receiving endpoint. Replay clears the
+current response/error fields and makes the row immediately eligible for the worker while preserving the original
+payload and attempt count. Delivered webhooks cannot be replayed.
 
 ## Worker Runner
 
