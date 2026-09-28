@@ -494,6 +494,18 @@
       },
       "ApiKeyCreateRequest": {
         "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
           "name": {
             "maxLength": 120,
             "minLength": 3,
@@ -531,6 +543,18 @@
               }
             ],
             "title": "Created By"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
           },
           "id": {
             "title": "Id",
@@ -600,6 +624,11 @@
               }
             ],
             "title": "Revoked By"
+          },
+          "rotation_due": {
+            "default": false,
+            "title": "Rotation Due",
+            "type": "boolean"
           },
           "scopes": {
             "items": {
@@ -663,6 +692,18 @@
             ],
             "title": "Created By"
           },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -731,6 +772,11 @@
               }
             ],
             "title": "Revoked By"
+          },
+          "rotation_due": {
+            "default": false,
+            "title": "Rotation Due",
+            "type": "boolean"
           },
           "scopes": {
             "items": {
