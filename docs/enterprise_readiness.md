@@ -136,7 +136,7 @@ ship. IDs match the tiers used in planning conversations.
 |----|------|--------|-------|
 | I1 | SSO (SAML/OIDC) | ⬜ | Stub in `docs/enterprise-product-roadmap.md` |
 | I2 | SCIM provisioning | ⬜ | Stub in roadmap |
-| I3 | Organization API keys | ⬜ | Stub in roadmap |
+| I3 | Organization API keys | 🟡 | Hashed key lifecycle + audit; public route auth and UI next |
 | I4 | Custom roles / fine-grained RBAC | 🟡 | Base RBAC documented; custom roles TBD |
 | I5 | Audit log export | 🟡 | Data portability routes exist |
 | I6 | Billing / usage metering | ⬜ | |
