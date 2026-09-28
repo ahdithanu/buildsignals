@@ -151,6 +151,9 @@ def list_acquisition_radar(
         ) == "contacted", 1), else_=0)).label(
             "contacted_count"
         ),
+        func.sum(case((ParcelAcquisitionCase.follow_up_at.isnot(None), 1), else_=0)).label(
+            "follow_up_count"
+        ),
         func.sum(case((func.coalesce(
             ParcelAcquisitionCase.assigned_to_user_id,
             NearbyParcelCandidate.assigned_to_user_id,
@@ -190,6 +193,7 @@ def list_acquisition_radar(
         func.sum(case((grouped.c.assigned_count > 0, 1), else_=0)),
         func.sum(case((grouped.c.promoted_count > 0, 1), else_=0)),
         func.sum(case((grouped.c.contacted_count > 0, 1), else_=0)),
+        func.sum(case((grouped.c.follow_up_count > 0, 1), else_=0)),
         func.count(func.distinct(grouped.c.state)),
     ).one()
     ranked_rows = db.query(grouped, radar_score).order_by(
@@ -209,7 +213,8 @@ def list_acquisition_radar(
                 "assigned_parcels": int(summary_row[2] or 0),
                 "promoted_parcels": int(summary_row[3] or 0),
                 "contacted_parcels": int(summary_row[4] or 0),
-                "state_count": int(summary_row[5] or 0),
+                "follow_up_parcels": int(summary_row[5] or 0),
+                "state_count": int(summary_row[6] or 0),
             },
         }
 
@@ -340,7 +345,8 @@ def list_acquisition_radar(
             "assigned_parcels": int(summary_row[2] or 0),
             "promoted_parcels": int(summary_row[3] or 0),
             "contacted_parcels": int(summary_row[4] or 0),
-            "state_count": int(summary_row[5] or 0),
+            "follow_up_parcels": int(summary_row[5] or 0),
+            "state_count": int(summary_row[6] or 0),
         },
     }
 

@@ -55,7 +55,7 @@ describe('<AcquisitionMap> states', () => {
     radarState = {
       data: {
         items: [], total: 0, limit: 100, offset: 0,
-        summary: { total_parcels: 0, shortlisted_parcels: 0, multi_opportunity_parcels: 0, assigned_parcels: 0, promoted_parcels: 0, contacted_parcels: 0, state_count: 0 },
+        summary: { total_parcels: 0, shortlisted_parcels: 0, multi_opportunity_parcels: 0, assigned_parcels: 0, promoted_parcels: 0, contacted_parcels: 0, follow_up_parcels: 0, state_count: 0 },
       },
       isLoading: false,
       error: null,
@@ -174,7 +174,7 @@ describe('<AcquisitionMap> states', () => {
         total: 2,
         limit: 100,
         offset: 0,
-        summary: { total_parcels: 2, shortlisted_parcels: 0, multi_opportunity_parcels: 0, assigned_parcels: 0, promoted_parcels: 0, contacted_parcels: 0, state_count: 2 },
+        summary: { total_parcels: 2, shortlisted_parcels: 0, multi_opportunity_parcels: 0, assigned_parcels: 0, promoted_parcels: 0, contacted_parcels: 0, follow_up_parcels: 0, state_count: 2 },
       },
       isLoading: false,
       error: null,

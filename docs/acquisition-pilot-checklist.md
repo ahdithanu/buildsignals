@@ -44,6 +44,13 @@ assignment does not imply contact, and the same focused frontend/typecheck set
 passes. This keeps the daily workflow honest: assigning a parcel, contacting a
 party, and saving an opportunity are distinct states.
 
+The workflow summary now includes `follow_up_parcels`, and the Radar workflow
+strip separates Outreach from scheduled Follow-up. Backend tests verify that a
+recorded outreach activity with a follow-up date increments both contacted and
+follow-up queue counts, while assignment-only and promotion-only flows do not.
+Focused backend radar/acquisition tests, four focused frontend radar/map/
+wireframe tests, and TypeScript typecheck pass.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with

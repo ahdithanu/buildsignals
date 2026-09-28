@@ -237,6 +237,7 @@ export interface AcquisitionRadarResponse {
     assigned_parcels: number;
     promoted_parcels: number;
     contacted_parcels: number;
+    follow_up_parcels: number;
     state_count: number;
   };
 }

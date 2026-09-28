@@ -258,6 +258,7 @@ function AcquisitionWorkflowStrip({
   shortlistedParcels,
   assignedParcels,
   contactedParcels,
+  followUpParcels,
   promotedCount,
 }: {
   totalParcels: number;
@@ -265,6 +266,7 @@ function AcquisitionWorkflowStrip({
   shortlistedParcels: number;
   assignedParcels: number;
   contactedParcels: number;
+  followUpParcels: number;
   promotedCount: number;
 }) {
   const steps = [
@@ -299,6 +301,12 @@ function AcquisitionWorkflowStrip({
       icon: Mail,
     },
     {
+      label: 'Follow-up',
+      value: followUpParcels,
+      detail: 'Parcels with a scheduled next step after outreach.',
+      icon: CalendarClock,
+    },
+    {
       label: 'Saved',
       value: promotedCount,
       detail: 'Parcel candidates promoted into saved opportunities.',
@@ -316,7 +324,7 @@ function AcquisitionWorkflowStrip({
         </div>
         <Badge variant="outline">Operational view</Badge>
       </div>
-      <ol className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <ol className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-7">
         {steps.map(({ label, value, detail, icon: Icon }, index) => (
           <li key={label} className="relative min-w-0 rounded-md border p-3">
             {index > 0 && <span className="absolute -left-3 top-1/2 hidden h-px w-3 bg-border md:block" aria-hidden="true" />}
@@ -424,6 +432,7 @@ export default function AcquisitionRadar() {
           shortlistedParcels={summary?.shortlisted_parcels ?? 0}
           assignedParcels={summary?.assigned_parcels ?? 0}
           contactedParcels={summary?.contacted_parcels ?? 0}
+          followUpParcels={summary?.follow_up_parcels ?? 0}
           promotedCount={summary?.promoted_parcels ?? 0}
         />
 

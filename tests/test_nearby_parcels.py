@@ -651,6 +651,10 @@ def test_parcel_acquisition_case_tracks_provenance_status_and_outreach(
     assert detail.json()["follow_up_at"].startswith("2026-08-21T17:00:00")
     assert len(detail.json()["sources"]) == 1
     assert len(detail.json()["activities"]) == 1
+    radar = client.get("/acquisition-radar", headers=headers)
+    assert radar.status_code == 200, radar.text
+    assert radar.json()["summary"]["contacted_parcels"] == 1
+    assert radar.json()["summary"]["follow_up_parcels"] == 1
     assert db.query(ParcelAcquisitionActivity).count() == 1
     assert db.query(AuditLog).filter_by(
         entity_type="parcel_acquisition_case"
@@ -784,6 +788,7 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
         "assigned_parcels": 0,
         "promoted_parcels": 0,
         "contacted_parcels": 0,
+        "follow_up_parcels": 0,
         "state_count": 1,
     }
     item = body["items"][0]
@@ -897,6 +902,7 @@ def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path)
     assert radar.status_code == 200, radar.text
     assert radar.json()["summary"]["assigned_parcels"] == 1
     assert radar.json()["summary"]["contacted_parcels"] == 0
+    assert radar.json()["summary"]["follow_up_parcels"] == 0
 
 
 def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_path):
@@ -982,6 +988,7 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     assert radar.status_code == 200, radar.text
     assert radar.json()["summary"]["promoted_parcels"] == 1
     assert radar.json()["summary"]["contacted_parcels"] == 0
+    assert radar.json()["summary"]["follow_up_parcels"] == 0
     assert radar.json()["items"][0]["promoted_deal_id"] == body["deal"]["id"]
 
     graph = client.get(f"/deals/{body['deal']['id']}/graph-context", headers=headers)
