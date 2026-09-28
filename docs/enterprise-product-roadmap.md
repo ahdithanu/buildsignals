@@ -44,17 +44,25 @@ admin visibility.
 - `GET /v1/public/deals`
 - `GET /v1/public/deals/{deal_id}`
 - `GET /v1/public/deals/{deal_id}/graph-context`
+- `GET /v1/public/deals/{deal_id}/workflow-history`
 - `GET /v1/public/eval-runs`
 - `GET /v1/public/eval-runs/{run_id}`
 - `GET /v1/public/signals`
+- `GET /v1/public/signals/{signal_id}/assessment-revisions`
+- `GET /v1/public/assessment-revisions/{revision_id}/reviews`
+- `GET /v1/public/assessment-revisions/{revision_id}/publication`
 
 **Implemented integration polish:** Copy-ready Python and TypeScript client
 snippets live in `docs/examples/` and are linked from `docs/public-api.md`.
+Public API keys can now export opportunity workflow history, assessment revision
+snapshots, review decisions, and publication events for downstream audit, CRM,
+and data warehouse sync without allowing external systems to mutate approvals.
 
 **Remaining path:**
-1. Expand public endpoints for opportunity workflow history and exports.
-2. Generate versioned Python and TypeScript SDK packages from OpenAPI once the
+1. Generate versioned Python and TypeScript SDK packages from OpenAPI once the
    API surface stabilizes.
+2. Add write-scoped integration endpoints only after per-action approval scopes
+   and customer-specific governance policies are in place.
 
 ---
 

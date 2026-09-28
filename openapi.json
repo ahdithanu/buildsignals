@@ -12210,6 +12210,69 @@
         "title": "PreviewResponse",
         "type": "object"
       },
+      "PublicDealWorkflowHistoryResponse": {
+        "properties": {
+          "deal_id": {
+            "title": "Deal Id",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/PublicSignalWorkflowResponse"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "deal_id",
+          "generated_at",
+          "signals"
+        ],
+        "title": "PublicDealWorkflowHistoryResponse",
+        "type": "object"
+      },
+      "PublicSignalWorkflowResponse": {
+        "properties": {
+          "assessment_revisions": {
+            "items": {
+              "$ref": "#/components/schemas/BuildSignalRevisionResponse"
+            },
+            "title": "Assessment Revisions",
+            "type": "array"
+          },
+          "publication_events": {
+            "items": {
+              "$ref": "#/components/schemas/PublicationResponse"
+            },
+            "title": "Publication Events",
+            "type": "array"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/BuildSignalReviewResponse"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "signal": {
+            "$ref": "#/components/schemas/SignalResponse"
+          }
+        },
+        "required": [
+          "signal",
+          "assessment_revisions",
+          "reviews",
+          "publication_events"
+        ],
+        "title": "PublicSignalWorkflowResponse",
+        "type": "object"
+      },
       "PublicationCreate": {
         "additionalProperties": false,
         "properties": {
@@ -23782,6 +23845,208 @@
         ]
       }
     },
+    "/v1/public/assessment-revisions/{revision_id}/publication": {
+      "get": {
+        "operationId": "list_public_assessment_publications_v1_public_assessment_revisions__revision_id__publication_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicationResponse"
+                  },
+                  "title": "Response List Public Assessment Publications V1 Public Assessment Revisions  Revision Id  Publication Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Public Assessment Publications",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/v1/public/assessment-revisions/{revision_id}/reviews": {
+      "get": {
+        "operationId": "list_public_assessment_reviews_v1_public_assessment_revisions__revision_id__reviews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BuildSignalReviewResponse"
+                  },
+                  "title": "Response List Public Assessment Reviews V1 Public Assessment Revisions  Revision Id  Reviews Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Public Assessment Reviews",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
     "/v1/public/deals": {
       "get": {
         "operationId": "list_public_deals_v1_public_deals_get",
@@ -24050,6 +24315,92 @@
           }
         },
         "summary": "Get Public Deal Graph Context",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/v1/public/deals/{deal_id}/workflow-history": {
+      "get": {
+        "operationId": "get_public_deal_workflow_history_v1_public_deals__deal_id__workflow_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit_per_signal",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit Per Signal",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicDealWorkflowHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Public Deal Workflow History",
         "tags": [
           "public-api"
         ]
@@ -24375,6 +24726,107 @@
           }
         },
         "summary": "List Public Signals",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/v1/public/signals/{signal_id}/assessment-revisions": {
+      "get": {
+        "operationId": "list_public_signal_assessment_revisions_v1_public_signals__signal_id__assessment_revisions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "signal_id",
+            "required": true,
+            "schema": {
+              "title": "Signal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BuildSignalRevisionResponse"
+                  },
+                  "title": "Response List Public Signal Assessment Revisions V1 Public Signals  Signal Id  Assessment Revisions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Public Signal Assessment Revisions",
         "tags": [
           "public-api"
         ]

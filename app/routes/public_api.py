@@ -1,13 +1,21 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session, joinedload
 
 from app.db import get_db
 from app.models.api_key import OrganizationApiKey
+from app.models.buildsignal import BuildSignalPublication, BuildSignalReview, BuildSignalRevision
 from app.models.deal import Deal
 from app.models.evaluation import EvalRun
 from app.models.graph import GraphEntity, GraphEntityLink, GraphRelationship
 from app.models.signal import Signal
 from app.routes.deals import _deal_to_detail
+from app.schemas.buildsignal import (
+    BuildSignalReviewResponse,
+    BuildSignalRevisionResponse,
+    PublicationResponse,
+)
 from app.schemas.deal import DealDetailResponse, DealResponse, DealStatus
 from app.schemas.evaluation import RunDetail, RunRead
 from app.schemas.graph import (
@@ -16,6 +24,7 @@ from app.schemas.graph import (
     GraphRelationshipResponse,
     OpportunityGraphContextResponse,
 )
+from app.schemas.public_api import PublicDealWorkflowHistoryResponse, PublicSignalWorkflowResponse
 from app.schemas.signal import SignalResponse
 from app.services import evaluation_service
 from app.services.api_usage_service import record_api_key_usage, start_usage_timer
@@ -137,6 +146,68 @@ def _public_opportunity_graph_context(
     )
 
 
+def _public_workflow_history(
+    db: Session,
+    *,
+    organization_id: str,
+    deal_id: str,
+    limit_per_signal: int,
+) -> PublicDealWorkflowHistoryResponse:
+    signals = (
+        db.query(Signal)
+        .filter(Signal.organization_id == organization_id, Signal.deal_id == deal_id)
+        .order_by(Signal.created_at.desc(), Signal.id.desc())
+        .all()
+    )
+    signal_items: list[PublicSignalWorkflowResponse] = []
+    for signal in signals:
+        revisions = (
+            db.query(BuildSignalRevision)
+            .filter(
+                BuildSignalRevision.organization_id == organization_id,
+                BuildSignalRevision.signal_id == signal.id,
+            )
+            .order_by(BuildSignalRevision.created_at.desc(), BuildSignalRevision.id.desc())
+            .limit(limit_per_signal)
+            .all()
+        )
+        revision_ids = [revision.id for revision in revisions]
+        reviews: list[BuildSignalReview] = []
+        publications: list[BuildSignalPublication] = []
+        if revision_ids:
+            reviews = (
+                db.query(BuildSignalReview)
+                .filter(
+                    BuildSignalReview.organization_id == organization_id,
+                    BuildSignalReview.revision_id.in_(revision_ids),
+                )
+                .order_by(BuildSignalReview.created_at.desc(), BuildSignalReview.id.desc())
+                .all()
+            )
+            publications = (
+                db.query(BuildSignalPublication)
+                .filter(
+                    BuildSignalPublication.organization_id == organization_id,
+                    BuildSignalPublication.revision_id.in_(revision_ids),
+                )
+                .order_by(BuildSignalPublication.version.desc(), BuildSignalPublication.id.desc())
+                .all()
+            )
+        signal_items.append(
+            PublicSignalWorkflowResponse(
+                signal=signal,
+                assessment_revisions=revisions,
+                reviews=reviews,
+                publication_events=publications,
+            )
+        )
+    return PublicDealWorkflowHistoryResponse(
+        deal_id=deal_id,
+        generated_at=datetime.now(timezone.utc),
+        signals=signal_items,
+    )
+
+
 @router.get("/deals", response_model=list[DealResponse])
 def list_public_deals(
     response: Response,
@@ -229,6 +300,44 @@ def get_public_deal_graph_context(
     return context
 
 
+@router.get("/deals/{deal_id}/workflow-history", response_model=PublicDealWorkflowHistoryResponse)
+def get_public_deal_workflow_history(
+    deal_id: str,
+    limit_per_signal: int = Query(25, ge=1, le=100),
+    api_key: OrganizationApiKey = Depends(read_api_key),
+    db: Session = Depends(get_db),
+):
+    started_at = start_usage_timer()
+    deal = active_query(db.query(Deal), Deal, org_id=api_key.organization_id).filter(
+        Deal.id == deal_id
+    ).first()
+    if not deal:
+        raise HTTPException(status_code=404, detail=f"Deal {deal_id} not found")
+    history = _public_workflow_history(
+        db,
+        organization_id=api_key.organization_id,
+        deal_id=deal_id,
+        limit_per_signal=limit_per_signal,
+    )
+    response_items = sum(
+        1
+        + len(item.assessment_revisions)
+        + len(item.reviews)
+        + len(item.publication_events)
+        for item in history.signals
+    )
+    record_api_key_usage(
+        db,
+        api_key=api_key,
+        method="GET",
+        path="/public/deals/{deal_id}/workflow-history",
+        status_code=200,
+        started_at=started_at,
+        response_items=response_items,
+    )
+    return history
+
+
 @router.get("/signals", response_model=list[SignalResponse])
 def list_public_signals(
     response: Response,
@@ -259,6 +368,130 @@ def list_public_signals(
         api_key=api_key,
         method="GET",
         path="/public/signals",
+        status_code=200,
+        started_at=started_at,
+        response_items=len(rows),
+    )
+    return rows
+
+
+@router.get("/signals/{signal_id}/assessment-revisions", response_model=list[BuildSignalRevisionResponse])
+def list_public_signal_assessment_revisions(
+    signal_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    api_key: OrganizationApiKey = Depends(read_api_key),
+    db: Session = Depends(get_db),
+):
+    started_at = start_usage_timer()
+    signal = scope_query(db.query(Signal), Signal, org_id=api_key.organization_id).filter(
+        Signal.id == signal_id
+    ).first()
+    if not signal:
+        raise HTTPException(status_code=404, detail=f"Signal {signal_id} not found")
+    rows = (
+        db.query(BuildSignalRevision)
+        .filter(
+            BuildSignalRevision.organization_id == api_key.organization_id,
+            BuildSignalRevision.signal_id == signal_id,
+        )
+        .order_by(BuildSignalRevision.created_at.desc(), BuildSignalRevision.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    record_api_key_usage(
+        db,
+        api_key=api_key,
+        method="GET",
+        path="/public/signals/{signal_id}/assessment-revisions",
+        status_code=200,
+        started_at=started_at,
+        response_items=len(rows),
+    )
+    return rows
+
+
+@router.get("/assessment-revisions/{revision_id}/reviews", response_model=list[BuildSignalReviewResponse])
+def list_public_assessment_reviews(
+    revision_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    api_key: OrganizationApiKey = Depends(read_api_key),
+    db: Session = Depends(get_db),
+):
+    started_at = start_usage_timer()
+    revision = (
+        db.query(BuildSignalRevision)
+        .filter(
+            BuildSignalRevision.organization_id == api_key.organization_id,
+            BuildSignalRevision.id == revision_id,
+        )
+        .first()
+    )
+    if not revision:
+        raise HTTPException(status_code=404, detail=f"Assessment revision {revision_id} not found")
+    rows = (
+        db.query(BuildSignalReview)
+        .filter(
+            BuildSignalReview.organization_id == api_key.organization_id,
+            BuildSignalReview.revision_id == revision_id,
+        )
+        .order_by(BuildSignalReview.created_at.desc(), BuildSignalReview.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    record_api_key_usage(
+        db,
+        api_key=api_key,
+        method="GET",
+        path="/public/assessment-revisions/{revision_id}/reviews",
+        status_code=200,
+        started_at=started_at,
+        response_items=len(rows),
+    )
+    return rows
+
+
+@router.get(
+    "/assessment-revisions/{revision_id}/publication",
+    response_model=list[PublicationResponse],
+)
+def list_public_assessment_publications(
+    revision_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    api_key: OrganizationApiKey = Depends(read_api_key),
+    db: Session = Depends(get_db),
+):
+    started_at = start_usage_timer()
+    revision = (
+        db.query(BuildSignalRevision)
+        .filter(
+            BuildSignalRevision.organization_id == api_key.organization_id,
+            BuildSignalRevision.id == revision_id,
+        )
+        .first()
+    )
+    if not revision:
+        raise HTTPException(status_code=404, detail=f"Assessment revision {revision_id} not found")
+    rows = (
+        db.query(BuildSignalPublication)
+        .filter(
+            BuildSignalPublication.organization_id == api_key.organization_id,
+            BuildSignalPublication.revision_id == revision_id,
+        )
+        .order_by(BuildSignalPublication.version.desc(), BuildSignalPublication.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    record_api_key_usage(
+        db,
+        api_key=api_key,
+        method="GET",
+        path="/public/assessment-revisions/{revision_id}/publication",
         status_code=200,
         started_at=started_at,
         response_items=len(rows),

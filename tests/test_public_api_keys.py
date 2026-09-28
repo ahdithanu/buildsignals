@@ -7,6 +7,7 @@ import pytest
 import app.utils.api_key_deps as api_key_deps
 from app.models.api_key import OrganizationApiKey
 from app.models.api_usage import OrganizationApiKeyUsageEvent
+from app.models.buildsignal import BuildSignalPublication, BuildSignalReview, BuildSignalRevision
 from app.models.deal import Deal
 from app.models.evaluation import EvalCase, EvalDataset, EvalMetric, EvalResult, EvalRun
 from app.models.graph import (
@@ -230,6 +231,93 @@ def _seed_eval_run(db, *, org_id: str, name: str, gate_passed: bool = True) -> E
     return run
 
 
+def _assessment_snapshot(signal_id: str) -> dict:
+    now = datetime.now(timezone.utc).isoformat()
+    return {
+        "schema_version": "1",
+        "signal_id": signal_id,
+        "status": "draft",
+        "detected_change": "Industrial tenant improvement permit moved into review.",
+        "event_at": now,
+        "investment_thesis": "Permit movement suggests near-term occupancy demand.",
+        "change_confidence": {"level": "high", "rationale": "Permit record names the site."},
+        "thesis_confidence": {"level": "medium", "rationale": "Use still requires diligence."},
+        "citations": [
+            {
+                "evidence_id": "evidence-public-api",
+                "stance": "supports",
+                "claim": "change",
+                "rationale": "Permit status changed.",
+                "source_system": "county_permits",
+                "source_id": "PERMIT-1",
+                "source_url": "https://example.test/permit",
+                "excerpt": "Plan review opened for tenant improvement.",
+                "observed_at": now,
+                "relationship_id": "relationship-public-api",
+                "relationship_is_current": True,
+                "relationship_last_verified_at": now,
+            }
+        ],
+        "implications": [
+            {
+                "entity_id": "entity-public-api",
+                "mechanism": "Occupancy-triggered demand",
+                "direction": "positive",
+                "horizon": "0-6 months",
+                "evidence_ids": ["evidence-public-api"],
+                "entity_name": "Workflow Warehouse",
+                "entity_type": "property",
+            }
+        ],
+        "further_investigation": ["Confirm tenant identity."],
+        "generated_at": now,
+        "review_flags": ["Analyst-authored hypothesis; source linkage does not validate investment causality."],
+    }
+
+
+def _seed_workflow_history(db, *, org_id: str, deal: Deal) -> tuple[Signal, BuildSignalRevision]:
+    signal = Signal(
+        organization_id=org_id,
+        deal_id=deal.id,
+        signal_type="permit",
+        source="fixture",
+        description="Workflow permit signal",
+        severity=8.7,
+    )
+    db.add(signal)
+    db.flush()
+    revision = BuildSignalRevision(
+        organization_id=org_id,
+        signal_id=signal.id,
+        author_id="author-public-api",
+        snapshot=_assessment_snapshot(signal.id),
+    )
+    db.add(revision)
+    db.flush()
+    review = BuildSignalReview(
+        organization_id=org_id,
+        revision_id=revision.id,
+        reviewer_id="reviewer-public-api",
+        decision="approved",
+        rationale="Evidence chain is complete.",
+    )
+    db.add(review)
+    db.flush()
+    db.add(BuildSignalPublication(
+        organization_id=org_id,
+        revision_id=revision.id,
+        actor_id="publisher-public-api",
+        review_id=review.id,
+        version=1,
+        action="published",
+        rationale="Ready for downstream warehouse export.",
+    ))
+    db.commit()
+    db.refresh(signal)
+    db.refresh(revision)
+    return signal, revision
+
+
 def test_public_api_key_reads_only_own_organization(client, db):
     first = _register(client, email="public-first@example.com", org_name="Public First")
     second = _register(client, email="public-second@example.com", org_name="Public Second")
@@ -387,6 +475,78 @@ def test_public_api_returns_tenant_scoped_eval_runs(client, db):
     assert [(event.method, event.path, event.response_items) for event in usage_events] == [
         ("GET", "/public/eval-runs", 1),
         ("GET", "/public/eval-runs/{run_id}", 2),
+    ]
+
+
+def test_public_api_returns_tenant_scoped_workflow_history(client, db):
+    first = _register(client, email="public-workflow-first@example.com", org_name="Public Workflow First")
+    second = _register(client, email="public-workflow-second@example.com", org_name="Public Workflow Second")
+    first_deal = _seed_deal(db, org_id=first["organization_id"], name="First workflow warehouse")
+    second_deal = _seed_deal(db, org_id=second["organization_id"], name="Second workflow warehouse")
+    signal, revision = _seed_workflow_history(db, org_id=first["organization_id"], deal=first_deal)
+    _, second_revision = _seed_workflow_history(db, org_id=second["organization_id"], deal=second_deal)
+    api_key, secret = _issue_key(
+        db,
+        org_id=first["organization_id"],
+        user_id=first["user_id"],
+        scopes=["read"],
+    )
+
+    history = client.get(
+        f"/public/deals/{first_deal.id}/workflow-history",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert history.status_code == 200, history.text
+    body = history.json()
+    assert body["deal_id"] == first_deal.id
+    assert [item["signal"]["id"] for item in body["signals"]] == [signal.id, first_deal.signals[0].id]
+    workflow_signal = body["signals"][0]
+    assert workflow_signal["assessment_revisions"][0]["id"] == revision.id
+    assert workflow_signal["reviews"][0]["decision"] == "approved"
+    assert workflow_signal["publication_events"][0]["action"] == "published"
+    assert workflow_signal["assessment_revisions"][0]["snapshot"]["citations"][0]["source_system"] == "county_permits"
+
+    revisions = client.get(
+        f"/public/signals/{signal.id}/assessment-revisions",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert revisions.status_code == 200, revisions.text
+    assert [row["id"] for row in revisions.json()] == [revision.id]
+
+    reviews = client.get(
+        f"/public/assessment-revisions/{revision.id}/reviews",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert reviews.status_code == 200, reviews.text
+    assert reviews.json()[0]["rationale"] == "Evidence chain is complete."
+
+    publications = client.get(
+        f"/public/assessment-revisions/{revision.id}/publication",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert publications.status_code == 200, publications.text
+    assert publications.json()[0]["rationale"] == "Ready for downstream warehouse export."
+
+    assert client.get(
+        f"/public/deals/{second_deal.id}/workflow-history",
+        headers={"Authorization": f"Bearer {secret}"},
+    ).status_code == 404
+    assert client.get(
+        f"/public/assessment-revisions/{second_revision.id}/reviews",
+        headers={"Authorization": f"Bearer {secret}"},
+    ).status_code == 404
+
+    usage_events = (
+        db.query(OrganizationApiKeyUsageEvent)
+        .filter_by(api_key_id=api_key.id)
+        .order_by(OrganizationApiKeyUsageEvent.created_at.asc())
+        .all()
+    )
+    assert [(event.method, event.path, event.response_items) for event in usage_events] == [
+        ("GET", "/public/deals/{deal_id}/workflow-history", 5),
+        ("GET", "/public/signals/{signal_id}/assessment-revisions", 1),
+        ("GET", "/public/assessment-revisions/{revision_id}/reviews", 1),
+        ("GET", "/public/assessment-revisions/{revision_id}/publication", 1),
     ]
 
 

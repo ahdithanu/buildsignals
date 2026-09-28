@@ -14,9 +14,13 @@ X-API-Key: bs_live_...
 - `GET /v1/public/deals`
 - `GET /v1/public/deals/{deal_id}`
 - `GET /v1/public/deals/{deal_id}/graph-context`
+- `GET /v1/public/deals/{deal_id}/workflow-history`
 - `GET /v1/public/eval-runs`
 - `GET /v1/public/eval-runs/{run_id}`
 - `GET /v1/public/signals`
+- `GET /v1/public/signals/{signal_id}/assessment-revisions`
+- `GET /v1/public/assessment-revisions/{revision_id}/reviews`
+- `GET /v1/public/assessment-revisions/{revision_id}/publication`
 
 All public responses are scoped to the API key's organization. A key with `write` or `admin` scope can read;
 keys without read-compatible scope receive `403`.
@@ -29,6 +33,12 @@ builds graph state on demand, so missing graph coverage is returned as empty con
 endpoint returns run-level metadata, thresholds, summaries, gate status, model, and prompt version. The detail
 endpoint includes case-level actual outputs, retrieved context, latency, token/cost metadata when captured, and
 normalized metrics such as citation accuracy, hallucination risk, factual coverage, and quality.
+
+`/deals/{deal_id}/workflow-history` exports the human-in-the-loop lifecycle for one opportunity. It includes each
+source signal, assessment revision snapshot, review decision, and publication/export event. Related drill-down
+endpoints expose signal-level assessment revisions plus revision-level reviews and publication events. These
+endpoints are read-only for API keys so external integrations can audit status without bypassing reviewer controls
+or mutating AI-generated content.
 
 ## Pagination
 
@@ -99,6 +109,7 @@ show the common production path:
 3. Fetch its graph context with relationship evidence.
 4. Fetch deal-level source signals.
 5. Export recent evaluation runs for AI governance.
+6. Export workflow history for downstream audit, warehouse, or CRM sync.
 
 Use these snippets as integration scaffolding rather than a generated SDK. When the public API surface stabilizes,
 Build Signals can generate versioned packages from `openapi.json`.
