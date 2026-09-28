@@ -38,6 +38,12 @@ shortlisted parcel is converted into a live opportunity. Focused backend
 promotion/radar tests, four focused frontend radar/map/wireframe tests, and
 TypeScript typecheck pass.
 
+The workflow summary also includes `contacted_parcels`, and the Radar workflow
+strip now separates Owner assignment from Outreach. Backend tests verify that
+assignment does not imply contact, and the same focused frontend/typecheck set
+passes. This keeps the daily workflow honest: assigning a parcel, contacting a
+party, and saving an opportunity are distinct states.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
