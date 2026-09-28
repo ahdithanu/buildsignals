@@ -31,6 +31,12 @@ The overview describes the populated source-filing, graph, parcel-reference,
 and qualified-location surfaces while explicitly saying the demo does not claim
 live planning coverage, confirmed brand expansions, verified for-sale listings,
 or ranked nearby acquisition candidates.
+It now also shows an acquisition-workflow readiness panel that translates the
+demo into the product promise: signal intake, evidence graph context, mapped
+locations, and parcel-candidate readiness. Each tile is labeled as ready,
+review-needed, or needing qualified source data so the demo can explain where
+BuildSignals is actionable today without fabricating parcel inventory or
+for-sale claims.
 
 ## Security Boundaries
 
@@ -206,6 +212,11 @@ verified filing-site points. A local 12-address pass matched seven addresses
 covering 75 filings; five were not plotted. Repeated filings can share one point.
 The map and linked list distinguish source coordinates, Census estimates, and
 parcel centroids. This local result is not production map coverage.
+
+Frontend regression coverage now clicks from the overview into the Map tab and
+asserts that a mapped demo layer renders geocoded filings and source parcel
+rows, while still labeling Census address-range estimates and parcel centroids
+separately.
 
 The demo still has **zero qualified parcel records**. Existing parcel ingestion
 and map display accept source coordinates and polygons when the source's export
