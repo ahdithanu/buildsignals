@@ -92,6 +92,11 @@ follow-up, case status, assignment, market, buyer lens, search, and pagination
 from the URL, then replaces the URL as filters change. Focused frontend tests
 verify URL-driven filter hydration.
 
+The Radar filter bar now includes a `Copy view link` action that copies the
+current filtered queue URL for demos, analyst handoff, and manager review.
+Focused frontend tests verify the copied link preserves active availability,
+signal-overlap, follow-up, and status filters.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
