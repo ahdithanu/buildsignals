@@ -106,6 +106,20 @@ class WebhookDeliveryResponse(BaseModel):
     updated_at: datetime
 
 
+class WebhookDeliverySummaryResponse(BaseModel):
+    organization_id: str
+    total: int
+    pending: int
+    delivered: int
+    failed: int
+    subscriptions_active: int
+    subscriptions_disabled: int
+    failure_rate: float
+    latest_attempted_at: datetime | None
+    latest_created_at: datetime | None
+    last_error_message: str | None
+
+
 class WebhookTestEventRequest(BaseModel):
     event_type: str = Field(default="deal.created")
     event_id: str = Field(default="test-event", min_length=1, max_length=120)

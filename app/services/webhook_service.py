@@ -37,6 +37,21 @@ class WebhookBatchResult:
     delivery_ids: list[str]
 
 
+@dataclass(frozen=True)
+class WebhookDeliverySummary:
+    organization_id: str
+    total: int
+    pending: int
+    delivered: int
+    failed: int
+    subscriptions_active: int
+    subscriptions_disabled: int
+    failure_rate: float
+    latest_attempted_at: datetime | None
+    latest_created_at: datetime | None
+    last_error_message: str | None
+
+
 def resolve_secret_reference(secret_reference: str | None) -> str | None:
     if not secret_reference:
         return None
@@ -374,4 +389,47 @@ def process_due_webhook_deliveries(
         pending=sum(1 for status in statuses if status == "pending"),
         failed=sum(1 for status in statuses if status == "failed"),
         delivery_ids=delivery_ids,
+    )
+
+
+def summarize_webhook_deliveries(db: Session, *, organization_id: str) -> WebhookDeliverySummary:
+    deliveries = (
+        db.query(WebhookDelivery)
+        .filter(WebhookDelivery.organization_id == organization_id)
+        .order_by(WebhookDelivery.created_at.desc())
+        .all()
+    )
+    subscriptions = (
+        db.query(WebhookSubscription.status)
+        .filter(WebhookSubscription.organization_id == organization_id)
+        .all()
+    )
+    total = len(deliveries)
+    pending = sum(1 for delivery in deliveries if delivery.status == "pending")
+    delivered = sum(1 for delivery in deliveries if delivery.status == "delivered")
+    failed = sum(1 for delivery in deliveries if delivery.status == "failed")
+    attempted = delivered + failed + sum(
+        1 for delivery in deliveries if delivery.status == "pending" and delivery.attempt_count > 0
+    )
+    latest_attempted_at = max(
+        (delivery.last_attempted_at for delivery in deliveries if delivery.last_attempted_at is not None),
+        default=None,
+    )
+    latest_created_at = max((delivery.created_at for delivery in deliveries), default=None)
+    last_error_message = next(
+        (delivery.error_message for delivery in deliveries if delivery.error_message),
+        None,
+    )
+    return WebhookDeliverySummary(
+        organization_id=organization_id,
+        total=total,
+        pending=pending,
+        delivered=delivered,
+        failed=failed,
+        subscriptions_active=sum(1 for (status,) in subscriptions if status == "active"),
+        subscriptions_disabled=sum(1 for (status,) in subscriptions if status == "disabled"),
+        failure_rate=round(failed / attempted, 4) if attempted else 0.0,
+        latest_attempted_at=latest_attempted_at,
+        latest_created_at=latest_created_at,
+        last_error_message=last_error_message,
     )

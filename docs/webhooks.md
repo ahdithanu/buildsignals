@@ -32,6 +32,7 @@ which preserves user-facing latency and avoids turning customer endpoint downtim
 - `POST /v1/organizations/{org_id}/webhook-subscriptions`
 - `PATCH /v1/organizations/{org_id}/webhook-subscriptions/{subscription_id}`
 - `GET /v1/organizations/{org_id}/webhook-deliveries`
+- `GET /v1/organizations/{org_id}/webhook-delivery-summary`
 - `POST /v1/organizations/{org_id}/webhook-test-events`
 - `POST /v1/organizations/{org_id}/webhook-deliveries/{delivery_id}/attempt`
 
@@ -50,6 +51,10 @@ covered by Postgres row-level security in production.
 
 The queue is processed by a tenant-scoped worker that signs payloads using the configured secret reference, performs
 bounded retries, and records success or failure without blocking the originating workflow.
+
+`GET /v1/organizations/{org_id}/webhook-delivery-summary` provides an admin health rollup with total, pending,
+delivered, and failed deliveries, active/disabled subscription counts, failure rate, latest timestamps, and the most
+recent error message. Use it as the dashboard source before drilling into individual delivery rows.
 
 ## Delivery Attempts
 

@@ -26,6 +26,7 @@ from app.schemas.organization import (
 )
 from app.schemas.webhook import (
     WebhookDeliveryResponse,
+    WebhookDeliverySummaryResponse,
     WebhookSubscriptionCreate,
     WebhookSubscriptionResponse,
     WebhookSubscriptionUpdate,
@@ -43,6 +44,7 @@ from app.services.webhook_service import (
     attempt_webhook_delivery,
     create_subscription,
     enqueue_webhook_event,
+    summarize_webhook_deliveries,
     update_subscription,
 )
 from app.utils.auth_deps import get_current_user, require_role_of
@@ -478,6 +480,17 @@ def list_webhook_deliveries(
         .limit(min(max(limit, 1), 100))
         .all()
     )
+
+
+@router.get("/{org_id}/webhook-delivery-summary", response_model=WebhookDeliverySummaryResponse)
+def get_webhook_delivery_summary(
+    org_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return summarize_webhook_deliveries(db, organization_id=org_id)
 
 
 @router.post("/{org_id}/webhook-test-events", response_model=list[WebhookDeliveryResponse], status_code=201)

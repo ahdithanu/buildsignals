@@ -91,6 +91,84 @@ def test_admin_can_manage_webhook_subscription_and_queue_test_event(client, db):
     assert db.query(AuditLog).filter_by(entity_type="webhook_subscription").count() == 2
 
 
+def test_admin_can_view_webhook_delivery_summary(client, db):
+    identity = _register(client, email="webhook-summary@example.com", org_name="Webhook Summary")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+    active = WebhookSubscription(
+        organization_id=org_id,
+        name="Active",
+        target_url="https://example.test/active",
+        event_types=["deal.created"],
+        status="active",
+    )
+    disabled = WebhookSubscription(
+        organization_id=org_id,
+        name="Disabled",
+        target_url="https://example.test/disabled",
+        event_types=["deal.created"],
+        status="disabled",
+    )
+    db.add_all([active, disabled])
+    db.flush()
+    db.add_all([
+        WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=active.id,
+            event_type="deal.created",
+            event_id="pending",
+            payload={},
+            status="pending",
+        ),
+        WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=active.id,
+            event_type="deal.created",
+            event_id="delivered",
+            payload={},
+            status="delivered",
+            attempt_count=1,
+            last_attempted_at=datetime.now(timezone.utc),
+        ),
+        WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=disabled.id,
+            event_type="deal.created",
+            event_id="failed",
+            payload={},
+            status="failed",
+            attempt_count=1,
+            last_attempted_at=datetime.now(timezone.utc),
+            error_message="Target returned 500",
+        ),
+        WebhookDelivery(
+            organization_id="other-org",
+            subscription_id=active.id,
+            event_type="deal.created",
+            event_id="other",
+            payload={},
+            status="failed",
+        ),
+    ])
+    db.commit()
+
+    response = client.get(f"/organizations/{org_id}/webhook-delivery-summary", headers=headers)
+
+    assert response.status_code == 200, response.text
+    summary = response.json()
+    assert summary["organization_id"] == org_id
+    assert summary["total"] == 3
+    assert summary["pending"] == 1
+    assert summary["delivered"] == 1
+    assert summary["failed"] == 1
+    assert summary["subscriptions_active"] == 1
+    assert summary["subscriptions_disabled"] == 1
+    assert summary["failure_rate"] == 0.5
+    assert summary["latest_attempted_at"]
+    assert summary["latest_created_at"]
+    assert summary["last_error_message"] == "Target returned 500"
+
+
 def test_webhook_config_rejects_unknown_events_and_raw_secret_like_urls(client):
     identity = _register(client, email="webhook-validation@example.com", org_name="Webhook Validation")
     headers = _headers(identity)

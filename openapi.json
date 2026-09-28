@@ -14859,6 +14859,92 @@
         "title": "WebhookDeliveryResponse",
         "type": "object"
       },
+      "WebhookDeliverySummaryResponse": {
+        "properties": {
+          "delivered": {
+            "title": "Delivered",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "failure_rate": {
+            "title": "Failure Rate",
+            "type": "number"
+          },
+          "last_error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Message"
+          },
+          "latest_attempted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Attempted At"
+          },
+          "latest_created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Created At"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "subscriptions_active": {
+            "title": "Subscriptions Active",
+            "type": "integer"
+          },
+          "subscriptions_disabled": {
+            "title": "Subscriptions Disabled",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "organization_id",
+          "total",
+          "pending",
+          "delivered",
+          "failed",
+          "subscriptions_active",
+          "subscriptions_disabled",
+          "failure_rate",
+          "latest_attempted_at",
+          "latest_created_at",
+          "last_error_message"
+        ],
+        "title": "WebhookDeliverySummaryResponse",
+        "type": "object"
+      },
       "WebhookSubscriptionCreate": {
         "properties": {
           "event_types": {
@@ -22908,6 +22994,64 @@
           }
         },
         "summary": "Attempt Organization Webhook Delivery",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/v1/organizations/{org_id}/webhook-delivery-summary": {
+      "get": {
+        "operationId": "get_webhook_delivery_summary_v1_organizations__org_id__webhook_delivery_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeliverySummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Webhook Delivery Summary",
         "tags": [
           "organizations"
         ]
