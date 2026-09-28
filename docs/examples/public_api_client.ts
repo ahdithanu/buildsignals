@@ -7,6 +7,10 @@
  */
 
 type JsonRecord = Record<string, unknown>;
+declare const process: {
+  argv: string[];
+  env: Record<string, string | undefined>;
+};
 
 export class BuildSignalsClient {
   private readonly apiKey: string;

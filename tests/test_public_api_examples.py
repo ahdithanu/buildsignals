@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import py_compile
 import subprocess
 from pathlib import Path
@@ -15,22 +16,28 @@ def test_python_public_api_example_compiles() -> None:
     py_compile.compile(str(PYTHON_EXAMPLE), doraise=True)
 
 
-def test_typescript_public_api_example_typechecks() -> None:
+def test_typescript_public_api_example_typechecks(tmp_path: Path) -> None:
+    tsconfig = tmp_path / "tsconfig.public-api-example.json"
+    tsconfig.write_text(
+        json.dumps(
+            {
+                "compilerOptions": {
+                    "module": "NodeNext",
+                    "moduleResolution": "NodeNext",
+                    "noEmit": True,
+                    "skipLibCheck": True,
+                    "target": "ES2022",
+                },
+                "files": [str(TYPESCRIPT_EXAMPLE)],
+            }
+        )
+    )
     result = subprocess.run(
         [
             "npx",
             "tsc",
-            "--noEmit",
-            "--target",
-            "ES2022",
-            "--module",
-            "NodeNext",
-            "--moduleResolution",
-            "NodeNext",
-            "--skipLibCheck",
-            "--types",
-            "node",
-            str(TYPESCRIPT_EXAMPLE),
+            "-p",
+            str(tsconfig),
         ],
         cwd=ROOT,
         capture_output=True,
