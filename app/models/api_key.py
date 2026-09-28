@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -15,6 +15,10 @@ def _utcnow() -> datetime:
 
 class OrganizationApiKey(Base):
     __tablename__ = "organization_api_keys"
+    __table_args__ = (
+        UniqueConstraint("key_hash", name="uq_organization_api_keys_key_hash"),
+        Index("ix_organization_api_keys_active", "organization_id", "revoked_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     organization_id: Mapped[str] = mapped_column(
@@ -24,7 +28,7 @@ class OrganizationApiKey(Base):
         index=True,
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    key_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     key_prefix: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
     scopes: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
