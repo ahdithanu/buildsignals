@@ -7,7 +7,7 @@ import { organizationsApi, type ApiKeyCreateResponse, type ApiKeyScope } from "@
 import { ErrorState, LoadingState } from "@/components/DataStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, Copy, Database, FileText, KeyRound, Plug, Scale, Settings as SettingsIcon, Trash2, Users } from "lucide-react";
+import { BarChart3, Bell, Copy, Database, FileText, KeyRound, Plug, RefreshCw, Scale, Settings as SettingsIcon, Trash2, Users } from "lucide-react";
 
 const fadeIn = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
 const API_KEY_SCOPES: ApiKeyScope[] = ["read", "write", "admin"];
@@ -80,11 +80,18 @@ export default function Settings() {
   const [newKeyScopes, setNewKeyScopes] = useState<ApiKeyScope[]>(["read"]);
   const [newKeyExpiresAt, setNewKeyExpiresAt] = useState(defaultExpirationDate);
   const [createdKey, setCreatedKey] = useState<ApiKeyCreateResponse | null>(null);
+  const [selectedUsageKeyId, setSelectedUsageKeyId] = useState<string | null>(null);
 
   const apiKeys = useQuery({
     queryKey: ["organization-api-keys", orgId],
     queryFn: () => organizationsApi.listApiKeys(orgId),
     enabled: Boolean(orgId && isAdmin),
+  });
+
+  const usageSummary = useQuery({
+    queryKey: ["organization-api-key-usage", orgId, selectedUsageKeyId],
+    queryFn: () => organizationsApi.getApiKeyUsage(orgId, selectedUsageKeyId ?? ""),
+    enabled: Boolean(orgId && isAdmin && selectedUsageKeyId),
   });
 
   const invalidateKeys = () =>
@@ -122,6 +129,25 @@ export default function Settings() {
     onError: (err) => {
       toast({
         title: "Could not revoke API key",
+        description: err instanceof ApiError ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rebuildRollups = useMutation({
+    mutationFn: (keyId: string) => organizationsApi.rebuildApiKeyUsageRollups(orgId, keyId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["organization-api-key-usage", orgId, result.api_key_id] });
+      invalidateKeys();
+      toast({
+        title: "Usage rollups rebuilt",
+        description: `${result.rebuilt_events.toLocaleString()} raw events were reconciled.`,
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: "Could not rebuild usage rollups",
         description: err instanceof ApiError ? err.message : "Try again.",
         variant: "destructive",
       });
@@ -290,6 +316,54 @@ export default function Settings() {
                         <Trash2 className="h-3.5 w-3.5" />
                         Revoke
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUsageKeyId((current) => (current === key.id ? null : key.id))}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        <BarChart3 className="h-3.5 w-3.5" />
+                        {selectedUsageKeyId === key.id ? "Hide usage" : "View usage"}
+                      </button>
+                      {selectedUsageKeyId === key.id && (
+                        <div className="md:col-span-2 rounded-lg border bg-secondary/40 p-3">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                              Daily usage rollups
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => rebuildRollups.mutate(key.id)}
+                              disabled={rebuildRollups.isPending}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                              {rebuildRollups.isPending ? "Rebuilding..." : "Rebuild rollups"}
+                            </button>
+                          </div>
+                          {usageSummary.isLoading && <p className="mt-3 text-xs text-muted-foreground">Loading usage...</p>}
+                          {usageSummary.error && (
+                            <p className="mt-3 text-xs text-destructive">Could not load usage detail.</p>
+                          )}
+                          {usageSummary.data && (
+                            <div className="mt-3 grid gap-3 md:grid-cols-3">
+                              {usageSummary.data.daily.slice(0, 3).map((bucket) => (
+                                <div key={bucket.usage_date} className="rounded-lg border bg-background p-3">
+                                  <p className="text-xs text-muted-foreground">{bucket.usage_date}</p>
+                                  <p className="mt-1 text-lg font-semibold text-foreground">
+                                    {bucket.total_calls.toLocaleString()} calls
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {bucket.total_items.toLocaleString()} items · {bucket.average_latency_ms}ms avg
+                                  </p>
+                                </div>
+                              ))}
+                              {usageSummary.data.daily.length === 0 && (
+                                <p className="text-xs text-muted-foreground">No daily rollups have been recorded yet.</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

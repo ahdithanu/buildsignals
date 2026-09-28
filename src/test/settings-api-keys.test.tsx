@@ -3,7 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Settings from '@/pages/Settings';
-import { organizationsApi, type ApiKeyCreateResponse, type ApiKeyResponse } from '@/api/organizations';
+import {
+  organizationsApi,
+  type ApiKeyCreateResponse,
+  type ApiKeyResponse,
+  type ApiKeyUsageSummary,
+} from '@/api/organizations';
 
 const auth = vi.hoisted(() => ({
   organizationId: 'org-a',
@@ -42,6 +47,30 @@ const created: ApiKeyCreateResponse = {
   secret: 'one-time-test-secret',
 };
 
+const usage: ApiKeyUsageSummary = {
+  api_key_id: 'key-1',
+  total_calls: 12,
+  total_items: 18,
+  last_called_at: '2026-09-28T10:05:00Z',
+  endpoints: [
+    {
+      path: '/public/deals',
+      method: 'GET',
+      total_calls: 12,
+      total_items: 18,
+      last_called_at: '2026-09-28T10:05:00Z',
+    },
+  ],
+  daily: [
+    {
+      usage_date: '2026-09-28',
+      total_calls: 12,
+      total_items: 18,
+      average_latency_ms: 42,
+    },
+  ],
+};
+
 let client: QueryClient;
 
 function mount() {
@@ -60,6 +89,11 @@ beforeEach(() => {
   vi.spyOn(organizationsApi, 'listApiKeys').mockResolvedValue([key]);
   vi.spyOn(organizationsApi, 'createApiKey').mockResolvedValue(created);
   vi.spyOn(organizationsApi, 'revokeApiKey').mockResolvedValue({ ...key, revoked_at: '2026-09-28T10:10:00Z' });
+  vi.spyOn(organizationsApi, 'getApiKeyUsage').mockResolvedValue(usage);
+  vi.spyOn(organizationsApi, 'rebuildApiKeyUsageRollups').mockResolvedValue({
+    api_key_id: 'key-1',
+    rebuilt_events: 12,
+  });
 });
 
 afterEach(() => {
@@ -82,6 +116,11 @@ describe('Settings API keys', () => {
     expect(await screen.findByText('test-key-prefix')).toBeInTheDocument();
     expect(await screen.findByText(/Usage: 12 calls/)).toBeInTheDocument();
     expect(screen.getByText(/Limit 120\/60s/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View usage' }));
+    expect(await screen.findByText('Daily usage rollups')).toBeInTheDocument();
+    expect(await screen.findByText('12 calls')).toBeInTheDocument();
+    expect(screen.getByText(/18 items/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Key name'), { target: { value: 'Partner export' } });
     fireEvent.click(screen.getByRole('button', { name: 'write' }));

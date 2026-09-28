@@ -237,4 +237,14 @@ def test_admin_can_view_api_key_usage_summary(client, db):
     body = usage.json()
     assert body["total_calls"] == 2
     assert body["total_items"] == 2
+    assert body["daily"][0]["total_calls"] == 2
+    assert body["daily"][0]["total_items"] == 2
+    assert body["daily"][0]["average_latency_ms"] >= 0
     assert body["endpoints"][0]["path"] == "/public/deals"
+
+    rebuild = client.post(
+        f"/organizations/{identity['organization_id']}/api-keys/{api_key.id}/usage/rebuild-rollups",
+        headers=headers,
+    )
+    assert rebuild.status_code == 200, rebuild.text
+    assert rebuild.json()["rebuilt_events"] == 2

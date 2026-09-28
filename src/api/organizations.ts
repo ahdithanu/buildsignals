@@ -50,6 +50,35 @@ export interface ApiKeyCreateResponse extends ApiKeyResponse {
   secret: string;
 }
 
+export interface ApiKeyUsageEndpointSummary {
+  path: string;
+  method: string;
+  total_calls: number;
+  total_items: number;
+  last_called_at: string | null;
+}
+
+export interface ApiKeyUsageDailySummary {
+  usage_date: string;
+  total_calls: number;
+  total_items: number;
+  average_latency_ms: number;
+}
+
+export interface ApiKeyUsageSummary {
+  api_key_id: string;
+  total_calls: number;
+  total_items: number;
+  last_called_at: string | null;
+  endpoints: ApiKeyUsageEndpointSummary[];
+  daily: ApiKeyUsageDailySummary[];
+}
+
+export interface ApiKeyUsageRollupRebuildResponse {
+  api_key_id: string;
+  rebuilt_events: number;
+}
+
 export const organizationsApi = {
   listMembers(orgId: string): Promise<MemberResponse[]> {
     return apiClient.get<MemberResponse[]>(
@@ -100,6 +129,22 @@ export const organizationsApi = {
   revokeApiKey(orgId: string, keyId: string): Promise<ApiKeyResponse> {
     return apiClient.delete<ApiKeyResponse>(
       `/organizations/${orgId}/api-keys/${keyId}`,
+    );
+  },
+
+  getApiKeyUsage(orgId: string, keyId: string): Promise<ApiKeyUsageSummary> {
+    return apiClient.get<ApiKeyUsageSummary>(
+      `/organizations/${orgId}/api-keys/${keyId}/usage`,
+    );
+  },
+
+  rebuildApiKeyUsageRollups(
+    orgId: string,
+    keyId: string,
+  ): Promise<ApiKeyUsageRollupRebuildResponse> {
+    return apiClient.post<ApiKeyUsageRollupRebuildResponse>(
+      `/organizations/${orgId}/api-keys/${keyId}/usage/rebuild-rollups`,
+      {},
     );
   },
 };
