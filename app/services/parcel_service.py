@@ -126,6 +126,7 @@ def list_acquisition_radar(
     review_status: str | None = None,
     assignment: str | None = None,
     follow_up: str | None = None,
+    signal_overlap: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict:
@@ -178,6 +179,11 @@ def list_acquisition_radar(
             "promoted_count"
         ),
     ).group_by(ParcelRecord.id, ParcelRecord.state).subquery()
+    grouped_filters = []
+    if signal_overlap == "multi":
+        grouped_filters.append(grouped.c.opportunity_count > 1)
+    elif signal_overlap == "single":
+        grouped_filters.append(grouped.c.opportunity_count == 1)
 
     opportunity_points = case(
         (grouped.c.opportunity_count >= 3, 15.0),
@@ -198,7 +204,7 @@ def list_acquisition_radar(
         + freshness_points
     ).label("radar_score")
 
-    total = db.query(func.count()).select_from(grouped).scalar() or 0
+    total = db.query(func.count()).select_from(grouped).filter(*grouped_filters).scalar() or 0
     summary_row = db.query(
         func.sum(case((grouped.c.shortlisted_count > 0, 1), else_=0)),
         func.sum(case((grouped.c.opportunity_count > 1, 1), else_=0)),
@@ -208,8 +214,8 @@ def list_acquisition_radar(
         func.sum(case((grouped.c.follow_up_count > 0, 1), else_=0)),
         func.sum(case((grouped.c.due_follow_up_count > 0, 1), else_=0)),
         func.count(func.distinct(grouped.c.state)),
-    ).one()
-    ranked_rows = db.query(grouped, radar_score).order_by(
+    ).select_from(grouped).filter(*grouped_filters).one()
+    ranked_rows = db.query(grouped, radar_score).filter(*grouped_filters).order_by(
         desc(radar_score), desc(grouped.c.opportunity_count), desc(grouped.c.latest_signal_at)
     ).offset(offset).limit(limit).all()
     parcel_ids = [row.parcel_id for row in ranked_rows]

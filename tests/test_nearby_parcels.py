@@ -821,6 +821,12 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
     filtered = client.get("/acquisition-radar?persona=developer&review_status=candidate")
     assert filtered.status_code == 200
     assert filtered.json()["items"] == []
+    multi = client.get("/acquisition-radar?signal_overlap=multi")
+    assert multi.status_code == 200
+    assert multi.json()["total"] == 1
+    single = client.get("/acquisition-radar?signal_overlap=single")
+    assert single.status_code == 200
+    assert single.json()["items"] == []
 
 
 def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path):

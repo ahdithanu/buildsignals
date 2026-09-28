@@ -247,6 +247,7 @@ def get_acquisition_radar(
     ),
     assignment: str | None = Query(default=None, pattern="^(assigned|unassigned)$"),
     follow_up: str | None = Query(default=None, pattern="^(due|scheduled|none)$"),
+    signal_overlap: str | None = Query(default=None, pattern="^(multi|single)$"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -259,6 +260,7 @@ def get_acquisition_radar(
         review_status=review_status,
         assignment=assignment,
         follow_up=follow_up,
+        signal_overlap=signal_overlap,
         limit=limit,
         offset=offset,
     )

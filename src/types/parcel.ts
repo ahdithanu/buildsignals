@@ -250,6 +250,7 @@ export interface AcquisitionRadarParams {
   review_status?: AcquisitionCaseStatus;
   assignment?: 'assigned' | 'unassigned';
   follow_up?: 'due' | 'scheduled' | 'none';
+  signal_overlap?: 'multi' | 'single';
   limit?: number;
   offset?: number;
 }

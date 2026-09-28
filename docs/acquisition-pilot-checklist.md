@@ -70,8 +70,9 @@ reminders. Focused backend/frontend tests and TypeScript pass.
 The Radar workflow strip is now actionable: Alert clears queue filters, Review
 filters to shortlisted parcels, Owner to assigned cases, Outreach to contacted
 cases, Follow-up to due next actions, and Saved to promoted opportunities.
-Evidence remains informational until a cross-signal-only server filter exists.
-Focused frontend tests verify these one-click filters.
+Evidence now filters to cross-signal parcels backed by more than one opportunity.
+The API supports `signal_overlap=multi|single`, and focused backend/frontend
+tests verify the aggregate filter and one-click workflow control.
 
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
