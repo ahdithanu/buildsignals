@@ -47,8 +47,7 @@ admin visibility.
 
 **Remaining path:**
 1. Expand public endpoints for opportunities, graph context, and eval results.
-2. Add daily aggregate rollups for billing-grade reporting.
-3. Add generated SDK snippets for Python and TypeScript.
+2. Add generated SDK snippets for Python and TypeScript.
 
 ---
 
@@ -56,7 +55,7 @@ admin visibility.
 
 **Target:** Usage-based billing for AI enrichment, memo generation, seat count.
 
-**Stub path:** Emit usage events to `usage_events` table; nightly aggregate job;
+**Stub path:** Emit usage events and daily aggregate rollups for API keys; add nightly aggregate job for AI workflow usage;
 Stripe Billing integration for invoices.
 
 ---

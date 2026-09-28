@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -106,9 +106,22 @@ class ApiKeyUsageEndpointSummary(BaseModel):
     last_called_at: datetime | None
 
 
+class ApiKeyUsageDailySummary(BaseModel):
+    usage_date: date
+    total_calls: int
+    total_items: int
+    average_latency_ms: int
+
+
 class ApiKeyUsageSummary(BaseModel):
     api_key_id: str
     total_calls: int
     total_items: int
     last_called_at: datetime | None
     endpoints: list[ApiKeyUsageEndpointSummary]
+    daily: list[ApiKeyUsageDailySummary] = Field(default_factory=list)
+
+
+class ApiKeyUsageRollupRebuildResponse(BaseModel):
+    api_key_id: str
+    rebuilt_events: int

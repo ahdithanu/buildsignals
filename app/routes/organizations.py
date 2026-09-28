@@ -14,6 +14,7 @@ from app.schemas.organization import (
     ApiKeyCreateRequest,
     ApiKeyCreateResponse,
     ApiKeyResponse,
+    ApiKeyUsageRollupRebuildResponse,
     ApiKeyUsageSummary,
     InviteMemberRequest,
     MemberResponse,
@@ -23,7 +24,11 @@ from app.schemas.organization import (
     UpdateMemberRequest,
 )
 from app.services.api_key_service import create_api_key, revoke_api_key, to_response
-from app.services.api_usage_service import get_api_key_usage_totals, summarize_api_key_usage
+from app.services.api_usage_service import (
+    get_api_key_usage_totals,
+    rebuild_api_key_usage_rollups,
+    summarize_api_key_usage,
+)
 from app.services.audit_service import log_change
 from app.services.security import create_access_token
 from app.utils.auth_deps import get_current_user, require_role_of
@@ -353,6 +358,33 @@ def get_organization_api_key_usage(
     if not api_key:
         raise HTTPException(status_code=404, detail="API key not found")
     return summarize_api_key_usage(db, organization_id=org_id, api_key_id=key_id)
+
+
+@router.post(
+    "/{org_id}/api-keys/{key_id}/usage/rebuild-rollups",
+    response_model=ApiKeyUsageRollupRebuildResponse,
+)
+def rebuild_organization_api_key_usage_rollups(
+    org_id: str,
+    key_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    api_key = (
+        db.query(OrganizationApiKey)
+        .filter(OrganizationApiKey.organization_id == org_id, OrganizationApiKey.id == key_id)
+        .first()
+    )
+    if not api_key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    rebuilt_events = rebuild_api_key_usage_rollups(db, organization_id=org_id, api_key_id=key_id)
+    log_change(
+        db, "organization_api_key", api_key.id, "rebuild_usage_rollups",
+        actor_id=principal["user_id"], organization_id=org_id,
+        new_values={"rebuilt_events": rebuilt_events},
+    )
+    db.commit()
+    return ApiKeyUsageRollupRebuildResponse(api_key_id=key_id, rebuilt_events=rebuilt_events)
 
 
 # ── switch active org ──────────────────────────────────────────────────────
