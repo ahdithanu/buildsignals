@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
   CalendarClock,
   Check,
   CircleDollarSign,
+  Copy,
   Flame,
   Mail,
   MapPinned,
@@ -370,6 +371,7 @@ function AcquisitionWorkflowStrip({
 
 export default function AcquisitionRadar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { organizationId, role } = useAuth();
@@ -428,6 +430,15 @@ export default function AcquisitionRadar() {
   ];
   const resetFilters = () => {
     setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setFollowUpFilter(''); setSignalOverlap(''); setAvailability(''); setOffset(0);
+  };
+  const copyViewLink = async () => {
+    const url = `${window.location.origin}${location.pathname}${location.search}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Radar view link copied' });
+    } catch {
+      toast({ title: 'Radar view link was not copied', variant: 'destructive' });
+    }
   };
   const selectWorkflowStep = (step: 'alert' | 'evidence' | 'review' | 'owner' | 'outreach' | 'follow_up' | 'saved') => {
     setQuery('');
@@ -506,7 +517,7 @@ export default function AcquisitionRadar() {
         />
 
         <section className="rounded-md border bg-card p-4">
-          <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_90px_140px_140px_140px_140px_140px_140px_auto] md:items-end">
+          <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_90px_140px_140px_140px_140px_140px_140px_auto_auto] md:items-end">
             <label className="text-xs text-muted-foreground">Search<div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0); }} className="h-9 pl-9" placeholder="Parcel, market, or opportunity" /></div></label>
             <label className="text-xs text-muted-foreground">State<Input value={state} onChange={(event) => { setState(event.target.value.slice(0, 2)); setOffset(0); }} className="mt-1 h-9 uppercase" placeholder="TX" /></label>
             <label className="text-xs text-muted-foreground">Buyer lens<select value={persona} onChange={(event) => { setPersona(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">All lenses</option><option value="developer">Developer</option><option value="investor">Investor</option><option value="broker">Broker</option><option value="realtor">Realtor</option></select></label>
@@ -515,6 +526,7 @@ export default function AcquisitionRadar() {
             <label className="text-xs text-muted-foreground">Follow-up<select value={followUpFilter} onChange={(event) => { setFollowUpFilter(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any follow-up</option><option value="due">Due now</option><option value="scheduled">Scheduled</option><option value="none">No follow-up</option></select></label>
             <label className="text-xs text-muted-foreground">Signals<select value={signalOverlap} onChange={(event) => { setSignalOverlap(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any signal</option><option value="multi">Cross-signal</option><option value="single">Single-signal</option></select></label>
             <label className="text-xs text-muted-foreground">Availability<select value={availability} onChange={(event) => { setAvailability(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any availability</option><option value="verified">Verified availability</option><option value="unverified">Candidate only</option></select></label>
+            <Button type="button" variant="outline" size="sm" className="h-9" onClick={copyViewLink}><Copy className="h-4 w-4" />Copy view link</Button>
             <Button type="button" variant="outline" size="sm" className="h-9" disabled={!query && !state && !persona && !status && !assignment && !followUpFilter && !signalOverlap && !availability} onClick={resetFilters}><X className="h-4 w-4" />Clear</Button>
           </div>
         </section>

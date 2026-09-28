@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AcquisitionRadar from '@/pages/AcquisitionRadar';
 
@@ -128,6 +128,14 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 
 describe('<AcquisitionRadar>', () => {
+  beforeEach(() => {
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+  });
+
   it('shows a deduplicated parcel queue with contributing opportunities and review actions', () => {
     render(<MemoryRouter><AcquisitionRadar /></MemoryRouter>);
 
@@ -191,7 +199,7 @@ describe('<AcquisitionRadar>', () => {
     currentRole = 'admin';
   });
 
-  it('hydrates acquisition radar filters from the URL', () => {
+  it('hydrates acquisition radar filters from the URL', async () => {
     render(
       <MemoryRouter initialEntries={['/acquisition-radar?availability=verified&signal_overlap=multi&follow_up=due&review_status=contacted']}>
         <AcquisitionRadar />
@@ -202,5 +210,20 @@ describe('<AcquisitionRadar>', () => {
     expect(screen.getByLabelText('Signals')).toHaveValue('multi');
     expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
     expect(screen.getByLabelText('Case status')).toHaveValue('contacted');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy view link' }));
+
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('/acquisition-radar?'),
+    ));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('availability=verified'),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('signal_overlap=multi'),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('follow_up=due'),
+    );
   });
 });
