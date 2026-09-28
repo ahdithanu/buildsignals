@@ -3869,6 +3869,76 @@
         "title": "DeleteAccountRequest",
         "type": "object"
       },
+      "DeploymentReadiness": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/DeploymentReadinessCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "database_provider": {
+            "title": "Database Provider",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "overall_status": {
+            "title": "Overall Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "environment",
+          "database_provider",
+          "overall_status",
+          "checks"
+        ],
+        "title": "DeploymentReadiness",
+        "type": "object"
+      },
+      "DeploymentReadinessCheck": {
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "status",
+          "summary"
+        ],
+        "title": "DeploymentReadinessCheck",
+        "type": "object"
+      },
       "DisableRequest": {
         "properties": {
           "code": {
@@ -8468,6 +8538,9 @@
             "title": "Days",
             "type": "integer"
           },
+          "deployment": {
+            "$ref": "#/components/schemas/DeploymentReadiness"
+          },
           "evaluations": {
             "$ref": "#/components/schemas/EvaluationCounts"
           },
@@ -8497,6 +8570,7 @@
           "days",
           "evaluations",
           "ingestion",
+          "deployment",
           "attention"
         ],
         "title": "ObservabilityOverview",
