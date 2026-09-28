@@ -61,6 +61,12 @@ The follow-up filter also supports `due`, giving analysts a daily outreach queue
 for parcels whose scheduled next step is now due or overdue. Focused backend
 and frontend tests verify the due filter and UI option, with TypeScript passing.
 
+The Radar summary now distinguishes scheduled follow-ups from due follow-ups:
+`follow_up_parcels` counts parcels with any scheduled next action, while
+`due_follow_up_parcels` counts parcels due as of request time. The workflow strip
+uses the due count so the daily queue reflects work to do now, not future
+reminders. Focused backend/frontend tests and TypeScript pass.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with

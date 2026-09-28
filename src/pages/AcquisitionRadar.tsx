@@ -258,7 +258,7 @@ function AcquisitionWorkflowStrip({
   shortlistedParcels,
   assignedParcels,
   contactedParcels,
-  followUpParcels,
+  dueFollowUpParcels,
   promotedCount,
 }: {
   totalParcels: number;
@@ -266,7 +266,7 @@ function AcquisitionWorkflowStrip({
   shortlistedParcels: number;
   assignedParcels: number;
   contactedParcels: number;
-  followUpParcels: number;
+  dueFollowUpParcels: number;
   promotedCount: number;
 }) {
   const steps = [
@@ -302,8 +302,8 @@ function AcquisitionWorkflowStrip({
     },
     {
       label: 'Follow-up',
-      value: followUpParcels,
-      detail: 'Parcels with a scheduled next step after outreach.',
+      value: dueFollowUpParcels,
+      detail: 'Parcels with a due or overdue next step after outreach.',
       icon: CalendarClock,
     },
     {
@@ -434,7 +434,7 @@ export default function AcquisitionRadar() {
           shortlistedParcels={summary?.shortlisted_parcels ?? 0}
           assignedParcels={summary?.assigned_parcels ?? 0}
           contactedParcels={summary?.contacted_parcels ?? 0}
-          followUpParcels={summary?.follow_up_parcels ?? 0}
+          dueFollowUpParcels={summary?.due_follow_up_parcels ?? 0}
           promotedCount={summary?.promoted_parcels ?? 0}
         />
 
