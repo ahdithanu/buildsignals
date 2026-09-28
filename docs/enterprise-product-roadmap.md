@@ -31,12 +31,15 @@ Track status in [enterprise_readiness.md](enterprise_readiness.md) tier I.
 
 **Target:** Machine-to-machine access for integrations without user JWT.
 
-**Existing foundation:** `METRICS_TOKEN` pattern for `/metrics`.
+**Implemented foundation:** Organization admins can create, list, and revoke
+backend-managed API keys. Secrets are generated once, stored only as SHA-256
+hashes, scoped to an organization, and lifecycle events are audit logged.
 
-**Stub path:**
-1. `api_keys` table (org_id, hashed_key, scopes, expires_at).
-2. Middleware: `Authorization: Bearer ds_live_...` with scope checks.
-3. Admin UI: create/revoke keys, scope selection (read deals, write ingestion).
+**Remaining path:**
+1. Add API-key authentication dependency for selected public API routes.
+2. Enforce route-level scope checks (`read`, `write`, `admin`).
+3. Add frontend admin UI for key creation and revoke flows.
+4. Add optional expiry and last-used metadata to support customer key rotation.
 
 ---
 

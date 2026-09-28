@@ -4,12 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.models.api_key import OrganizationApiKey
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
 from app.routes.auth import _set_refresh_cookie
 from app.schemas.auth import TokenResponse
 from app.schemas.organization import (
+    ApiKeyCreateRequest,
+    ApiKeyCreateResponse,
+    ApiKeyResponse,
     InviteMemberRequest,
     MemberResponse,
     MyOrganizationItem,
@@ -17,6 +21,7 @@ from app.schemas.organization import (
     SwitchOrgRequest,
     UpdateMemberRequest,
 )
+from app.services.api_key_service import create_api_key, revoke_api_key, to_response
 from app.services.audit_service import log_change
 from app.services.security import create_access_token
 from app.utils.auth_deps import get_current_user, require_role_of
@@ -243,6 +248,78 @@ def remove_member(
     )
     db.commit()
     return None
+
+
+# ── organization API keys ──────────────────────────────────────────────────
+
+@router.get("/{org_id}/api-keys", response_model=list[ApiKeyResponse])
+def list_api_keys(
+    org_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(OrganizationApiKey)
+        .filter(OrganizationApiKey.organization_id == org_id)
+        .order_by(OrganizationApiKey.created_at.desc())
+        .all()
+    )
+    return [to_response(row) for row in rows]
+
+
+@router.post("/{org_id}/api-keys", response_model=ApiKeyCreateResponse, status_code=201)
+def create_organization_api_key(
+    org_id: str,
+    payload: ApiKeyCreateRequest,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    api_key, secret = create_api_key(
+        db,
+        organization_id=org_id,
+        name=payload.name,
+        scopes=payload.scopes,
+        actor_id=principal["user_id"],
+    )
+    db.flush()
+    log_change(
+        db, "organization_api_key", api_key.id, "create",
+        actor_id=principal["user_id"], organization_id=org_id,
+        new_values={"name": api_key.name, "key_prefix": api_key.key_prefix, "scopes": payload.scopes},
+    )
+    db.commit()
+    db.refresh(api_key)
+    response = to_response(api_key).model_dump()
+    return ApiKeyCreateResponse(**response, secret=secret)
+
+
+@router.delete("/{org_id}/api-keys/{key_id}", response_model=ApiKeyResponse)
+def revoke_organization_api_key(
+    org_id: str,
+    key_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    api_key = (
+        db.query(OrganizationApiKey)
+        .filter(OrganizationApiKey.organization_id == org_id, OrganizationApiKey.id == key_id)
+        .first()
+    )
+    if not api_key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    was_revoked = api_key.revoked_at is not None
+    revoke_api_key(db, api_key=api_key, actor_id=principal["user_id"])
+    if not was_revoked:
+        log_change(
+            db, "organization_api_key", api_key.id, "revoke",
+            actor_id=principal["user_id"], organization_id=org_id,
+            old_values={"name": api_key.name, "key_prefix": api_key.key_prefix},
+        )
+    db.commit()
+    db.refresh(api_key)
+    return to_response(api_key)
 
 
 # ── switch active org ──────────────────────────────────────────────────────
