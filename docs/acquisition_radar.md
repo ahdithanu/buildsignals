@@ -14,8 +14,28 @@ appearing in multiple searches is returned once while retaining every
 contributing opportunity and candidate ID.
 
 Supported filters are free-text query, two-letter state, buyer persona, review
-status, assignment state, limit, and offset. All source queries use the active
+status, assignment state, follow-up state, signal overlap, verified
+availability state, limit, and offset. All source queries use the active
 organization context before aggregation.
+
+Filter query parameters are intentionally stable enough for analyst handoff and
+demo links:
+
+| Parameter | Values | Meaning |
+| --- | --- | --- |
+| `q` | text | Search parcel address, parcel ID, owner, market, or connected signal text. |
+| `state` | two-letter state | Limit to a market state. |
+| `persona` | `developer`, `investor`, `broker`, `realtor` | Buyer lens used by the originating candidate ranking. |
+| `review_status` | case status | Canonical acquisition case lifecycle. |
+| `assignment` | `assigned`, `unassigned` | Whether a teammate owns the case. |
+| `follow_up` | `due`, `scheduled`, `none` | Due/overdue, any scheduled, or no next action. |
+| `signal_overlap` | `multi`, `single` | Cross-signal parcels versus parcels found from one signal. |
+| `availability` | `verified`, `unverified` | Source-backed availability evidence versus discovery-only candidates. |
+| `offset` | integer | Current page offset. |
+
+The frontend mirrors these parameters into the URL, so a reviewer can copy a
+filtered queue such as due follow-ups, promoted parcels, cross-signal
+candidates, or verified availability without creating a separate saved view.
 
 ## Ranking
 
@@ -36,13 +56,38 @@ promotion state, evidence freshness, and links to each contributing deal.
 Radar scoring never changes retailer identity confidence and never treats
 proximity or long ownership tenure as evidence that an owner intends to sell.
 
+Verified availability is separate from the ranking score. A parcel receives the
+`Verified availability` badge or matches `availability=verified` only when it
+has a current source-backed parcel fact with an availability or listing fact
+type, recognized available/listed status, confidence of at least 0.70, and a
+source URL or excerpt. Nearby candidates without that evidence remain
+`Candidate only`, even if they rank highly or sit beside a strong development
+signal.
+
 ## UI Workflow
 
 The authenticated `/acquisition-radar` workspace provides portfolio counts,
-market, buyer-lens, case-status, and assignment filters; a paginated,
-deduplicated priority queue; parcel and contributing-opportunity links; team
-assignment; follow-up dates; outreach history; and explicit promotion. Viewers
-receive the same context without mutation controls.
+market, buyer-lens, case-status, assignment, follow-up, signal-overlap, and
+verified-availability filters; a paginated, deduplicated priority queue; parcel
+and contributing-opportunity links; team assignment; follow-up dates; outreach
+history; and explicit promotion. Viewers receive the same context without
+mutation controls.
+
+The workflow strip above the queue is the daily operating path:
+
+| Step | Backing count or filter |
+| --- | --- |
+| Alert | total ranked parcels |
+| Evidence | cross-signal parcels through `signal_overlap=multi` |
+| Review | shortlisted parcels through `review_status=shortlisted` |
+| Owner | assigned parcels through `assignment=assigned` |
+| Outreach | contacted parcels through `review_status=contacted` |
+| Follow-up | due or overdue parcels through `follow_up=due` |
+| Saved | promoted parcels through `review_status=promoted` |
+
+Each step is clickable and resets the queue into the corresponding work mode.
+This keeps the intended workflow visible: signal evidence, project context,
+nearby parcels, owner/outreach work, follow-up, then saved opportunity.
 
 ## Canonical Case And Provenance
 

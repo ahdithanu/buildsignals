@@ -303,6 +303,19 @@ signal confidence, repeated opportunity exposure, review state, and freshness.
 It is also the team queue for canonical case status, assignment, outreach,
 follow-up, pagination, and explicit opportunity promotion.
 
+Radar now exposes the daily acquisition workflow as first-class filtered work:
+alert intake, evidence review, shortlist review, owner assignment, outreach,
+due follow-up, and saved opportunity. Filters are URL-backed for handoff and
+demo workflows: `follow_up=due|scheduled|none`,
+`signal_overlap=multi|single`, and `availability=verified|unverified` sit
+alongside market, buyer-lens, status, assignment, and text search filters.
+
+The `availability=verified` path requires source-backed listing, broker, owner,
+auction, or explicit availability evidence stored as a current parcel fact with
+recognized status, confidence, and source URL or excerpt. Parcels found only
+because they are near a permit, planning record, or retailer signal remain
+nearby candidates and are labeled separately from verified sale availability.
+
 No parcel becomes an opportunity automatically. Promotion is an explicit user
 action that preserves the originating search, ranking version, and evidence.
 
