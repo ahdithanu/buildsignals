@@ -251,6 +251,7 @@ export interface AcquisitionRadarParams {
   assignment?: 'assigned' | 'unassigned';
   follow_up?: 'due' | 'scheduled' | 'none';
   signal_overlap?: 'multi' | 'single';
+  availability?: 'verified' | 'unverified';
   limit?: number;
   offset?: number;
 }

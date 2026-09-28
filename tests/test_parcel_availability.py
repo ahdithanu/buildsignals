@@ -132,3 +132,10 @@ def test_availability_evidence_import_flows_into_zip3_heatmap(client, db, tmp_pa
     top = zip3_heatmap(db)["items"][0]
     assert top["verified_for_sale_count"] == 1
     assert top["sample_parcels"][0]["availability_label"] == "verified_for_sale"
+    verified = client.get("/acquisition-radar?availability=verified", headers=headers)
+    assert verified.status_code == 200, verified.text
+    assert verified.json()["total"] == 1
+    assert verified.json()["items"][0]["parcel"]["external_parcel_id"] == "P-LIVE-LISTING"
+    unverified = client.get("/acquisition-radar?availability=unverified", headers=headers)
+    assert unverified.status_code == 200, unverified.text
+    assert unverified.json()["items"] == []

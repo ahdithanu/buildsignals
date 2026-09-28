@@ -380,6 +380,7 @@ export default function AcquisitionRadar() {
   const [assignment, setAssignment] = useState('');
   const [followUpFilter, setFollowUpFilter] = useState('');
   const [signalOverlap, setSignalOverlap] = useState('');
+  const [availability, setAvailability] = useState('');
   const [offset, setOffset] = useState(0);
   const [outreachItem, setOutreachItem] = useState<AcquisitionRadarItem | null>(null);
   const [activityType, setActivityType] = useState<AcquisitionActivityType>('call');
@@ -393,9 +394,10 @@ export default function AcquisitionRadar() {
     assignment: (assignment || undefined) as 'assigned' | 'unassigned' | undefined,
     follow_up: (followUpFilter || undefined) as 'due' | 'scheduled' | 'none' | undefined,
     signal_overlap: (signalOverlap || undefined) as 'multi' | 'single' | undefined,
+    availability: (availability || undefined) as 'verified' | 'unverified' | undefined,
     limit: PAGE_SIZE,
     offset,
-  }), [assignment, followUpFilter, offset, persona, query, signalOverlap, state, status]);
+  }), [assignment, availability, followUpFilter, offset, persona, query, signalOverlap, state, status]);
   const { data, isLoading, error, refetch, updateCase, recordActivity, promote } = useAcquisitionRadar(params);
   const { data: zip3Heatmap } = useZip3Heatmap({ state: state.trim().toUpperCase() || undefined, limit: 12 });
   const canManage = role === 'admin' || role === 'editor';
@@ -408,7 +410,7 @@ export default function AcquisitionRadar() {
     { label: 'Markets', value: summary?.state_count ?? 0, icon: CircleDollarSign },
   ];
   const resetFilters = () => {
-    setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setFollowUpFilter(''); setSignalOverlap(''); setOffset(0);
+    setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setFollowUpFilter(''); setSignalOverlap(''); setAvailability(''); setOffset(0);
   };
   const selectWorkflowStep = (step: 'alert' | 'evidence' | 'review' | 'owner' | 'outreach' | 'follow_up' | 'saved') => {
     setQuery('');
@@ -418,6 +420,7 @@ export default function AcquisitionRadar() {
     setAssignment('');
     setFollowUpFilter('');
     setSignalOverlap('');
+    setAvailability('');
     setOffset(0);
     if (step === 'evidence') setSignalOverlap('multi');
     if (step === 'review') setStatus('shortlisted');
@@ -486,7 +489,7 @@ export default function AcquisitionRadar() {
         />
 
         <section className="rounded-md border bg-card p-4">
-          <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_90px_140px_140px_140px_140px_140px_auto] md:items-end">
+          <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_90px_140px_140px_140px_140px_140px_140px_auto] md:items-end">
             <label className="text-xs text-muted-foreground">Search<div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0); }} className="h-9 pl-9" placeholder="Parcel, market, or opportunity" /></div></label>
             <label className="text-xs text-muted-foreground">State<Input value={state} onChange={(event) => { setState(event.target.value.slice(0, 2)); setOffset(0); }} className="mt-1 h-9 uppercase" placeholder="TX" /></label>
             <label className="text-xs text-muted-foreground">Buyer lens<select value={persona} onChange={(event) => { setPersona(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">All lenses</option><option value="developer">Developer</option><option value="investor">Investor</option><option value="broker">Broker</option><option value="realtor">Realtor</option></select></label>
@@ -494,7 +497,8 @@ export default function AcquisitionRadar() {
             <label className="text-xs text-muted-foreground">Assignment<select value={assignment} onChange={(event) => { setAssignment(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any owner</option><option value="assigned">Assigned</option><option value="unassigned">Unassigned</option></select></label>
             <label className="text-xs text-muted-foreground">Follow-up<select value={followUpFilter} onChange={(event) => { setFollowUpFilter(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any follow-up</option><option value="due">Due now</option><option value="scheduled">Scheduled</option><option value="none">No follow-up</option></select></label>
             <label className="text-xs text-muted-foreground">Signals<select value={signalOverlap} onChange={(event) => { setSignalOverlap(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any signal</option><option value="multi">Cross-signal</option><option value="single">Single-signal</option></select></label>
-            <Button type="button" variant="outline" size="sm" className="h-9" disabled={!query && !state && !persona && !status && !assignment && !followUpFilter && !signalOverlap} onClick={resetFilters}><X className="h-4 w-4" />Clear</Button>
+            <label className="text-xs text-muted-foreground">Availability<select value={availability} onChange={(event) => { setAvailability(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any availability</option><option value="verified">Verified availability</option><option value="unverified">Candidate only</option></select></label>
+            <Button type="button" variant="outline" size="sm" className="h-9" disabled={!query && !state && !persona && !status && !assignment && !followUpFilter && !signalOverlap && !availability} onClick={resetFilters}><X className="h-4 w-4" />Clear</Button>
           </div>
         </section>
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import and_, case, desc, func, or_
+from sqlalchemy import and_, case, desc, exists, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.acquisition import ParcelAcquisitionCase
@@ -10,7 +10,7 @@ from app.models.brand import PermitBrandMatch
 from app.models.deal import Deal
 from app.models.graph import GraphEntityType, GraphRelationshipType
 from app.models.organization_membership import OrganizationMembership
-from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelRecord
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
 from app.models.planning import PlanningRecord
 from app.models.user import User
 from app.schemas.deal import DealCreate
@@ -28,6 +28,7 @@ from app.services.graph_service import (
 )
 from app.services.parcel_proximity import find_nearby_parcels
 from app.services.parcel_ranking import rank_parcel_candidate, ranker_version
+from app.services.parcel_availability import AVAILABILITY_FACT_TYPES, VERIFIED_AVAILABILITY_STATUSES
 from app.utils.org_scope import active_query, get_org_id
 
 
@@ -117,6 +118,32 @@ def _radar_candidate_query(
     return rows
 
 
+def _verified_availability_exists(parcel_id_column, organization_id_column):
+    status = func.lower(func.coalesce(
+        ParcelFact.value["status"].as_string(),
+        ParcelFact.value["availability_status"].as_string(),
+        "",
+    ))
+    evidence_type = func.lower(func.coalesce(
+        ParcelFact.value["evidence_type"].as_string(),
+        ParcelFact.value["source_type"].as_string(),
+        "",
+    ))
+    return exists().where(
+        ParcelFact.parcel_id == parcel_id_column,
+        ParcelFact.organization_id == organization_id_column,
+        ParcelFact.is_current.is_(True),
+        ParcelFact.fact_type.in_(AVAILABILITY_FACT_TYPES),
+        status.in_(VERIFIED_AVAILABILITY_STATUSES),
+        evidence_type.in_(("listing", "broker", "owner", "auction")),
+        ParcelFact.confidence >= 0.7,
+        or_(
+            and_(ParcelFact.source_url.isnot(None), ParcelFact.source_url != ""),
+            and_(ParcelFact.excerpt.isnot(None), ParcelFact.excerpt != ""),
+        ),
+    )
+
+
 def list_acquisition_radar(
     db: Session,
     *,
@@ -127,6 +154,7 @@ def list_acquisition_radar(
     assignment: str | None = None,
     follow_up: str | None = None,
     signal_overlap: str | None = None,
+    availability: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict:
@@ -184,6 +212,14 @@ def list_acquisition_radar(
         grouped_filters.append(grouped.c.opportunity_count > 1)
     elif signal_overlap == "single":
         grouped_filters.append(grouped.c.opportunity_count == 1)
+    if availability:
+        availability_exists = _verified_availability_exists(
+            grouped.c.parcel_id, get_org_id()
+        )
+        if availability == "verified":
+            grouped_filters.append(availability_exists)
+        elif availability == "unverified":
+            grouped_filters.append(~availability_exists)
 
     opportunity_points = case(
         (grouped.c.opportunity_count >= 3, 15.0),

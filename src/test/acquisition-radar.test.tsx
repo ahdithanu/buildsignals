@@ -148,6 +148,7 @@ describe('<AcquisitionRadar>', () => {
     expect(within(summary).getByText('Cross-signal')).toBeInTheDocument();
     expect(screen.getByLabelText('Follow-up')).toHaveTextContent('Any follow-up');
     expect(screen.getByLabelText('Follow-up')).toHaveTextContent('Due now');
+    expect(screen.getByLabelText('Availability')).toHaveTextContent('Verified availability');
     expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
     expect(screen.getByText('91')).toBeInTheDocument();
     expect(screen.getByText('2 opportunities')).toBeInTheDocument();
@@ -160,7 +161,7 @@ describe('<AcquisitionRadar>', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Follow-up' }));
     expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
     expect(screen.getByLabelText('Signals')).toHaveValue('');
-    expect(screen.getByText('Verified availability')).toBeInTheDocument();
+    expect(screen.getByTitle('Verified availability evidence: broker')).toHaveTextContent('Verified availability');
     fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Review' }));
     expect(screen.getByLabelText('Case status')).toHaveValue('shortlisted');
     expect(screen.getByLabelText('Follow-up')).toHaveValue('');

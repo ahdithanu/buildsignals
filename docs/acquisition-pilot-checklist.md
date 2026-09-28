@@ -79,6 +79,13 @@ parcel has source-backed availability evidence accepted by the shared availabili
 contract. This reuses the map's evidence helper, so proximity/shortlisting still
 does not imply a parcel is for sale. Focused radar tests and TypeScript pass.
 
+Acquisition Radar can now filter directly by `availability=verified|unverified`.
+The backend filter uses the same source-backed availability contract as ZIP3 heat
+and map views: current availability/listing fact, recognized status and evidence
+type, confidence threshold, and source URL or excerpt. Focused backend tests
+verify that a broker/listing evidence fact appears in the verified queue and is
+excluded from candidate-only results; focused frontend tests verify the control.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
