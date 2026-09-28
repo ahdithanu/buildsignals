@@ -2,6 +2,21 @@
 
 ## Local implementation, not deployed
 
+### Demo acquisition workflow readiness (2026-09-28)
+
+The read-only demo overview now translates the historical Columbus cohort into
+the BuildSignals investor workflow: signal intake, evidence graph context,
+mapped locations, and parcel-candidate readiness. Each item is labeled ready,
+review-needed, or needs-data based on measured demo counts, so the demo explains
+where the product is actionable without inventing parcel inventory, for-sale
+status, or live planning coverage. The Map tab regression now clicks through
+from the overview and verifies that geocoded filings and source parcel rows
+render together with separate Census-estimate and parcel-centroid labels.
+
+Verification: focused `demo-workspace` frontend tests pass with two cases, and
+TypeScript typecheck passes. This does not activate production ingestion,
+qualify Franklin County/Columbus parcel rights, or create live inventory.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
