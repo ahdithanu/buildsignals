@@ -13,10 +13,15 @@ X-API-Key: bs_live_...
 
 - `GET /v1/public/deals`
 - `GET /v1/public/deals/{deal_id}`
+- `GET /v1/public/deals/{deal_id}/graph-context`
 - `GET /v1/public/signals`
 
 All public responses are scoped to the API key's organization. A key with `write` or `admin` scope can read;
 keys without read-compatible scope receive `403`.
+
+`/deals/{deal_id}/graph-context` returns connected developers, parcels, owners, contractors, architects,
+engineers, permits, cities, lenders, brokers, and relationship evidence for one deal. It is read-only and never
+builds graph state on demand, so missing graph coverage is returned as empty context rather than invented facts.
 
 ## Pagination
 

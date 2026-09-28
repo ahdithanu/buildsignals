@@ -817,6 +817,35 @@
         "title": "ApiKeyResponse",
         "type": "object"
       },
+      "ApiKeyUsageDailySummary": {
+        "properties": {
+          "average_latency_ms": {
+            "title": "Average Latency Ms",
+            "type": "integer"
+          },
+          "total_calls": {
+            "title": "Total Calls",
+            "type": "integer"
+          },
+          "total_items": {
+            "title": "Total Items",
+            "type": "integer"
+          },
+          "usage_date": {
+            "format": "date",
+            "title": "Usage Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "usage_date",
+          "total_calls",
+          "total_items",
+          "average_latency_ms"
+        ],
+        "title": "ApiKeyUsageDailySummary",
+        "type": "object"
+      },
       "ApiKeyUsageEndpointSummary": {
         "properties": {
           "last_called_at": {
@@ -858,11 +887,36 @@
         "title": "ApiKeyUsageEndpointSummary",
         "type": "object"
       },
+      "ApiKeyUsageRollupRebuildResponse": {
+        "properties": {
+          "api_key_id": {
+            "title": "Api Key Id",
+            "type": "string"
+          },
+          "rebuilt_events": {
+            "title": "Rebuilt Events",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "api_key_id",
+          "rebuilt_events"
+        ],
+        "title": "ApiKeyUsageRollupRebuildResponse",
+        "type": "object"
+      },
       "ApiKeyUsageSummary": {
         "properties": {
           "api_key_id": {
             "title": "Api Key Id",
             "type": "string"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyUsageDailySummary"
+            },
+            "title": "Daily",
+            "type": "array"
           },
           "endpoints": {
             "items": {
@@ -21797,6 +21851,73 @@
         ]
       }
     },
+    "/v1/organizations/{org_id}/api-keys/{key_id}/usage/rebuild-rollups": {
+      "post": {
+        "operationId": "rebuild_organization_api_key_usage_rollups_v1_organizations__org_id__api_keys__key_id__usage_rebuild_rollups_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "title": "Org Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyUsageRollupRebuildResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rebuild Organization Api Key Usage Rollups",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
     "/v1/organizations/{org_id}/delete": {
       "post": {
         "description": "GDPR right-to-erasure: permanently delete all data for an organization.\n\nIrreversible. Guard rails, in order:\n  - admin of the org, and `{org_id}` must equal the caller's active org\n    (require_role_of(..., must_match_active_org=True));\n  - the request body must echo the org's exact name;\n  - the default/demo org can never be deleted.\n\nDeletes every tenant-scoped row, memberships, and users whose ONLY\nmembership was this org (users belonging to other orgs are left intact).\nBecause the org's audit_logs are deleted too, the erasure itself is\nrecorded to the application log (which lives in separate storage) as a\nPII-free receipt, not to audit_logs.",
@@ -23855,6 +23976,80 @@
           }
         },
         "summary": "Get Public Deal",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/v1/public/deals/{deal_id}/graph-context": {
+      "get": {
+        "operationId": "get_public_deal_graph_context_v1_public_deals__deal_id__graph_context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityGraphContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Public Deal Graph Context",
         "tags": [
           "public-api"
         ]
