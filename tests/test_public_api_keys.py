@@ -8,6 +8,14 @@ import app.utils.api_key_deps as api_key_deps
 from app.models.api_key import OrganizationApiKey
 from app.models.api_usage import OrganizationApiKeyUsageEvent
 from app.models.deal import Deal
+from app.models.graph import (
+    GraphEntity,
+    GraphEntityLink,
+    GraphEntityType,
+    GraphRelationship,
+    GraphRelationshipEvidence,
+    GraphRelationshipType,
+)
 from app.models.signal import Signal
 from app.services.api_key_service import create_api_key, revoke_api_key
 from app.services.rate_limiter import limiter
@@ -70,6 +78,57 @@ def _seed_deal(db, *, org_id: str, name: str) -> Deal:
     db.commit()
     db.refresh(deal)
     return deal
+
+
+def _seed_graph_context(db, *, org_id: str, deal: Deal, developer_name: str) -> None:
+    opportunity = GraphEntity(
+        organization_id=org_id,
+        entity_type=GraphEntityType.property,
+        display_name=deal.name,
+        normalized_name=deal.name.lower(),
+        normalized_address=(deal.address or "").lower(),
+        address=deal.address,
+        city=deal.city,
+        state=deal.state,
+        confidence=1.0,
+    )
+    developer = GraphEntity(
+        organization_id=org_id,
+        entity_type=GraphEntityType.developer,
+        display_name=developer_name,
+        normalized_name=developer_name.lower(),
+        confidence=0.91,
+    )
+    db.add_all([opportunity, developer])
+    db.flush()
+    db.add(GraphEntityLink(
+        organization_id=org_id,
+        entity_id=opportunity.id,
+        record_type="deal",
+        record_id=deal.id,
+        source_system="fixture",
+    ))
+    relationship = GraphRelationship(
+        organization_id=org_id,
+        source_entity_id=opportunity.id,
+        target_entity_id=developer.id,
+        relationship_type=GraphRelationshipType.developed_by,
+        confidence=0.86,
+        source_system="fixture",
+        source_id=f"developer:{deal.id}",
+    )
+    db.add(relationship)
+    db.flush()
+    db.add(GraphRelationshipEvidence(
+        organization_id=org_id,
+        relationship_id=relationship.id,
+        source_system="county_permits",
+        source_id=f"permit:{deal.id}",
+        evidence_type="permit_record",
+        excerpt=f"{developer_name} listed on permit",
+        confidence=0.88,
+    ))
+    db.commit()
 
 
 def test_public_api_key_reads_only_own_organization(client, db):
@@ -142,6 +201,48 @@ def test_public_api_list_routes_include_pagination_headers(client, db):
     assert len(signals.json()) == 1
     assert signals.headers["X-Total-Count"] == "3"
     assert signals.headers["X-Next-Skip"] == ""
+
+
+def test_public_api_returns_tenant_scoped_graph_context(client, db):
+    first = _register(client, email="public-graph-first@example.com", org_name="Public Graph First")
+    second = _register(client, email="public-graph-second@example.com", org_name="Public Graph Second")
+    first_deal = _seed_deal(db, org_id=first["organization_id"], name="First graph warehouse")
+    second_deal = _seed_deal(db, org_id=second["organization_id"], name="Second graph warehouse")
+    _seed_graph_context(
+        db,
+        org_id=first["organization_id"],
+        deal=first_deal,
+        developer_name="Riverstone Development",
+    )
+    _seed_graph_context(
+        db,
+        org_id=second["organization_id"],
+        deal=second_deal,
+        developer_name="Other Org Developer",
+    )
+    _api_key, secret = _issue_key(
+        db,
+        org_id=first["organization_id"],
+        user_id=first["user_id"],
+        scopes=["read"],
+    )
+
+    response = client.get(
+        f"/public/deals/{first_deal.id}/graph-context",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["opportunity_id"] == first_deal.id
+    assert body["root_entities"][0]["display_name"] == "First graph warehouse"
+    assert body["developers"][0]["entity"]["display_name"] == "Riverstone Development"
+    assert body["developers"][0]["relationship"]["evidence"][0]["source_system"] == "county_permits"
+
+    cross_org = client.get(
+        f"/public/deals/{second_deal.id}/graph-context",
+        headers={"Authorization": f"Bearer {secret}"},
+    )
+    assert cross_org.status_code == 404
 
 
 def test_public_api_rejects_missing_revoked_or_under_scoped_keys(client, db):

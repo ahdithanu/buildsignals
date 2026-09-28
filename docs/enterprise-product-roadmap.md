@@ -46,7 +46,7 @@ admin visibility.
 - `GET /v1/public/signals`
 
 **Remaining path:**
-1. Expand public endpoints for opportunities, graph context, and eval results.
+1. Expand public endpoints for opportunities and eval results.
 2. Add generated SDK snippets for Python and TypeScript.
 
 ---
