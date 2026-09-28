@@ -521,7 +521,7 @@ export default function AcquisitionRadar() {
         />
 
         <section className="rounded-md border bg-card p-4">
-          <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_90px_140px_140px_140px_140px_140px_140px_auto_auto] md:items-end">
+          <div className="grid gap-3 md:grid-cols-2 md:items-end lg:grid-cols-4 xl:grid-cols-[minmax(220px,1fr)_90px_140px_140px_140px_140px_140px_140px_auto_auto]">
             <label className="text-xs text-muted-foreground">Search<div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0); }} className="h-9 pl-9" placeholder="Parcel, market, or opportunity" /></div></label>
             <label className="text-xs text-muted-foreground">State<Input value={state} onChange={(event) => { setState(event.target.value.slice(0, 2)); setOffset(0); }} className="mt-1 h-9 uppercase" placeholder="TX" /></label>
             <label className="text-xs text-muted-foreground">Buyer lens<select value={persona} onChange={(event) => { setPersona(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">All lenses</option><option value="developer">Developer</option><option value="investor">Investor</option><option value="broker">Broker</option><option value="realtor">Realtor</option></select></label>
