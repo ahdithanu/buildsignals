@@ -139,7 +139,7 @@ describe('<AcquisitionMap> states', () => {
               observed_at: '2026-09-27T00:00:00Z',
               last_verified_at: '2026-09-27T00:00:00Z',
             }],
-            signals: [{ candidate_id: 'candidate-787', search_id: 'search-1', deal_id: 'deal-1', deal_name: 'Retail signal', anchor_permit_id: 'permit-787', persona: 'developer', approval_stage: 'pre_approval', signal_confidence: 0.9, distance_miles: 0.4, candidate_score: 86, created_at: '2026-09-27T00:00:00Z' }],
+            signals: [{ candidate_id: 'candidate-787', search_id: 'search-1', deal_id: 'deal-1', deal_name: 'Retail signal', anchor_permit_id: 'permit-787', anchor_planning_id: 'plan-787', persona: 'developer', approval_stage: 'pre_approval', signal_confidence: 0.9, distance_miles: 0.4, candidate_score: 86, created_at: '2026-09-27T00:00:00Z' }],
           },
           {
             parcel: {
@@ -226,8 +226,8 @@ describe('<AcquisitionMap> states', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear source' }));
     expect(screen.queryByText(/Source-linked parcels:/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Select planning source' }));
-    expect(screen.getByText(/Planning market filter:/)).toBeInTheDocument();
-    expect(screen.getByText(/not a direct planning-to-parcel search/i)).toBeInTheDocument();
+    expect(screen.getByText(/Planning-linked parcels:/)).toBeInTheDocument();
+    expect(screen.queryByText(/not a direct planning-to-parcel search/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear source' }));
     fireEvent.change(screen.getByLabelText(/filter acquisition map by state/i), { target: { value: 'tx' } });
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();

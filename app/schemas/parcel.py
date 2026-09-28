@@ -18,6 +18,15 @@ class NearbyParcelSearchCreate(BaseModel):
     limit: int = Field(default=50, ge=1, le=100)
 
 
+class PlanningNearbyParcelSearchCreate(BaseModel):
+    radius_miles: float = Field(default=2.0, ge=0.25, le=5.0)
+    persona: Literal["developer", "investor", "broker", "realtor"] = "developer"
+    minimum_land_area_sq_ft: Optional[float] = Field(default=None, ge=0)
+    zoning_codes: list[str] = Field(default_factory=list, max_length=50)
+    land_uses: list[str] = Field(default_factory=list, max_length=50)
+    limit: int = Field(default=50, ge=1, le=100)
+
+
 class NearbyParcelCandidateReview(BaseModel):
     review_status: Literal["candidate", "shortlisted", "dismissed"]
 
@@ -143,7 +152,8 @@ class NearbyParcelSearchSummary(BaseModel):
     id: str
     deal_id: str
     anchor_brand_match_id: Optional[str]
-    anchor_permit_id: str
+    anchor_permit_id: Optional[str] = None
+    anchor_planning_id: Optional[str] = None
     anchor_latitude: float
     anchor_longitude: float
     radius_miles: float
@@ -195,6 +205,7 @@ class AcquisitionRadarSignalResponse(BaseModel):
     deal_id: str
     deal_name: str
     anchor_permit_id: Optional[str] = None
+    anchor_planning_id: Optional[str] = None
     persona: str
     approval_stage: Optional[str] = None
     signal_confidence: Optional[float] = None

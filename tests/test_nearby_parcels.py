@@ -16,6 +16,7 @@ from app.models.audit_log import AuditLog
 from app.models.brand import PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
 from app.models.ingestion import (
+    IngestionRun,
     IngestionSource,
     RawSourceRecord,
     RawSourceRecordObservation,
@@ -23,6 +24,7 @@ from app.models.ingestion import (
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
+from app.models.planning import PlanningRecord
 from app.models.user import User
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.catalog import load_catalog
@@ -320,6 +322,93 @@ def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tm
         assert persona_body["ranker_version"] == expected_version
         assert persona_body["candidates"][0]["explanation"]["ranker_version"] == expected_version
         assert "No owner willingness to sell" in persona_body["candidates"][0]["explanation"]["cautions"][0]
+
+
+def test_planning_record_creates_ranked_reviewable_parcel_search(client, db):
+    headers = _admin_headers(db)
+    deal = client.post("/deals", headers=headers, json={
+        "name": "Planning-led acquisition",
+        "address": "100 Main Street",
+        "city": "Austin",
+        "state": "TX",
+        "property_type": "retail",
+    }).json()
+    source = IngestionSource(
+        id=str(uuid4()),
+        organization_id="default-org",
+        key="planning_test",
+        name="Planning test",
+        adapter="test",
+        record_type="planning",
+        jurisdiction="Austin",
+        base_url="https://example.gov/planning",
+        field_mappings=[],
+        settings={},
+    )
+    db.add(source)
+    db.flush()
+    run = IngestionRun(
+        organization_id="default-org",
+        source_id=source.id,
+        status="completed",
+        trigger="manual",
+    )
+    db.add(run)
+    db.flush()
+    raw = RawSourceRecord(
+        id=str(uuid4()),
+        organization_id="default-org",
+        source_id=source.id,
+        run_id=run.id,
+        external_record_id="PLAN-1",
+        record_type="planning",
+        payload={"id": "PLAN-1"},
+        content_hash="plan-hash",
+    )
+    planning = PlanningRecord(
+        id=str(uuid4()),
+        organization_id="default-org",
+        source_id=source.id,
+        latest_raw_record_id=raw.id,
+        external_record_id="PLAN-1",
+        normalization_hash="plan-normalized",
+        event_type="planning_hearing_agenda_item",
+        stage="pre_approval",
+        title="Austin planning hearing",
+        address="100 Main St",
+        city="Austin",
+        state="TX",
+        latitude=30.2672,
+        longitude=-97.7431,
+        priority_score=80,
+        confidence=0.9,
+    )
+    db.add_all([raw, planning])
+    db.flush()
+    _add_parcel(
+        db, source.id, raw.id, "P-PLAN", -97.735,
+        land_area_sq_ft=80_000,
+        land_value=1_000_000,
+        improvement_value=100_000,
+        zoning_code="Commercial Retail",
+        land_use="Retail",
+    )
+    db.commit()
+
+    response = client.post(
+        f"/deals/{deal['id']}/planning-records/{planning.id}/nearby-parcel-searches",
+        headers=headers,
+        json={"radius_miles": 2, "persona": "developer"},
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["anchor_permit_id"] is None
+    assert body["anchor_planning_id"] == planning.id
+    assert body["candidates"][0]["parcel"]["external_parcel_id"] == "P-PLAN"
+    assert body["candidates"][0]["explanation"]["anchor_planning_id"] == planning.id
+    radar = client.get("/acquisition-radar", headers=headers).json()
+    assert radar["items"][0]["signals"][0]["anchor_planning_id"] == planning.id
 
 
 def test_nearby_parcel_export_is_policy_gated_safe_and_audited(

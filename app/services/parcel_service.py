@@ -11,6 +11,7 @@ from app.models.deal import Deal
 from app.models.graph import GraphEntityType, GraphRelationshipType
 from app.models.organization_membership import OrganizationMembership
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelRecord
+from app.models.planning import PlanningRecord
 from app.models.user import User
 from app.schemas.deal import DealCreate
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
@@ -211,6 +212,7 @@ def list_acquisition_radar(
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.deal),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_brand_match),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_permit),
+        joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_planning),
     ).filter(NearbyParcelCandidate.parcel_id.in_(parcel_ids)).all()
     acquisition_cases = active_query(
         db.query(ParcelAcquisitionCase), ParcelAcquisitionCase
@@ -266,14 +268,16 @@ def list_acquisition_radar(
             seen_deals.add(candidate.search.deal_id)
             match = candidate.search.anchor_brand_match
             permit = candidate.search.anchor_permit
+            planning = candidate.search.anchor_planning
             signals.append({
                 "candidate_id": candidate.id,
                 "search_id": candidate.search_id,
                 "deal_id": candidate.search.deal_id,
                 "deal_name": candidate.search.deal.name,
                 "anchor_permit_id": permit.id if permit else None,
+                "anchor_planning_id": planning.id if planning else None,
                 "persona": candidate.search.persona,
-                "approval_stage": permit.approval_stage if permit else None,
+                "approval_stage": permit.approval_stage if permit else planning.stage if planning else None,
                 "signal_confidence": match.confidence if match else None,
                 "distance_miles": candidate.distance_miles,
                 "candidate_score": candidate.score,
@@ -449,6 +453,115 @@ def list_nearby_parcel_searches(
     return active_query(db.query(NearbyParcelSearch), NearbyParcelSearch).filter(
         NearbyParcelSearch.deal_id == deal_id
     ).order_by(NearbyParcelSearch.created_at.desc()).limit(limit).all()
+
+
+def create_planning_nearby_parcel_search(
+    db: Session,
+    *,
+    deal_id: str,
+    planning_record_id: str,
+    radius_miles: float,
+    persona: str,
+    minimum_land_area_sq_ft: float | None,
+    zoning_codes: list[str],
+    land_uses: list[str],
+    limit: int,
+) -> NearbyParcelSearch:
+    deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()
+    if deal is None:
+        raise LookupError("Deal not found")
+    planning = active_query(db.query(PlanningRecord), PlanningRecord).filter(
+        PlanningRecord.id == planning_record_id
+    ).first()
+    if planning is None:
+        raise LookupError("Planning record not found")
+    if planning.latitude is None or planning.longitude is None:
+        raise ValueError("The planning record does not have verified coordinates")
+    if not -90 <= planning.latitude <= 90 or not -180 <= planning.longitude <= 180:
+        raise ValueError("The planning record has invalid coordinates")
+
+    filters = {
+        "minimum_land_area_sq_ft": minimum_land_area_sq_ft,
+        "zoning_codes": zoning_codes,
+        "land_uses": land_uses,
+        "anchor_source": "planning_record",
+    }
+    search = NearbyParcelSearch(
+        organization_id=get_org_id(),
+        deal_id=deal.id,
+        anchor_brand_match_id=None,
+        anchor_permit_id=None,
+        anchor_planning_id=planning.id,
+        anchor_latitude=planning.latitude,
+        anchor_longitude=planning.longitude,
+        radius_miles=radius_miles,
+        persona=persona,
+        filters=filters,
+        result_limit=limit,
+        as_of=utcnow(),
+        ranker_version=ranker_version(persona),
+    )
+    db.add(search)
+    db.flush()
+
+    nearby = find_nearby_parcels(
+        db,
+        latitude=planning.latitude,
+        longitude=planning.longitude,
+        radius_miles=radius_miles,
+        minimum_land_area_sq_ft=minimum_land_area_sq_ft,
+        zoning_codes=zoning_codes,
+        land_uses=land_uses,
+        limit=limit,
+    )
+    ranked = []
+    for parcel, distance in nearby:
+        score = rank_parcel_candidate(
+            parcel,
+            parcel.facts,
+            persona=persona,
+            distance_miles=distance,
+            radius_miles=radius_miles,
+        )
+        ranked.append((parcel, distance, score))
+    ranked.sort(key=lambda row: (-row[2].score, row[1], row[0].external_parcel_id))
+
+    for rank, (parcel, distance, score) in enumerate(ranked, start=1):
+        candidate = NearbyParcelCandidate(
+            organization_id=get_org_id(),
+            search_id=search.id,
+            parcel_id=parcel.id,
+            rank=rank,
+            distance_miles=round(distance, 4),
+            score=score.score,
+            score_confidence=score.confidence,
+            explanation={
+                **score.explanation,
+                "anchor_planning_id": planning.id,
+                "anchor_source": "planning_record",
+            },
+            review_status="candidate",
+            ranker_version=ranker_version(persona),
+        )
+        db.add(candidate)
+        db.flush()
+        ensure_acquisition_case_for_candidate(db, candidate)
+    log_change(
+        db,
+        "nearby_parcel_search",
+        search.id,
+        "create",
+        organization_id=get_org_id(),
+        new_values={
+            "deal_id": deal.id,
+            "anchor_planning_id": planning.id,
+            "radius_miles": radius_miles,
+            "persona": persona,
+            "candidate_count": len(ranked),
+        },
+    )
+    db.flush()
+    return get_nearby_parcel_search(db, search.id) or search
 
 
 def get_nearby_parcel_search(

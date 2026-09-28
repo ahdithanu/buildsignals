@@ -2,6 +2,21 @@
 
 ## Local implementation, not deployed
 
+### Planning-Anchored Nearby Parcel Searches (2026-09-27)
+
+Planning records can now directly generate ranked nearby-parcel searches with
+the same radius, persona, acreage, zoning, land-use, audit, and acquisition-case
+behavior as permit-anchored searches. Search rows enforce exactly one anchor:
+either a permit or a planning record. The acquisition radar exposes
+`anchor_planning_id`, and the map prefers exact planning-linked parcel searches
+when a selected source record has one. If no planning search has been run yet,
+the UI continues to show the explicit city/state market fallback rather than
+pretending that nearby parcels are directly linked.
+
+Verification: focused backend parcel/availability/ZIP3 tests, focused
+acquisition-map frontend tests, and TypeScript checks pass. This does not
+activate any new parcel source or qualify Columbus/Franklin County rights.
+
 ### Full regional rollout visibility (2026-09-26)
 
 The Source Health product page now renders the complete 50-state rollout queue

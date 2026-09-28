@@ -8,6 +8,7 @@ import type {
   NearbyParcelSearch,
   NearbyParcelSearchCreate,
   NearbyParcelSearchSummary,
+  PlanningNearbyParcelSearchCreate,
   AcquisitionRadarParams,
   AcquisitionRadarResponse,
   ParcelReviewStatus,
@@ -61,6 +62,15 @@ export const parcelsApi = {
     apiClient.post<ParcelFact>(`/parcels/${parcelId}/availability-evidence`, payload),
   create: (dealId: string, payload: NearbyParcelSearchCreate): Promise<NearbyParcelSearch> =>
     apiClient.post<NearbyParcelSearch>(`/deals/${dealId}/nearby-parcel-searches`, payload),
+  createFromPlanning: (
+    dealId: string,
+    planningRecordId: string,
+    payload: PlanningNearbyParcelSearchCreate,
+  ): Promise<NearbyParcelSearch> =>
+    apiClient.post<NearbyParcelSearch>(
+      `/deals/${dealId}/planning-records/${planningRecordId}/nearby-parcel-searches`,
+      payload,
+    ),
   review: (candidateId: string, reviewStatus: ParcelReviewStatus): Promise<NearbyParcelCandidate> =>
     apiClient.patch<NearbyParcelCandidate>(`/parcel-candidates/${candidateId}`, {
       review_status: reviewStatus,

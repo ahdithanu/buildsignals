@@ -32,6 +32,7 @@ from app.schemas.parcel import (
     ParcelFactResponse,
     ParcelLineageEventResponse,
     ParcelSearchHitResponse,
+    PlanningNearbyParcelSearchCreate,
 )
 from app.services.acquisition_service import (
     get_acquisition_case,
@@ -48,6 +49,7 @@ from app.services.parcel_lineage import get_lineage_event, lineage_events_for_pa
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,
     create_nearby_parcel_search,
+    create_planning_nearby_parcel_search,
     get_nearby_parcel_search,
     get_parcel_detail,
     list_acquisition_radar,
@@ -330,6 +332,40 @@ def create_search(
             db,
             deal_id=deal_id,
             anchor_brand_match_id=payload.anchor_brand_match_id,
+            radius_miles=payload.radius_miles,
+            persona=payload.persona,
+            minimum_land_area_sq_ft=payload.minimum_land_area_sq_ft,
+            zoning_codes=payload.zoning_codes,
+            land_uses=payload.land_uses,
+            limit=payload.limit,
+        )
+        db.commit()
+        return get_nearby_parcel_search(db, search.id)
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/deals/{deal_id}/planning-records/{planning_record_id}/nearby-parcel-searches",
+    response_model=NearbyParcelSearchResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def create_planning_search(
+    deal_id: str,
+    planning_record_id: str,
+    payload: PlanningNearbyParcelSearchCreate,
+    db: Session = Depends(get_db),
+):
+    try:
+        search = create_planning_nearby_parcel_search(
+            db,
+            deal_id=deal_id,
+            planning_record_id=planning_record_id,
             radius_miles=payload.radius_miles,
             persona=payload.persona,
             minimum_land_area_sq_ft=payload.minimum_land_area_sq_ft,

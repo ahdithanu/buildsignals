@@ -113,7 +113,8 @@ export interface NearbyParcelSearchSummary {
   id: string;
   deal_id: string;
   anchor_brand_match_id?: string | null;
-  anchor_permit_id: string;
+  anchor_permit_id?: string | null;
+  anchor_planning_id?: string | null;
   anchor_latitude: number;
   anchor_longitude: number;
   radius_miles: number;
@@ -131,6 +132,15 @@ export interface NearbyParcelSearch extends NearbyParcelSearchSummary {
 
 export interface NearbyParcelSearchCreate {
   anchor_brand_match_id: string;
+  radius_miles: number;
+  persona: ParcelPersona;
+  limit?: number;
+  minimum_land_area_sq_ft?: number | null;
+  zoning_codes?: string[];
+  land_uses?: string[];
+}
+
+export interface PlanningNearbyParcelSearchCreate {
   radius_miles: number;
   persona: ParcelPersona;
   limit?: number;
@@ -183,6 +193,7 @@ export interface AcquisitionRadarSignal {
   deal_id: string;
   deal_name: string;
   anchor_permit_id?: string | null;
+  anchor_planning_id?: string | null;
   persona: ParcelPersona;
   approval_stage?: string | null;
   signal_confidence?: number | null;
