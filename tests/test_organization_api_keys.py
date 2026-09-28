@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -49,6 +50,8 @@ def test_admin_creates_lists_and_revokes_api_key_without_storing_secret(client, 
     assert body["key_prefix"].startswith("bs_live_")
     assert body["scopes"] == ["read", "write"]
     assert body["revoked_at"] is None
+    assert body["expires_at"] is not None
+    assert body["rotation_due"] is False
 
     stored = db.query(OrganizationApiKey).filter_by(id=body["id"]).one()
     assert stored.key_hash != body["secret"]
@@ -61,6 +64,7 @@ def test_admin_creates_lists_and_revokes_api_key_without_storing_secret(client, 
     assert len(listed_body) == 1
     assert "secret" not in listed_body[0]
     assert listed_body[0]["key_prefix"] == body["key_prefix"]
+    assert listed_body[0]["expires_at"] == body["expires_at"]
 
     revoked = client.delete(
         f"/organizations/{org_id}/api-keys/{body['id']}",
@@ -126,3 +130,26 @@ def test_invalid_api_key_scope_is_rejected(client):
         json={"name": "Bad scope", "scopes": ["root"]},
     )
     assert response.status_code == 422
+
+
+def test_api_key_expiration_must_be_future_and_rotation_due_is_reported(client):
+    admin = _register(client, email="expiry-key@example.com", org_name="Expiry Key Co")
+    expired = client.post(
+        f"/organizations/{admin['organization_id']}/api-keys",
+        headers=_auth(admin["access_token"]),
+        json={
+            "name": "Already expired",
+            "scopes": ["read"],
+            "expires_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
+        },
+    )
+    assert expired.status_code == 422
+
+    soon = datetime.now(timezone.utc) + timedelta(days=7)
+    created = client.post(
+        f"/organizations/{admin['organization_id']}/api-keys",
+        headers=_auth(admin["access_token"]),
+        json={"name": "Rotate soon", "scopes": ["read"], "expires_at": soon.isoformat()},
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["rotation_due"] is True

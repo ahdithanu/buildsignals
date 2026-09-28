@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 import app.utils.api_key_deps as api_key_deps
@@ -167,6 +169,21 @@ def test_public_api_rejects_missing_revoked_or_under_scoped_keys(client, db):
     db.commit()
     revoked = client.get("/public/deals", headers={"Authorization": f"Bearer {secret}"})
     assert revoked.status_code == 401
+
+
+def test_public_api_rejects_expired_api_keys(client, db):
+    identity = _register(client, email="public-expired@example.com", org_name="Public Expired")
+    api_key, secret = _issue_key(
+        db,
+        org_id=identity["organization_id"],
+        user_id=identity["user_id"],
+        scopes=["read"],
+    )
+    api_key.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+    db.commit()
+
+    response = client.get("/public/deals", headers={"Authorization": f"Bearer {secret}"})
+    assert response.status_code == 401
 
 
 def test_public_api_key_rate_limit_headers_and_enforcement(client, db, monkeypatch):
