@@ -292,12 +292,18 @@ def create_organization_api_key(
         name=payload.name,
         scopes=payload.scopes,
         actor_id=principal["user_id"],
+        expires_at=payload.expires_at,
     )
     db.flush()
     log_change(
         db, "organization_api_key", api_key.id, "create",
         actor_id=principal["user_id"], organization_id=org_id,
-        new_values={"name": api_key.name, "key_prefix": api_key.key_prefix, "scopes": payload.scopes},
+        new_values={
+            "name": api_key.name,
+            "key_prefix": api_key.key_prefix,
+            "scopes": payload.scopes,
+            "expires_at": api_key.expires_at.isoformat() if api_key.expires_at else None,
+        },
     )
     db.commit()
     db.refresh(api_key)

@@ -2,7 +2,7 @@
 
 Build Signals exposes tenant-scoped read endpoints for customer exports and partner integrations.
 Organization admins create and revoke API keys from Settings. Secrets are shown once, stored only as hashes,
-and can be passed with either header:
+expire by default after 90 days, and can be passed with either header:
 
 ```bash
 Authorization: Bearer bs_live_...
@@ -48,6 +48,12 @@ Public API keys have a per-key rate limit. Responses include:
 Successful calls are recorded with endpoint, status, item count, latency, and timestamp. Admins can see total
 calls and last-used information in Settings, which gives customer success and implementation teams a quick way
 to debug integrations without exposing key secrets.
+
+## Rotation
+
+New keys default to a 90-day expiration unless an admin chooses a different future date. Expired keys are rejected
+the same way as revoked keys. Settings flags keys as rotation due when they are within the rotation warning window,
+so enterprise teams can issue a replacement key before an integration outage.
 
 ## Example
 

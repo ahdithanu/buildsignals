@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -51,6 +51,7 @@ class SwitchOrgRequest(BaseModel):
 class ApiKeyCreateRequest(BaseModel):
     name: str = Field(..., min_length=3, max_length=120)
     scopes: list[str] = Field(default_factory=lambda: ["read"])
+    expires_at: datetime | None = None
 
     @field_validator("scopes")
     @classmethod
@@ -64,6 +65,16 @@ class ApiKeyCreateRequest(BaseModel):
             raise ValueError(f"Unsupported API key scope(s): {', '.join(sorted(unknown))}")
         return normalized
 
+    @field_validator("expires_at")
+    @classmethod
+    def validate_expiration(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        comparable = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        if comparable <= datetime.now(timezone.utc):
+            raise ValueError("API key expiration must be in the future")
+        return comparable
+
 
 class ApiKeyResponse(BaseModel):
     id: str
@@ -75,6 +86,8 @@ class ApiKeyResponse(BaseModel):
     revoked_at: datetime | None
     revoked_by: str | None
     last_used_at: datetime | None
+    expires_at: datetime | None = None
+    rotation_due: bool = False
     usage_total_calls: int = 0
     usage_last_called_at: datetime | None = None
     rate_limit_limit: int | None = None

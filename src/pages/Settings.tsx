@@ -19,6 +19,12 @@ function formatDate(iso: string | null): string {
   return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
+function defaultExpirationDate(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 90);
+  return date.toISOString().slice(0, 10);
+}
+
 const settingsSections = [
   {
     icon: <SettingsIcon className="h-4 w-4" />,
@@ -72,6 +78,7 @@ export default function Settings() {
   const { toast } = useToast();
   const [newKeyName, setNewKeyName] = useState("Warehouse export");
   const [newKeyScopes, setNewKeyScopes] = useState<ApiKeyScope[]>(["read"]);
+  const [newKeyExpiresAt, setNewKeyExpiresAt] = useState(defaultExpirationDate);
   const [createdKey, setCreatedKey] = useState<ApiKeyCreateResponse | null>(null);
 
   const apiKeys = useQuery({
@@ -87,11 +94,13 @@ export default function Settings() {
     mutationFn: () => organizationsApi.createApiKey(orgId, {
       name: newKeyName.trim(),
       scopes: newKeyScopes,
+      expires_at: newKeyExpiresAt ? new Date(`${newKeyExpiresAt}T23:59:59.000Z`).toISOString() : null,
     }),
     onSuccess: (key) => {
       setCreatedKey(key);
       setNewKeyName("Warehouse export");
       setNewKeyScopes(["read"]);
+      setNewKeyExpiresAt(defaultExpirationDate());
       invalidateKeys();
       toast({ title: "API key created", description: "Copy the secret now. It will not be shown again." });
     },
@@ -183,7 +192,7 @@ export default function Settings() {
             )}
 
             <form
-              className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]"
+              className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_auto]"
               onSubmit={(event) => {
                 event.preventDefault();
                 if (newKeyName.trim()) createKey.mutate();
@@ -217,6 +226,17 @@ export default function Settings() {
                   ))}
                 </div>
               </div>
+              <div>
+                <label htmlFor="api-key-expires" className="text-xs font-medium text-muted-foreground">Expires</label>
+                <input
+                  id="api-key-expires"
+                  type="date"
+                  value={newKeyExpiresAt}
+                  onChange={(event) => setNewKeyExpiresAt(event.target.value)}
+                  className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                  required
+                />
+              </div>
               <div className="flex items-end">
                 <button
                   type="submit"
@@ -245,9 +265,10 @@ export default function Settings() {
                           <p className="text-sm font-medium text-foreground">{key.name}</p>
                           <code className="rounded bg-secondary px-2 py-0.5 text-xs text-muted-foreground">{key.key_prefix}</code>
                           {key.revoked_at && <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">Revoked</span>}
+                          {!key.revoked_at && key.rotation_due && <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700">Rotate soon</span>}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Scopes: {key.scopes.join(", ")} · Created {formatDate(key.created_at)} · Last used {formatDate(key.last_used_at)}
+                          Scopes: {key.scopes.join(", ")} · Created {formatDate(key.created_at)} · Expires {formatDate(key.expires_at)} · Last used {formatDate(key.last_used_at)}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           Usage: {key.usage_total_calls.toLocaleString()} calls · Last call {formatDate(key.usage_last_called_at)}

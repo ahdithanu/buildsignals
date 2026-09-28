@@ -27,6 +27,8 @@ const key: ApiKeyResponse = {
   revoked_at: null,
   revoked_by: null,
   last_used_at: null,
+  expires_at: '2026-12-27T23:59:59Z',
+  rotation_due: false,
   usage_total_calls: 12,
   usage_last_called_at: '2026-09-28T10:05:00Z',
   rate_limit_limit: 120,
@@ -88,6 +90,7 @@ describe('Settings API keys', () => {
     await waitFor(() => expect(organizationsApi.createApiKey).toHaveBeenCalledWith('org-a', {
       name: 'Partner export',
       scopes: ['read', 'write'],
+      expires_at: expect.stringMatching(/^20\d\d-\d\d-\d\dT23:59:59\.000Z$/),
     }));
     expect(await screen.findByText('One-time secret')).toBeInTheDocument();
     expect(screen.getByText('one-time-test-secret')).toBeInTheDocument();

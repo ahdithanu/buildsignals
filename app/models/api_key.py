@@ -36,6 +36,7 @@ class OrganizationApiKey(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
 
     organization = relationship("Organization", foreign_keys="[OrganizationApiKey.organization_id]")
     creator = relationship("User", foreign_keys="[OrganizationApiKey.created_by]")

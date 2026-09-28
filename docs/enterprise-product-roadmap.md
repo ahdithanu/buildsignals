@@ -47,9 +47,8 @@ admin visibility.
 
 **Remaining path:**
 1. Expand public endpoints for opportunities, graph context, and eval results.
-2. Add optional expiry and rotation reminders for customer key hygiene.
-3. Add daily aggregate rollups for billing-grade reporting.
-4. Add generated SDK snippets for Python and TypeScript.
+2. Add daily aggregate rollups for billing-grade reporting.
+3. Add generated SDK snippets for Python and TypeScript.
 
 ---
 
