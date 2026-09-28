@@ -829,6 +829,19 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
     assert single.json()["items"] == []
 
 
+def test_acquisition_radar_rejects_invalid_shared_filter_values(client):
+    invalid_urls = [
+        "/acquisition-radar?follow_up=tomorrow",
+        "/acquisition-radar?signal_overlap=cross",
+        "/acquisition-radar?availability=maybe",
+    ]
+
+    for url in invalid_urls:
+        response = client.get(url)
+
+        assert response.status_code == 422, url
+
+
 def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path):
     org = Organization(id="default-org", name="Default Org", slug="default-org", is_active=True)
     db.add(org)
