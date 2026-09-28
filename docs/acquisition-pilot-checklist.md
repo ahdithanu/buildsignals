@@ -31,6 +31,13 @@ Verification: focused Acquisition Radar frontend tests pass with two cases, and
 TypeScript typecheck passes. This is UI workflow clarity over existing data; it
 does not replace real source-backed acceptance.
 
+The radar summary now includes a server-computed `promoted_parcels` count so the
+Saved step reflects the full filtered queue rather than only the current page of
+results. Promotion tests verify the count and promoted opportunity link after a
+shortlisted parcel is converted into a live opportunity. Focused backend
+promotion/radar tests, four focused frontend radar/map/wireframe tests, and
+TypeScript typecheck pass.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with
