@@ -407,7 +407,7 @@ export default function AcquisitionRadar() {
   const { data, isLoading, error, refetch, updateCase, recordActivity, promote } = useAcquisitionRadar(params);
   const { data: zip3Heatmap } = useZip3Heatmap({ state: state.trim().toUpperCase() || undefined, limit: 12 });
   const canManage = role === 'admin' || role === 'editor';
-  useEffect(() => {
+  const viewSearchParams = useMemo(() => {
     const next = new URLSearchParams();
     if (query.trim()) next.set('q', query.trim());
     if (state.trim()) next.set('state', state.trim().toUpperCase());
@@ -418,8 +418,11 @@ export default function AcquisitionRadar() {
     if (signalOverlap) next.set('signal_overlap', signalOverlap);
     if (availability) next.set('availability', availability);
     if (offset > 0) next.set('offset', String(offset));
-    setSearchParams(next, { replace: true });
-  }, [assignment, availability, followUpFilter, offset, persona, query, setSearchParams, signalOverlap, state, status]);
+    return next;
+  }, [assignment, availability, followUpFilter, offset, persona, query, signalOverlap, state, status]);
+  useEffect(() => {
+    setSearchParams(viewSearchParams, { replace: true });
+  }, [setSearchParams, viewSearchParams]);
   const summary = data?.summary;
   const metrics: Array<{ label: string; value: number; icon: LucideIcon }> = [
     { label: 'Ranked parcels', value: summary?.total_parcels ?? 0, icon: MapPinned },
@@ -432,7 +435,8 @@ export default function AcquisitionRadar() {
     setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setFollowUpFilter(''); setSignalOverlap(''); setAvailability(''); setOffset(0);
   };
   const copyViewLink = async () => {
-    const url = `${window.location.origin}${location.pathname}${location.search}`;
+    const queryString = viewSearchParams.toString();
+    const url = `${window.location.origin}${location.pathname}${queryString ? `?${queryString}` : ''}`;
     try {
       await navigator.clipboard.writeText(url);
       toast({ title: 'Radar view link copied' });

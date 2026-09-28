@@ -225,5 +225,13 @@ describe('<AcquisitionRadar>', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining('follow_up=due'),
     );
+
+    vi.mocked(navigator.clipboard.writeText).mockClear();
+    fireEvent.change(screen.getByLabelText('Availability'), { target: { value: 'unverified' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy view link' }));
+
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('availability=unverified'),
+    ));
   });
 });
