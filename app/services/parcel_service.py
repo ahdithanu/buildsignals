@@ -47,6 +47,7 @@ def _radar_candidate_query(
     persona: str | None = None,
     review_status: str | None = None,
     assignment: str | None = None,
+    follow_up: str | None = None,
 ):
     rows = active_query(db.query(NearbyParcelCandidate), NearbyParcelCandidate).join(
         NearbyParcelSearch,
@@ -107,6 +108,10 @@ def _radar_candidate_query(
             ParcelAcquisitionCase.assigned_to_user_id.is_(None),
             NearbyParcelCandidate.assigned_to_user_id.is_(None),
         )
+    if follow_up == "scheduled":
+        rows = rows.filter(ParcelAcquisitionCase.follow_up_at.isnot(None))
+    elif follow_up == "none":
+        rows = rows.filter(ParcelAcquisitionCase.follow_up_at.is_(None))
     return rows
 
 
@@ -118,6 +123,7 @@ def list_acquisition_radar(
     persona: str | None = None,
     review_status: str | None = None,
     assignment: str | None = None,
+    follow_up: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict:
@@ -130,6 +136,7 @@ def list_acquisition_radar(
         persona=persona,
         review_status=review_status,
         assignment=assignment,
+        follow_up=follow_up,
     )
     grouped = base.with_entities(
         ParcelRecord.id.label("parcel_id"),
@@ -225,6 +232,7 @@ def list_acquisition_radar(
         persona=persona,
         review_status=review_status,
         assignment=assignment,
+        follow_up=follow_up,
     ).options(
         joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.source),
         joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts),

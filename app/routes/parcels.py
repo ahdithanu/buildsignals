@@ -246,6 +246,7 @@ def get_acquisition_radar(
         pattern="^(candidate|shortlisted|contacted|dismissed|promoted)$",
     ),
     assignment: str | None = Query(default=None, pattern="^(assigned|unassigned)$"),
+    follow_up: str | None = Query(default=None, pattern="^(scheduled|none)$"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -257,6 +258,7 @@ def get_acquisition_radar(
         persona=persona,
         review_status=review_status,
         assignment=assignment,
+        follow_up=follow_up,
         limit=limit,
         offset=offset,
     )

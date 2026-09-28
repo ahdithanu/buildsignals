@@ -655,6 +655,12 @@ def test_parcel_acquisition_case_tracks_provenance_status_and_outreach(
     assert radar.status_code == 200, radar.text
     assert radar.json()["summary"]["contacted_parcels"] == 1
     assert radar.json()["summary"]["follow_up_parcels"] == 1
+    scheduled = client.get("/acquisition-radar?follow_up=scheduled", headers=headers)
+    assert scheduled.status_code == 200, scheduled.text
+    assert scheduled.json()["total"] == 1
+    unscheduled = client.get("/acquisition-radar?follow_up=none", headers=headers)
+    assert unscheduled.status_code == 200, unscheduled.text
+    assert unscheduled.json()["items"] == []
     assert db.query(ParcelAcquisitionActivity).count() == 1
     assert db.query(AuditLog).filter_by(
         entity_type="parcel_acquisition_case"

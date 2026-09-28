@@ -51,6 +51,12 @@ follow-up queue counts, while assignment-only and promotion-only flows do not.
 Focused backend radar/acquisition tests, four focused frontend radar/map/
 wireframe tests, and TypeScript typecheck pass.
 
+Acquisition Radar can now filter by scheduled follow-up versus no follow-up.
+The filter is applied server-side through `/acquisition-radar?follow_up=...`
+so daily outreach views and aggregate counts are scoped consistently. Focused
+backend tests verify scheduled/no-follow-up query results after an outreach
+activity, and the frontend radar tests verify the new control.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with

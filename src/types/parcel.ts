@@ -248,6 +248,7 @@ export interface AcquisitionRadarParams {
   persona?: ParcelPersona;
   review_status?: AcquisitionCaseStatus;
   assignment?: 'assigned' | 'unassigned';
+  follow_up?: 'scheduled' | 'none';
   limit?: number;
   offset?: number;
 }
