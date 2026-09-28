@@ -23,9 +23,8 @@ Supported event types:
 - `eval.run.completed`
 - `eval.run.failed`
 
-The first release intentionally queues delivery records but does not perform outbound HTTP calls inside product
-request handlers. This preserves user-facing latency and avoids turning customer endpoint downtime into application
-failures.
+Product request handlers only queue delivery records. Outbound HTTP delivery runs through an explicit worker path,
+which preserves user-facing latency and avoids turning customer endpoint downtime into application failures.
 
 ## Admin API
 
@@ -49,7 +48,7 @@ covered by Postgres row-level security in production.
 - Attempt count and next retry time.
 - Last response code, response excerpt, and error message.
 
-The queue is designed for a future worker that signs payloads using the configured secret reference, performs
+The queue is processed by a tenant-scoped worker that signs payloads using the configured secret reference, performs
 bounded retries, and records success or failure without blocking the originating workflow.
 
 ## Delivery Attempts
@@ -70,9 +69,32 @@ not stored in the subscription row.
 bounded response excerpt, error message, incremented attempt count, and an exponential retry timestamp. Disabled
 subscriptions fail pending deliveries instead of posting to stale customer endpoints.
 
+## Worker Runner
+
+Run due deliveries for one organization with:
+
+```bash
+python scripts/process_webhooks.py --organization-id <org-id> --limit 25 --max-attempts 8 --timeout-seconds 10
+```
+
+The runner prints a JSON summary:
+
+```json
+{"attempted": 3, "delivered": 2, "delivery_ids": ["..."], "failed": 0, "pending": 1}
+```
+
+The worker is intentionally organization-scoped because production Postgres row-level security is tenant scoped.
+Schedulers should run it per enrolled customer workspace. Safe defaults:
+
+- `--limit` accepts 1 to 250 deliveries per run.
+- `--max-attempts` accepts 1 to 25 attempts before a still-pending delivery is marked failed.
+- `--timeout-seconds` accepts 1 to 60 seconds per target request.
+
+For Vercel Cron or another scheduler, store signing material in deployment secrets, point subscription
+`secret_reference` values at those names, and invoke the runner on the desired cadence.
+
 ## Scaling Path
 
-For 1 million opportunities, webhook delivery should move from the manual attempt endpoint to a dedicated worker
-pool backed by batched queue reads, idempotency keys, exponential backoff, dead-letter retention, and per-customer
-concurrency limits. The current table shape already supports those additions without changing customer-facing
-subscription APIs.
+For 1 million opportunities, webhook delivery should move from the tenant-scoped runner to a dedicated worker pool
+backed by leased queue reads, idempotency keys, dead-letter retention, and per-customer concurrency limits. The
+current table shape already supports those additions without changing customer-facing subscription APIs.

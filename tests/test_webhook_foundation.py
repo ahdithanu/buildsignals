@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from app.models.audit_log import AuditLog
 from app.models.webhook import WebhookDelivery, WebhookSubscription
 from app.services.webhook_service import (
@@ -6,6 +8,7 @@ from app.services.webhook_service import (
     build_delivery_headers,
     canonical_webhook_body,
     enqueue_webhook_event,
+    process_due_webhook_deliveries,
     webhook_signature,
 )
 
@@ -317,3 +320,105 @@ def test_attempt_webhook_delivery_fails_disabled_subscription(db):
     assert result.status == "failed"
     assert result.attempt_count == 1
     assert result.error_message == "Webhook subscription is not active"
+
+
+def test_process_due_webhook_deliveries_attempts_ready_rows_only(db):
+    subscription = WebhookSubscription(
+        organization_id="org-worker",
+        name="Worker",
+        target_url="https://example.test/webhook",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    due = WebhookDelivery(
+        organization_id="org-worker",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="due",
+        payload={"deal_id": "due"},
+    )
+    future = WebhookDelivery(
+        organization_id="org-worker",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="future",
+        payload={"deal_id": "future"},
+        next_attempt_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+    other_org = WebhookDelivery(
+        organization_id="other-org",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="other",
+        payload={"deal_id": "other"},
+    )
+    db.add_all([due, future, other_org])
+    db.commit()
+
+    def transport(*_args, **_kwargs):
+        return WebhookTransportResponse(status_code=204, body="")
+
+    result = process_due_webhook_deliveries(
+        db,
+        organization_id="org-worker",
+        limit=10,
+        transport=transport,
+    )
+
+    assert result.attempted == 1
+    assert result.delivered == 1
+    assert result.pending == 0
+    assert result.failed == 0
+    assert result.delivery_ids == [due.id]
+    assert db.get(WebhookDelivery, future.id).attempt_count == 0
+    assert db.get(WebhookDelivery, other_org.id).attempt_count == 0
+
+
+def test_process_due_webhook_deliveries_marks_exhausted_retry_failed(db):
+    subscription = WebhookSubscription(
+        organization_id="org-exhausted",
+        name="Exhausted",
+        target_url="https://example.test/webhook",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    delivery = WebhookDelivery(
+        organization_id="org-exhausted",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="deal-1",
+        payload={"deal_id": "deal-1"},
+        attempt_count=1,
+    )
+    db.add(delivery)
+    db.commit()
+
+    def transport(*_args, **_kwargs):
+        return WebhookTransportResponse(status_code=500, body="nope")
+
+    result = process_due_webhook_deliveries(
+        db,
+        organization_id="org-exhausted",
+        max_attempts=2,
+        transport=transport,
+    )
+
+    refreshed = db.get(WebhookDelivery, delivery.id)
+    assert result.attempted == 1
+    assert result.failed == 1
+    assert refreshed.status == "failed"
+    assert refreshed.attempt_count == 2
+    assert refreshed.next_attempt_at is None
+
+
+def test_process_due_webhook_deliveries_validates_operational_bounds(db):
+    try:
+        process_due_webhook_deliveries(db, organization_id="org-worker", limit=0)
+    except ValueError as exc:
+        assert str(exc) == "limit must be between 1 and 250"
+    else:
+        raise AssertionError("Expected invalid limit to fail")

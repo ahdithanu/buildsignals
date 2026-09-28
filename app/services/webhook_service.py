@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.webhook import WebhookDelivery, WebhookSubscription
@@ -25,6 +26,15 @@ MAX_RESPONSE_EXCERPT = 2000
 class WebhookTransportResponse:
     status_code: int
     body: str
+
+
+@dataclass(frozen=True)
+class WebhookBatchResult:
+    attempted: int
+    delivered: int
+    pending: int
+    failed: int
+    delivery_ids: list[str]
 
 
 def resolve_secret_reference(secret_reference: str | None) -> str | None:
@@ -296,3 +306,72 @@ def attempt_webhook_delivery(
     db.commit()
     db.refresh(delivery)
     return delivery
+
+
+def fail_delivery_if_attempts_exhausted(
+    db: Session,
+    delivery: WebhookDelivery,
+    *,
+    max_attempts: int,
+) -> WebhookDelivery:
+    if delivery.status == "pending" and delivery.attempt_count >= max_attempts:
+        delivery.status = "failed"
+        delivery.next_attempt_at = None
+        delivery.updated_at = datetime.now(timezone.utc)
+        if not delivery.error_message:
+            delivery.error_message = "Webhook delivery exhausted retry attempts"
+        db.commit()
+        db.refresh(delivery)
+    return delivery
+
+
+def process_due_webhook_deliveries(
+    db: Session,
+    *,
+    organization_id: str,
+    limit: int = 25,
+    max_attempts: int = 8,
+    timeout_seconds: int = 10,
+    transport=None,
+) -> WebhookBatchResult:
+    if limit < 1 or limit > 250:
+        raise ValueError("limit must be between 1 and 250")
+    if max_attempts < 1 or max_attempts > 25:
+        raise ValueError("max_attempts must be between 1 and 25")
+    if timeout_seconds < 1 or timeout_seconds > 60:
+        raise ValueError("timeout_seconds must be between 1 and 60")
+
+    now = datetime.now(timezone.utc)
+    deliveries = (
+        db.query(WebhookDelivery)
+        .filter(
+            WebhookDelivery.organization_id == organization_id,
+            WebhookDelivery.status == "pending",
+            WebhookDelivery.attempt_count < max_attempts,
+            or_(WebhookDelivery.next_attempt_at.is_(None), WebhookDelivery.next_attempt_at <= now),
+        )
+        .order_by(WebhookDelivery.created_at.asc())
+        .limit(limit)
+        .all()
+    )
+
+    statuses: list[str] = []
+    delivery_ids: list[str] = []
+    for delivery in deliveries:
+        attempted = attempt_webhook_delivery(
+            db,
+            delivery_id=delivery.id,
+            transport=transport,
+            timeout_seconds=timeout_seconds,
+        )
+        attempted = fail_delivery_if_attempts_exhausted(db, attempted, max_attempts=max_attempts)
+        statuses.append(attempted.status)
+        delivery_ids.append(attempted.id)
+
+    return WebhookBatchResult(
+        attempted=len(delivery_ids),
+        delivered=sum(1 for status in statuses if status == "delivered"),
+        pending=sum(1 for status in statuses if status == "pending"),
+        failed=sum(1 for status in statuses if status == "failed"),
+        delivery_ids=delivery_ids,
+    )
