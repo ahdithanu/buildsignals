@@ -484,7 +484,9 @@ ranked parcels to exact planning-anchored searches when those saved searches
 exist, or by the same city/state market with an explicit caveat before a direct
 search has been run. The independent signal geography layer now supports bounded
 older/newer paging over permit and planning layers. A single combined map surface
-remains open.
+is partially closed: selecting a permit or planning record plots that source
+anchor on the acquisition map beside ZIP3 heat and ranked parcels, while the
+independent source browser remains available above it.
 
 ## Initial acquisition screening
 

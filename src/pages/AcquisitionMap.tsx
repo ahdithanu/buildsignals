@@ -105,6 +105,17 @@ export default function AcquisitionMap() {
     if (activeFilters.has('Tax evidence') && !hasTaxEvidence(item.facts ?? [])) return false;
     return true;
   });
+  const selectedSourcePoint = selectedSourceRecord
+    && Number.isFinite(selectedSourceRecord.latitude)
+    && Number.isFinite(selectedSourceRecord.longitude)
+    ? {
+      id: `source:${selectedSourceRecord.id}`,
+      title: `Selected ${selectedSourceRecord.kind}: ${selectedSourceRecord.title}`,
+      latitude: selectedSourceRecord.latitude,
+      longitude: selectedSourceRecord.longitude,
+      kind: selectedSourceRecord.kind,
+    } as const
+    : null;
   const selectedParcel = visibleItems.find((item) => item.parcel.id === selectedParcelId) || visibleItems[0];
   const selectedAcreage = items
     .filter((item) => assemblage.has(item.parcel.id))
@@ -272,6 +283,7 @@ export default function AcquisitionMap() {
 
             <Suspense fallback={<p>Loading parcel map...</p>}>
               <GeographicMap points={[
+                ...(selectedSourcePoint ? [selectedSourcePoint] : []),
                 ...heatItems
                   .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
                   .map((item) => ({
@@ -287,6 +299,7 @@ export default function AcquisitionMap() {
                 latitude: item.parcel.latitude, longitude: item.parcel.longitude, kind: 'parcel' as const,
               })),
               ]} onSelect={(id) => {
+                if (id.startsWith('source:')) return;
                 if (id.startsWith('zip3:')) {
                   setSelectedZip3(id.slice(5));
                   setSelectedSignalId('');

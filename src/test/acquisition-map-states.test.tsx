@@ -223,23 +223,25 @@ describe('<AcquisitionMap> states', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select source permit' }));
     expect(screen.getByText(/Source-linked parcels:/)).toBeInTheDocument();
     expect(screen.getByText(/Retail source permit/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Selected permit: Retail source permit' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear source' }));
     expect(screen.queryByText(/Source-linked parcels:/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Select planning source' }));
     expect(screen.getByText(/Planning-linked parcels:/)).toBeInTheDocument();
     expect(screen.queryByText(/not a direct planning-to-parcel search/i)).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Selected planning: Austin planning hearing' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear source' }));
     fireEvent.change(screen.getByLabelText(/filter acquisition map by state/i), { target: { value: 'tx' } });
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear state' }));
     expect(screen.getByLabelText(/filter acquisition map by state/i)).toHaveValue('');
     expect(screen.getByRole('button', { name: /ZIP3 787 2 pre-approval .* 8 candidates/i })).toBeInTheDocument();
-    expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
+    expect(screen.getAllByText('125 Congress Ave').length).toBeGreaterThanOrEqual(1);
 
     fireEvent.click(screen.getByRole('button', { name: /ZIP3 787 2 pre-approval .* 8 candidates/i }));
 
     expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
-    expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
+    expect(screen.getAllByText('125 Congress Ave').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Verified availability evidence: broker')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open availability evidence/i })).toHaveAttribute(
       'href',
@@ -250,6 +252,6 @@ describe('<AcquisitionMap> states', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Verified availability' }));
     expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
-    expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
+    expect(screen.getAllByText('125 Congress Ave').length).toBeGreaterThanOrEqual(1);
   });
 });
