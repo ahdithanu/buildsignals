@@ -5,6 +5,7 @@ import {
   Calculator,
   FileEdit,
   Kanban,
+  MonitorCheck,
   Radio,
   Radar,
   Settings,
@@ -44,6 +45,7 @@ const navItems = [
   { title: "Account", url: "/account", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
   { title: "AI Evaluations", url: "/admin/evals", icon: ShieldCheck, adminOnly: true },
+  { title: "Observability", url: "/admin/observability", icon: MonitorCheck, adminOnly: true },
 ];
 
 function initials(name: string | null | undefined): string {

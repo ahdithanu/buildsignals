@@ -19,6 +19,15 @@ const overview: ObservabilityOverview = {
     input_tokens_reported_results: 0, input_tokens_unknown_results: 5, output_tokens_reported_results: 0, output_tokens_unknown_results: 5,
     by_workflow: [{ workflow: 'copilot_answer', runs: 4, gate_passed: 2, failed: 1 }], daily: [{ date: '2026-09-23', runs: 4, case_errors: 1 }] },
   ingestion: { runs: 4, completed: 1, partial: 1, partial_with_errors: 1, failed: 1, running: 1, records_seen: 100, records_failed: 2, stalled_runs: 1 },
+  deployment: {
+    environment: 'production',
+    database_provider: 'postgres',
+    overall_status: 'warning',
+    checks: [
+      { code: 'database_provider', label: 'Production database', status: 'pass', summary: 'Postgres is configured for deployed data.', action: null },
+      { code: 'demo_workspace', label: 'Demo workspace', status: 'warning', summary: 'Demo login is disabled or missing seeded backend credentials.', action: 'Set BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS=true, BUILD_SIGNALS_DEMO_EMAIL, and BUILD_SIGNALS_DEMO_PASSWORD on the API service, then redeploy.' },
+    ],
+  },
   attention: [{ code: 'stalled', level: 'warning', summary: 'Stalled ingestion', count: 1, href: '/source-health' }],
 };
 let client: QueryClient;
@@ -52,6 +61,9 @@ describe('Observability', () => {
     expect(screen.getByText(/Unknown usage is not zero/)).toBeInTheDocument();
     expect(screen.getByText('Stalled ingestion')).toBeInTheDocument();
     expect(screen.getByText('2026-09-23')).toBeInTheDocument();
+    expect(screen.getByText('Deployment readiness')).toBeInTheDocument();
+    expect(screen.getByText('Demo workspace')).toBeInTheDocument();
+    expect(screen.getByText(/BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS=true/)).toBeInTheDocument();
   });
   it('renders empty sections', async () => {
     vi.mocked(observabilityApi.overview).mockResolvedValue({ ...overview, evaluations: { ...overview.evaluations, daily: [], by_workflow: [] }, attention: [] });

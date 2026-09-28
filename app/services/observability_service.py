@@ -1,15 +1,27 @@
 """Read-only, organization-scoped aggregates for the admin dashboard."""
 
+import os
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, case, func, select
 from sqlalchemy.orm import Session
 
+from app.config import (
+    CORS_ALLOWED_ORIGINS,
+    DATABASE_URL,
+    DEMO_LOGIN_EMAIL,
+    DEMO_LOGIN_ENABLED,
+    DEMO_LOGIN_PASSWORD,
+    ENVIRONMENT,
+    IS_PRODUCTION,
+)
 from app.models.evaluation import EvalDataset, EvalResult, EvalRun
 from app.models.ingestion import IngestionRun
 from app.schemas.observability import (
     AttentionItem,
     DailyCounts,
+    DeploymentReadiness,
+    DeploymentReadinessCheck,
     EvaluationCounts,
     IngestionCounts,
     ObservabilityOverview,
@@ -19,6 +31,108 @@ from app.schemas.observability import (
 
 def _count_when(condition):
     return func.sum(case((condition, 1), else_=0))
+
+
+def _readiness_check(
+    code: str,
+    label: str,
+    ok: bool,
+    summary_ok: str,
+    summary_fail: str,
+    *,
+    action: str | None = None,
+    warn: bool = False,
+) -> DeploymentReadinessCheck:
+    status = "pass" if ok else "warning" if warn else "fail"
+    return DeploymentReadinessCheck(
+        code=code,
+        label=label,
+        status=status,
+        summary=summary_ok if ok else summary_fail,
+        action=None if ok else action,
+    )
+
+
+def get_deployment_readiness() -> DeploymentReadiness:
+    app_base_url = os.environ.get("APP_BASE_URL", "").strip()
+    metrics_token = os.environ.get("METRICS_TOKEN", "").strip()
+    redis_url = os.environ.get("REDIS_URL", "").strip()
+    sentry_dsn = os.environ.get("SENTRY_DSN", "").strip()
+    database_provider = "postgres" if DATABASE_URL.startswith(("postgresql://", "postgres://")) else "sqlite"
+    checks = [
+        _readiness_check(
+            "database_provider",
+            "Production database",
+            not IS_PRODUCTION or database_provider == "postgres",
+            "Postgres is configured for deployed data.",
+            "Production must use Postgres instead of SQLite.",
+            action="Set DATABASE_URL to the managed Postgres connection and redeploy the API.",
+        ),
+        _readiness_check(
+            "cors_origins",
+            "Allowed frontend origins",
+            bool(CORS_ALLOWED_ORIGINS),
+            "CORS allowlist is configured.",
+            "No frontend origin allowlist is configured.",
+            action="Set CORS_ALLOWED_ORIGINS to the production frontend URL without wildcards.",
+        ),
+        _readiness_check(
+            "app_base_url",
+            "Application base URL",
+            bool(app_base_url) and "localhost" not in app_base_url,
+            "APP_BASE_URL points at a deployed frontend.",
+            "APP_BASE_URL is missing or still points at localhost.",
+            action="Set APP_BASE_URL to the production frontend URL so email links and redirects are correct.",
+            warn=not IS_PRODUCTION,
+        ),
+        _readiness_check(
+            "demo_workspace",
+            "Demo workspace",
+            DEMO_LOGIN_ENABLED and bool(DEMO_LOGIN_EMAIL) and bool(DEMO_LOGIN_PASSWORD),
+            "Demo login is enabled with backend-only seeded credentials.",
+            "Demo login is disabled or missing seeded backend credentials.",
+            action=(
+                "Set BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS=true, BUILD_SIGNALS_DEMO_EMAIL, "
+                "and BUILD_SIGNALS_DEMO_PASSWORD on the API service, then redeploy."
+            ),
+            warn=True,
+        ),
+        _readiness_check(
+            "shared_rate_limit",
+            "Shared rate limiter",
+            bool(redis_url),
+            "Redis/Valkey is configured for shared rate limits.",
+            "Rate limiting may be process-local because REDIS_URL is missing.",
+            action="Link the Render key-value service or set REDIS_URL before serious prospect traffic.",
+            warn=True,
+        ),
+        _readiness_check(
+            "metrics_token",
+            "Metrics protection",
+            bool(metrics_token),
+            "Metrics scraping requires a bearer token.",
+            "Metrics token is missing; avoid exposing metrics publicly.",
+            action="Set METRICS_TOKEN on the API service.",
+            warn=True,
+        ),
+        _readiness_check(
+            "sentry",
+            "Error tracking",
+            bool(sentry_dsn),
+            "Backend Sentry DSN is configured.",
+            "Backend Sentry DSN is not configured.",
+            action="Set SENTRY_DSN to capture production backend errors.",
+            warn=True,
+        ),
+    ]
+    severity = {"pass": 0, "warning": 1, "fail": 2}
+    overall = max((check.status for check in checks), key=lambda status: severity[status])
+    return DeploymentReadiness(
+        environment=ENVIRONMENT,
+        database_provider=database_provider,
+        overall_status=overall,
+        checks=checks,
+    )
 
 
 def get_overview(db: Session, org_id: str, days: int, now: datetime | None = None) -> ObservabilityOverview:
@@ -125,5 +239,5 @@ def get_overview(db: Session, org_id: str, days: int, now: datetime | None = Non
             latency_reported_results=latency_reported, latency_unknown_results=results - latency_reported,
             by_workflow=[WorkflowCounts(workflow=w, runs=int(n), gate_passed=int(g or 0), failed=int(f or 0))
                          for w, n, g, f in workflows], daily=daily,
-        ), ingestion=ingestion, attention=attention,
+        ), ingestion=ingestion, deployment=get_deployment_readiness(), attention=attention,
     )
