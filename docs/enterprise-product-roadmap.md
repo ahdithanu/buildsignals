@@ -33,9 +33,11 @@ Track status in [enterprise_readiness.md](enterprise_readiness.md) tier I.
 
 **Implemented foundation:** Organization admins can create, list, and revoke
 backend-managed API keys. Secrets are generated once, stored only as SHA-256
-hashes, scoped to an organization, and lifecycle events are audit logged. Public
-read endpoints now accept `Authorization: Bearer bs_live_...` or `X-API-Key`
-headers for tenant-scoped deal and signal exports.
+hashes, scoped to an organization, and lifecycle events are audit logged. Admins
+can manage keys from Settings. Public read endpoints accept
+`Authorization: Bearer bs_live_...` or `X-API-Key` headers for tenant-scoped deal
+and signal exports, enforce a per-key rate limit, and record usage events for
+admin visibility.
 
 **Initial public API:**
 
@@ -44,10 +46,10 @@ headers for tenant-scoped deal and signal exports.
 - `GET /v1/public/signals`
 
 **Remaining path:**
-1. Add frontend admin UI for key creation and revoke flows.
-2. Expand public endpoints for opportunities, graph context, and eval results.
-3. Add optional expiry and last-used metadata to support customer key rotation.
-4. Add per-key rate limits and usage metering for customer integrations.
+1. Expand public endpoints for opportunities, graph context, and eval results.
+2. Add optional expiry and rotation reminders for customer key hygiene.
+3. Add daily aggregate rollups for billing-grade reporting.
+4. Add customer-facing OpenAPI examples and SDK snippets.
 
 ---
 

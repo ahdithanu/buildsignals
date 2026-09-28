@@ -14,6 +14,7 @@ from app.schemas.organization import (
     ApiKeyCreateRequest,
     ApiKeyCreateResponse,
     ApiKeyResponse,
+    ApiKeyUsageSummary,
     InviteMemberRequest,
     MemberResponse,
     MyOrganizationItem,
@@ -22,6 +23,7 @@ from app.schemas.organization import (
     UpdateMemberRequest,
 )
 from app.services.api_key_service import create_api_key, revoke_api_key, to_response
+from app.services.api_usage_service import get_api_key_usage_totals, summarize_api_key_usage
 from app.services.audit_service import log_change
 from app.services.security import create_access_token
 from app.utils.auth_deps import get_current_user, require_role_of
@@ -264,7 +266,15 @@ def list_api_keys(
         .order_by(OrganizationApiKey.created_at.desc())
         .all()
     )
-    return [to_response(row) for row in rows]
+    usage = get_api_key_usage_totals(db, api_key_ids=[row.id for row in rows])
+    return [
+        to_response(
+            row,
+            usage_total_calls=usage.get(row.id, (0, None))[0],
+            usage_last_called_at=usage.get(row.id, (0, None))[1],
+        )
+        for row in rows
+    ]
 
 
 @router.post("/{org_id}/api-keys", response_model=ApiKeyCreateResponse, status_code=201)
@@ -320,6 +330,23 @@ def revoke_organization_api_key(
     db.commit()
     db.refresh(api_key)
     return to_response(api_key)
+
+
+@router.get("/{org_id}/api-keys/{key_id}/usage", response_model=ApiKeyUsageSummary)
+def get_organization_api_key_usage(
+    org_id: str,
+    key_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    api_key = (
+        db.query(OrganizationApiKey)
+        .filter(OrganizationApiKey.organization_id == org_id, OrganizationApiKey.id == key_id)
+        .first()
+    )
+    if not api_key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    return summarize_api_key_usage(db, organization_id=org_id, api_key_id=key_id)
 
 
 # ── switch active org ──────────────────────────────────────────────────────

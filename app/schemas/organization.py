@@ -75,7 +75,27 @@ class ApiKeyResponse(BaseModel):
     revoked_at: datetime | None
     revoked_by: str | None
     last_used_at: datetime | None
+    usage_total_calls: int = 0
+    usage_last_called_at: datetime | None = None
+    rate_limit_limit: int | None = None
+    rate_limit_window_seconds: int | None = None
 
 
 class ApiKeyCreateResponse(ApiKeyResponse):
     secret: str
+
+
+class ApiKeyUsageEndpointSummary(BaseModel):
+    path: str
+    method: str
+    total_calls: int
+    total_items: int
+    last_called_at: datetime | None
+
+
+class ApiKeyUsageSummary(BaseModel):
+    api_key_id: str
+    total_calls: int
+    total_items: int
+    last_called_at: datetime | None
+    endpoints: list[ApiKeyUsageEndpointSummary]

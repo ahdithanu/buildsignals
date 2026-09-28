@@ -249,6 +249,12 @@ export default function Settings() {
                         <p className="mt-1 text-xs text-muted-foreground">
                           Scopes: {key.scopes.join(", ")} · Created {formatDate(key.created_at)} · Last used {formatDate(key.last_used_at)}
                         </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Usage: {key.usage_total_calls.toLocaleString()} calls · Last call {formatDate(key.usage_last_called_at)}
+                          {key.rate_limit_limit && key.rate_limit_window_seconds
+                            ? ` · Limit ${key.rate_limit_limit.toLocaleString()}/${key.rate_limit_window_seconds}s`
+                            : ""}
+                        </p>
                       </div>
                       <button
                         type="button"

@@ -27,6 +27,10 @@ const key: ApiKeyResponse = {
   revoked_at: null,
   revoked_by: null,
   last_used_at: null,
+  usage_total_calls: 12,
+  usage_last_called_at: '2026-09-28T10:05:00Z',
+  rate_limit_limit: 120,
+  rate_limit_window_seconds: 60,
 };
 
 const created: ApiKeyCreateResponse = {
@@ -74,6 +78,8 @@ describe('Settings API keys', () => {
     mount();
     expect(await screen.findByText('Organization API keys')).toBeInTheDocument();
     expect(await screen.findByText('test-key-prefix')).toBeInTheDocument();
+    expect(await screen.findByText(/Usage: 12 calls/)).toBeInTheDocument();
+    expect(screen.getByText(/Limit 120\/60s/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Key name'), { target: { value: 'Partner export' } });
     fireEvent.click(screen.getByRole('button', { name: 'write' }));

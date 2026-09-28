@@ -27,11 +27,12 @@ from app.db import Base
 ROOT = Path(__file__).resolve().parents[1]
 PREVIOUS = "20260920_0001"
 REVISION = "20260923_0001"
-HEAD_REVISION = "20260928_0001"
+HEAD_REVISION = "20260928_0002"
 PG_URL = os.environ.get("TEST_SCHEMA_RECONCILIATION_POSTGRES_URL")
 PATH = ROOT / "alembic/versions/20260923_0001_reconcile_schema.py"
 POST_RECONCILIATION_TABLES = {
     "organization_api_keys",
+    "organization_api_key_usage_events",
     "prompt_template",
     "prompt_version",
 }
