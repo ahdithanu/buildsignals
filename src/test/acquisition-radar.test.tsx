@@ -190,4 +190,17 @@ describe('<AcquisitionRadar>', () => {
     expect(screen.getAllByText('Unassigned').length).toBeGreaterThan(0);
     currentRole = 'admin';
   });
+
+  it('hydrates acquisition radar filters from the URL', () => {
+    render(
+      <MemoryRouter initialEntries={['/acquisition-radar?availability=verified&signal_overlap=multi&follow_up=due&review_status=contacted']}>
+        <AcquisitionRadar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByLabelText('Availability')).toHaveValue('verified');
+    expect(screen.getByLabelText('Signals')).toHaveValue('multi');
+    expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
+    expect(screen.getByLabelText('Case status')).toHaveValue('contacted');
+  });
 });

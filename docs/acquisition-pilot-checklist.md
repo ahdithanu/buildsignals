@@ -86,6 +86,12 @@ type, confidence threshold, and source URL or excerpt. Focused backend tests
 verify that a broker/listing evidence fact appears in the verified queue and is
 excluded from candidate-only results; focused frontend tests verify the control.
 
+Acquisition Radar filter state is now shareable through URL query parameters for
+demo and analyst workflows. The page hydrates availability, signal overlap,
+follow-up, case status, assignment, market, buyer lens, search, and pagination
+from the URL, then replaces the URL as filters change. Focused frontend tests
+verify URL-driven filter hydration.
+
 ### Planning-Anchored Nearby Parcel Searches (2026-09-27)
 
 Planning records can now directly generate ranked nearby-parcel searches with

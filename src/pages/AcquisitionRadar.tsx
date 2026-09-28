@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
@@ -370,18 +370,22 @@ function AcquisitionWorkflowStrip({
 
 export default function AcquisitionRadar() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { organizationId, role } = useAuth();
   const { data: members = [] } = useOrganizationMembers(organizationId);
-  const [query, setQuery] = useState('');
-  const [state, setState] = useState('');
-  const [persona, setPersona] = useState('');
-  const [status, setStatus] = useState('');
-  const [assignment, setAssignment] = useState('');
-  const [followUpFilter, setFollowUpFilter] = useState('');
-  const [signalOverlap, setSignalOverlap] = useState('');
-  const [availability, setAvailability] = useState('');
-  const [offset, setOffset] = useState(0);
+  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [state, setState] = useState(searchParams.get('state') || '');
+  const [persona, setPersona] = useState(searchParams.get('persona') || '');
+  const [status, setStatus] = useState(searchParams.get('review_status') || '');
+  const [assignment, setAssignment] = useState(searchParams.get('assignment') || '');
+  const [followUpFilter, setFollowUpFilter] = useState(searchParams.get('follow_up') || '');
+  const [signalOverlap, setSignalOverlap] = useState(searchParams.get('signal_overlap') || '');
+  const [availability, setAvailability] = useState(searchParams.get('availability') || '');
+  const [offset, setOffset] = useState(() => {
+    const parsed = Number(searchParams.get('offset') || 0);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  });
   const [outreachItem, setOutreachItem] = useState<AcquisitionRadarItem | null>(null);
   const [activityType, setActivityType] = useState<AcquisitionActivityType>('call');
   const [notes, setNotes] = useState('');
@@ -401,6 +405,19 @@ export default function AcquisitionRadar() {
   const { data, isLoading, error, refetch, updateCase, recordActivity, promote } = useAcquisitionRadar(params);
   const { data: zip3Heatmap } = useZip3Heatmap({ state: state.trim().toUpperCase() || undefined, limit: 12 });
   const canManage = role === 'admin' || role === 'editor';
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (query.trim()) next.set('q', query.trim());
+    if (state.trim()) next.set('state', state.trim().toUpperCase());
+    if (persona) next.set('persona', persona);
+    if (status) next.set('review_status', status);
+    if (assignment) next.set('assignment', assignment);
+    if (followUpFilter) next.set('follow_up', followUpFilter);
+    if (signalOverlap) next.set('signal_overlap', signalOverlap);
+    if (availability) next.set('availability', availability);
+    if (offset > 0) next.set('offset', String(offset));
+    setSearchParams(next, { replace: true });
+  }, [assignment, availability, followUpFilter, offset, persona, query, setSearchParams, signalOverlap, state, status]);
   const summary = data?.summary;
   const metrics: Array<{ label: string; value: number; icon: LucideIcon }> = [
     { label: 'Ranked parcels', value: summary?.total_parcels ?? 0, icon: MapPinned },
