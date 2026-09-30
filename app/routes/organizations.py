@@ -502,7 +502,7 @@ def list_webhook_dead_letters(
     org_id: str,
     limit: int = 50,
     skip: int = 0,
-    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    principal: dict = Depends(require_role_of(MemberRole.admin, must_match_active_org=True)),
     db: Session = Depends(get_db),
 ):
     if not db.get(Organization, org_id):
@@ -610,7 +610,7 @@ def acknowledge_webhook_dead_letter(
     org_id: str,
     delivery_id: str,
     payload: WebhookDeadLetterAcknowledgeRequest,
-    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    principal: dict = Depends(require_role_of(MemberRole.admin, must_match_active_org=True)),
     db: Session = Depends(get_db),
 ):
     delivery = get_failed_webhook_delivery(db, organization_id=org_id, delivery_id=delivery_id)
