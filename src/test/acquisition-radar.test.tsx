@@ -210,6 +210,11 @@ describe('<AcquisitionRadar>', () => {
     expect(screen.getByLabelText('Signals')).toHaveValue('multi');
     expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
     expect(screen.getByLabelText('Case status')).toHaveValue('contacted');
+    const activeFilters = screen.getByLabelText('Active acquisition radar filters');
+    expect(activeFilters).toHaveTextContent('Availability:');
+    expect(activeFilters).toHaveTextContent('verified availability');
+    expect(activeFilters).toHaveTextContent('Signals:');
+    expect(activeFilters).toHaveTextContent('cross-signal');
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy view link' }));
 
@@ -233,5 +238,9 @@ describe('<AcquisitionRadar>', () => {
     await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining('availability=unverified'),
     ));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Signals filter' }));
+    expect(screen.getByLabelText('Signals')).toHaveValue('');
+    expect(screen.getByLabelText('Availability')).toHaveValue('unverified');
   });
 });

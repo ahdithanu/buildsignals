@@ -434,6 +434,19 @@ export default function AcquisitionRadar() {
   const resetFilters = () => {
     setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setFollowUpFilter(''); setSignalOverlap(''); setAvailability(''); setOffset(0);
   };
+  const activeFilters = useMemo(() => {
+    const filters: Array<{ key: string; label: string; value: string; onClear: () => void }> = [];
+    const clear = (fn: (value: string) => void) => () => { fn(''); setOffset(0); };
+    if (query.trim()) filters.push({ key: 'q', label: 'Search', value: query.trim(), onClear: clear(setQuery) });
+    if (state.trim()) filters.push({ key: 'state', label: 'State', value: state.trim().toUpperCase(), onClear: clear(setState) });
+    if (persona) filters.push({ key: 'persona', label: 'Buyer lens', value: persona, onClear: clear(setPersona) });
+    if (status) filters.push({ key: 'status', label: 'Status', value: status.replace('_', ' '), onClear: clear(setStatus) });
+    if (assignment) filters.push({ key: 'assignment', label: 'Assignment', value: assignment, onClear: clear(setAssignment) });
+    if (followUpFilter) filters.push({ key: 'follow_up', label: 'Follow-up', value: followUpFilter === 'due' ? 'due now' : followUpFilter, onClear: clear(setFollowUpFilter) });
+    if (signalOverlap) filters.push({ key: 'signal_overlap', label: 'Signals', value: signalOverlap === 'multi' ? 'cross-signal' : 'single-signal', onClear: clear(setSignalOverlap) });
+    if (availability) filters.push({ key: 'availability', label: 'Availability', value: availability === 'verified' ? 'verified availability' : 'candidate only', onClear: clear(setAvailability) });
+    return filters;
+  }, [assignment, availability, followUpFilter, persona, query, signalOverlap, state, status]);
   const copyViewLink = async () => {
     const queryString = viewSearchParams.toString();
     const url = `${window.location.origin}${location.pathname}${queryString ? `?${queryString}` : ''}`;
@@ -533,6 +546,23 @@ export default function AcquisitionRadar() {
             <Button type="button" variant="outline" size="sm" className="h-9" onClick={copyViewLink}><Copy className="h-4 w-4" />Copy view link</Button>
             <Button type="button" variant="outline" size="sm" className="h-9" disabled={!query && !state && !persona && !status && !assignment && !followUpFilter && !signalOverlap && !availability} onClick={resetFilters}><X className="h-4 w-4" />Clear</Button>
           </div>
+          {activeFilters.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="Active acquisition radar filters">
+              {activeFilters.map((filter) => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  onClick={filter.onClear}
+                  className="inline-flex h-7 max-w-full items-center gap-1 rounded-md border bg-secondary px-2 text-xs text-secondary-foreground hover:bg-muted"
+                  aria-label={`Clear ${filter.label} filter`}
+                >
+                  <span className="shrink-0 text-muted-foreground">{filter.label}:</span>
+                  <span className="truncate font-medium">{filter.value}</span>
+                  <X className="h-3 w-3 shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         {isLoading ? <LoadingState message="Ranking acquisition candidates..." /> : error ? <ErrorState message="Acquisition Radar is unavailable." onRetry={() => refetch()} /> : !data?.items.length ? <EmptyState title="No parcels match these filters" description="Nearby-parcel searches will appear here as development signals are reviewed." /> : (
