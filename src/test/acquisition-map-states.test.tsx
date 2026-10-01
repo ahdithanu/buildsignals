@@ -212,9 +212,11 @@ describe('<AcquisitionMap> states', () => {
       },
     };
 
-    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/map?state=TX&zip3=787']}><AcquisitionMap /></MemoryRouter>);
 
     expect(screen.getByText('ZIP3 opportunity heat')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
+    expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Set signal geography state' }));
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     expect(screen.getByText('Signal state TX')).toBeInTheDocument();

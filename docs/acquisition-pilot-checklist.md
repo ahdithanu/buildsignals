@@ -104,6 +104,9 @@ tenant-scoped `zip3=NNN` API parameter over parcel postal-code prefixes. ZIP3
 selection is URL-backed, copy-link compatible, and visible as an active filter
 chip. Focused backend tests cover matching, misses, and invalid ZIP3 values;
 focused frontend tests cover card selection, chip clearing, and copied links.
+The Acquisition Map also hydrates `state` and `zip3` from URL parameters and
+keeps them synchronized as the user filters the map, making market-cluster map
+views shareable alongside Radar queue links.
 
 Latest focused verification: backend parcel/radar/availability/ZIP3 regression
 suite passes 30 tests; frontend Radar, Radar isolation, map-state, and

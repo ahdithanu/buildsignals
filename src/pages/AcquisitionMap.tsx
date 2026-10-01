@@ -1,5 +1,5 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Check,
   Download,
@@ -46,17 +46,25 @@ function formatDate(value: string | null | undefined) {
 export default function AcquisitionMap() {
   const { role } = useAuth();
   const { toast } = useToast();
-  const [stateFilter, setStateFilter] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [stateFilter, setStateFilter] = useState(searchParams.get('state') || '');
   const [selectedSourceRecord, setSelectedSourceRecord] = useState<MapSignal | null>(null);
   const selectedState = stateFilter.trim().toUpperCase() || undefined;
   const { data, isLoading, error, refetch, exportSearch } = useAcquisitionRadar({ state: selectedState, limit: 100, offset: 0 });
   const { data: heatmap } = useZip3Heatmap({ state: selectedState, limit: 25 });
   const [selectedSignalId, setSelectedSignalId] = useState('');
   const [selectedParcelId, setSelectedParcelId] = useState('');
-  const [selectedZip3, setSelectedZip3] = useState('');
+  const [selectedZip3, setSelectedZip3] = useState(searchParams.get('zip3') || '');
   const [assemblage, setAssemblage] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [activeOnly, setActiveOnly] = useState(true);
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (selectedState) next.set('state', selectedState);
+    if (selectedZip3) next.set('zip3', selectedZip3);
+    setSearchParams(next, { replace: true });
+  }, [selectedState, selectedZip3, setSearchParams]);
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const signals = useMemo(() => radarSignals(items), [items]);
