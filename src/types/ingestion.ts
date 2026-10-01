@@ -245,6 +245,7 @@ export interface IngestionCoverage {
   live_signal_stage_counts: Record<string, number>;
   live_signal_sources_by_stage: Record<string, RetailerOpeningCoverageSource[]>;
   candidate_status_counts: Record<string, number>;
+  state_readiness_counts?: Record<string, number>;
   top_jurisdictions: CoverageJurisdictionBucket[];
   state_buckets: StateCoverageBucket[];
   activation_queue: StateCoverageBucket[];

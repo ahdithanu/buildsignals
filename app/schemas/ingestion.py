@@ -293,6 +293,7 @@ class IngestionCoverageResponse(BaseModel):
     live_signal_stage_counts: dict[str, int]
     live_signal_sources_by_stage: dict[str, list[RetailerOpeningCoverageSourceResponse]]
     candidate_status_counts: dict[str, int]
+    state_readiness_counts: dict[str, int] = Field(default_factory=dict)
     top_jurisdictions: list[CoverageJurisdictionBucket]
     state_buckets: list[StateCoverageBucket]
     activation_queue: list[StateCoverageBucket]

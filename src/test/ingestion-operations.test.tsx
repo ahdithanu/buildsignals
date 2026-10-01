@@ -138,6 +138,13 @@ describe("<IngestionOperations>", () => {
             ],
           },
           candidate_status_counts: { operational_retry: 1 },
+          state_readiness_counts: {
+            investor_ready: 1,
+            early_warning_ready: 0,
+            live_foundation: 1,
+            candidate_only: 1,
+            uncovered: 47,
+          },
           top_jurisdictions: [
             { jurisdiction: "TX", live_sources: 2, candidate_sources: 0 },
           ],
@@ -350,6 +357,9 @@ describe("<IngestionOperations>", () => {
     const liveMix = screen.getByLabelText("Configured source mix");
     expect(within(liveMix).getByText("Configured Source Mix")).toBeInTheDocument();
     expect(within(liveMix).getByText("approved only")).toBeInTheDocument();
+    expect(screen.getByText("50-state readiness funnel")).toBeInTheDocument();
+    expect(screen.getByLabelText("State readiness distribution")).toHaveTextContent("investor ready");
+    expect(screen.getByLabelText("State readiness distribution")).toHaveTextContent("candidate only");
     expect(screen.getByText("State leaders")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "TX · investor ready" })).toHaveAttribute(
       "href",

@@ -1126,6 +1126,9 @@ def test_ingestion_coverage_endpoint_reports_active_catalog_footprint(client, db
         "IA", "MS", "MT", "NM", "OK", "WV", "WY",
     }
     assert set(body["missing_states"]) == set(body["candidate_only_states"])
+    assert sum(body["state_readiness_counts"].values()) == 50
+    assert body["state_readiness_counts"]["candidate_only"] == 7
+    assert body["state_readiness_counts"]["uncovered"] == 0
 
 
 def test_ingestion_coverage_prioritizes_activation_queue_by_readiness(monkeypatch):

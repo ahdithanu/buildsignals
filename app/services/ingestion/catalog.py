@@ -211,6 +211,7 @@ class IngestionCoverageSummary:
     live_signal_stage_counts: dict[str, int]
     live_signal_sources_by_stage: dict[str, list[RetailerOpeningCoverageSource]]
     candidate_status_counts: dict[str, int]
+    state_readiness_counts: dict[str, int]
     top_jurisdictions: list[CoverageJurisdictionBucket]
     state_buckets: list[StateCoverageBucket]
     activation_queue: list[StateCoverageBucket]
@@ -574,6 +575,31 @@ def summarize_coverage(
         state for state in US_STATE_CODES if state not in researched_states
     ]
     rollout_queue = _build_rollout_queue(state_buckets, state_jurisdictions)
+    state_readiness_counts: dict[str, int] = {
+        "investor_ready": 0,
+        "early_warning_ready": 0,
+        "live_foundation": 0,
+        "candidate_only": 0,
+        "uncovered": 0,
+    }
+    for state in US_STATE_CODES:
+        bucket = state_buckets.get(
+            state,
+            {
+                "live_sources": 0,
+                "candidate_sources": 0,
+                "retailer_opening_sources": 0,
+                "pre_approval_sources": 0,
+                "approved_only_sources": 0,
+                "live_record_type_counts": {},
+                "candidate_record_type_counts": {},
+                "candidate_status_counts": {},
+            },
+        )
+        readiness_level = _state_readiness_level(bucket)
+        state_readiness_counts[readiness_level] = (
+            state_readiness_counts.get(readiness_level, 0) + 1
+        )
     return IngestionCoverageSummary(
         live_source_count=len(live_catalog),
         candidate_count=len(candidates),
@@ -586,6 +612,7 @@ def summarize_coverage(
         live_signal_stage_counts=live_signal_stage_counts,
         live_signal_sources_by_stage=live_signal_sources_by_stage,
         candidate_status_counts=candidate_status_counts,
+        state_readiness_counts=state_readiness_counts,
         top_jurisdictions=top_jurisdictions,
         state_buckets=state_buckets_list,
         activation_queue=activation_queue,

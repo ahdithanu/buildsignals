@@ -163,3 +163,8 @@ counts, and the next recommended scale action. This makes the expansion loop
 operational: deepen investor-ready markets, promote candidate-only markets, and
 avoid presenting parcel-only or approved-only states as full early-warning
 coverage.
+
+The Source Health page also summarizes those classifications into a 50-state
+readiness funnel. The funnel is intentionally catalog-derived: it helps operators
+prioritize activation work, but it is not measured live inventory, freshness, or
+full-market completeness.

@@ -81,7 +81,10 @@ const readinessLegend = [
   { level: 'early_warning_ready', label: 'Pre-approval coverage is live; parcel or retailer context needs depth' },
   { level: 'live_foundation', label: 'At least one live source exists, but early-warning coverage is incomplete' },
   { level: 'candidate_only', label: 'Source research exists; production admission is still pending' },
+  { level: 'uncovered', label: 'No live or candidate source is currently selected' },
 ];
+
+const readinessOrder = ['investor_ready', 'early_warning_ready', 'live_foundation', 'candidate_only', 'uncovered'];
 
 function HealthRow({
   source,
@@ -827,6 +830,29 @@ export default function IngestionOperations() {
               <div className="rounded-md border bg-secondary/35 px-3 py-3">
                 <p className="text-[11px] text-muted-foreground">Approved-only sources</p>
                 <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">{coverage.approved_only_source_count}</p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-md border bg-background px-3 py-3" aria-label="State readiness distribution">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-foreground">50-state readiness funnel</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Counts classify states by the strongest configured or candidate source position, not record freshness or full-market completeness.
+                  </p>
+                </div>
+                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  50 states
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-5">
+                {readinessOrder.map((level) => (
+                  <div key={level} className="rounded-md border bg-secondary/25 px-2.5 py-2">
+                    <p className="text-[10px] text-muted-foreground">{formatReadiness(level)}</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">
+                      {coverage.state_readiness_counts?.[level] ?? 0}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="mt-4 rounded-md border bg-background px-3 py-3">
