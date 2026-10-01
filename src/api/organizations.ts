@@ -278,11 +278,19 @@ export const organizationsApi = {
 
   listWebhookDeliveries(
     orgId: string,
-    params?: { subscriptionId?: string; status?: WebhookDeliveryStatus; limit?: number },
+    params?: {
+      subscriptionId?: string;
+      status?: WebhookDeliveryStatus;
+      eventType?: WebhookEventType;
+      eventId?: string;
+      limit?: number;
+    },
   ): Promise<WebhookDeliveryResponse[]> {
     const search = new URLSearchParams();
     if (params?.subscriptionId) search.set("subscription_id", params.subscriptionId);
     if (params?.status) search.set("status", params.status);
+    if (params?.eventType) search.set("event_type", params.eventType);
+    if (params?.eventId?.trim()) search.set("event_id", params.eventId.trim());
     search.set("limit", String(params?.limit ?? 10));
     return apiClient.get<WebhookDeliveryResponse[]>(
       `/organizations/${orgId}/webhook-deliveries?${search.toString()}`,

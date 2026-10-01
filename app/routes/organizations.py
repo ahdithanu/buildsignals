@@ -25,6 +25,7 @@ from app.schemas.organization import (
     UpdateMemberRequest,
 )
 from app.schemas.webhook import (
+    WEBHOOK_EVENT_TYPES,
     WebhookDeadLetterAcknowledgeRequest,
     WebhookDeliveryResponse,
     WebhookDeliverySummaryResponse,
@@ -466,6 +467,8 @@ def list_webhook_deliveries(
     org_id: str,
     subscription_id: str | None = None,
     status: str | None = None,
+    event_type: str | None = None,
+    event_id: str | None = None,
     limit: int = 50,
     skip: int = 0,
     principal: dict = Depends(require_role_of(MemberRole.admin)),
@@ -477,7 +480,16 @@ def list_webhook_deliveries(
     if subscription_id:
         query = query.filter(WebhookDelivery.subscription_id == subscription_id)
     if status:
+        if status not in {"pending", "delivered", "failed"}:
+            raise HTTPException(status_code=422, detail="Unsupported webhook delivery status")
         query = query.filter(WebhookDelivery.status == status)
+    if event_type:
+        normalized_event_type = event_type.strip().lower()
+        if normalized_event_type not in WEBHOOK_EVENT_TYPES:
+            raise HTTPException(status_code=422, detail="Unsupported webhook event type")
+        query = query.filter(WebhookDelivery.event_type == normalized_event_type)
+    if event_id:
+        query = query.filter(WebhookDelivery.event_id.ilike(f"%{event_id.strip()}%"))
     return (
         query.order_by(WebhookDelivery.created_at.desc(), WebhookDelivery.id.desc())
         .offset(skip)

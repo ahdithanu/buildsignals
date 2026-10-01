@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { motion } from "framer-motion";
 import { ApiError } from "@/api/client";
-import { WEBHOOK_EVENT_TYPES, organizationsApi, type ApiKeyCreateResponse, type ApiKeyScope, type WebhookEventType } from "@/api/organizations";
+import { WEBHOOK_EVENT_TYPES, organizationsApi, type ApiKeyCreateResponse, type ApiKeyScope, type WebhookDeliveryStatus, type WebhookEventType } from "@/api/organizations";
 import { ErrorState, LoadingState } from "@/components/DataStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -91,6 +91,9 @@ export default function Settings() {
   const [webhookEventTypes, setWebhookEventTypes] = useState<WebhookEventType[]>(["deal.created"]);
   const [webhookTestEventType, setWebhookTestEventType] = useState<WebhookEventType>("deal.created");
   const [selectedWebhookSubscriptionId, setSelectedWebhookSubscriptionId] = useState<string | null>(null);
+  const [webhookDeliveryStatusFilter, setWebhookDeliveryStatusFilter] = useState<WebhookDeliveryStatus | "all">("all");
+  const [webhookDeliveryEventTypeFilter, setWebhookDeliveryEventTypeFilter] = useState<WebhookEventType | "all">("all");
+  const [webhookDeliveryEventIdFilter, setWebhookDeliveryEventIdFilter] = useState("");
 
   const apiKeys = useQuery({
     queryKey: ["organization-api-keys", orgId],
@@ -123,9 +126,19 @@ export default function Settings() {
   });
 
   const webhookDeliveries = useQuery({
-    queryKey: ["organization-webhook-deliveries", orgId, selectedWebhookSubscriptionId],
+    queryKey: [
+      "organization-webhook-deliveries",
+      orgId,
+      selectedWebhookSubscriptionId,
+      webhookDeliveryStatusFilter,
+      webhookDeliveryEventTypeFilter,
+      webhookDeliveryEventIdFilter,
+    ],
     queryFn: () => organizationsApi.listWebhookDeliveries(orgId, {
       subscriptionId: selectedWebhookSubscriptionId ?? undefined,
+      status: webhookDeliveryStatusFilter === "all" ? undefined : webhookDeliveryStatusFilter,
+      eventType: webhookDeliveryEventTypeFilter === "all" ? undefined : webhookDeliveryEventTypeFilter,
+      eventId: webhookDeliveryEventIdFilter,
       limit: 10,
     }),
     enabled: Boolean(orgId && isAdmin && selectedWebhookSubscriptionId),
@@ -507,7 +520,12 @@ export default function Settings() {
                           <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
-                              onClick={() => setSelectedWebhookSubscriptionId(subscription.id)}
+                              onClick={() => {
+                                setSelectedWebhookSubscriptionId(subscription.id);
+                                setWebhookDeliveryStatusFilter("all");
+                                setWebhookDeliveryEventTypeFilter("all");
+                                setWebhookDeliveryEventIdFilter("");
+                              }}
                               className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                             >
                               View deliveries
@@ -565,6 +583,52 @@ export default function Settings() {
                       Refresh deliveries
                     </button>
                   </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <div>
+                      <label htmlFor="webhook-delivery-status-filter" className="text-xs font-medium text-muted-foreground">
+                        Status
+                      </label>
+                      <select
+                        id="webhook-delivery-status-filter"
+                        value={webhookDeliveryStatusFilter}
+                        onChange={(event) => setWebhookDeliveryStatusFilter(event.target.value as WebhookDeliveryStatus | "all")}
+                        className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="all">All statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="failed">Failed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="webhook-delivery-event-type-filter" className="text-xs font-medium text-muted-foreground">
+                        Event type
+                      </label>
+                      <select
+                        id="webhook-delivery-event-type-filter"
+                        value={webhookDeliveryEventTypeFilter}
+                        onChange={(event) => setWebhookDeliveryEventTypeFilter(event.target.value as WebhookEventType | "all")}
+                        className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="all">All event types</option>
+                        {WEBHOOK_EVENT_TYPES.map((eventType) => (
+                          <option key={eventType} value={eventType}>{eventType}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="webhook-delivery-event-id-filter" className="text-xs font-medium text-muted-foreground">
+                        Event ID contains
+                      </label>
+                      <input
+                        id="webhook-delivery-event-id-filter"
+                        value={webhookDeliveryEventIdFilter}
+                        onChange={(event) => setWebhookDeliveryEventIdFilter(event.target.value)}
+                        placeholder="admin-test, deal id, event id"
+                        className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
                   {webhookDeliveries.isLoading && (
                     <p className="mt-3 text-xs text-muted-foreground">Loading recent deliveries...</p>
                   )}
@@ -575,7 +639,7 @@ export default function Settings() {
                     <div className="mt-3 space-y-2">
                       {webhookDeliveries.data.length === 0 && (
                         <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-                          No deliveries have been queued for this endpoint yet. Send a test event for one of its subscribed event types.
+                          No deliveries match these filters. Send a test event or broaden the status, event type, or event ID search.
                         </p>
                       )}
                       {webhookDeliveries.data.map((delivery) => (
