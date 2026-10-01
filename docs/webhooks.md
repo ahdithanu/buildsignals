@@ -40,7 +40,9 @@ which preserves user-facing latency and avoids turning customer endpoint downtim
 - `POST /v1/organizations/{org_id}/webhook-dead-letters/{delivery_id}/acknowledge`
 
 Only organization admins can manage subscriptions or inspect deliveries. All records are organization-scoped and
-covered by Postgres row-level security in production.
+covered by Postgres row-level security in production. Delivery listing supports operational filters for
+`subscription_id`, `status`, `event_type`, partial `event_id`, `skip`, and bounded `limit` so support teams can
+isolate one customer integration incident without exporting the full tenant history.
 
 ## Delivery Queue
 
