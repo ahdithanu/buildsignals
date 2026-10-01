@@ -194,4 +194,22 @@ export const organizationsApi = {
       `/organizations/${orgId}/webhook-dead-letters?limit=5`,
     );
   },
+
+  replayWebhookDelivery(orgId: string, deliveryId: string): Promise<WebhookDeliveryResponse> {
+    return apiClient.post<WebhookDeliveryResponse>(
+      `/organizations/${orgId}/webhook-deliveries/${deliveryId}/replay`,
+      {},
+    );
+  },
+
+  acknowledgeWebhookDeadLetter(
+    orgId: string,
+    deliveryId: string,
+    note?: string,
+  ): Promise<WebhookDeliveryResponse> {
+    return apiClient.post<WebhookDeliveryResponse>(
+      `/organizations/${orgId}/webhook-dead-letters/${deliveryId}/acknowledge`,
+      { note: note ?? null },
+    );
+  },
 };
