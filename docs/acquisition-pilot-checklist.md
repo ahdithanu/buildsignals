@@ -96,6 +96,9 @@ The Radar filter bar now includes a `Copy view link` action that copies the
 current filtered queue URL for demos, analyst handoff, and manager review.
 Focused frontend tests verify the copied link preserves active availability,
 signal-overlap, follow-up, and status filters.
+Active filter chips now render from the same URL-backed state, so a shared
+queue visibly explains why it is narrowed. Each chip clears its own filter and
+resets pagination without disturbing the rest of the view.
 
 Latest focused verification: backend parcel/radar/availability/ZIP3 regression
 suite passes 30 tests; frontend Radar, Radar isolation, map-state, and
