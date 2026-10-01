@@ -79,6 +79,41 @@ export interface ApiKeyUsageRollupRebuildResponse {
   rebuilt_events: number;
 }
 
+export type WebhookDeliveryStatus = "pending" | "delivered" | "failed";
+
+export interface WebhookDeliverySummaryResponse {
+  organization_id: string;
+  total: number;
+  pending: number;
+  delivered: number;
+  failed: number;
+  dead_lettered: number;
+  subscriptions_active: number;
+  subscriptions_disabled: number;
+  failure_rate: number;
+  latest_attempted_at: string | null;
+  latest_created_at: string | null;
+  last_error_message: string | null;
+}
+
+export interface WebhookDeliveryResponse {
+  id: string;
+  organization_id: string;
+  subscription_id: string;
+  event_type: string;
+  event_id: string;
+  payload: Record<string, unknown>;
+  status: WebhookDeliveryStatus;
+  attempt_count: number;
+  next_attempt_at: string | null;
+  last_attempted_at: string | null;
+  response_status_code: number | null;
+  response_body_excerpt: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export const organizationsApi = {
   listMembers(orgId: string): Promise<MemberResponse[]> {
     return apiClient.get<MemberResponse[]>(
@@ -145,6 +180,18 @@ export const organizationsApi = {
     return apiClient.post<ApiKeyUsageRollupRebuildResponse>(
       `/organizations/${orgId}/api-keys/${keyId}/usage/rebuild-rollups`,
       {},
+    );
+  },
+
+  getWebhookDeliverySummary(orgId: string): Promise<WebhookDeliverySummaryResponse> {
+    return apiClient.get<WebhookDeliverySummaryResponse>(
+      `/organizations/${orgId}/webhook-delivery-summary`,
+    );
+  },
+
+  listWebhookDeadLetters(orgId: string): Promise<WebhookDeliveryResponse[]> {
+    return apiClient.get<WebhookDeliveryResponse[]>(
+      `/organizations/${orgId}/webhook-dead-letters?limit=5`,
     );
   },
 };
