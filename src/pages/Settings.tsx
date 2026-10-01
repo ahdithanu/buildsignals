@@ -7,7 +7,7 @@ import { organizationsApi, type ApiKeyCreateResponse, type ApiKeyScope } from "@
 import { ErrorState, LoadingState } from "@/components/DataStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { BarChart3, Bell, Copy, Database, FileText, KeyRound, Plug, RefreshCw, Scale, Settings as SettingsIcon, Trash2, Users } from "lucide-react";
+import { BarChart3, Bell, CheckCircle2, Copy, Database, FileText, KeyRound, Plug, RefreshCw, Scale, Settings as SettingsIcon, Trash2, TriangleAlert, Users } from "lucide-react";
 
 const fadeIn = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
 const API_KEY_SCOPES: ApiKeyScope[] = ["read", "write", "admin"];
@@ -17,6 +17,10 @@ function formatDate(iso: string | null): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
 }
 
 function defaultExpirationDate(): string {
@@ -92,6 +96,18 @@ export default function Settings() {
     queryKey: ["organization-api-key-usage", orgId, selectedUsageKeyId],
     queryFn: () => organizationsApi.getApiKeyUsage(orgId, selectedUsageKeyId ?? ""),
     enabled: Boolean(orgId && isAdmin && selectedUsageKeyId),
+  });
+
+  const webhookSummary = useQuery({
+    queryKey: ["organization-webhook-summary", orgId],
+    queryFn: () => organizationsApi.getWebhookDeliverySummary(orgId),
+    enabled: Boolean(orgId && isAdmin),
+  });
+
+  const webhookDeadLetters = useQuery({
+    queryKey: ["organization-webhook-dead-letters", orgId],
+    queryFn: () => organizationsApi.listWebhookDeadLetters(orgId),
+    enabled: Boolean(orgId && isAdmin),
   });
 
   const invalidateKeys = () =>
@@ -180,6 +196,113 @@ export default function Settings() {
 
         {isAdmin && (
           <motion.div {...fadeIn} className="mb-6 rounded-xl border bg-card p-5 card-shadow">
+            <div className="mb-6 rounded-xl border bg-secondary/30 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Plug className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-semibold text-foreground">Webhook delivery health</h3>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Monitor customer integration delivery, retries, and failed events that need operator review.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    webhookSummary.refetch();
+                    webhookDeadLetters.refetch();
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh
+                </button>
+              </div>
+
+              {(webhookSummary.isLoading || webhookDeadLetters.isLoading) && (
+                <p className="mt-4 text-xs text-muted-foreground">Loading webhook delivery status...</p>
+              )}
+              {(webhookSummary.error || webhookDeadLetters.error) && (
+                <p className="mt-4 text-xs text-destructive">Could not load webhook delivery status.</p>
+              )}
+              {webhookSummary.data && (
+                <div className="mt-4 grid gap-3 md:grid-cols-4">
+                  <div className="rounded-lg border bg-background p-3">
+                    <p className="text-xs text-muted-foreground">Delivery posture</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      {webhookSummary.data.dead_lettered > 0 ? (
+                        <TriangleAlert className="h-4 w-4 text-amber-600" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      )}
+                      <p className="text-sm font-semibold text-foreground">
+                        {webhookSummary.data.dead_lettered > 0 ? "Review needed" : "Healthy"}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {webhookSummary.data.subscriptions_active.toLocaleString()} active subscriptions
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-background p-3">
+                    <p className="text-xs text-muted-foreground">Dead letters</p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">
+                      {webhookSummary.data.dead_lettered.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {webhookSummary.data.failed.toLocaleString()} failed total
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-background p-3">
+                    <p className="text-xs text-muted-foreground">Failure rate</p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">
+                      {formatPercent(webhookSummary.data.failure_rate)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {webhookSummary.data.delivered.toLocaleString()} delivered
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-background p-3">
+                    <p className="text-xs text-muted-foreground">Latest attempt</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {formatDate(webhookSummary.data.latest_attempted_at)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {webhookSummary.data.pending.toLocaleString()} pending retries
+                    </p>
+                  </div>
+                </div>
+              )}
+              {webhookSummary.data?.last_error_message && (
+                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Last delivery error: {webhookSummary.data.last_error_message}
+                </p>
+              )}
+              {webhookDeadLetters.data && webhookDeadLetters.data.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Latest dead-lettered deliveries
+                  </p>
+                  {webhookDeadLetters.data.map((delivery) => (
+                    <div key={delivery.id} className="rounded-lg border bg-background p-3">
+                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                        <p className="text-sm font-medium text-foreground">{delivery.event_type}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {delivery.attempt_count.toLocaleString()} attempts · {formatDate(delivery.updated_at)}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Event {delivery.event_id} · Subscription {delivery.subscription_id.slice(0, 8)}
+                      </p>
+                      {delivery.error_message && (
+                        <p className="mt-2 text-xs text-destructive">{delivery.error_message}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
               <div>
                 <div className="flex items-center gap-2">
