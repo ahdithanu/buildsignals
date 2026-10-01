@@ -82,8 +82,9 @@ Status meanings:
 ## Expansion Order
 
 1. Every state now has an explicit production or candidate-catalog decision.
-   The active catalog currently reports 43 states with at least one configured
-   live source and 98 live jurisdictions / statewide areas; candidate-only and
+   The validated backend catalog currently reports 134 configured live sources
+   across 43 states, with seven candidate-only state gaps: Iowa, Mississippi,
+   Montana, New Mexico, Oklahoma, West Virginia, and Wyoming. Candidate-only and
    held states remain in the candidate catalog until their rights, lifecycle,
    freshness, identity, and technical gates clear. Re-audit holds when publishers
    add licensed bulk feeds or materially change platforms.
