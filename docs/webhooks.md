@@ -61,7 +61,9 @@ bounded retries, and records success or failure without blocking the originating
 delivered, failed, and dead-lettered deliveries, active/disabled subscription counts, failure rate, latest timestamps,
 and the most recent error message. Use it as the dashboard source before drilling into individual delivery rows.
 The Settings console can also filter recent deliveries by subscription, status, event type, and event id so
-operators can verify a specific customer endpoint after sending a test event or troubleshooting a failure.
+operators can verify a specific customer endpoint after sending a test event or troubleshooting a failure. Each
+delivery row exposes an expandable debug view with the delivery id, next retry timestamp, canonical payload, and
+response excerpt when available.
 
 ## Delivery Attempts
 
