@@ -46,6 +46,11 @@ import type {
 } from '@/types/parcel';
 
 const PAGE_SIZE = 50;
+
+function normalizedZip3(value: string | null) {
+  return value && /^\d{3}$/.test(value) ? value : '';
+}
+
 const statusStyles: Record<AcquisitionCaseStatus, string> = {
   candidate: 'border-sky-200 bg-sky-50 text-sky-800',
   shortlisted: 'border-emerald-200 bg-emerald-50 text-emerald-800',
@@ -396,7 +401,7 @@ export default function AcquisitionRadar() {
   const [followUpFilter, setFollowUpFilter] = useState(searchParams.get('follow_up') || '');
   const [signalOverlap, setSignalOverlap] = useState(searchParams.get('signal_overlap') || '');
   const [availability, setAvailability] = useState(searchParams.get('availability') || '');
-  const [zip3, setZip3] = useState(searchParams.get('zip3') || '');
+  const [zip3, setZip3] = useState(normalizedZip3(searchParams.get('zip3')));
   const [offset, setOffset] = useState(() => {
     const parsed = Number(searchParams.get('offset') || 0);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;

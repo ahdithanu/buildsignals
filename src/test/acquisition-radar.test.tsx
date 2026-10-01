@@ -6,6 +6,7 @@ import AcquisitionRadar from '@/pages/AcquisitionRadar';
 
 const updateCase = vi.fn();
 const recordActivity = vi.fn();
+const mockRadarParams = vi.fn();
 let currentRole = 'admin';
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
@@ -55,7 +56,9 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
       },
     },
   }),
-  useAcquisitionRadar: () => ({
+  useAcquisitionRadar: (params: Record<string, unknown>) => {
+    mockRadarParams(params);
+    return ({
     data: {
       items: [{
         parcel: {
@@ -108,7 +111,8 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
     updateCase: { isPending: false, variables: undefined, mutate: updateCase },
     recordActivity: { isPending: false, variables: undefined, mutate: recordActivity },
     promote: { isPending: false, variables: undefined, mutate: vi.fn() },
-  }),
+    });
+  },
 }));
 
 vi.mock('@/hooks/useOrganizationMembers', () => ({
@@ -129,6 +133,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 
 describe('<AcquisitionRadar>', () => {
   beforeEach(() => {
+    mockRadarParams.mockClear();
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn().mockResolvedValue(undefined),
@@ -252,5 +257,19 @@ describe('<AcquisitionRadar>', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear Signals filter' }));
     expect(screen.getByLabelText('Signals')).toHaveValue('');
     expect(screen.getByLabelText('Availability')).toHaveValue('unverified');
+  });
+
+  it('ignores malformed ZIP3 URL filters before calling the radar API', () => {
+    render(
+      <MemoryRouter initialEntries={['/acquisition-radar?state=TX&zip3=78A']}>
+        <AcquisitionRadar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Clear ZIP3 filter' })).not.toBeInTheDocument();
+    expect(mockRadarParams).toHaveBeenLastCalledWith(expect.objectContaining({
+      state: 'TX',
+      zip3: undefined,
+    }));
   });
 });

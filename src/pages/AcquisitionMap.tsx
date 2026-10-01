@@ -34,6 +34,10 @@ import type { AcquisitionRadarItem } from '@/types/parcel';
 const evidenceFilters = ['Shortlisted', 'Verified availability', 'Owner evidence', 'Held 10+ yrs', 'Tax evidence'];
 const GeographicMap = lazy(() => import('@/components/GeographicMap'));
 
+function normalizedZip3(value: string | null) {
+  return value && /^\d{3}$/.test(value) ? value : '';
+}
+
 function acres(item: AcquisitionRadarItem) {
   return item.parcel.land_area_sq_ft == null ? null : item.parcel.land_area_sq_ft / 43_560;
 }
@@ -55,7 +59,7 @@ export default function AcquisitionMap() {
   const { data: heatmap } = useZip3Heatmap({ state: selectedState, limit: 25 });
   const [selectedSignalId, setSelectedSignalId] = useState('');
   const [selectedParcelId, setSelectedParcelId] = useState('');
-  const [selectedZip3, setSelectedZip3] = useState(searchParams.get('zip3') || '');
+  const [selectedZip3, setSelectedZip3] = useState(normalizedZip3(searchParams.get('zip3')));
   const [assemblage, setAssemblage] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [activeOnly, setActiveOnly] = useState(true);
