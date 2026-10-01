@@ -80,6 +80,49 @@ export interface ApiKeyUsageRollupRebuildResponse {
 }
 
 export type WebhookDeliveryStatus = "pending" | "delivered" | "failed";
+export type WebhookSubscriptionStatus = "active" | "disabled";
+
+export const WEBHOOK_EVENT_TYPES = [
+  "deal.created",
+  "deal.updated",
+  "signal.created",
+  "assessment.revision.created",
+  "assessment.review.created",
+  "assessment.publication.created",
+  "eval.run.completed",
+  "eval.run.failed",
+] as const;
+
+export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];
+
+export interface WebhookSubscriptionResponse {
+  id: string;
+  organization_id: string;
+  name: string;
+  target_url: string;
+  event_types: WebhookEventType[];
+  status: WebhookSubscriptionStatus;
+  secret_reference: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  disabled_at: string | null;
+}
+
+export interface WebhookSubscriptionCreateRequest {
+  name: string;
+  target_url: string;
+  event_types: WebhookEventType[];
+  secret_reference?: string | null;
+}
+
+export interface WebhookSubscriptionUpdateRequest {
+  name?: string;
+  target_url?: string;
+  event_types?: WebhookEventType[];
+  status?: WebhookSubscriptionStatus;
+  secret_reference?: string | null;
+}
 
 export interface WebhookDeliverySummaryResponse {
   organization_id: string;
@@ -186,6 +229,33 @@ export const organizationsApi = {
   getWebhookDeliverySummary(orgId: string): Promise<WebhookDeliverySummaryResponse> {
     return apiClient.get<WebhookDeliverySummaryResponse>(
       `/organizations/${orgId}/webhook-delivery-summary`,
+    );
+  },
+
+  listWebhookSubscriptions(orgId: string): Promise<WebhookSubscriptionResponse[]> {
+    return apiClient.get<WebhookSubscriptionResponse[]>(
+      `/organizations/${orgId}/webhook-subscriptions`,
+    );
+  },
+
+  createWebhookSubscription(
+    orgId: string,
+    payload: WebhookSubscriptionCreateRequest,
+  ): Promise<WebhookSubscriptionResponse> {
+    return apiClient.post<WebhookSubscriptionResponse>(
+      `/organizations/${orgId}/webhook-subscriptions`,
+      payload,
+    );
+  },
+
+  updateWebhookSubscription(
+    orgId: string,
+    subscriptionId: string,
+    payload: WebhookSubscriptionUpdateRequest,
+  ): Promise<WebhookSubscriptionResponse> {
+    return apiClient.patch<WebhookSubscriptionResponse>(
+      `/organizations/${orgId}/webhook-subscriptions/${subscriptionId}`,
+      payload,
     );
   },
 
