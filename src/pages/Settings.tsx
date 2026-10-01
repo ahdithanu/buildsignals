@@ -113,6 +113,11 @@ export default function Settings() {
   const invalidateKeys = () =>
     queryClient.invalidateQueries({ queryKey: ["organization-api-keys", orgId] });
 
+  const invalidateWebhooks = () => {
+    queryClient.invalidateQueries({ queryKey: ["organization-webhook-summary", orgId] });
+    queryClient.invalidateQueries({ queryKey: ["organization-webhook-dead-letters", orgId] });
+  };
+
   const createKey = useMutation({
     mutationFn: () => organizationsApi.createApiKey(orgId, {
       name: newKeyName.trim(),
@@ -164,6 +169,43 @@ export default function Settings() {
     onError: (err) => {
       toast({
         title: "Could not rebuild usage rollups",
+        description: err instanceof ApiError ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const replayWebhookDelivery = useMutation({
+    mutationFn: (deliveryId: string) => organizationsApi.replayWebhookDelivery(orgId, deliveryId),
+    onSuccess: () => {
+      invalidateWebhooks();
+      toast({
+        title: "Webhook replay queued",
+        description: "A new pending delivery was created for retry processing.",
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: "Could not replay webhook",
+        description: err instanceof ApiError ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const acknowledgeWebhookDeadLetter = useMutation({
+    mutationFn: ({ deliveryId, note }: { deliveryId: string; note?: string }) =>
+      organizationsApi.acknowledgeWebhookDeadLetter(orgId, deliveryId, note),
+    onSuccess: () => {
+      invalidateWebhooks();
+      toast({
+        title: "Dead letter acknowledged",
+        description: "The acknowledgement was recorded in the audit log.",
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: "Could not acknowledge dead letter",
         description: err instanceof ApiError ? err.message : "Try again.",
         variant: "destructive",
       });
@@ -285,11 +327,42 @@ export default function Settings() {
                   </p>
                   {webhookDeadLetters.data.map((delivery) => (
                     <div key={delivery.id} className="rounded-lg border bg-background p-3">
-                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                        <p className="text-sm font-medium text-foreground">{delivery.event_type}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {delivery.attempt_count.toLocaleString()} attempts · {formatDate(delivery.updated_at)}
-                        </p>
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{delivery.event_type}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {delivery.attempt_count.toLocaleString()} attempts · {formatDate(delivery.updated_at)}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={replayWebhookDelivery.isPending}
+                            onClick={() => {
+                              if (window.confirm("Replay this failed webhook delivery? A new pending delivery will be created.")) {
+                                replayWebhookDelivery.mutate(delivery.id);
+                              }
+                            }}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            Replay
+                          </button>
+                          <button
+                            type="button"
+                            disabled={acknowledgeWebhookDeadLetter.isPending}
+                            onClick={() => {
+                              const note = window.prompt("Acknowledge this dead letter with an optional operator note.");
+                              if (note !== null) {
+                                acknowledgeWebhookDeadLetter.mutate({ deliveryId: delivery.id, note });
+                              }
+                            }}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Acknowledge
+                          </button>
+                        </div>
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Event {delivery.event_id} · Subscription {delivery.subscription_id.slice(0, 8)}
