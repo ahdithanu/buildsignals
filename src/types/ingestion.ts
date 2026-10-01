@@ -193,6 +193,12 @@ export interface StateCoverageBucket {
   retailer_opening_sources: number;
   pre_approval_sources: number;
   approved_only_sources: number;
+  live_record_type_counts?: Record<string, number>;
+  candidate_record_type_counts?: Record<string, number>;
+  candidate_status_counts?: Record<string, number>;
+  readiness_level?: 'investor_ready' | 'early_warning_ready' | 'live_foundation' | 'candidate_only' | 'uncovered' | string;
+  next_action?: string;
+  next_action_label?: string;
   priority_score: number;
   priority_reasons: string[];
 }

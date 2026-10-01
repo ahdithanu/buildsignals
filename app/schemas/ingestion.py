@@ -242,6 +242,12 @@ class StateCoverageBucket(BaseModel):
     retailer_opening_sources: int
     pre_approval_sources: int
     approved_only_sources: int
+    live_record_type_counts: dict[str, int] = Field(default_factory=dict)
+    candidate_record_type_counts: dict[str, int] = Field(default_factory=dict)
+    candidate_status_counts: dict[str, int] = Field(default_factory=dict)
+    readiness_level: str = "uncovered"
+    next_action: str = "discover_first_source"
+    next_action_label: str = "Discover first official source"
     priority_score: int
     priority_reasons: list[str]
 

@@ -156,6 +156,12 @@ class StateCoverageBucket:
     retailer_opening_sources: int
     pre_approval_sources: int
     approved_only_sources: int
+    live_record_type_counts: dict[str, int]
+    candidate_record_type_counts: dict[str, int]
+    candidate_status_counts: dict[str, int]
+    readiness_level: str
+    next_action: str
+    next_action_label: str
     priority_score: int
     priority_reasons: list[str]
 
@@ -453,10 +459,16 @@ def summarize_coverage(
                     "retailer_opening_sources": 0,
                     "pre_approval_sources": 0,
                     "approved_only_sources": 0,
+                    "live_record_type_counts": {},
+                    "candidate_record_type_counts": {},
                     "candidate_status_counts": {},
                 },
             )
             state_bucket["live_sources"] += 1
+            live_record_type_counts = state_bucket["live_record_type_counts"]
+            if isinstance(live_record_type_counts, dict):
+                record_type = str(entry.record_type or "unknown")
+                live_record_type_counts[record_type] = live_record_type_counts.get(record_type, 0) + 1
             if (entry.settings or {}).get("retailer_opening_signal"):
                 state_bucket["retailer_opening_sources"] += 1
             if stage == "pre_approval_and_approved":
@@ -481,10 +493,16 @@ def summarize_coverage(
                     "retailer_opening_sources": 0,
                     "pre_approval_sources": 0,
                     "approved_only_sources": 0,
+                    "live_record_type_counts": {},
+                    "candidate_record_type_counts": {},
                     "candidate_status_counts": {},
                 },
             )
             state_bucket["candidate_sources"] += 1
+            candidate_record_type_counts = state_bucket["candidate_record_type_counts"]
+            if isinstance(candidate_record_type_counts, dict):
+                record_type = str(entry.record_type or "unknown")
+                candidate_record_type_counts[record_type] = candidate_record_type_counts.get(record_type, 0) + 1
             candidate_status_counts_by_state = state_bucket["candidate_status_counts"]
             candidate_status_counts_by_state[entry.status] = candidate_status_counts_by_state.get(entry.status, 0) + 1
 
@@ -519,6 +537,12 @@ def summarize_coverage(
             retailer_opening_sources=bucket["retailer_opening_sources"],
             pre_approval_sources=bucket["pre_approval_sources"],
             approved_only_sources=bucket["approved_only_sources"],
+            live_record_type_counts=dict(bucket["live_record_type_counts"]),
+            candidate_record_type_counts=dict(bucket["candidate_record_type_counts"]),
+            candidate_status_counts=dict(bucket["candidate_status_counts"]),
+            readiness_level=_state_readiness_level(bucket),
+            next_action=_state_next_action(bucket)[0],
+            next_action_label=_state_next_action(bucket)[1],
             priority_score=score,
             priority_reasons=reasons,
         )
@@ -532,6 +556,12 @@ def summarize_coverage(
             retailer_opening_sources=bucket["retailer_opening_sources"],
             pre_approval_sources=bucket["pre_approval_sources"],
             approved_only_sources=bucket["approved_only_sources"],
+            live_record_type_counts=dict(bucket["live_record_type_counts"]),
+            candidate_record_type_counts=dict(bucket["candidate_record_type_counts"]),
+            candidate_status_counts=dict(bucket["candidate_status_counts"]),
+            readiness_level=_state_readiness_level(bucket),
+            next_action=_state_next_action(bucket)[0],
+            next_action_label=_state_next_action(bucket)[1],
             priority_score=score,
             priority_reasons=reasons,
         )
@@ -587,6 +617,8 @@ def _build_rollout_queue(
                 "retailer_opening_sources": 0,
                 "pre_approval_sources": 0,
                 "approved_only_sources": 0,
+                "live_record_type_counts": {},
+                "candidate_record_type_counts": {},
                 "candidate_status_counts": {},
             },
         )
@@ -644,6 +676,28 @@ def _state_next_action(bucket: dict[str, int | dict[str, int]]) -> tuple[str, st
     if retailer_opening_sources == 0:
         return "add_retailer_opening_source", "Add retailer-opening source"
     return "add_secondary_jurisdiction", "Add secondary jurisdiction"
+
+
+def _state_readiness_level(bucket: dict[str, int | dict[str, int]]) -> str:
+    live_sources = int(bucket["live_sources"])
+    candidate_sources = int(bucket["candidate_sources"])
+    retailer_opening_sources = int(bucket["retailer_opening_sources"])
+    pre_approval_sources = int(bucket["pre_approval_sources"])
+    live_record_type_counts = bucket.get("live_record_type_counts", {})
+    live_parcel_sources = (
+        int(live_record_type_counts.get("parcel", 0))
+        if isinstance(live_record_type_counts, dict)
+        else 0
+    )
+    if live_sources > 0 and pre_approval_sources > 0 and live_parcel_sources > 0 and retailer_opening_sources > 0:
+        return "investor_ready"
+    if live_sources > 0 and pre_approval_sources > 0:
+        return "early_warning_ready"
+    if live_sources > 0:
+        return "live_foundation"
+    if candidate_sources > 0:
+        return "candidate_only"
+    return "uncovered"
 
 
 def _next_action_priority(action: str) -> int:

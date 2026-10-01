@@ -11,6 +11,20 @@ function formatStageLabel(stage: string) {
   return stage.replace(/_/g, " ");
 }
 
+function formatReadiness(value?: string) {
+  if (!value) return "unclassified";
+  return value.replace(/_/g, " ");
+}
+
+function sourceMixLabel(counts?: Record<string, number>) {
+  const entries = Object.entries(counts ?? {}).filter(([, count]) => count > 0);
+  if (entries.length === 0) return "no typed live sources";
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([type, count]) => `${type} ${count}`)
+    .join(" · ");
+}
+
 export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
   const liveStageEntries = Object.entries(coverage.live_signal_stage_counts);
   const candidateStatusEntries = Object.entries(coverage.candidate_status_counts);
@@ -110,9 +124,9 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
                 key={bucket.state}
                 to={`/source-health?state=${bucket.state}`}
                 className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
+                title={`${formatReadiness(bucket.readiness_level)} · ${sourceMixLabel(bucket.live_record_type_counts)} · ${(bucket.priority_reasons ?? []).join(' · ')}`}
               >
-                {bucket.state} · {bucket.live_sources + bucket.candidate_sources}
+                {bucket.state} · {formatReadiness(bucket.readiness_level)}
               </Link>
             ))
           )}
@@ -143,7 +157,7 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
                 className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
                 title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
               >
-                {bucket.state} · {bucket.candidate_sources}
+                {bucket.state} · {bucket.next_action_label ?? "Resolve candidate blocker"}
               </Link>
             ))
           )}
