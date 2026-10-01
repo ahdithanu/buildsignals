@@ -275,6 +275,19 @@ export const organizationsApi = {
     );
   },
 
+  listWebhookDeliveries(
+    orgId: string,
+    params?: { subscriptionId?: string; status?: WebhookDeliveryStatus; limit?: number },
+  ): Promise<WebhookDeliveryResponse[]> {
+    const search = new URLSearchParams();
+    if (params?.subscriptionId) search.set("subscription_id", params.subscriptionId);
+    if (params?.status) search.set("status", params.status);
+    search.set("limit", String(params?.limit ?? 10));
+    return apiClient.get<WebhookDeliveryResponse[]>(
+      `/organizations/${orgId}/webhook-deliveries?${search.toString()}`,
+    );
+  },
+
   listWebhookDeadLetters(orgId: string): Promise<WebhookDeliveryResponse[]> {
     return apiClient.get<WebhookDeliveryResponse[]>(
       `/organizations/${orgId}/webhook-dead-letters?limit=5`,

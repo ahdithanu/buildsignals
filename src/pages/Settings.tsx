@@ -90,6 +90,7 @@ export default function Settings() {
   const [webhookSecretReference, setWebhookSecretReference] = useState("");
   const [webhookEventTypes, setWebhookEventTypes] = useState<WebhookEventType[]>(["deal.created"]);
   const [webhookTestEventType, setWebhookTestEventType] = useState<WebhookEventType>("deal.created");
+  const [selectedWebhookSubscriptionId, setSelectedWebhookSubscriptionId] = useState<string | null>(null);
 
   const apiKeys = useQuery({
     queryKey: ["organization-api-keys", orgId],
@@ -121,6 +122,15 @@ export default function Settings() {
     enabled: Boolean(orgId && isAdmin),
   });
 
+  const webhookDeliveries = useQuery({
+    queryKey: ["organization-webhook-deliveries", orgId, selectedWebhookSubscriptionId],
+    queryFn: () => organizationsApi.listWebhookDeliveries(orgId, {
+      subscriptionId: selectedWebhookSubscriptionId ?? undefined,
+      limit: 10,
+    }),
+    enabled: Boolean(orgId && isAdmin && selectedWebhookSubscriptionId),
+  });
+
   const invalidateKeys = () =>
     queryClient.invalidateQueries({ queryKey: ["organization-api-keys", orgId] });
 
@@ -128,6 +138,7 @@ export default function Settings() {
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-summary", orgId] });
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-dead-letters", orgId] });
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-subscriptions", orgId] });
+    queryClient.invalidateQueries({ queryKey: ["organization-webhook-deliveries", orgId] });
   };
 
   const createKey = useMutation({
@@ -491,25 +502,100 @@ export default function Settings() {
                               </p>
                             )}
                           </div>
-                          <button
-                            type="button"
-                            disabled={toggleWebhookStatus.isPending}
-                            onClick={() => {
-                              const nextStatus = subscription.status === "active" ? "disabled" : "active";
-                              if (window.confirm(`${nextStatus === "disabled" ? "Disable" : "Enable"} ${subscription.name}?`)) {
-                                toggleWebhookStatus.mutate({ subscriptionId: subscription.id, status: nextStatus });
-                              }
-                            }}
-                            className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-                          >
-                            {subscription.status === "active" ? "Disable" : "Enable"}
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedWebhookSubscriptionId(subscription.id)}
+                              className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                            >
+                              View deliveries
+                            </button>
+                            <button
+                              type="button"
+                              disabled={toggleWebhookStatus.isPending}
+                              onClick={() => {
+                                const nextStatus = subscription.status === "active" ? "disabled" : "active";
+                                if (window.confirm(`${nextStatus === "disabled" ? "Disable" : "Enable"} ${subscription.name}?`)) {
+                                  toggleWebhookStatus.mutate({ subscriptionId: subscription.id, status: nextStatus });
+                                }
+                              }}
+                              className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                            >
+                              {subscription.status === "active" ? "Disable" : "Enable"}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+
+              {selectedWebhookSubscriptionId && (
+                <div className="mt-5 rounded-lg border bg-background p-3">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Recent endpoint deliveries
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {webhookSubscriptions.data?.find((subscription) => subscription.id === selectedWebhookSubscriptionId)?.name ?? "Selected endpoint"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => webhookDeliveries.refetch()}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Refresh deliveries
+                    </button>
+                  </div>
+                  {webhookDeliveries.isLoading && (
+                    <p className="mt-3 text-xs text-muted-foreground">Loading recent deliveries...</p>
+                  )}
+                  {webhookDeliveries.error && (
+                    <p className="mt-3 text-xs text-destructive">Could not load recent deliveries.</p>
+                  )}
+                  {webhookDeliveries.data && (
+                    <div className="mt-3 space-y-2">
+                      {webhookDeliveries.data.length === 0 && (
+                        <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+                          No deliveries have been queued for this endpoint yet. Send a test event for one of its subscribed event types.
+                        </p>
+                      )}
+                      {webhookDeliveries.data.map((delivery) => (
+                        <div key={delivery.id} className="rounded-lg border p-3">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{delivery.event_type}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Event {delivery.event_id} · Created {formatDate(delivery.created_at)}
+                              </p>
+                            </div>
+                            <span className={`rounded-full px-2 py-0.5 text-xs ${
+                              delivery.status === "delivered"
+                                ? "bg-emerald-500/10 text-emerald-700"
+                                : delivery.status === "failed"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-amber-500/10 text-amber-700"
+                            }`}>
+                              {delivery.status}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Attempts: {delivery.attempt_count.toLocaleString()} · Last attempt: {formatDate(delivery.last_attempted_at)}
+                            {delivery.response_status_code ? ` · Response ${delivery.response_status_code}` : ""}
+                          </p>
+                          {delivery.error_message && (
+                            <p className="mt-2 text-xs text-destructive">{delivery.error_message}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mb-6 rounded-xl border bg-secondary/30 p-4">
