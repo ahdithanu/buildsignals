@@ -38,6 +38,13 @@ describe("<NationalCoverageCard>", () => {
               operational_retry: 5,
               queued: 8,
             },
+            state_readiness_counts: {
+              investor_ready: 2,
+              early_warning_ready: 6,
+              live_foundation: 6,
+              candidate_only: 1,
+              uncovered: 35,
+            },
             top_jurisdictions: [
               { jurisdiction: "TX", live_sources: 10, candidate_sources: 2 },
             ],
@@ -127,6 +134,9 @@ describe("<NationalCoverageCard>", () => {
     expect(screen.getByText("28")).toBeInTheDocument();
     expect(screen.getByText("14", { selector: ".mt-1.text-lg" })).toBeInTheDocument();
     expect(screen.getByText("9", { selector: ".mt-1.text-lg" })).toBeInTheDocument();
+    expect(screen.getByText("50-state readiness funnel")).toBeInTheDocument();
+    expect(screen.getByLabelText("National readiness funnel")).toHaveTextContent("investor ready");
+    expect(screen.getByLabelText("National readiness funnel")).toHaveTextContent("uncovered");
     expect(screen.getByText(/pre approval and approved/i)).toBeInTheDocument();
     expect(screen.getAllByText(/approved only/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/operational retry/i).length).toBeGreaterThanOrEqual(1);
