@@ -86,13 +86,15 @@ payload and attempt count. Delivered webhooks cannot be replayed.
 ## Test Events
 
 Admins can queue a synthetic test payload from the Settings console or by calling
-`POST /v1/organizations/{org_id}/webhook-test-events`. The request accepts an event type, event id, and arbitrary
-payload. Build Signals creates one pending delivery for each active subscription that includes the requested event
-type, then records an audit event with the queued delivery count.
+`POST /v1/organizations/{org_id}/webhook-test-events`. The request accepts an event type, event id, arbitrary
+payload, and optional `subscription_id`. Build Signals creates one pending delivery for each active matching
+subscription, or only the targeted active subscription when `subscription_id` is present, then records an audit event
+with the queued delivery count.
 
 Use test events immediately after creating a customer endpoint to validate routing, signing headers, receiver
 availability, and downstream observability before relying on production events. A zero-delivery response means no
-active endpoint currently subscribes to that event type.
+active endpoint currently subscribes to that event type, or the targeted endpoint is disabled or not subscribed to
+that event.
 
 ## Dead Letters
 

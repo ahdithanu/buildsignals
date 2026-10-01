@@ -128,6 +128,7 @@ export interface WebhookTestEventRequest {
   event_type: WebhookEventType;
   event_id: string;
   payload: Record<string, unknown>;
+  subscription_id?: string | null;
 }
 
 export interface WebhookDeliverySummaryResponse {

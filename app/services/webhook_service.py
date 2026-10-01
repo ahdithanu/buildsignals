@@ -218,15 +218,15 @@ def enqueue_webhook_event(
     event_type: str,
     event_id: str | None = None,
     payload: dict,
+    subscription_id: str | None = None,
 ) -> list[WebhookDelivery]:
-    subscriptions = (
-        db.query(WebhookSubscription)
-        .filter(
-            WebhookSubscription.organization_id == organization_id,
-            WebhookSubscription.status == "active",
-        )
-        .all()
+    query = db.query(WebhookSubscription).filter(
+        WebhookSubscription.organization_id == organization_id,
+        WebhookSubscription.status == "active",
     )
+    if subscription_id:
+        query = query.filter(WebhookSubscription.id == subscription_id)
+    subscriptions = query.all()
     normalized_event_type = event_type.strip().lower()
     deliveries: list[WebhookDelivery] = []
     delivery_event_id = event_id or str(uuid4())
