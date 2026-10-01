@@ -8,6 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       DATABASE_URL: "sqlite:///./ci.db"
       SECRET_KEY: "ci-test-secret-key-not-for-production"

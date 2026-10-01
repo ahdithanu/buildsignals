@@ -1,8 +1,10 @@
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from app.models.audit_log import AuditLog
+from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.webhook import WebhookDelivery, WebhookSubscription
 from app.services.account_lockout import lockout
 from app.services.rate_limiter import limiter
@@ -174,12 +176,138 @@ def test_admin_can_view_webhook_delivery_summary(client, db):
     assert summary["pending"] == 1
     assert summary["delivered"] == 1
     assert summary["failed"] == 1
+    assert summary["dead_lettered"] == 1
     assert summary["subscriptions_active"] == 1
     assert summary["subscriptions_disabled"] == 1
     assert summary["failure_rate"] == 0.5
     assert summary["latest_attempted_at"]
     assert summary["latest_created_at"]
     assert summary["last_error_message"] == "Target returned 500"
+
+
+def test_admin_can_list_and_acknowledge_webhook_dead_letters(client, db):
+    identity = _register(client, email="webhook-dead-letter@example.com", org_name="Webhook Dead Letter")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+    subscription = WebhookSubscription(
+        organization_id=org_id,
+        name="Dead letters",
+        target_url="https://example.test/dead-letter",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    failed = WebhookDelivery(
+        organization_id=org_id,
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="failed",
+        payload={},
+        status="failed",
+        attempt_count=8,
+        error_message="Webhook target returned HTTP 500",
+    )
+    pending = WebhookDelivery(
+        organization_id=org_id,
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="pending",
+        payload={},
+        status="pending",
+    )
+    db.add_all([failed, pending])
+    db.commit()
+
+    listed = client.get(f"/organizations/{org_id}/webhook-dead-letters", headers=headers)
+    acknowledged = client.post(
+        f"/organizations/{org_id}/webhook-dead-letters/{failed.id}/acknowledge",
+        headers=headers,
+        json={"note": "Customer fixed receiver and replayed separately."},
+    )
+    conflict = client.post(
+        f"/organizations/{org_id}/webhook-dead-letters/{pending.id}/acknowledge",
+        headers=headers,
+        json={},
+    )
+
+    assert listed.status_code == 200, listed.text
+    assert [row["id"] for row in listed.json()] == [failed.id]
+    assert acknowledged.status_code == 200, acknowledged.text
+    assert acknowledged.json()["status"] == "failed"
+    assert conflict.status_code == 409
+    audit = db.query(AuditLog).filter_by(entity_type="webhook_delivery", action="acknowledge_dead_letter").one()
+    assert json.loads(audit.new_values)["note"] == "Customer fixed receiver and replayed separately."
+
+
+@pytest.mark.parametrize("method, suffix", [
+    ("GET", ""),
+    ("POST", "/{delivery_id}/acknowledge"),
+])
+def test_webhook_dead_letters_require_matching_active_org(client, db, method, suffix):
+    first = _register(client, email="dead-letter-first@example.com", org_name="Dead Letter First")
+    second = _register(client, email="dead-letter-second@example.com", org_name="Dead Letter Second")
+    org_id = second["organization_id"]
+    # Membership in both orgs must not bypass the JWT's active org / RLS scope.
+    db.add(OrganizationMembership(
+        organization_id=org_id,
+        user_id=first["user_id"],
+        role=MemberRole.admin,
+    ))
+    subscription = WebhookSubscription(
+        organization_id=org_id,
+        name="Dead letters",
+        target_url="https://example.test/dead-letter",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    evidence = {
+        "payload": {"deal_id": "failed"},
+        "status": "failed",
+        "attempt_count": 8,
+        "response_status_code": 500,
+        "response_body_excerpt": "Receiver unavailable",
+        "error_message": "Webhook target returned HTTP 500",
+    }
+    failed = WebhookDelivery(
+        organization_id=org_id,
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="failed",
+        **evidence,
+    )
+    db.add(failed)
+    db.commit()
+    url = f"/organizations/{org_id}/webhook-dead-letters{suffix.format(delivery_id=failed.id)}"
+    request_kwargs = {"json": {"note": "Receiver investigation complete"}} if method == "POST" else {}
+
+    rejected = client.request(method, url, headers=_headers(first), **request_kwargs)
+
+    assert rejected.status_code == 403, rejected.text
+    assert rejected.json()["detail"] == "Cannot act on a different organization"
+    assert db.query(AuditLog).filter_by(action="acknowledge_dead_letter").count() == 0
+
+    switched = client.post(
+        "/auth/switch-org",
+        headers=_headers(first),
+        json={"organization_id": org_id},
+    )
+    assert switched.status_code == 200, switched.text
+    accepted = client.request(method, url, headers=_headers(switched.json()), **request_kwargs)
+
+    assert accepted.status_code == 200, accepted.text
+    if method == "GET":
+        assert [row["id"] for row in accepted.json()] == [failed.id]
+    else:
+        assert accepted.json()["id"] == failed.id
+        audit = db.query(AuditLog).filter_by(action="acknowledge_dead_letter").one()
+        assert audit.organization_id == org_id
+        assert audit.actor_id == first["user_id"]
+        assert json.loads(audit.new_values)["note"] == request_kwargs["json"]["note"]
+    db.refresh(failed)
+    assert {field: getattr(failed, field) for field in evidence} == evidence
 
 
 def test_admin_can_replay_failed_webhook_delivery(client, db):

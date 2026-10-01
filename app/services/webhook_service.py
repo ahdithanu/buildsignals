@@ -44,6 +44,7 @@ class WebhookDeliverySummary:
     pending: int
     delivered: int
     failed: int
+    dead_lettered: int
     subscriptions_active: int
     subscriptions_disabled: int
     failure_rate: float
@@ -426,6 +427,7 @@ def summarize_webhook_deliveries(db: Session, *, organization_id: str) -> Webhoo
         pending=pending,
         delivered=delivered,
         failed=failed,
+        dead_lettered=failed,
         subscriptions_active=sum(1 for (status,) in subscriptions if status == "active"),
         subscriptions_disabled=sum(1 for (status,) in subscriptions if status == "disabled"),
         failure_rate=round(failed / attempted, 4) if attempted else 0.0,
@@ -459,4 +461,39 @@ def replay_webhook_delivery(
     delivery.updated_at = now
     db.commit()
     db.refresh(delivery)
+    return delivery
+
+
+def list_dead_letter_webhook_deliveries(
+    db: Session,
+    *,
+    organization_id: str,
+    limit: int = 50,
+    skip: int = 0,
+) -> list[WebhookDelivery]:
+    return (
+        db.query(WebhookDelivery)
+        .filter(WebhookDelivery.organization_id == organization_id, WebhookDelivery.status == "failed")
+        .order_by(WebhookDelivery.updated_at.desc(), WebhookDelivery.id.desc())
+        .offset(max(skip, 0))
+        .limit(min(max(limit, 1), 100))
+        .all()
+    )
+
+
+def get_failed_webhook_delivery(
+    db: Session,
+    *,
+    organization_id: str,
+    delivery_id: str,
+) -> WebhookDelivery:
+    delivery = (
+        db.query(WebhookDelivery)
+        .filter(WebhookDelivery.organization_id == organization_id, WebhookDelivery.id == delivery_id)
+        .first()
+    )
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Webhook delivery not found")
+    if delivery.status != "failed":
+        raise HTTPException(status_code=409, detail="Only failed webhook deliveries can be acknowledged")
     return delivery
