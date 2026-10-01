@@ -307,8 +307,10 @@ Radar now exposes the daily acquisition workflow as first-class filtered work:
 alert intake, evidence review, shortlist review, owner assignment, outreach,
 due follow-up, and saved opportunity. Filters are URL-backed for handoff and
 demo workflows: `follow_up=due|scheduled|none`,
-`signal_overlap=multi|single`, and `availability=verified|unverified` sit
-alongside market, buyer-lens, status, assignment, and text search filters.
+`signal_overlap=multi|single`, `availability=verified|unverified`, and
+`zip3=NNN` sit alongside market, buyer-lens, status, assignment, and text
+search filters. ZIP3 heat cards can now focus the Radar queue on parcels whose
+postal code begins with the selected market-cluster prefix.
 
 The `availability=verified` path requires source-backed listing, broker, owner,
 auction, or explicit availability evidence stored as a current parcel fact with

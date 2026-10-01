@@ -49,6 +49,7 @@ def _radar_candidate_query(
     review_status: str | None = None,
     assignment: str | None = None,
     follow_up: str | None = None,
+    zip3: str | None = None,
 ):
     rows = active_query(db.query(NearbyParcelCandidate), NearbyParcelCandidate).join(
         NearbyParcelSearch,
@@ -89,6 +90,8 @@ def _radar_candidate_query(
         ))
     if state:
         rows = rows.filter(func.upper(ParcelRecord.state) == state.strip().upper())
+    if zip3:
+        rows = rows.filter(ParcelRecord.postal_code.like(f"{zip3.strip()}%"))
     if persona:
         rows = rows.filter(NearbyParcelSearch.persona == persona)
     if review_status:
@@ -155,6 +158,7 @@ def list_acquisition_radar(
     follow_up: str | None = None,
     signal_overlap: str | None = None,
     availability: str | None = None,
+    zip3: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict:
@@ -168,6 +172,7 @@ def list_acquisition_radar(
         review_status=review_status,
         assignment=assignment,
         follow_up=follow_up,
+        zip3=zip3,
     )
     grouped = base.with_entities(
         ParcelRecord.id.label("parcel_id"),
@@ -282,6 +287,7 @@ def list_acquisition_radar(
         review_status=review_status,
         assignment=assignment,
         follow_up=follow_up,
+        zip3=zip3,
     ).options(
         joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.source),
         joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts),

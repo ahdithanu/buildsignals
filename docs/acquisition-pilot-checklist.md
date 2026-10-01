@@ -99,6 +99,11 @@ signal-overlap, follow-up, and status filters.
 Active filter chips now render from the same URL-backed state, so a shared
 queue visibly explains why it is narrowed. Each chip clears its own filter and
 resets pagination without disturbing the rest of the view.
+ZIP3 opportunity heat cards now filter Acquisition Radar through a real
+tenant-scoped `zip3=NNN` API parameter over parcel postal-code prefixes. ZIP3
+selection is URL-backed, copy-link compatible, and visible as an active filter
+chip. Focused backend tests cover matching, misses, and invalid ZIP3 values;
+focused frontend tests cover card selection, chip clearing, and copied links.
 
 Latest focused verification: backend parcel/radar/availability/ZIP3 regression
 suite passes 30 tests; frontend Radar, Radar isolation, map-state, and

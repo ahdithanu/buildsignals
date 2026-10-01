@@ -15,8 +15,8 @@ contributing opportunity and candidate ID.
 
 Supported filters are free-text query, two-letter state, buyer persona, review
 status, assignment state, follow-up state, signal overlap, verified
-availability state, limit, and offset. All source queries use the active
-organization context before aggregation.
+availability state, ZIP3 market cluster, limit, and offset. All source queries
+use the active organization context before aggregation.
 
 Filter query parameters are intentionally stable enough for analyst handoff and
 demo links:
@@ -31,6 +31,7 @@ demo links:
 | `follow_up` | `due`, `scheduled`, `none` | Due/overdue, any scheduled, or no next action. |
 | `signal_overlap` | `multi`, `single` | Cross-signal parcels versus parcels found from one signal. |
 | `availability` | `verified`, `unverified` | Source-backed availability evidence versus discovery-only candidates. |
+| `zip3` | three digits | Parcels whose postal code begins with the selected ZIP3 heat cluster. |
 | `offset` | integer | Current page offset. |
 
 The frontend mirrors these parameters into the URL, so a reviewer can copy a
@@ -68,10 +69,10 @@ signal.
 
 The authenticated `/acquisition-radar` workspace provides portfolio counts,
 market, buyer-lens, case-status, assignment, follow-up, signal-overlap, and
-verified-availability filters; a paginated, deduplicated priority queue; parcel
-and contributing-opportunity links; team assignment; follow-up dates; outreach
-history; and explicit promotion. Viewers receive the same context without
-mutation controls.
+verified-availability filters; clickable ZIP3 opportunity heat clusters; a
+paginated, deduplicated priority queue; parcel and contributing-opportunity
+links; team assignment; follow-up dates; outreach history; and explicit
+promotion. Viewers receive the same context without mutation controls.
 
 The workflow strip above the queue is the daily operating path:
 

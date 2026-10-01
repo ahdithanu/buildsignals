@@ -252,6 +252,7 @@ export interface AcquisitionRadarParams {
   follow_up?: 'due' | 'scheduled' | 'none';
   signal_overlap?: 'multi' | 'single';
   availability?: 'verified' | 'unverified';
+  zip3?: string;
   limit?: number;
   offset?: number;
 }

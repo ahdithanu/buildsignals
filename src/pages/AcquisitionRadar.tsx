@@ -186,9 +186,11 @@ function RadarRow({
   );
 }
 
-function Zip3OpportunityHeat({ items, semantics }: {
+function Zip3OpportunityHeat({ items, semantics, selectedZip3, onSelectZip3 }: {
   items: Zip3HeatmapItem[];
   semantics?: { nearby_candidate: string; verified_for_sale: string };
+  selectedZip3?: string;
+  onSelectZip3?: (zip3: string) => void;
 }) {
   const topScore = Math.max(...items.map((item) => item.score), 1);
   if (items.length === 0) {
@@ -220,17 +222,27 @@ function Zip3OpportunityHeat({ items, semantics }: {
         {items.slice(0, 6).map((item) => {
           const width = `${Math.max(12, Math.round((item.score / topScore) * 100))}%`;
           return (
-            <article key={item.zip3} className="rounded-md border p-3">
+            <button
+              key={item.zip3}
+              type="button"
+              onClick={() => onSelectZip3?.(item.zip3)}
+              className={cn(
+                'rounded-md border p-3 text-left transition hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                selectedZip3 === item.zip3 && 'border-foreground bg-foreground text-background hover:bg-foreground',
+              )}
+              aria-pressed={selectedZip3 === item.zip3}
+              aria-label={`Filter acquisition radar by ZIP3 ${item.zip3}`}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-lg font-semibold tabular-nums text-foreground">ZIP3 {item.zip3}</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  <p className={cn('text-lg font-semibold tabular-nums text-foreground', selectedZip3 === item.zip3 && 'text-background')}>ZIP3 {item.zip3}</p>
+                  <p className={cn('mt-0.5 text-[11px] text-muted-foreground', selectedZip3 === item.zip3 && 'text-background/70')}>
                     {[item.cities[0], item.states[0]].filter(Boolean).join(', ') || 'Market cluster'}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold tabular-nums">{item.score}</p>
-                  <p className="text-[11px] text-muted-foreground">heat score</p>
+                  <p className={cn('text-[11px] text-muted-foreground', selectedZip3 === item.zip3 && 'text-background/70')}>heat score</p>
                 </div>
               </div>
               <div className="mt-3 h-2 rounded-full bg-secondary">
@@ -242,16 +254,16 @@ function Zip3OpportunityHeat({ items, semantics }: {
                 <div><dt className="text-muted-foreground">For sale</dt><dd className="font-semibold tabular-nums">{item.verified_for_sale_count}</dd></div>
               </dl>
               {item.sample_signals[0] && (
-                <p className="mt-3 line-clamp-2 text-[11px] text-muted-foreground">
-                  Signal: <span className="font-medium text-foreground">{item.sample_signals[0].title}</span>
+                <p className={cn('mt-3 line-clamp-2 text-[11px] text-muted-foreground', selectedZip3 === item.zip3 && 'text-background/70')}>
+                  Signal: <span className={cn('font-medium text-foreground', selectedZip3 === item.zip3 && 'text-background')}>{item.sample_signals[0].title}</span>
                 </p>
               )}
               {item.sample_parcels[0] && (
-                <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
-                  Nearby parcel: <span className="font-medium text-foreground">{item.sample_parcels[0].address || item.sample_parcels[0].external_parcel_id}</span>
+                <p className={cn('mt-1 line-clamp-2 text-[11px] text-muted-foreground', selectedZip3 === item.zip3 && 'text-background/70')}>
+                  Nearby parcel: <span className={cn('font-medium text-foreground', selectedZip3 === item.zip3 && 'text-background')}>{item.sample_parcels[0].address || item.sample_parcels[0].external_parcel_id}</span>
                 </p>
               )}
-            </article>
+            </button>
           );
         })}
       </div>
@@ -384,6 +396,7 @@ export default function AcquisitionRadar() {
   const [followUpFilter, setFollowUpFilter] = useState(searchParams.get('follow_up') || '');
   const [signalOverlap, setSignalOverlap] = useState(searchParams.get('signal_overlap') || '');
   const [availability, setAvailability] = useState(searchParams.get('availability') || '');
+  const [zip3, setZip3] = useState(searchParams.get('zip3') || '');
   const [offset, setOffset] = useState(() => {
     const parsed = Number(searchParams.get('offset') || 0);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
@@ -401,9 +414,10 @@ export default function AcquisitionRadar() {
     follow_up: (followUpFilter || undefined) as 'due' | 'scheduled' | 'none' | undefined,
     signal_overlap: (signalOverlap || undefined) as 'multi' | 'single' | undefined,
     availability: (availability || undefined) as 'verified' | 'unverified' | undefined,
+    zip3: zip3 || undefined,
     limit: PAGE_SIZE,
     offset,
-  }), [assignment, availability, followUpFilter, offset, persona, query, signalOverlap, state, status]);
+  }), [assignment, availability, followUpFilter, offset, persona, query, signalOverlap, state, status, zip3]);
   const { data, isLoading, error, refetch, updateCase, recordActivity, promote } = useAcquisitionRadar(params);
   const { data: zip3Heatmap } = useZip3Heatmap({ state: state.trim().toUpperCase() || undefined, limit: 12 });
   const canManage = role === 'admin' || role === 'editor';
@@ -417,9 +431,10 @@ export default function AcquisitionRadar() {
     if (followUpFilter) next.set('follow_up', followUpFilter);
     if (signalOverlap) next.set('signal_overlap', signalOverlap);
     if (availability) next.set('availability', availability);
+    if (zip3) next.set('zip3', zip3);
     if (offset > 0) next.set('offset', String(offset));
     return next;
-  }, [assignment, availability, followUpFilter, offset, persona, query, signalOverlap, state, status]);
+  }, [assignment, availability, followUpFilter, offset, persona, query, signalOverlap, state, status, zip3]);
   useEffect(() => {
     setSearchParams(viewSearchParams, { replace: true });
   }, [setSearchParams, viewSearchParams]);
@@ -432,7 +447,7 @@ export default function AcquisitionRadar() {
     { label: 'Markets', value: summary?.state_count ?? 0, icon: CircleDollarSign },
   ];
   const resetFilters = () => {
-    setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setFollowUpFilter(''); setSignalOverlap(''); setAvailability(''); setOffset(0);
+    setQuery(''); setState(''); setPersona(''); setStatus(''); setAssignment(''); setFollowUpFilter(''); setSignalOverlap(''); setAvailability(''); setZip3(''); setOffset(0);
   };
   const activeFilters = useMemo(() => {
     const filters: Array<{ key: string; label: string; value: string; onClear: () => void }> = [];
@@ -445,8 +460,9 @@ export default function AcquisitionRadar() {
     if (followUpFilter) filters.push({ key: 'follow_up', label: 'Follow-up', value: followUpFilter === 'due' ? 'due now' : followUpFilter, onClear: clear(setFollowUpFilter) });
     if (signalOverlap) filters.push({ key: 'signal_overlap', label: 'Signals', value: signalOverlap === 'multi' ? 'cross-signal' : 'single-signal', onClear: clear(setSignalOverlap) });
     if (availability) filters.push({ key: 'availability', label: 'Availability', value: availability === 'verified' ? 'verified availability' : 'candidate only', onClear: clear(setAvailability) });
+    if (zip3) filters.push({ key: 'zip3', label: 'ZIP3', value: zip3, onClear: clear(setZip3) });
     return filters;
-  }, [assignment, availability, followUpFilter, persona, query, signalOverlap, state, status]);
+  }, [assignment, availability, followUpFilter, persona, query, signalOverlap, state, status, zip3]);
   const copyViewLink = async () => {
     const queryString = viewSearchParams.toString();
     const url = `${window.location.origin}${location.pathname}${queryString ? `?${queryString}` : ''}`;
@@ -466,6 +482,7 @@ export default function AcquisitionRadar() {
     setFollowUpFilter('');
     setSignalOverlap('');
     setAvailability('');
+    setZip3('');
     setOffset(0);
     if (step === 'evidence') setSignalOverlap('multi');
     if (step === 'review') setStatus('shortlisted');
@@ -521,7 +538,12 @@ export default function AcquisitionRadar() {
           {metrics.map(({ label, value, icon: Icon }) => <div key={label} className="min-w-0 bg-card px-4 py-3"><div className="flex items-center gap-2 text-muted-foreground"><Icon className="h-3.5 w-3.5" /><span className="text-[11px]">{label}</span></div><p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{value}</p></div>)}
         </section>
 
-        <Zip3OpportunityHeat items={zip3Heatmap?.items ?? []} semantics={zip3Heatmap?.for_sale_semantics} />
+        <Zip3OpportunityHeat
+          items={zip3Heatmap?.items ?? []}
+          semantics={zip3Heatmap?.for_sale_semantics}
+          selectedZip3={zip3}
+          onSelectZip3={(nextZip3) => { setZip3(nextZip3 === zip3 ? '' : nextZip3); setOffset(0); }}
+        />
         <AcquisitionWorkflowStrip
           totalParcels={summary?.total_parcels ?? 0}
           crossSignalParcels={summary?.multi_opportunity_parcels ?? 0}
@@ -544,7 +566,7 @@ export default function AcquisitionRadar() {
             <label className="text-xs text-muted-foreground">Signals<select value={signalOverlap} onChange={(event) => { setSignalOverlap(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any signal</option><option value="multi">Cross-signal</option><option value="single">Single-signal</option></select></label>
             <label className="text-xs text-muted-foreground">Availability<select value={availability} onChange={(event) => { setAvailability(event.target.value); setOffset(0); }} className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"><option value="">Any availability</option><option value="verified">Verified availability</option><option value="unverified">Candidate only</option></select></label>
             <Button type="button" variant="outline" size="sm" className="h-9" onClick={copyViewLink}><Copy className="h-4 w-4" />Copy view link</Button>
-            <Button type="button" variant="outline" size="sm" className="h-9" disabled={!query && !state && !persona && !status && !assignment && !followUpFilter && !signalOverlap && !availability} onClick={resetFilters}><X className="h-4 w-4" />Clear</Button>
+            <Button type="button" variant="outline" size="sm" className="h-9" disabled={!query && !state && !persona && !status && !assignment && !followUpFilter && !signalOverlap && !availability && !zip3} onClick={resetFilters}><X className="h-4 w-4" />Clear</Button>
           </div>
           {activeFilters.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2" aria-label="Active acquisition radar filters">

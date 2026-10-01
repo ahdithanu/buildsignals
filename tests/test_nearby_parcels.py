@@ -827,6 +827,12 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
     single = client.get("/acquisition-radar?signal_overlap=single")
     assert single.status_code == 200
     assert single.json()["items"] == []
+    zip3_match = client.get("/acquisition-radar?zip3=787")
+    assert zip3_match.status_code == 200
+    assert zip3_match.json()["total"] == 1
+    zip3_miss = client.get("/acquisition-radar?zip3=432")
+    assert zip3_miss.status_code == 200
+    assert zip3_miss.json()["items"] == []
 
 
 def test_acquisition_radar_rejects_invalid_shared_filter_values(client):
@@ -834,6 +840,8 @@ def test_acquisition_radar_rejects_invalid_shared_filter_values(client):
         "/acquisition-radar?follow_up=tomorrow",
         "/acquisition-radar?signal_overlap=cross",
         "/acquisition-radar?availability=maybe",
+        "/acquisition-radar?zip3=78",
+        "/acquisition-radar?zip3=78A",
     ]
 
     for url in invalid_urls:

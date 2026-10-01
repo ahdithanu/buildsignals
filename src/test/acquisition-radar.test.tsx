@@ -144,6 +144,11 @@ describe('<AcquisitionRadar>', () => {
     expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('Candidate parcels are not verified listings');
     expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('Starbucks Coffee build-out');
     expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('210 Congress Ave');
+    fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by ZIP3 787' }));
+    expect(screen.getByLabelText('Active acquisition radar filters')).toHaveTextContent('ZIP3:');
+    expect(screen.getByLabelText('Active acquisition radar filters')).toHaveTextContent('787');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear ZIP3 filter' }));
+    expect(screen.queryByRole('button', { name: 'Clear ZIP3 filter' })).not.toBeInTheDocument();
     const workflow = screen.getByLabelText('Daily acquisition workflow');
     expect(workflow).toHaveTextContent('Alert');
     expect(workflow).toHaveTextContent('Evidence');
@@ -201,7 +206,7 @@ describe('<AcquisitionRadar>', () => {
 
   it('hydrates acquisition radar filters from the URL', async () => {
     render(
-      <MemoryRouter initialEntries={['/acquisition-radar?availability=verified&signal_overlap=multi&follow_up=due&review_status=contacted']}>
+      <MemoryRouter initialEntries={['/acquisition-radar?availability=verified&signal_overlap=multi&follow_up=due&review_status=contacted&zip3=787']}>
         <AcquisitionRadar />
       </MemoryRouter>,
     );
@@ -215,6 +220,8 @@ describe('<AcquisitionRadar>', () => {
     expect(activeFilters).toHaveTextContent('verified availability');
     expect(activeFilters).toHaveTextContent('Signals:');
     expect(activeFilters).toHaveTextContent('cross-signal');
+    expect(activeFilters).toHaveTextContent('ZIP3:');
+    expect(activeFilters).toHaveTextContent('787');
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy view link' }));
 
@@ -229,6 +236,9 @@ describe('<AcquisitionRadar>', () => {
     );
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining('follow_up=due'),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('zip3=787'),
     );
 
     vi.mocked(navigator.clipboard.writeText).mockClear();
