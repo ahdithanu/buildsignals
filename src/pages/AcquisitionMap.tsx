@@ -134,6 +134,10 @@ export default function AcquisitionMap() {
     .filter((item) => assemblage.has(item.parcel.id))
     .reduce((sum, item) => sum + (acres(item) ?? 0), 0);
   const canExport = (role === 'admin' || role === 'editor') && !!selectedSignal?.searchId;
+  const acquisitionWorkspaceParams = new URLSearchParams();
+  if (selectedState) acquisitionWorkspaceParams.set('state', selectedState);
+  if (selectedZip3) acquisitionWorkspaceParams.set('zip3', selectedZip3);
+  const acquisitionWorkspaceHref = `/acquisition-radar${acquisitionWorkspaceParams.toString() ? `?${acquisitionWorkspaceParams.toString()}` : ''}`;
 
   function toggleFilter(filter: string) {
     setActiveFilters((current) => {
@@ -459,7 +463,7 @@ export default function AcquisitionMap() {
               )}
 
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-2">
-                <Link to="/acquisition-radar" className="inline-flex h-8 items-center gap-1.5 bg-foreground px-3 text-[10px] font-semibold text-background">
+                <Link to={acquisitionWorkspaceHref} className="inline-flex h-8 items-center gap-1.5 bg-foreground px-3 text-[10px] font-semibold text-background">
                   <Users className="h-3.5 w-3.5" /> Open acquisition workspace ({assemblage.size} selected{selectedAcreage ? ` · ${selectedAcreage.toFixed(1)} ac` : ''})
                 </Link>
                 <button

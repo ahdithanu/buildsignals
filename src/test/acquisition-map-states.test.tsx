@@ -227,6 +227,10 @@ describe('<AcquisitionMap> states', () => {
     expect(screen.getByText('ZIP3 opportunity heat')).toBeInTheDocument();
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open acquisition workspace/ })).toHaveAttribute(
+      'href',
+      '/acquisition-radar?state=TX&zip3=787',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Copy map view' }));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://app.buildsignals.ai/map?state=TX&zip3=787');
     fireEvent.click(screen.getByRole('button', { name: 'Set signal geography state' }));

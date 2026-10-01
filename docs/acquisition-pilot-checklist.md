@@ -108,12 +108,14 @@ The Acquisition Map also hydrates `state` and `zip3` from URL parameters and
 keeps them synchronized as the user filters the map, making market-cluster map
 views shareable alongside Radar queue links. The map now includes a `Copy map
 view` action that preserves the selected state and ZIP3 filters for reviewer or
-prospect handoff.
+prospect handoff. The map's acquisition-workspace link now carries selected
+`state` and `zip3` filters into Acquisition Radar so a ZIP3 heat view opens the
+same filtered parcel queue.
 
 Focused Map/Radar link verification: `src/test/acquisition-radar.test.tsx` and
 `src/test/acquisition-map-states.test.tsx` pass 7 tests, including copied Radar
-and map URLs plus malformed ZIP3 shared-link rejection before Radar API calls.
-TypeScript check passes.
+and map URLs, map-to-Radar filter handoff, plus malformed ZIP3 shared-link
+rejection before Radar API calls. TypeScript check passes.
 
 Latest focused verification: backend parcel/radar/availability/ZIP3 regression
 suite passes 30 tests; frontend Radar, Radar isolation, map-state, and
