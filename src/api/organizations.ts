@@ -310,6 +310,13 @@ export const organizationsApi = {
     );
   },
 
+  attemptWebhookDelivery(orgId: string, deliveryId: string): Promise<WebhookDeliveryResponse> {
+    return apiClient.post<WebhookDeliveryResponse>(
+      `/organizations/${orgId}/webhook-deliveries/${deliveryId}/attempt`,
+      {},
+    );
+  },
+
   acknowledgeWebhookDeadLetter(
     orgId: string,
     deliveryId: string,
