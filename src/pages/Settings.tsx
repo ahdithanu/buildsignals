@@ -94,6 +94,7 @@ export default function Settings() {
   const [webhookDeliveryStatusFilter, setWebhookDeliveryStatusFilter] = useState<WebhookDeliveryStatus | "all">("all");
   const [webhookDeliveryEventTypeFilter, setWebhookDeliveryEventTypeFilter] = useState<WebhookEventType | "all">("all");
   const [webhookDeliveryEventIdFilter, setWebhookDeliveryEventIdFilter] = useState("");
+  const [expandedWebhookDeliveryId, setExpandedWebhookDeliveryId] = useState<string | null>(null);
 
   const apiKeys = useQuery({
     queryKey: ["organization-api-keys", orgId],
@@ -543,6 +544,7 @@ export default function Settings() {
                                 setWebhookDeliveryStatusFilter("all");
                                 setWebhookDeliveryEventTypeFilter("all");
                                 setWebhookDeliveryEventIdFilter("");
+                                setExpandedWebhookDeliveryId(null);
                               }}
                               className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                             >
@@ -685,6 +687,40 @@ export default function Settings() {
                           </p>
                           {delivery.error_message && (
                             <p className="mt-2 text-xs text-destructive">{delivery.error_message}</p>
+                          )}
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedWebhookDeliveryId((current) => (
+                                current === delivery.id ? null : delivery.id
+                              ))}
+                              className="inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+                            >
+                              {expandedWebhookDeliveryId === delivery.id ? "Hide debug details" : "Show debug details"}
+                            </button>
+                          </div>
+                          {expandedWebhookDeliveryId === delivery.id && (
+                            <div className="mt-3 grid gap-3 rounded-lg border bg-secondary/40 p-3 text-xs">
+                              <div className="grid gap-1">
+                                <p className="font-medium text-foreground">Delivery metadata</p>
+                                <p className="break-all text-muted-foreground">Delivery ID: {delivery.id}</p>
+                                <p className="text-muted-foreground">Next retry: {formatDate(delivery.next_attempt_at)}</p>
+                              </div>
+                              <div className="grid gap-1">
+                                <p className="font-medium text-foreground">Payload</p>
+                                <pre className="max-h-48 overflow-auto rounded-md bg-background p-2 text-[11px] leading-relaxed text-muted-foreground">
+                                  {JSON.stringify(delivery.payload, null, 2)}
+                                </pre>
+                              </div>
+                              {delivery.response_body_excerpt && (
+                                <div className="grid gap-1">
+                                  <p className="font-medium text-foreground">Response excerpt</p>
+                                  <pre className="max-h-32 overflow-auto rounded-md bg-background p-2 text-[11px] leading-relaxed text-muted-foreground">
+                                    {delivery.response_body_excerpt}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
                           )}
                           {delivery.status === "pending" && (
                             <div className="mt-3">
