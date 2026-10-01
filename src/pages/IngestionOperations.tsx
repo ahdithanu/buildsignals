@@ -62,6 +62,20 @@ function formatStageLabel(stage: string | undefined) {
   return stage.replace(/_/g, ' ');
 }
 
+function formatReadiness(value?: string) {
+  if (!value) return 'unclassified';
+  return value.replace(/_/g, ' ');
+}
+
+function sourceMixLabel(counts?: Record<string, number>) {
+  const entries = Object.entries(counts ?? {}).filter(([, count]) => count > 0);
+  if (entries.length === 0) return 'no typed live sources';
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([type, count]) => `${type} ${count}`)
+    .join(' · ');
+}
+
 function HealthRow({
   source,
   canManage,
@@ -836,7 +850,7 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">State leaders</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    States with the most configured and candidate sources
+                    States with the strongest readiness mix
                   </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -849,9 +863,9 @@ export default function IngestionOperations() {
                     key={bucket.state}
                     to={`/source-health?state=${bucket.state}`}
                     className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                    title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
+                    title={`${formatReadiness(bucket.readiness_level)} · ${sourceMixLabel(bucket.live_record_type_counts)} · ${(bucket.priority_reasons ?? []).join(' · ')}`}
                   >
-                    {bucket.state} · {bucket.live_sources + bucket.candidate_sources}
+                    {bucket.state} · {formatReadiness(bucket.readiness_level)}
                   </Link>
                 ))}
               </div>
@@ -879,7 +893,7 @@ export default function IngestionOperations() {
                     className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
                     title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
                   >
-                    {bucket.state} · {bucket.candidate_sources}
+                    {bucket.state} · {bucket.next_action_label ?? 'Resolve candidate blocker'}
                   </Link>
                 ))}
               </div>
