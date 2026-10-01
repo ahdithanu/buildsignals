@@ -123,10 +123,11 @@ def test_connector_config_resolves_rolling_utc_date_placeholders():
 
 
 def test_coverage_builds_a_50_state_clustered_rollout_queue():
-    coverage = summarize_coverage()
+    coverage = summarize_coverage(limit=50)
 
     assert len(coverage.rollout_queue) == 50
     by_state = {item.state: item for item in coverage.rollout_queue}
+    state_buckets = {item.state: item for item in coverage.state_buckets}
     assert by_state["TX"].rollout_cluster == 1
     assert by_state["WA"].rollout_cluster == 1
     assert by_state["CA"].rollout_cluster == 2
@@ -140,6 +141,10 @@ def test_coverage_builds_a_50_state_clustered_rollout_queue():
         "add_secondary_jurisdiction",
     }
     assert by_state["AK"].next_action == "add_pre_approval_source"
+    assert state_buckets["TX"].readiness_level in {"investor_ready", "early_warning_ready"}
+    assert state_buckets["TX"].live_record_type_counts
+    assert state_buckets["AK"].readiness_level == "live_foundation"
+    assert state_buckets["AK"].live_record_type_counts["parcel"] == 1
 
 
 def _source(db, *, key: str = "canary_source", name: str = "Canary source"):
@@ -1163,6 +1168,10 @@ def test_ingestion_coverage_prioritizes_activation_queue_by_readiness(monkeypatc
     assert [bucket.state for bucket in summary.activation_queue] == ["FL", "TX"]
     assert summary.activation_queue[0].priority_score > summary.activation_queue[1].priority_score
     assert summary.activation_queue[0].priority_reasons
+    assert summary.activation_queue[0].readiness_level == "candidate_only"
+    assert summary.activation_queue[0].next_action == "resolve_candidate_blocker"
+    assert summary.activation_queue[0].candidate_record_type_counts == {"permit": 2}
+    assert summary.activation_queue[0].candidate_status_counts == {"queued": 2}
 
 
 def test_ingestion_candidate_promotion_requires_reviewed_catalog_manifest(client, monkeypatch):
