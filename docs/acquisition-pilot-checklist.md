@@ -485,6 +485,10 @@ application, production diagnostics, and release coverage measurement.
 - [x] Empty-map workspace diagnostics: authenticated tenant-scoped active permit,
   coordinate-bearing permit, active parcel, coordinate-bearing parcel, and saved
   search counts. Invalid geographic ranges excluded. Failed requests are not zeros.
+  The readiness response now also exposes derived prerequisites for geocoded
+  filings, mapped parcels, saved searches, and ranked-map readiness, and the map
+  panel labels each prerequisite as ready or missing without treating empty counts
+  as market coverage or parcel availability.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

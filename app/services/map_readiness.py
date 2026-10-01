@@ -20,4 +20,12 @@ def map_readiness(db: Session) -> dict:
     counts["saved_searches"] = active_query(
         db.query(func.count(NearbyParcelSearch.id)), NearbyParcelSearch,
     ).scalar() or 0
+    counts["has_geocoded_signals"] = counts["geocoded_permits"] > 0
+    counts["has_geocoded_parcels"] = counts["geocoded_parcels"] > 0
+    counts["has_saved_searches"] = counts["saved_searches"] > 0
+    counts["ready_for_ranked_map"] = (
+        counts["has_geocoded_signals"]
+        and counts["has_geocoded_parcels"]
+        and counts["has_saved_searches"]
+    )
     return counts

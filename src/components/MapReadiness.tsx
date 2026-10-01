@@ -9,6 +9,10 @@ interface Readiness {
   parcels: number;
   geocoded_parcels: number;
   saved_searches: number;
+  has_geocoded_signals?: boolean;
+  has_geocoded_parcels?: boolean;
+  has_saved_searches?: boolean;
+  ready_for_ranked_map?: boolean;
 }
 
 export function MapReadiness() {
@@ -26,9 +30,21 @@ export function MapReadiness() {
     : !data.geocoded_parcels ? 'Parcel records are missing usable coordinates.'
     : !data.saved_searches ? 'No nearby-parcel searches have been saved.'
     : 'Saved searches have not produced visible ranked parcels. Review their radius, filters, and source coverage.';
+  const readiness = [
+    ['Geocoded filings', data.has_geocoded_signals ?? data.geocoded_permits > 0],
+    ['Mapped parcels', data.has_geocoded_parcels ?? data.geocoded_parcels > 0],
+    ['Saved searches', data.has_saved_searches ?? data.saved_searches > 0],
+  ] as const;
   return <section className="mx-auto max-w-4xl border-t p-6" aria-label="Map readiness">
     <h2 className="text-lg font-semibold">Workspace inventory</h2>
     <p className="my-3">{message}</p>
+    <div className="mb-4 flex flex-wrap gap-2" aria-label="Map readiness prerequisites">
+      {readiness.map(([label, ready]) => (
+        <span key={label} className="rounded-md border bg-secondary/40 px-2 py-1 text-xs text-muted-foreground">
+          {label}: {ready ? 'ready' : 'missing'}
+        </span>
+      ))}
+    </div>
     <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
       {Object.entries({ 'Active permits': data.permits, 'Permits with coordinates': data.geocoded_permits,
         'Active parcels': data.parcels, 'Parcels with coordinates': data.geocoded_parcels,
