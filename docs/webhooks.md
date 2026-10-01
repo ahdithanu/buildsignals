@@ -81,6 +81,17 @@ Admins can replay a failed or pending delivery after the customer fixes their re
 current response/error fields and makes the row immediately eligible for the worker while preserving the original
 payload and attempt count. Delivered webhooks cannot be replayed.
 
+## Test Events
+
+Admins can queue a synthetic test payload from the Settings console or by calling
+`POST /v1/organizations/{org_id}/webhook-test-events`. The request accepts an event type, event id, and arbitrary
+payload. Build Signals creates one pending delivery for each active subscription that includes the requested event
+type, then records an audit event with the queued delivery count.
+
+Use test events immediately after creating a customer endpoint to validate routing, signing headers, receiver
+availability, and downstream observability before relying on production events. A zero-delivery response means no
+active endpoint currently subscribes to that event type.
+
 ## Dead Letters
 
 Failed deliveries are the webhook dead-letter queue. Admins can list them with

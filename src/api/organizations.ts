@@ -124,6 +124,12 @@ export interface WebhookSubscriptionUpdateRequest {
   secret_reference?: string | null;
 }
 
+export interface WebhookTestEventRequest {
+  event_type: WebhookEventType;
+  event_id: string;
+  payload: Record<string, unknown>;
+}
+
 export interface WebhookDeliverySummaryResponse {
   organization_id: string;
   total: number;
@@ -255,6 +261,16 @@ export const organizationsApi = {
   ): Promise<WebhookSubscriptionResponse> {
     return apiClient.patch<WebhookSubscriptionResponse>(
       `/organizations/${orgId}/webhook-subscriptions/${subscriptionId}`,
+      payload,
+    );
+  },
+
+  createWebhookTestEvent(
+    orgId: string,
+    payload: WebhookTestEventRequest,
+  ): Promise<WebhookDeliveryResponse[]> {
+    return apiClient.post<WebhookDeliveryResponse[]>(
+      `/organizations/${orgId}/webhook-test-events`,
       payload,
     );
   },

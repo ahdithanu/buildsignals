@@ -7,7 +7,7 @@ import { WEBHOOK_EVENT_TYPES, organizationsApi, type ApiKeyCreateResponse, type 
 import { ErrorState, LoadingState } from "@/components/DataStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { BarChart3, Bell, CheckCircle2, Copy, Database, FileText, KeyRound, Plug, RefreshCw, Scale, Settings as SettingsIcon, Trash2, TriangleAlert, Users } from "lucide-react";
+import { BarChart3, Bell, CheckCircle2, Copy, Database, FileText, KeyRound, Plug, RefreshCw, Scale, Send, Settings as SettingsIcon, Trash2, TriangleAlert, Users } from "lucide-react";
 
 const fadeIn = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
 const API_KEY_SCOPES: ApiKeyScope[] = ["read", "write", "admin"];
@@ -89,6 +89,7 @@ export default function Settings() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecretReference, setWebhookSecretReference] = useState("");
   const [webhookEventTypes, setWebhookEventTypes] = useState<WebhookEventType[]>(["deal.created"]);
+  const [webhookTestEventType, setWebhookTestEventType] = useState<WebhookEventType>("deal.created");
 
   const apiKeys = useQuery({
     queryKey: ["organization-api-keys", orgId],
@@ -263,6 +264,32 @@ export default function Settings() {
     },
   });
 
+  const createWebhookTestEvent = useMutation({
+    mutationFn: () => organizationsApi.createWebhookTestEvent(orgId, {
+      event_type: webhookTestEventType,
+      event_id: `admin-test-${Date.now()}`,
+      payload: {
+        test: true,
+        source: "settings_console",
+        message: "Build Signals webhook test event",
+      },
+    }),
+    onSuccess: (deliveries) => {
+      invalidateWebhooks();
+      toast({
+        title: "Webhook test event queued",
+        description: `${deliveries.length.toLocaleString()} matching active endpoint${deliveries.length === 1 ? "" : "s"} will receive ${webhookTestEventType}.`,
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: "Could not queue webhook test",
+        description: err instanceof ApiError ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const toggleScope = (scope: ApiKeyScope) => {
     setNewKeyScopes((current) => {
       if (current.includes(scope)) {
@@ -397,6 +424,38 @@ export default function Settings() {
                   </button>
                 </div>
               </form>
+
+              <div className="mt-5 rounded-lg border bg-background p-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <label htmlFor="webhook-test-event" className="text-xs font-medium text-muted-foreground">
+                      Test event type
+                    </label>
+                    <select
+                      id="webhook-test-event"
+                      value={webhookTestEventType}
+                      onChange={(event) => setWebhookTestEventType(event.target.value as WebhookEventType)}
+                      className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm md:w-72"
+                    >
+                      {WEBHOOK_EVENT_TYPES.map((eventType) => (
+                        <option key={eventType} value={eventType}>{eventType}</option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Queues a signed test payload for every active endpoint subscribed to this event.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={createWebhookTestEvent.isPending || !webhookSubscriptions.data?.some((subscription) => subscription.status === "active")}
+                    onClick={() => createWebhookTestEvent.mutate()}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    {createWebhookTestEvent.isPending ? "Queuing..." : "Send test event"}
+                  </button>
+                </div>
+              </div>
 
               <div className="mt-5">
                 {webhookSubscriptions.isLoading && <p className="text-xs text-muted-foreground">Loading webhook endpoints...</p>}
