@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { motion } from "framer-motion";
 import { ApiError } from "@/api/client";
-import { organizationsApi, type ApiKeyCreateResponse, type ApiKeyScope } from "@/api/organizations";
+import { WEBHOOK_EVENT_TYPES, organizationsApi, type ApiKeyCreateResponse, type ApiKeyScope, type WebhookEventType } from "@/api/organizations";
 import { ErrorState, LoadingState } from "@/components/DataStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +85,10 @@ export default function Settings() {
   const [newKeyExpiresAt, setNewKeyExpiresAt] = useState(defaultExpirationDate);
   const [createdKey, setCreatedKey] = useState<ApiKeyCreateResponse | null>(null);
   const [selectedUsageKeyId, setSelectedUsageKeyId] = useState<string | null>(null);
+  const [webhookName, setWebhookName] = useState("Customer integration");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSecretReference, setWebhookSecretReference] = useState("");
+  const [webhookEventTypes, setWebhookEventTypes] = useState<WebhookEventType[]>(["deal.created"]);
 
   const apiKeys = useQuery({
     queryKey: ["organization-api-keys", orgId],
@@ -110,12 +114,19 @@ export default function Settings() {
     enabled: Boolean(orgId && isAdmin),
   });
 
+  const webhookSubscriptions = useQuery({
+    queryKey: ["organization-webhook-subscriptions", orgId],
+    queryFn: () => organizationsApi.listWebhookSubscriptions(orgId),
+    enabled: Boolean(orgId && isAdmin),
+  });
+
   const invalidateKeys = () =>
     queryClient.invalidateQueries({ queryKey: ["organization-api-keys", orgId] });
 
   const invalidateWebhooks = () => {
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-summary", orgId] });
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-dead-letters", orgId] });
+    queryClient.invalidateQueries({ queryKey: ["organization-webhook-subscriptions", orgId] });
   };
 
   const createKey = useMutation({
@@ -212,6 +223,46 @@ export default function Settings() {
     },
   });
 
+  const createWebhookSubscription = useMutation({
+    mutationFn: () => organizationsApi.createWebhookSubscription(orgId, {
+      name: webhookName.trim(),
+      target_url: webhookUrl.trim(),
+      event_types: webhookEventTypes,
+      secret_reference: webhookSecretReference.trim() || null,
+    }),
+    onSuccess: () => {
+      setWebhookName("Customer integration");
+      setWebhookUrl("");
+      setWebhookSecretReference("");
+      setWebhookEventTypes(["deal.created"]);
+      invalidateWebhooks();
+      toast({ title: "Webhook endpoint created" });
+    },
+    onError: (err) => {
+      toast({
+        title: "Could not create webhook endpoint",
+        description: err instanceof ApiError ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleWebhookStatus = useMutation({
+    mutationFn: ({ subscriptionId, status }: { subscriptionId: string; status: "active" | "disabled" }) =>
+      organizationsApi.updateWebhookSubscription(orgId, subscriptionId, { status }),
+    onSuccess: () => {
+      invalidateWebhooks();
+      toast({ title: "Webhook endpoint updated" });
+    },
+    onError: (err) => {
+      toast({
+        title: "Could not update webhook endpoint",
+        description: err instanceof ApiError ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const toggleScope = (scope: ApiKeyScope) => {
     setNewKeyScopes((current) => {
       if (current.includes(scope)) {
@@ -219,6 +270,16 @@ export default function Settings() {
         return next.length ? next : current;
       }
       return [...current, scope].sort() as ApiKeyScope[];
+    });
+  };
+
+  const toggleWebhookEventType = (eventType: WebhookEventType) => {
+    setWebhookEventTypes((current) => {
+      if (current.includes(eventType)) {
+        const next = current.filter((item) => item !== eventType);
+        return next.length ? next : current;
+      }
+      return [...current, eventType].sort() as WebhookEventType[];
     });
   };
 
@@ -238,6 +299,160 @@ export default function Settings() {
 
         {isAdmin && (
           <motion.div {...fadeIn} className="mb-6 rounded-xl border bg-card p-5 card-shadow">
+            <div className="mb-6 rounded-xl border bg-secondary/30 p-4">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Plug className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-semibold text-foreground">Webhook endpoints</h3>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Configure signed customer integration endpoints for deal, signal, assessment, and eval events.
+                  </p>
+                </div>
+                <span className="rounded-full bg-background px-3 py-1 text-xs text-muted-foreground">
+                  HMAC signed
+                </span>
+              </div>
+
+              <form
+                className="mt-4 grid gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (webhookName.trim() && webhookUrl.trim()) createWebhookSubscription.mutate();
+                }}
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="webhook-name" className="text-xs font-medium text-muted-foreground">
+                      Endpoint name
+                    </label>
+                    <input
+                      id="webhook-name"
+                      value={webhookName}
+                      onChange={(event) => setWebhookName(event.target.value)}
+                      className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                      minLength={3}
+                      maxLength={120}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="webhook-url" className="text-xs font-medium text-muted-foreground">
+                      Target URL
+                    </label>
+                    <input
+                      id="webhook-url"
+                      type="url"
+                      value={webhookUrl}
+                      onChange={(event) => setWebhookUrl(event.target.value)}
+                      placeholder="https://customer.example.com/webhooks/build-signals"
+                      className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="webhook-secret-reference" className="text-xs font-medium text-muted-foreground">
+                    Secret reference
+                  </label>
+                  <input
+                    id="webhook-secret-reference"
+                    value={webhookSecretReference}
+                    onChange={(event) => setWebhookSecretReference(event.target.value)}
+                    placeholder="vercel:BUILD_SIGNALS_WEBHOOK_SECRET"
+                    className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                    maxLength={255}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Store the signing secret outside the UI and reference it here; do not paste raw secret values.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Events</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {WEBHOOK_EVENT_TYPES.map((eventType) => (
+                      <button
+                        key={eventType}
+                        type="button"
+                        onClick={() => toggleWebhookEventType(eventType)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                          webhookEventTypes.includes(eventType)
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-background text-muted-foreground"
+                        }`}
+                      >
+                        {eventType}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <button
+                    type="submit"
+                    disabled={createWebhookSubscription.isPending || !webhookName.trim() || !webhookUrl.trim()}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                  >
+                    {createWebhookSubscription.isPending ? "Creating..." : "Create webhook endpoint"}
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-5">
+                {webhookSubscriptions.isLoading && <p className="text-xs text-muted-foreground">Loading webhook endpoints...</p>}
+                {webhookSubscriptions.error && <p className="text-xs text-destructive">Could not load webhook endpoints.</p>}
+                {webhookSubscriptions.data && (
+                  <div className="space-y-2">
+                    {webhookSubscriptions.data.length === 0 && (
+                      <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                        No webhook endpoints yet. Add one to stream Build Signals events into a customer workflow.
+                      </p>
+                    )}
+                    {webhookSubscriptions.data.map((subscription) => (
+                      <div key={subscription.id} className="rounded-lg border bg-background p-3">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-medium text-foreground">{subscription.name}</p>
+                              <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                subscription.status === "active"
+                                  ? "bg-emerald-500/10 text-emerald-700"
+                                  : "bg-muted text-muted-foreground"
+                              }`}>
+                                {subscription.status}
+                              </span>
+                            </div>
+                            <p className="mt-1 break-all text-xs text-muted-foreground">{subscription.target_url}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Events: {subscription.event_types.join(", ")} · Updated {formatDate(subscription.updated_at)}
+                            </p>
+                            {subscription.secret_reference && (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Secret reference: {subscription.secret_reference}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={toggleWebhookStatus.isPending}
+                            onClick={() => {
+                              const nextStatus = subscription.status === "active" ? "disabled" : "active";
+                              if (window.confirm(`${nextStatus === "disabled" ? "Disable" : "Enable"} ${subscription.name}?`)) {
+                                toggleWebhookStatus.mutate({ subscriptionId: subscription.id, status: nextStatus });
+                              }
+                            }}
+                            className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          >
+                            {subscription.status === "active" ? "Disable" : "Enable"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="mb-6 rounded-xl border bg-secondary/30 p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
