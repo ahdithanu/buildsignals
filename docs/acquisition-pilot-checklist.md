@@ -427,9 +427,9 @@ historical download, history survives reload, and a second export refreshes the
 open list. Both screenshots were inspected and horizontal overflow checks pass.
 Application TypeScript, focused lint, and production build pass; the existing
 large-bundle warning remains. No production migration or release was performed.
-Parcel-source qualification and source-backed rent-roll, lease, and capex inputs
-remain separate open gates. History is a downloadable snapshot archive, not an
-in-browser underwriting comparison or independently verified acquisition example.
+Parcel-source qualification and independently verified real-property diligence
+remain separate open gates. History is now a persisted downloadable snapshot
+archive, not a guarantee that unverified deal inputs are acquisition facts.
 
 ### Integrated regression and release-preflight repair (2026-09-21)
 
@@ -458,9 +458,9 @@ the production frontend build passes with the existing large-bundle warning.
 Focused lint and whitespace checks pass. These receipts do not validate live
 inventory, county source-use rights, production restoration, or deployment.
 
-Next substantive gates remain qualified parcel evidence and the real acquisition
-workflow, persisted screening history, and source-backed diligence inputs.
-Production diagnostics and any release still require their separate live gates.
+Next substantive gates remain qualified parcel evidence, real-record acquisition
+workflow verification, independent diligence verification / reviewed fact
+application, production diagnostics, and release coverage measurement.
 
 - [x] Scope acquisition-radar browser cache by organization and user; defer reads
   until authentication is available. Regression tests verify organization changes,
@@ -500,12 +500,12 @@ Production diagnostics and any release still require their separate live gates.
   independently verified evidence. Persisted structured criteria now have an API
   foundation, creation and selection UI, and persisted downloadable screening
   history verified on mobile and desktop.
-- [ ] Add source-backed rent-roll/lease/capex diligence inputs. Current field
-  references identify recorded deal inputs, not independently verified documents.
-  Attributed excerpt intake, evidence-bound analyst reviews, and retained export
-  snapshots are implemented and browser-tested. Remaining: authorized real
-  property inputs, verification, and reviewed structured fact application; an
-  analyst's supports/contradicts assessment alone is not a numeric screening fact.
+- [x] Add bounded source-attributed rent-roll/lease/CAM/capex diligence intake.
+  Attributed excerpt intake, evidence-bound analyst reviews, structured numeric
+  observations, retained export snapshots/history, and browser workflows are
+  implemented and tested. Remaining independent gates: authorized real-property
+  inputs, verification, and reviewed structured fact application; an analyst's
+  supports/contradicts assessment alone is not a numeric screening fact.
 - [ ] Verify source evidence, project timeline, nearby parcels, saved opportunity,
   and export on mobile and desktop with real qualified records.
 - [ ] Release and measure live inventory, freshness, and source-specific coverage.
@@ -584,8 +584,9 @@ See https://operations.osmfoundation.org/policies/tiles/ and
 https://leafletjs.com/reference.html for the basemap policy and library reference.
 
 Remaining pilot gaps: production counts and auth verification, qualified nearby
-parcel inventory, reliable geocoding, reviewed brand relevance, and broader
-cross-page signal-to-parcel navigation. The acquisition map now
+parcel inventory, reliable real-record geocoding, reviewed brand relevance,
+independently verified diligence facts, and broader cross-page
+signal-to-parcel navigation. The acquisition map now
 shares backend state filtering with ZIP3 heat and can filter for source-backed
 verified availability. Signal geography and ranked parcel geography now share
 one page-level state filter, and selecting a permit source record narrows the
@@ -715,9 +716,9 @@ unauthenticated, cross-tenant, and deleted-deal access is rejected. A committed
 audit entry records the actor, method, profile, counts, timestamp, and SHA-256 of
 the exact response bytes before delivery.
 
-This is an export-time snapshot, not persisted screening history or a guarantee
-that facts did not change after the on-screen query. Source-backed underwriting
-and custom criteria remain pending. Verification: 13 focused backend tests,
+This is an export-time snapshot, not a guarantee that facts did not change after
+the on-screen query. Independent source-backed underwriting fact verification
+and reviewed fact application remain pending. Verification: 13 focused backend tests,
 three UI tests, and two real-API Playwright workflows at 1440px and 390px pass;
 the browser workflows inspect downloaded content and verify unknowns and market
 selection are retained. TypeScript and focused lint pass. No production release
