@@ -243,6 +243,53 @@ def test_admin_can_filter_webhook_deliveries_for_endpoint_triage(client, db):
     assert invalid.status_code == 422
 
 
+def test_admin_can_attempt_pending_webhook_delivery_from_api(client, db, monkeypatch):
+    identity = _register(client, email="webhook-attempt-route@example.com", org_name="Webhook Attempt Route")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+    subscription = WebhookSubscription(
+        organization_id=org_id,
+        name="Attempt endpoint",
+        target_url="https://attempt.example.test/build-signals",
+        event_types=["deal.created"],
+    )
+    db.add(subscription)
+    db.flush()
+    delivery = WebhookDelivery(
+        organization_id=org_id,
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="attempt-now",
+        payload={},
+        status="pending",
+    )
+    db.add(delivery)
+    db.commit()
+
+    def fake_attempt(session, *, delivery_id: str):
+        row = session.get(WebhookDelivery, delivery_id)
+        row.status = "delivered"
+        row.attempt_count += 1
+        row.response_status_code = 204
+        session.flush()
+        session.refresh(row)
+        return row
+
+    monkeypatch.setattr("app.routes.organizations.attempt_webhook_delivery", fake_attempt)
+
+    response = client.post(
+        f"/organizations/{org_id}/webhook-deliveries/{delivery.id}/attempt",
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "delivered"
+    assert body["attempt_count"] == 1
+    assert body["response_status_code"] == 204
+    assert db.query(AuditLog).filter_by(entity_type="webhook_delivery", action="attempt").count() == 1
+
+
 def test_admin_can_view_webhook_delivery_summary(client, db):
     identity = _register(client, email="webhook-summary@example.com", org_name="Webhook Summary")
     headers = _headers(identity)

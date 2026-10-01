@@ -60,8 +60,8 @@ bounded retries, and records success or failure without blocking the originating
 `GET /v1/organizations/{org_id}/webhook-delivery-summary` provides an admin health rollup with total, pending,
 delivered, failed, and dead-lettered deliveries, active/disabled subscription counts, failure rate, latest timestamps,
 and the most recent error message. Use it as the dashboard source before drilling into individual delivery rows.
-The Settings console can also filter recent deliveries by subscription so operators can verify a specific customer
-endpoint after sending a test event or troubleshooting a failure.
+The Settings console can also filter recent deliveries by subscription, status, event type, and event id so
+operators can verify a specific customer endpoint after sending a test event or troubleshooting a failure.
 
 ## Delivery Attempts
 
@@ -77,9 +77,11 @@ The signature is `v1=` plus an HMAC-SHA256 digest over `{timestamp}.{canonical_b
 resolved from deployment environment variables when they use `env:NAME` or `vercel:NAME`; raw signing secrets are
 not stored in the subscription row.
 
-2xx responses mark a delivery as `delivered`. Non-2xx responses and network errors leave the row `pending` with a
-bounded response excerpt, error message, incremented attempt count, and an exponential retry timestamp. Disabled
-subscriptions fail pending deliveries instead of posting to stale customer endpoints.
+Admins can trigger an immediate attempt for a pending delivery from the Settings drilldown or by calling
+`POST /v1/organizations/{org_id}/webhook-deliveries/{delivery_id}/attempt`. 2xx responses mark a delivery as
+`delivered`. Non-2xx responses and network errors leave the row `pending` with a bounded response excerpt, error
+message, incremented attempt count, and an exponential retry timestamp. Disabled subscriptions fail pending
+deliveries instead of posting to stale customer endpoints.
 
 Admins can replay a failed or pending delivery after the customer fixes their receiving endpoint. Replay clears the
 current response/error fields and makes the row immediately eligible for the worker while preserving the original

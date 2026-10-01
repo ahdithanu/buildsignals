@@ -229,6 +229,24 @@ export default function Settings() {
     },
   });
 
+  const attemptWebhookDelivery = useMutation({
+    mutationFn: (deliveryId: string) => organizationsApi.attemptWebhookDelivery(orgId, deliveryId),
+    onSuccess: (delivery) => {
+      invalidateWebhooks();
+      toast({
+        title: delivery.status === "delivered" ? "Webhook delivered" : "Webhook attempt recorded",
+        description: `Attempt ${delivery.attempt_count.toLocaleString()} finished with ${delivery.status}.`,
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: "Could not attempt webhook",
+        description: err instanceof ApiError ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const acknowledgeWebhookDeadLetter = useMutation({
     mutationFn: ({ deliveryId, note }: { deliveryId: string; note?: string }) =>
       organizationsApi.acknowledgeWebhookDeadLetter(orgId, deliveryId, note),
@@ -667,6 +685,23 @@ export default function Settings() {
                           </p>
                           {delivery.error_message && (
                             <p className="mt-2 text-xs text-destructive">{delivery.error_message}</p>
+                          )}
+                          {delivery.status === "pending" && (
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                disabled={attemptWebhookDelivery.isPending}
+                                onClick={() => {
+                                  if (window.confirm("Attempt this pending webhook delivery now?")) {
+                                    attemptWebhookDelivery.mutate(delivery.id);
+                                  }
+                                }}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                              >
+                                <Send className="h-3.5 w-3.5" />
+                                Attempt now
+                              </button>
+                            </div>
                           )}
                         </div>
                       ))}
