@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Check,
+  Copy,
   Download,
   ExternalLink,
   Layers3,
@@ -172,6 +173,21 @@ export default function AcquisitionMap() {
           : 'The source-reviewed export could not be completed.',
         variant: 'destructive',
       }),
+    });
+  }
+
+  async function copyMapLink() {
+    const next = new URLSearchParams();
+    if (selectedState) next.set('state', selectedState);
+    if (selectedZip3) next.set('zip3', selectedZip3);
+    const query = next.toString();
+    const url = `${window.location.origin}/map${query ? `?${query}` : ''}`;
+    await navigator.clipboard.writeText(url);
+    toast({
+      title: 'Map view copied',
+      description: selectedZip3
+        ? `ZIP3 ${selectedZip3} map filters are ready to share.`
+        : 'Current acquisition map filters are ready to share.',
     });
   }
 
@@ -365,6 +381,13 @@ export default function AcquisitionMap() {
                 className={cn('inline-flex h-8 items-center gap-1.5 border border-foreground bg-card px-2 text-[9px] font-semibold', activeOnly && 'bg-foreground text-background')}
               >
                 <Layers3 className="h-3 w-3" /> Active only
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyMapLink()}
+                className="inline-flex h-8 items-center gap-1.5 border border-foreground bg-card px-2 text-[9px] font-semibold"
+              >
+                <Copy className="h-3 w-3" /> Copy map view
               </button>
             </div>
             <div className="px-3 pb-3 text-xs text-muted-foreground">

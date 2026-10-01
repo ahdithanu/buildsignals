@@ -52,6 +52,16 @@ vi.mock('@/contexts/AuthContext', () => ({
 describe('<AcquisitionMap> states', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: new URL('https://app.buildsignals.ai/map'),
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
     radarState = {
       data: {
         items: [], total: 0, limit: 100, offset: 0,
@@ -217,6 +227,8 @@ describe('<AcquisitionMap> states', () => {
     expect(screen.getByText('ZIP3 opportunity heat')).toBeInTheDocument();
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy map view' }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://app.buildsignals.ai/map?state=TX&zip3=787');
     fireEvent.click(screen.getByRole('button', { name: 'Set signal geography state' }));
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     expect(screen.getByText('Signal state TX')).toBeInTheDocument();
