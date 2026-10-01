@@ -76,6 +76,13 @@ function sourceMixLabel(counts?: Record<string, number>) {
     .join(' · ');
 }
 
+const readinessLegend = [
+  { level: 'investor_ready', label: 'Pre-approval, parcel, and opening-intent coverage are all live' },
+  { level: 'early_warning_ready', label: 'Pre-approval coverage is live; parcel or retailer context needs depth' },
+  { level: 'live_foundation', label: 'At least one live source exists, but early-warning coverage is incomplete' },
+  { level: 'candidate_only', label: 'Source research exists; production admission is still pending' },
+];
+
 function HealthRow({
   source,
   canManage,
@@ -867,6 +874,27 @@ export default function IngestionOperations() {
                   >
                     {bucket.state} · {formatReadiness(bucket.readiness_level)}
                   </Link>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 rounded-md border bg-background px-3 py-3" aria-label="Coverage readiness legend">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-foreground">Readiness levels</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Use these labels to separate demoable investor markets from markets still in source qualification.
+                  </p>
+                </div>
+                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  evidence first
+                </span>
+              </div>
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                {readinessLegend.map((item) => (
+                  <div key={item.level} className="rounded-md border bg-secondary/25 px-2.5 py-2">
+                    <p className="text-[11px] font-medium text-foreground">{formatReadiness(item.level)}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{item.label}</p>
+                  </div>
                 ))}
               </div>
             </div>

@@ -149,6 +149,14 @@ describe("<IngestionOperations>", () => {
               retailer_opening_sources: 1,
               pre_approval_sources: 1,
               approved_only_sources: 0,
+              live_record_type_counts: { permit: 1, parcel: 1, retailer_opening: 1 },
+              candidate_record_type_counts: {},
+              candidate_status_counts: {},
+              readiness_level: "investor_ready",
+              next_action: "deepen_parcel_context",
+              next_action_label: "Deepen parcel context",
+              priority_score: 210,
+              priority_reasons: ["pre-approval coverage", "parcel context"],
             },
             {
               state: "MI",
@@ -157,6 +165,14 @@ describe("<IngestionOperations>", () => {
               retailer_opening_sources: 0,
               pre_approval_sources: 0,
               approved_only_sources: 1,
+              live_record_type_counts: { permit: 1 },
+              candidate_record_type_counts: {},
+              candidate_status_counts: {},
+              readiness_level: "live_foundation",
+              next_action: "add_pre_approval_source",
+              next_action_label: "Add pre-approval source",
+              priority_score: 90,
+              priority_reasons: ["approved-only coverage"],
             },
           ],
           activation_queue: [
@@ -167,6 +183,14 @@ describe("<IngestionOperations>", () => {
               retailer_opening_sources: 0,
               pre_approval_sources: 0,
               approved_only_sources: 0,
+              live_record_type_counts: {},
+              candidate_record_type_counts: { permit: 1 },
+              candidate_status_counts: { operational_retry: 1 },
+              readiness_level: "candidate_only",
+              next_action: "resolve_candidate_blocker",
+              next_action_label: "Resolve candidate blocker",
+              priority_score: 80,
+              priority_reasons: ["candidate source available"],
             },
           ],
           rollout_queue: [
@@ -327,6 +351,13 @@ describe("<IngestionOperations>", () => {
     expect(within(liveMix).getByText("Configured Source Mix")).toBeInTheDocument();
     expect(within(liveMix).getByText("approved only")).toBeInTheDocument();
     expect(screen.getByText("State leaders")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "TX · investor ready" })).toHaveAttribute(
+      "href",
+      "/source-health?state=TX",
+    );
+    expect(screen.getByText("Readiness levels")).toBeInTheDocument();
+    expect(screen.getByText("Pre-approval, parcel, and opening-intent coverage are all live")).toBeInTheDocument();
+    expect(screen.getByText("Source research exists; production admission is still pending")).toBeInTheDocument();
     expect(screen.getByText("Next activation queue")).toBeInTheDocument();
     expect(screen.getByText("50-state rollout queue")).toBeInTheDocument();
     expect(screen.getByText("TX · Cluster 1")).toBeInTheDocument();
