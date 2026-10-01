@@ -524,6 +524,7 @@ def create_webhook_test_event(
         organization_id=org_id,
         event_type=payload.event_type,
         event_id=payload.event_id,
+        subscription_id=payload.subscription_id,
         payload={
             **payload.payload,
             "event_type": payload.event_type,
@@ -539,7 +540,11 @@ def create_webhook_test_event(
         "enqueue_test_event",
         actor_id=principal["user_id"],
         organization_id=org_id,
-        new_values={"event_type": payload.event_type, "delivery_count": len(deliveries)},
+        new_values={
+            "event_type": payload.event_type,
+            "delivery_count": len(deliveries),
+            "subscription_id": payload.subscription_id,
+        },
     )
     db.commit()
     for delivery in deliveries:

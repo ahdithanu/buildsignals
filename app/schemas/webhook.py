@@ -129,6 +129,7 @@ class WebhookTestEventRequest(BaseModel):
     event_type: str = Field(default="deal.created")
     event_id: str = Field(default="test-event", min_length=1, max_length=120)
     payload: dict = Field(default_factory=lambda: {"test": True})
+    subscription_id: str | None = Field(default=None, min_length=1, max_length=120)
 
     @field_validator("event_type")
     @classmethod

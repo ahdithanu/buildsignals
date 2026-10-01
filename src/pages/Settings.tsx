@@ -276,20 +276,22 @@ export default function Settings() {
   });
 
   const createWebhookTestEvent = useMutation({
-    mutationFn: () => organizationsApi.createWebhookTestEvent(orgId, {
-      event_type: webhookTestEventType,
-      event_id: `admin-test-${Date.now()}`,
-      payload: {
-        test: true,
-        source: "settings_console",
-        message: "Build Signals webhook test event",
-      },
-    }),
-    onSuccess: (deliveries) => {
+    mutationFn: ({ eventType, subscriptionId }: { eventType: WebhookEventType; subscriptionId?: string }) =>
+      organizationsApi.createWebhookTestEvent(orgId, {
+        event_type: eventType,
+        event_id: `admin-test-${Date.now()}`,
+        subscription_id: subscriptionId ?? null,
+        payload: {
+          test: true,
+          source: "settings_console",
+          message: "Build Signals webhook test event",
+        },
+      }),
+    onSuccess: (deliveries, variables) => {
       invalidateWebhooks();
       toast({
         title: "Webhook test event queued",
-        description: `${deliveries.length.toLocaleString()} matching active endpoint${deliveries.length === 1 ? "" : "s"} will receive ${webhookTestEventType}.`,
+        description: `${deliveries.length.toLocaleString()} matching active endpoint${deliveries.length === 1 ? "" : "s"} will receive ${variables.eventType}.`,
       });
     },
     onError: (err) => {
@@ -459,7 +461,7 @@ export default function Settings() {
                   <button
                     type="button"
                     disabled={createWebhookTestEvent.isPending || !webhookSubscriptions.data?.some((subscription) => subscription.status === "active")}
-                    onClick={() => createWebhookTestEvent.mutate()}
+                    onClick={() => createWebhookTestEvent.mutate({ eventType: webhookTestEventType })}
                     className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
                   >
                     <Send className="h-3.5 w-3.5" />
@@ -509,6 +511,18 @@ export default function Settings() {
                               className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                             >
                               View deliveries
+                            </button>
+                            <button
+                              type="button"
+                              disabled={createWebhookTestEvent.isPending || subscription.status !== "active"}
+                              onClick={() => createWebhookTestEvent.mutate({
+                                eventType: subscription.event_types[0],
+                                subscriptionId: subscription.id,
+                              })}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                            >
+                              <Send className="h-3.5 w-3.5" />
+                              Send test
                             </button>
                             <button
                               type="button"

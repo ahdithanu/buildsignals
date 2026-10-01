@@ -106,6 +106,50 @@ def test_admin_can_manage_webhook_subscription_and_queue_test_event(client, db):
     assert db.query(AuditLog).filter_by(entity_type="webhook_subscription").count() == 2
 
 
+def test_admin_can_queue_test_event_for_one_webhook_subscription(client, db):
+    identity = _register(client, email="webhook-target@example.com", org_name="Webhook Target")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+
+    first = client.post(
+        f"/organizations/{org_id}/webhook-subscriptions",
+        headers=headers,
+        json={
+            "name": "First endpoint",
+            "target_url": "https://first.example.test/build-signals",
+            "event_types": ["deal.created"],
+        },
+    )
+    assert first.status_code == 201, first.text
+    second = client.post(
+        f"/organizations/{org_id}/webhook-subscriptions",
+        headers=headers,
+        json={
+            "name": "Second endpoint",
+            "target_url": "https://second.example.test/build-signals",
+            "event_types": ["deal.created"],
+        },
+    )
+    assert second.status_code == 201, second.text
+
+    deliveries = client.post(
+        f"/organizations/{org_id}/webhook-test-events",
+        headers=headers,
+        json={
+            "event_type": "deal.created",
+            "event_id": "targeted-test-1",
+            "subscription_id": first.json()["id"],
+            "payload": {"deal_id": "deal-1"},
+        },
+    )
+
+    assert deliveries.status_code == 201, deliveries.text
+    body = deliveries.json()
+    assert len(body) == 1
+    assert body[0]["subscription_id"] == first.json()["id"]
+    assert db.query(WebhookDelivery).count() == 1
+
+
 def test_admin_can_view_webhook_delivery_summary(client, db):
     identity = _register(client, email="webhook-summary@example.com", org_name="Webhook Summary")
     headers = _headers(identity)
