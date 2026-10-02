@@ -225,6 +225,8 @@ describe('<AcquisitionMap> states', () => {
     render(<MemoryRouter initialEntries={['/map?state=TX&zip3=787']}><AcquisitionMap /></MemoryRouter>);
 
     expect(screen.getByText('ZIP3 opportunity heat')).toBeInTheDocument();
+    expect(screen.getByText(/Nearby candidates are investigation leads, not verified listings/)).toBeInTheDocument();
+    expect(screen.getByText(/Verified for-sale requires source evidence: Requires listing evidence/)).toBeInTheDocument();
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Open acquisition workspace/ })).toHaveAttribute(

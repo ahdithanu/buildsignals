@@ -601,6 +601,10 @@ by score. Selecting a ZIP3 clears the single-signal focus and filters the ranked
 parcel table to candidate parcels in that market cluster. These centroids are
 derived from admitted source coordinates and nearby parcel coordinates; they are
 not licensed ZIP boundary polygons.
+The map now displays the heatmap's for-sale semantics beside ZIP3 heat, making
+the distinction explicit in the workflow: nearby candidates are investigation
+leads, while verified for-sale requires source evidence. Focused frontend tests
+and TypeScript pass.
 
 Leaflet is lazy-loaded. OpenStreetMap raster tiles load only for the visible map,
 with attribution and an origin referrer. There is no bulk fetch or offline cache.

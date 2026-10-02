@@ -348,6 +348,12 @@ export default function AcquisitionMap() {
                     <p className="section-label text-foreground">ZIP3 opportunity heat</p>
                     {selectedZip3 && <button type="button" className="text-[10px] font-semibold underline" onClick={() => setSelectedZip3('')}>Clear ZIP3</button>}
                   </div>
+                  {heatmap?.for_sale_semantics && (
+                    <p className="mb-2 max-w-3xl text-[10px] leading-relaxed text-muted-foreground">
+                      Nearby candidates are investigation leads, not verified listings.
+                      {' '}Verified for-sale requires source evidence: {heatmap.for_sale_semantics.verified_for_sale}
+                    </p>
+                  )}
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {heatItems.slice(0, 10).map((item) => (
                       <button
