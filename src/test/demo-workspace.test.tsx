@@ -60,6 +60,12 @@ it('describes populated demo surfaces without claiming live parcel inventory', a
   render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DemoWorkspace /></MemoryRouter></QueryClientProvider>);
   expect(await screen.findByText(/2,049 permit and site records/)).toBeInTheDocument();
   expect(screen.getByText('Acquisition workflow readiness')).toBeInTheDocument();
+  expect(screen.getByText('Signal-to-capital lens')).toBeInTheDocument();
+  expect(screen.getByText('Earlier evidence')).toBeInTheDocument();
+  expect(screen.getByText('Identity graph')).toBeInTheDocument();
+  expect(screen.getByText('Geography layer')).toBeInTheDocument();
+  expect(screen.getByText('Parcel follow-up')).toBeInTheDocument();
+  expect(screen.getByText(/The sellable workflow is detection, evidence, entity resolution, geography, parcel diligence, and saved opportunity/)).toBeInTheDocument();
   expect(screen.getByText('Signal intake')).toBeInTheDocument();
   expect(screen.getByText('Graph context')).toBeInTheDocument();
   expect(screen.getByText('Mapped locations')).toBeInTheDocument();

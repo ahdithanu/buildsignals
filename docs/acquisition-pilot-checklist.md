@@ -507,6 +507,10 @@ application, production diagnostics, and release coverage measurement.
   qualified geometry as review-needed investigation leads, not blocked workflow
   data and not mapped/for-sale parcel inventory. Focused demo workspace tests and
   TypeScript pass.
+  The demo overview now includes a signal-to-capital lens that translates the
+  historical cohort into earlier evidence, identity graph, geography layer, and
+  parcel follow-up workstreams while explicitly withholding live-coverage or
+  for-sale claims. Focused demo workspace tests and TypeScript pass.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

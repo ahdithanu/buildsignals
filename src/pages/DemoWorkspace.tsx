@@ -107,6 +107,34 @@ export default function DemoWorkspace() {
       },
     ];
   }, [summary.data]);
+  const investorLens = useMemo(() => {
+    const data = summary.data;
+    if (!data) return [];
+    return [
+      {
+        label: 'Earlier evidence',
+        value: data.permit_records.toLocaleString(),
+        detail: 'Historical source filings that can be reviewed before a brokered opportunity package exists.',
+      },
+      {
+        label: 'Identity graph',
+        value: data.relationships.toLocaleString(),
+        detail: 'Evidence-backed edges connecting filings to reported applicants, properties, parcel IDs, and jurisdiction context.',
+      },
+      {
+        label: 'Geography layer',
+        value: (data.mapped_permits + data.mapped_parcels).toLocaleString(),
+        detail: 'Qualified map points loaded for proximity review; estimates remain labeled apart from source coordinates.',
+      },
+      {
+        label: 'Parcel follow-up',
+        value: data.parcel_references.toLocaleString(),
+        detail: data.mapped_parcels > 0
+          ? 'Mapped parcel context is available, but sale status still requires source-backed availability evidence.'
+          : 'Reported parcel IDs create a review queue until geometry, ownership, availability, and source rights are qualified.',
+      },
+    ];
+  }, [summary.data]);
   const boundaries = useMemo(() => (showParcels ? locations.data?.parcels ?? [] : []).filter(item => item.boundary).map(item => ({
     id: item.id, title: item.title, geometry: item.boundary!,
   })), [locations.data, showParcels]);
@@ -148,6 +176,23 @@ export default function DemoWorkspace() {
             <div><h3 className="font-semibold">Why does it matter?</h3><p className="mt-1 text-muted-foreground">Use the graph to see repeated applicants, properties, and parcel IDs with evidence and confidence instead of keyword-only search.</p></div>
             <div><h3 className="font-semibold">Where can capital move?</h3><p className="mt-1 text-muted-foreground">The product is ready to score nearby lots once qualified parcel geometry, zoning, access, ownership, and availability are loaded.</p></div>
           </div>
+        </section>}
+        {investorLens.length > 0 && <section aria-label="Signal to capital lens" className="border-y py-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-semibold">Signal-to-capital lens</h2>
+              <p className="mt-1 text-sm text-muted-foreground">What this cohort can support today, and what still needs qualified source data before it becomes an acquisition recommendation.</p>
+            </div>
+            <span className="text-xs font-semibold uppercase text-muted-foreground">Demo intelligence, not live coverage</span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            {investorLens.map(item => <div key={item.label} className="min-h-[8rem] border p-3 text-sm">
+              <span className="block text-[11px] font-semibold uppercase text-muted-foreground">{item.label}</span>
+              <span className="mt-2 block text-2xl font-semibold tabular-nums">{item.value}</span>
+              <span className="mt-2 block text-xs leading-5 text-muted-foreground">{item.detail}</span>
+            </div>)}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">The sellable workflow is detection, evidence, entity resolution, geography, parcel diligence, and saved opportunity. This demo intentionally stops short of calling any parcel for sale without explicit availability evidence.</p>
         </section>}
         <div className="grid gap-5 md:grid-cols-2">
           <div className="border-b pb-4"><h2 className="font-semibold">Source activity</h2><p className="mt-2 text-sm">{summary.data?.permit_records.toLocaleString() ?? '...'} permit and site records, captured {date(summary.data?.captured_at)}.</p><button className="mt-3 text-sm font-medium underline" onClick={() => setSection('permits')}>Browse filings</button></div>
