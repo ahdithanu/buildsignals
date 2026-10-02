@@ -5,6 +5,11 @@ canonical records stored for the signed-in organization. The report supports
 permits, parcels and planning records, with 25 sources per page and adjustable
 freshness windows. Summary numbers apply only to the current source page, across
 all observed states, not to the whole organization or the nation.
+The UI also rolls the current source page into up to six observed state/DC
+buckets so a reviewer can quickly see where stored records, geocoded rows,
+collection recency and source-date recency actually exist. This rollup is still
+source-page scoped; it is not a statewide coverage score or a substitute for
+production inventory measurement across every page.
 
 ## API and Semantics
 
@@ -27,6 +32,9 @@ all observed states, not to the whole organization or the nation.
 The UI hides unconfirmed totals when measurement fails, provides retry and bounded
 pagination, and keys queries by organization and all parameters. The surrounding
 configured-state filter does not restrict this organization-wide inventory.
+The observed-state rollup is intentionally absent while the measurement is
+loading or unavailable, and unknown geography remains labeled as unknown instead
+of being inferred from configured jurisdictions.
 
 ## Deployment and Verification
 
@@ -40,6 +48,8 @@ Frontend tests cover page/filter changes, loading/error/retry and organization
 changes. The authenticated browser regression covers a new empty organization;
 the CSP smoke test uses synthetic populated data at mobile, tablet and desktop
 widths. None of those synthetic counts are production coverage evidence.
+The focused coverage-panel regression also verifies the observed-state rollup and
+guards against presenting it as nationwide coverage.
 
 For customer-facing claims, capture an authorized production measurement with
 its timestamp, record type, source pages and freshness window. Configured feed
