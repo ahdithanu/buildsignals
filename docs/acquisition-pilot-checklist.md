@@ -521,6 +521,11 @@ application, production diagnostics, and release coverage measurement.
   source-updated counts. It remains explicitly scoped to tenant stored records and
   does not present source-page observations as statewide or nationwide coverage.
   Focused coverage-panel tests and TypeScript pass.
+  Source-health now honors `record_type` URL handoffs, so readiness links such as
+  `/source-health?record_type=parcel` open directly on parcel inventory instead
+  of defaulting back to permits. Changing record type keeps the URL shareable and
+  clears the parameter for the default permit view. Focused coverage/readiness
+  tests and TypeScript pass.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

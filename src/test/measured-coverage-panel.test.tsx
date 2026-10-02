@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ingestionApi } from '@/api/ingestion';
 import { MeasuredCoveragePanel } from '@/components/MeasuredCoveragePanel';
@@ -30,9 +30,14 @@ function report(params: Partial<MeasuredCoverageParams> = {}): MeasuredCoverage 
   };
 }
 
-function setup() {
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
+
+function setup(initialEntry = '/source-health') {
   const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } });
-  const app = <QueryClientProvider client={client}><MemoryRouter><MeasuredCoveragePanel /></MemoryRouter></QueryClientProvider>;
+  const app = <QueryClientProvider client={client}><MemoryRouter initialEntries={[initialEntry]}><LocationProbe /><MeasuredCoveragePanel /></MemoryRouter></QueryClientProvider>;
   return { ...render(app), app, client };
 }
 
@@ -75,6 +80,22 @@ describe('MeasuredCoveragePanel', () => {
     fireEvent.change(screen.getByLabelText('Freshness window'), { target: { value: '24' } });
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'parcel', freshness_hours: 24, limit: 25, offset: 0 }));
     expect(screen.getByRole('button', { name: 'Previous source page' })).toBeDisabled();
+  });
+
+  it('honors record_type URL handoffs and keeps the URL shareable when the record type changes', async () => {
+    setup('/source-health?record_type=parcel');
+    await screen.findByRole('article', { name: 'county_public_records' });
+    expect(screen.getByLabelText('Records')).toHaveValue('parcel');
+    expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'parcel', freshness_hours: 72, limit: 25, offset: 0 });
+    expect(screen.getByText('Parcel inventory is not verified for-sale inventory.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'planning' } });
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'planning', freshness_hours: 72, limit: 25, offset: 0 }));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=planning');
+
+    fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'permit' } });
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'permit', freshness_hours: 72, limit: 25, offset: 0 }));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('');
   });
 
   it('shows zero for a measured empty source, not inferred coverage from its configuration', async () => {

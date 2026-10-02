@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useMeasuredCoverage } from '@/hooks/useMeasuredCoverage';
@@ -9,6 +9,11 @@ import type { CoverageRecordType, ObservedStateCoverage } from '@/types/ingestio
 const PAGE_SIZE = 25;
 const number = new Intl.NumberFormat('en-US');
 const datetime = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+const recordTypes = new Set<CoverageRecordType>(['permit', 'parcel', 'planning']);
+
+function queryRecordType(value: string | null): CoverageRecordType {
+  return recordTypes.has(value as CoverageRecordType) ? value as CoverageRecordType : 'permit';
+}
 
 function dateLabel(value: string | null) {
   if (!value) return 'Unknown';
@@ -44,7 +49,8 @@ function StateMeasurements({ state, hours }: { state: ObservedStateCoverage; hou
 }
 
 export function MeasuredCoveragePanel() {
-  const [recordType, setRecordType] = useState<CoverageRecordType>('permit');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [recordType, setRecordType] = useState<CoverageRecordType>(() => queryRecordType(searchParams.get('record_type')));
   const [hours, setHours] = useState(72);
   const [offset, setOffset] = useState(0);
   const { data, isPending, isFetching, error, refetch } = useMeasuredCoverage({
@@ -70,6 +76,15 @@ export function MeasuredCoveragePanel() {
     .sort((a, b) => b.stored_records - a.stored_records || a.state.localeCompare(b.state))
     .slice(0, 6);
 
+  function changeRecordType(value: CoverageRecordType) {
+    setRecordType(value);
+    setOffset(0);
+    const next = new URLSearchParams(searchParams);
+    if (value === 'permit') next.delete('record_type');
+    else next.set('record_type', value);
+    setSearchParams(next, { replace: true });
+  }
+
   return (
     <section className="min-w-0 border-y py-5" aria-label="Measured ingestion inventory" aria-busy={isFetching}>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -79,7 +94,7 @@ export function MeasuredCoveragePanel() {
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid gap-1 text-xs">Records
-            <select aria-label="Records" className="h-9 rounded-md border bg-background px-2 text-xs" value={recordType} onChange={event => { setRecordType(event.target.value as CoverageRecordType); setOffset(0); }}>
+            <select aria-label="Records" className="h-9 rounded-md border bg-background px-2 text-xs" value={recordType} onChange={event => changeRecordType(event.target.value as CoverageRecordType)}>
               <option value="permit">Permits</option><option value="parcel">Parcels</option><option value="planning">Planning</option>
             </select>
           </label>
