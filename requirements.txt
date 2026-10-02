@@ -10,7 +10,7 @@ sqlalchemy==2.0.54
 # was validated against during the fastapi bump.
 pydantic==2.13.5
 email-validator==2.3.0
-python-dateutil==2.9.0
+python-dateutil==2.9.0.post0
 alembic==1.13.1
 psycopg2-binary==2.9.13
 # passlib removed — it was unmaintained (last release 1.7.4, 2020) and its
