@@ -1022,6 +1022,14 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     assert body["candidate_id"] == candidate_id
     assert body["deal"]["name"] == "125 Main St Opportunity"
     assert body["deal"]["address"] == "P-PROMOTE Congress Ave"
+    repeated = client.post(
+        f"/parcel-candidates/{candidate_id}/opportunity",
+        headers=headers,
+        json={"name": "Duplicate click should reuse existing opportunity"},
+    )
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["created"] is False
+    assert repeated.json()["deal"]["id"] == body["deal"]["id"]
 
     radar = client.get("/acquisition-radar", headers=headers)
     assert radar.status_code == 200, radar.text

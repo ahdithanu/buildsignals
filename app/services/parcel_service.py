@@ -876,6 +876,12 @@ def promote_nearby_parcel_candidate_to_deal(
     if candidate is None:
         raise LookupError("Nearby parcel candidate not found")
     acquisition_case = ensure_acquisition_case_for_candidate(db, candidate)
+    if acquisition_case.promoted_deal_id:
+        existing_deal = active_query(db.query(Deal), Deal).filter(
+            Deal.id == acquisition_case.promoted_deal_id
+        ).first()
+        if existing_deal is not None:
+            return existing_deal, False
     if acquisition_case.status not in {"shortlisted", "contacted"}:
         raise ValueError("Only shortlisted or contacted parcels can be promoted")
 

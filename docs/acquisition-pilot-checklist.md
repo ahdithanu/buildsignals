@@ -38,6 +38,11 @@ shortlisted parcel is converted into a live opportunity. Focused backend
 promotion/radar tests, four focused frontend radar/map/wireframe tests, and
 TypeScript typecheck pass.
 
+Saved-opportunity promotion is now idempotent for an already-promoted parcel
+candidate. A repeated click or API retry returns the existing opportunity with
+`created=false` instead of failing the promoted acquisition case or creating a
+duplicate. The nearby-parcel backend suite passes 24 tests.
+
 The workflow summary also includes `contacted_parcels`, and the Radar workflow
 strip now separates Owner assignment from Outreach. Backend tests verify that
 assignment does not imply contact, and the same focused frontend/typecheck set
