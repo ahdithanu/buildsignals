@@ -52,19 +52,24 @@ describe('MeasuredCoveragePanel', () => {
     expect(within(source).getByText('Unknown source date').nextElementSibling).toHaveTextContent('40');
     expect(within(source).getByText('Future source date').nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText('Stored records on this page')).toBeInTheDocument();
+    expect(screen.getByText('Observed states on this source page')).toBeInTheDocument();
+    const rollup = screen.getByRole('region', { name: 'Observed state rollup' });
+    expect(within(rollup).getByText('TX')).toBeInTheDocument();
+    expect(within(rollup).getByText('1 source')).toBeInTheDocument();
+    expect(within(rollup).getByText('Geocoded').nextElementSibling).toHaveTextContent('80');
     expect(screen.getByRole('link', { name: 'county_public_records' })).toHaveAttribute('href', '/source-health/sources/source-a');
     expect(screen.queryByText(/nationwide coverage/i)).not.toBeInTheDocument();
   });
 
   it('uses bounded pages and resets pagination for record type and freshness changes', async () => {
     setup();
-    await screen.findByRole('article');
+    await screen.findByRole('article', { name: 'county_public_records' });
     fireEvent.click(screen.getByRole('button', { name: 'Next source page' }));
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'permit', freshness_hours: 72, limit: 25, offset: 25 }));
-    await screen.findByRole('article');
+    await screen.findByRole('article', { name: 'county_public_records' });
     fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'parcel' } });
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'parcel', freshness_hours: 72, limit: 25, offset: 0 }));
-    await screen.findByRole('article');
+    await screen.findByRole('article', { name: 'county_public_records' });
     fireEvent.click(screen.getByRole('button', { name: 'Next source page' }));
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'parcel', freshness_hours: 72, limit: 25, offset: 25 }));
     fireEvent.change(screen.getByLabelText('Freshness window'), { target: { value: '24' } });
@@ -90,7 +95,7 @@ describe('MeasuredCoveragePanel', () => {
     Object.assign(unknown.sources[0].observed_states[0], { state: null, newest_seen_at: null, newest_source_date: null });
     vi.mocked(ingestionApi.measuredCoverage).mockResolvedValueOnce(unknown).mockResolvedValue({ ...report(), sources: [], has_more: false });
     setup();
-    await screen.findByText('Unknown state');
+    expect((await screen.findAllByText('Unknown state')).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Latest source date: Unknown')).toBeInTheDocument();
     expect(screen.getByText('Latest collection: Unknown')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'planning' } });
@@ -100,26 +105,26 @@ describe('MeasuredCoveragePanel', () => {
   it('shows no totals while loading or on an error, even after a successful measurement', async () => {
     const { client } = setup();
     expect(screen.queryByLabelText('Current page measurements')).not.toBeInTheDocument();
-    await screen.findByRole('article');
+    await screen.findByRole('article', { name: 'county_public_records' });
     vi.mocked(ingestionApi.measuredCoverage).mockRejectedValue(new Error('Offline'));
     fireEvent.click(screen.getByRole('button', { name: 'Refresh measured inventory' }));
     await screen.findByRole('alert');
     expect(screen.queryByLabelText('Current page measurements')).not.toBeInTheDocument();
-    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: 'county_public_records' })).not.toBeInTheDocument();
     vi.mocked(ingestionApi.measuredCoverage).mockResolvedValue(report());
     fireEvent.click(screen.getByRole('button', { name: 'Retry measurement' }));
-    await screen.findByRole('article');
+    await screen.findByRole('article', { name: 'county_public_records' });
     client.clear();
   });
 
   it('does not reuse another organization measurement or request data anonymously', async () => {
     const view = setup();
-    await screen.findByRole('article');
+    await screen.findByRole('article', { name: 'county_public_records' });
     const next = { ...report(), sources: [], has_more: false };
     vi.mocked(ingestionApi.measuredCoverage).mockResolvedValue(next);
     auth.organizationId = 'org-b';
     view.rerender(<QueryClientProvider client={view.client}><MemoryRouter><MeasuredCoveragePanel /></MemoryRouter></QueryClientProvider>);
-    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: 'county_public_records' })).not.toBeInTheDocument();
     await screen.findByText('No permit sources on this page.');
     expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(2);
     auth.organizationId = null;

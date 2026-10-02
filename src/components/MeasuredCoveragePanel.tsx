@@ -53,6 +53,22 @@ export function MeasuredCoveragePanel() {
   const states = data?.sources.flatMap(source => source.observed_states) ?? [];
   const stored = data?.sources.reduce((total, source) => total + source.stored_records, 0) ?? 0;
   const observedStates = new Set(states.flatMap(state => state.state ? [state.state] : []));
+  const stateRollup = Array.from(states.reduce((map, state) => {
+    const key = state.state ?? 'Unknown';
+    const current = map.get(key) ?? {
+      state: key, stored_records: 0, geocoded_records: 0, recently_seen_records: 0,
+      recent_source_date_records: 0, source_count: 0,
+    };
+    current.stored_records += state.stored_records;
+    current.geocoded_records += state.geocoded_records;
+    current.recently_seen_records += state.recently_seen_records;
+    current.recent_source_date_records += state.recent_source_date_records;
+    current.source_count += 1;
+    map.set(key, current);
+    return map;
+  }, new Map<string, { state: string; stored_records: number; geocoded_records: number; recently_seen_records: number; recent_source_date_records: number; source_count: number }>()).values())
+    .sort((a, b) => b.stored_records - a.stored_records || a.state.localeCompare(b.state))
+    .slice(0, 6);
 
   return (
     <section className="min-w-0 border-y py-5" aria-label="Measured ingestion inventory" aria-busy={isFetching}>
@@ -89,6 +105,24 @@ export function MeasuredCoveragePanel() {
             </dl>
             <p className="mt-2 text-[11px] text-muted-foreground">Measured {dateLabel(data.measured_at)} | Source-local counts; overlaps are not deduplicated.</p>
             {recordType === 'parcel' && <p className="mt-1 text-xs text-muted-foreground">Parcel inventory is not verified for-sale inventory.</p>}
+            {stateRollup.length > 0 && <section aria-label="Observed state rollup" className="mt-4 border-y py-3">
+              <h4 className="text-xs font-semibold">Observed states on this source page</h4>
+              <p className="mt-1 text-[11px] text-muted-foreground">Measured stored records only. This is not statewide completeness, source authorization, or all configured coverage.</p>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                {stateRollup.map(item => <article key={item.state} className="border p-3 text-xs">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h5 className="font-semibold">{item.state === 'Unknown' ? 'Unknown state' : item.state}</h5>
+                    <span className="tabular-nums">{number.format(item.source_count)} source{item.source_count === 1 ? '' : 's'}</span>
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-2">
+                    <Metric label="Stored" value={item.stored_records} />
+                    <Metric label="Geocoded" value={item.geocoded_records} />
+                    <Metric label={`Collected (${hours}h)`} value={item.recently_seen_records} />
+                    <Metric label={`Source updated (${hours}h)`} value={item.recent_source_date_records} />
+                  </dl>
+                </article>)}
+              </div>
+            </section>}
             <div className="mt-3">
               {data.sources.length === 0 ? <p className="py-4 text-sm text-muted-foreground">No {recordType} sources on this page.</p> : data.sources.map(source => (
                 <article key={source.source_id} className="min-w-0 border-b py-4" aria-label={source.source_key}>
