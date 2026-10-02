@@ -62,6 +62,18 @@ describe('Imported data empty states', () => {
     expect(screen.queryByText(/No matching signals/)).not.toBeInTheDocument();
   });
 
+  it('links single-record empty states to the matching measured inventory tab', async () => {
+    setup(['parcel']);
+    await screen.findByText('No imported records available');
+    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=parcel');
+  });
+
+  it('links planning-only empty states to planning measured inventory', async () => {
+    setup(['planning']);
+    await screen.findByText('No imported records available');
+    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=planning');
+  });
+
   it('handles an organization with no configured sources', async () => {
     vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => ({ ...report(params), sources: [] }));
     setup();
