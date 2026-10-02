@@ -114,6 +114,12 @@ export default function Settings() {
     enabled: Boolean(orgId && isAdmin),
   });
 
+  const webhookQueue = useQuery({
+    queryKey: ["organization-webhook-queue", orgId],
+    queryFn: () => organizationsApi.getWebhookQueueSnapshot(orgId),
+    enabled: Boolean(orgId && isAdmin),
+  });
+
   const webhookDeadLetters = useQuery({
     queryKey: ["organization-webhook-dead-letters", orgId],
     queryFn: () => organizationsApi.listWebhookDeadLetters(orgId),
@@ -150,6 +156,7 @@ export default function Settings() {
 
   const invalidateWebhooks = () => {
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-summary", orgId] });
+    queryClient.invalidateQueries({ queryKey: ["organization-webhook-queue", orgId] });
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-dead-letters", orgId] });
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-subscriptions", orgId] });
     queryClient.invalidateQueries({ queryKey: ["organization-webhook-deliveries", orgId] });
@@ -762,6 +769,7 @@ export default function Settings() {
                   type="button"
                   onClick={() => {
                     webhookSummary.refetch();
+                    webhookQueue.refetch();
                     webhookDeadLetters.refetch();
                   }}
                   className="inline-flex items-center justify-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
@@ -771,10 +779,10 @@ export default function Settings() {
                 </button>
               </div>
 
-              {(webhookSummary.isLoading || webhookDeadLetters.isLoading) && (
+              {(webhookSummary.isLoading || webhookQueue.isLoading || webhookDeadLetters.isLoading) && (
                 <p className="mt-4 text-xs text-muted-foreground">Loading webhook delivery status...</p>
               )}
-              {(webhookSummary.error || webhookDeadLetters.error) && (
+              {(webhookSummary.error || webhookQueue.error || webhookDeadLetters.error) && (
                 <p className="mt-4 text-xs text-destructive">Could not load webhook delivery status.</p>
               )}
               {webhookSummary.data && (
@@ -821,6 +829,59 @@ export default function Settings() {
                     <p className="text-xs text-muted-foreground">
                       {webhookSummary.data.pending.toLocaleString()} pending retries
                     </p>
+                  </div>
+                </div>
+              )}
+              {webhookQueue.data && (
+                <div className="mt-4 rounded-lg border bg-background p-3">
+                  <div className="flex flex-col gap-1 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Worker queue snapshot
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Read-only view of pending deliveries eligible for the webhook worker.
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-xs ${
+                      webhookQueue.data.due_now > 0
+                        ? "bg-amber-500/10 text-amber-700"
+                        : "bg-emerald-500/10 text-emerald-700"
+                    }`}>
+                      {webhookQueue.data.due_now.toLocaleString()} due now
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-4">
+                    <div className="rounded-lg border bg-secondary/30 p-3">
+                      <p className="text-xs text-muted-foreground">Pending</p>
+                      <p className="mt-1 text-2xl font-semibold text-foreground">
+                        {webhookQueue.data.pending.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-secondary/30 p-3">
+                      <p className="text-xs text-muted-foreground">Scheduled retry</p>
+                      <p className="mt-1 text-2xl font-semibold text-foreground">
+                        {webhookQueue.data.scheduled.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Next: {formatDate(webhookQueue.data.next_due_at)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-secondary/30 p-3">
+                      <p className="text-xs text-muted-foreground">Exhausted</p>
+                      <p className="mt-1 text-2xl font-semibold text-foreground">
+                        {webhookQueue.data.exhausted.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Limit: {webhookQueue.data.max_attempts.toLocaleString()} attempts
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-secondary/30 p-3">
+                      <p className="text-xs text-muted-foreground">Oldest due</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        {formatDate(webhookQueue.data.oldest_due_at)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

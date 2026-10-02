@@ -15,6 +15,7 @@ from app.services.webhook_service import (
     canonical_webhook_body,
     enqueue_webhook_event,
     process_due_webhook_deliveries,
+    summarize_webhook_queue,
     webhook_signature,
 )
 
@@ -862,6 +863,104 @@ def test_process_due_webhook_deliveries_attempts_ready_rows_only(db):
     assert result.delivery_ids == [due.id]
     assert db.get(WebhookDelivery, future.id).attempt_count == 0
     assert db.get(WebhookDelivery, other_org.id).attempt_count == 0
+
+
+def test_summarize_webhook_queue_counts_due_scheduled_and_exhausted(db):
+    subscription = WebhookSubscription(
+        organization_id="org-queue",
+        name="Queue",
+        target_url="https://example.test/webhook",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    now = datetime.now(timezone.utc)
+    due = WebhookDelivery(
+        organization_id="org-queue",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="due",
+        payload={},
+        created_at=now - timedelta(hours=2),
+    )
+    scheduled = WebhookDelivery(
+        organization_id="org-queue",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="scheduled",
+        payload={},
+        next_attempt_at=now + timedelta(hours=1),
+    )
+    exhausted = WebhookDelivery(
+        organization_id="org-queue",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="exhausted",
+        payload={},
+        attempt_count=8,
+    )
+    delivered = WebhookDelivery(
+        organization_id="org-queue",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="delivered",
+        payload={},
+        status="delivered",
+    )
+    other_org = WebhookDelivery(
+        organization_id="other-org",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="other",
+        payload={},
+    )
+    db.add_all([due, scheduled, exhausted, delivered, other_org])
+    db.commit()
+
+    snapshot = summarize_webhook_queue(db, organization_id="org-queue")
+
+    assert snapshot.organization_id == "org-queue"
+    assert snapshot.pending == 3
+    assert snapshot.due_now == 1
+    assert snapshot.scheduled == 1
+    assert snapshot.exhausted == 1
+    assert snapshot.next_due_at == scheduled.next_attempt_at.replace(tzinfo=timezone.utc)
+    assert snapshot.oldest_due_at == due.created_at.replace(tzinfo=timezone.utc)
+
+
+def test_admin_can_view_webhook_queue_snapshot(client, db):
+    identity = _register(client, email="webhook-queue@example.com", org_name="Webhook Queue")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+    subscription = WebhookSubscription(
+        organization_id=org_id,
+        name="Queue endpoint",
+        target_url="https://queue.example.test/build-signals",
+        event_types=["deal.created"],
+    )
+    db.add(subscription)
+    db.flush()
+    db.add(WebhookDelivery(
+        organization_id=org_id,
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="due",
+        payload={},
+    ))
+    db.commit()
+
+    response = client.get(f"/organizations/{org_id}/webhook-queue", headers=headers)
+    invalid = client.get(f"/organizations/{org_id}/webhook-queue?max_attempts=0", headers=headers)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["organization_id"] == org_id
+    assert body["pending"] == 1
+    assert body["due_now"] == 1
+    assert body["scheduled"] == 0
+    assert body["exhausted"] == 0
+    assert invalid.status_code == 422
 
 
 def test_process_due_webhook_deliveries_marks_exhausted_retry_failed(db):

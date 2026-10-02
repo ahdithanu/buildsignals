@@ -146,6 +146,17 @@ export interface WebhookDeliverySummaryResponse {
   last_error_message: string | null;
 }
 
+export interface WebhookQueueSnapshotResponse {
+  organization_id: string;
+  pending: number;
+  due_now: number;
+  scheduled: number;
+  exhausted: number;
+  max_attempts: number;
+  next_due_at: string | null;
+  oldest_due_at: string | null;
+}
+
 export interface WebhookDeliveryResponse {
   id: string;
   organization_id: string;
@@ -236,6 +247,12 @@ export const organizationsApi = {
   getWebhookDeliverySummary(orgId: string): Promise<WebhookDeliverySummaryResponse> {
     return apiClient.get<WebhookDeliverySummaryResponse>(
       `/organizations/${orgId}/webhook-delivery-summary`,
+    );
+  },
+
+  getWebhookQueueSnapshot(orgId: string): Promise<WebhookQueueSnapshotResponse> {
+    return apiClient.get<WebhookQueueSnapshotResponse>(
+      `/organizations/${orgId}/webhook-queue`,
     );
   },
 

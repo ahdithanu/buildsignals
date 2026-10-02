@@ -60,6 +60,8 @@ bounded retries, and records success or failure without blocking the originating
 `GET /v1/organizations/{org_id}/webhook-delivery-summary` provides an admin health rollup with total, pending,
 delivered, failed, and dead-lettered deliveries, active/disabled subscription counts, failure rate, latest timestamps,
 and the most recent error message. Use it as the dashboard source before drilling into individual delivery rows.
+`GET /v1/organizations/{org_id}/webhook-queue` provides a read-only worker queue snapshot with pending, due-now,
+scheduled, and exhausted retry counts plus the next scheduled retry and oldest due delivery timestamp.
 The Settings console can also filter recent deliveries by subscription, status, event type, and event id so
 operators can verify a specific customer endpoint after sending a test event or troubleshooting a failure. Each
 delivery row exposes an expandable debug view with the delivery id, next retry timestamp, canonical payload, and
@@ -125,7 +127,8 @@ The runner prints a JSON summary:
 ```
 
 The worker is intentionally organization-scoped because production Postgres row-level security is tenant scoped.
-Schedulers should run it per enrolled customer workspace. Safe defaults:
+Schedulers should run it per enrolled customer workspace. Admins can inspect the read-only worker queue snapshot in
+Settings before running the worker; the snapshot does not send customer traffic. Safe defaults:
 
 - `--limit` accepts 1 to 250 deliveries per run.
 - `--max-attempts` accepts 1 to 25 attempts before a still-pending delivery is marked failed.
