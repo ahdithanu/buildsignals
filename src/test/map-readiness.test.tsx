@@ -64,6 +64,7 @@ describe('map diagnostics', () => {
     show();
     expect(await screen.findByText('No nearby-parcel searches have been saved.')).toBeInTheDocument();
     expect(screen.getByLabelText('Map readiness prerequisites')).toHaveTextContent('Saved searches: missing');
+    expect(screen.getByRole('link', { name: 'Open permit review' })).toHaveAttribute('href', '/permit-review');
   });
   it('counts geocoded planning records as early map signals', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
@@ -86,5 +87,6 @@ describe('map diagnostics', () => {
     expect(screen.getByText('Planning records')).toBeInTheDocument();
     expect(screen.getByText('Geocoded signals')).toBeInTheDocument();
     expect(screen.getByLabelText('Map readiness prerequisites')).toHaveTextContent('Geocoded filings: ready');
+    expect(screen.getByRole('link', { name: 'Open acquisition radar' })).toHaveAttribute('href', '/acquisition-radar');
   });
 });

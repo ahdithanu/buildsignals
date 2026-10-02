@@ -494,6 +494,10 @@ application, production diagnostics, and release coverage measurement.
   geocoded-signal prerequisite even when permit records are absent. Focused
   backend/frontend tests and TypeScript pass. This remains a workspace diagnostic,
   not live coverage or for-sale evidence.
+  The readiness panel now routes users to the next workflow based on the missing
+  prerequisite: source coverage, planning review, parcel-source review, permit
+  review for nearby searches, or Acquisition Radar when the prerequisites exist.
+  Focused frontend tests and TypeScript pass.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

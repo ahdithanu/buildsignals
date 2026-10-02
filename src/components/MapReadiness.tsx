@@ -36,6 +36,15 @@ export function MapReadiness() {
     : !data.geocoded_parcels ? 'Parcel records are missing usable coordinates.'
     : !data.saved_searches ? 'No nearby-parcel searches have been saved.'
     : 'Saved searches have not produced visible ranked parcels. Review their radius, filters, and source coverage.';
+  const primaryAction = !signals || !data.parcels
+    ? { label: 'Review source coverage', href: '/source-health' }
+    : !geocodedSignals
+      ? { label: 'Review planning signals', href: '/planning' }
+      : !data.geocoded_parcels
+        ? { label: 'Review parcel sources', href: '/source-health?record_type=parcel' }
+        : !data.saved_searches
+          ? { label: 'Open permit review', href: '/permit-review' }
+          : { label: 'Open acquisition radar', href: '/acquisition-radar' };
   const readiness = [
     ['Geocoded filings', data.has_geocoded_signals ?? data.geocoded_permits > 0],
     ['Mapped parcels', data.has_geocoded_parcels ?? data.geocoded_parcels > 0],
@@ -59,6 +68,6 @@ export function MapReadiness() {
         'Saved searches': data.saved_searches }).map(([label, count]) => <div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="font-semibold">{count.toLocaleString()}</dd></div>)}
     </dl>
     <p className="my-4 text-sm text-muted-foreground">Workspace counts do not establish local coverage, match quality, or availability for sale.</p>
-    <Link className="underline" to="/source-health">Review source coverage</Link>
+    <Link className="underline" to={primaryAction.href}>{primaryAction.label}</Link>
   </section>;
 }
