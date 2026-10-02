@@ -1048,6 +1048,61 @@ def test_admin_can_filter_webhook_deliveries_by_worker_queue_bucket(client, db):
     assert invalid.status_code == 422
 
 
+def test_admin_can_page_webhook_deliveries(client, db):
+    identity = _register(client, email="webhook-page@example.com", org_name="Webhook Page")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+    now = datetime.now(timezone.utc)
+    subscription = WebhookSubscription(
+        organization_id=org_id,
+        name="Paged endpoint",
+        target_url="https://paged.example.test/build-signals",
+        event_types=["deal.created"],
+    )
+    other_subscription = WebhookSubscription(
+        organization_id="other-org",
+        name="Other endpoint",
+        target_url="https://other.example.test/build-signals",
+        event_types=["deal.created"],
+    )
+    db.add_all([subscription, other_subscription])
+    db.flush()
+    for index in range(4):
+        db.add(WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=subscription.id,
+            event_type="deal.created",
+            event_id=f"paged-{index}",
+            payload={},
+            created_at=now + timedelta(minutes=index),
+        ))
+    db.add(WebhookDelivery(
+        organization_id="other-org",
+        subscription_id=other_subscription.id,
+        event_type="deal.created",
+        event_id="other-tenant",
+        payload={},
+        created_at=now + timedelta(minutes=10),
+    ))
+    db.commit()
+
+    first_page = client.get(
+        f"/organizations/{org_id}/webhook-deliveries",
+        headers=headers,
+        params={"limit": 2},
+    )
+    second_page = client.get(
+        f"/organizations/{org_id}/webhook-deliveries",
+        headers=headers,
+        params={"limit": 2, "skip": 2},
+    )
+
+    assert first_page.status_code == 200, first_page.text
+    assert [row["event_id"] for row in first_page.json()] == ["paged-3", "paged-2"]
+    assert second_page.status_code == 200, second_page.text
+    assert [row["event_id"] for row in second_page.json()] == ["paged-1", "paged-0"]
+
+
 def test_process_due_webhook_deliveries_marks_exhausted_retry_failed(db):
     subscription = WebhookSubscription(
         organization_id="org-exhausted",

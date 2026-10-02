@@ -303,6 +303,7 @@ export const organizationsApi = {
       eventType?: WebhookEventType;
       eventId?: string;
       limit?: number;
+      skip?: number;
     },
   ): Promise<WebhookDeliveryResponse[]> {
     const search = new URLSearchParams();
@@ -312,6 +313,7 @@ export const organizationsApi = {
     if (params?.eventType) search.set("event_type", params.eventType);
     if (params?.eventId?.trim()) search.set("event_id", params.eventId.trim());
     search.set("limit", String(params?.limit ?? 10));
+    search.set("skip", String(params?.skip ?? 0));
     return apiClient.get<WebhookDeliveryResponse[]>(
       `/organizations/${orgId}/webhook-deliveries?${search.toString()}`,
     );
