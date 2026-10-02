@@ -2,7 +2,8 @@
 
 Implementation follow-up: [Security and coverage evidence release](security-evidence-release.md)
 records local verification, newly discovered missing RLS policies, and the
-remaining production gates. Findings below retain their original audit context.
+remaining production gates. Findings below retain their original audit context,
+with resolved items called out explicitly rather than silently removed.
 
 This is a scoped code/configuration review and public-header check, not a
 penetration test, certification, or guarantee of investment results.
@@ -18,8 +19,7 @@ Prior local suites: 928 backend passed / 6 skipped; 110 frontend passed.
 
 | Priority | Gap and evidence | Acceptance gate |
 | --- | --- | --- |
-| P1 | Login.tsx does not submit TOTP although auth.py requires it for enrolled users | Submit optional code; test enrolled and unenrolled sign-in, rejection, retry, and mobile layout |
-| P1 | User.totp_secret is a plain string; twofa.py stores the shared secret directly | Encrypt with separately managed keys; migrate existing secrets; test rotation and recovery without logging secrets |
+| P1 | Production MFA key provisioning and legacy-secret backfill are unverified | Provision managed `MFA_ENCRYPTION_KEYS`/`MFA_ACTIVE_KEY_ID`, run dry-run and apply backfill, set `MFA_ALLOW_LEGACY_PLAINTEXT=false`, verify enrolled login and document key recovery |
 | P1 | Production restore and application-role isolation are unverified | Restore isolated PostgreSQL copy; record schema, isolation, measured RPO/RTO, reviewer and date |
 | P1 | 41 configured parcel feeds are not verified live inventory | Measure unique parcels, failed imports, latest source dates and geographic extent for each marketed market |
 | P1 | Enterprise checklist treats configuration as completion | Separate implemented, CI verified, production verified, and externally audited for each claim |
@@ -28,8 +28,18 @@ Prior local suites: 928 backend passed / 6 skipped; 110 frontend passed.
 | P2 | Mobile customer workflow is not fully verified | Test registration, MFA, alert, evidence, timeline, parcel selection, save and export at 390px and desktop |
 
 Priority reflects launch triage, not a formal vulnerability severity rating.
-TOTP storage finding does not establish that the database has been compromised.
-Transport and disk encryption do not replace separate protection of MFA secrets.
+The remaining MFA finding is a production evidence gap. Local code now protects
+new MFA enrollments with application-level encrypted storage, but the deployed
+environment still needs key provisioning, legacy backfill evidence, and
+legacy-read disablement before the gate can be closed. Transport and disk
+encryption do not replace separate protection of MFA secrets.
+
+## Resolved Since Audit
+
+| Original priority | Resolved item | Verification receipt |
+| --- | --- | --- |
+| P1 | Login submits optional TOTP codes and permits retry after rejection. Backend still rejects enrolled users without a valid code. | `tests/test_2fa.py` and `tests/test_mfa_secrets.py` pass 23 backend tests; `src/test/build-signals-wireframes.test.tsx` passes five frontend tests, including authenticator-code submission and retry. |
+| P1 | New MFA enrollment no longer stores the shared secret as plaintext. Secrets are written as authenticated, user-bound ciphertext under a separately provisioned versioned key ring, and legacy plaintext is cleared on storage/backfill. | `tests/test_2fa.py` and `tests/test_mfa_secrets.py` pass 23 backend tests covering encrypted storage, randomized ciphertext, tamper rejection, missing-key failure, legacy-read gating, atomic backfill, rotation, disable cleanup, and export omission. |
 
 ## Buyer Acceptance
 

@@ -48,5 +48,6 @@ counts alone must not be marketed as live geographic completeness.
 This release also changes organization user exports to a profile-field allowlist.
 Password hashes, MFA shared secrets, encrypted secret fields, token-revocation
 versions and superuser flags are excluded. The serializer and authenticated export
-route have regressions for secret omission. MFA encryption at rest is still a
-separate gated release; export filtering does not resolve plaintext storage.
+route have regressions for secret omission. MFA encryption at rest is implemented
+in the application layer, but production readiness still depends on managed key
+provisioning, legacy-secret backfill and disabling legacy plaintext reads.
