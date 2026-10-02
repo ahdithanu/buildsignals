@@ -121,6 +121,17 @@ class WebhookDeliverySummaryResponse(BaseModel):
     last_error_message: str | None
 
 
+class WebhookQueueSnapshotResponse(BaseModel):
+    organization_id: str
+    pending: int
+    due_now: int
+    scheduled: int
+    exhausted: int
+    max_attempts: int
+    next_due_at: datetime | None
+    oldest_due_at: datetime | None
+
+
 class WebhookDeadLetterAcknowledgeRequest(BaseModel):
     note: str | None = Field(default=None, max_length=500)
 

@@ -53,6 +53,18 @@ class WebhookDeliverySummary:
     last_error_message: str | None
 
 
+@dataclass(frozen=True)
+class WebhookQueueSnapshot:
+    organization_id: str
+    pending: int
+    due_now: int
+    scheduled: int
+    exhausted: int
+    max_attempts: int
+    next_due_at: datetime | None
+    oldest_due_at: datetime | None
+
+
 def resolve_secret_reference(secret_reference: str | None) -> str | None:
     if not secret_reference:
         return None
@@ -341,6 +353,14 @@ def fail_delivery_if_attempts_exhausted(
     return delivery
 
 
+def _as_aware_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def process_due_webhook_deliveries(
     db: Session,
     *,
@@ -434,6 +454,51 @@ def summarize_webhook_deliveries(db: Session, *, organization_id: str) -> Webhoo
         latest_attempted_at=latest_attempted_at,
         latest_created_at=latest_created_at,
         last_error_message=last_error_message,
+    )
+
+
+def summarize_webhook_queue(
+    db: Session,
+    *,
+    organization_id: str,
+    max_attempts: int = 8,
+) -> WebhookQueueSnapshot:
+    if max_attempts < 1 or max_attempts > 25:
+        raise ValueError("max_attempts must be between 1 and 25")
+
+    now = datetime.now(timezone.utc)
+    pending_deliveries = (
+        db.query(WebhookDelivery)
+        .filter(
+            WebhookDelivery.organization_id == organization_id,
+            WebhookDelivery.status == "pending",
+        )
+        .all()
+    )
+    due_deliveries = [
+        delivery for delivery in pending_deliveries
+        if delivery.attempt_count < max_attempts
+        and (_as_aware_utc(delivery.next_attempt_at) is None or _as_aware_utc(delivery.next_attempt_at) <= now)
+    ]
+    scheduled_deliveries = [
+        delivery for delivery in pending_deliveries
+        if delivery.attempt_count < max_attempts
+        and _as_aware_utc(delivery.next_attempt_at) is not None
+        and _as_aware_utc(delivery.next_attempt_at) > now
+    ]
+    exhausted_deliveries = [
+        delivery for delivery in pending_deliveries
+        if delivery.attempt_count >= max_attempts
+    ]
+    return WebhookQueueSnapshot(
+        organization_id=organization_id,
+        pending=len(pending_deliveries),
+        due_now=len(due_deliveries),
+        scheduled=len(scheduled_deliveries),
+        exhausted=len(exhausted_deliveries),
+        max_attempts=max_attempts,
+        next_due_at=min((_as_aware_utc(delivery.next_attempt_at) for delivery in scheduled_deliveries), default=None),
+        oldest_due_at=min((_as_aware_utc(delivery.created_at) for delivery in due_deliveries), default=None),
     )
 
 

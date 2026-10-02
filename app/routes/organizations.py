@@ -29,6 +29,7 @@ from app.schemas.webhook import (
     WebhookDeadLetterAcknowledgeRequest,
     WebhookDeliveryResponse,
     WebhookDeliverySummaryResponse,
+    WebhookQueueSnapshotResponse,
     WebhookSubscriptionCreate,
     WebhookSubscriptionResponse,
     WebhookSubscriptionUpdate,
@@ -50,6 +51,7 @@ from app.services.webhook_service import (
     list_dead_letter_webhook_deliveries,
     replay_webhook_delivery,
     summarize_webhook_deliveries,
+    summarize_webhook_queue,
     update_subscription,
 )
 from app.utils.auth_deps import get_current_user, require_role_of
@@ -507,6 +509,21 @@ def get_webhook_delivery_summary(
     if not db.get(Organization, org_id):
         raise HTTPException(status_code=404, detail="Organization not found")
     return summarize_webhook_deliveries(db, organization_id=org_id)
+
+
+@router.get("/{org_id}/webhook-queue", response_model=WebhookQueueSnapshotResponse)
+def get_webhook_queue_snapshot(
+    org_id: str,
+    max_attempts: int = 8,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    try:
+        return summarize_webhook_queue(db, organization_id=org_id, max_attempts=max_attempts)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/{org_id}/webhook-dead-letters", response_model=list[WebhookDeliveryResponse])
