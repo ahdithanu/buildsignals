@@ -54,6 +54,8 @@ export function SignalMapExplorer({
   });
   const points = useMemo(() => (data?.items ?? []).filter(p => layer === 'all' || p.kind === layer)
     .map(p => ({ ...p, id: `${p.kind}:${p.id}` })), [data, layer]);
+  const shownPermitCount = points.filter((point) => point.kind === 'permit').length;
+  const shownPlanningCount = points.filter((point) => point.kind === 'planning').length;
   const record = points.find(p => p.id === selected);
   const selectRecord = (id: string) => {
     setSelected(id);
@@ -71,7 +73,7 @@ export function SignalMapExplorer({
       : isPending ? <p role="status">Loading signal locations...</p>
       : <>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-          <p>{points.length} geocoded source records shown. Not unique projects, confirmed openings, or properties for sale.</p>
+          <p>{points.length} geocoded source records shown: {shownPermitCount} permits, {shownPlanningCount} planning. Not unique projects, confirmed openings, or properties for sale.</p>
           <div className="flex items-center gap-2">
             <button
               type="button"

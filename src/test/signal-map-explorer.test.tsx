@@ -28,6 +28,20 @@ describe('independent signal map', () => {
     expect(screen.queryByRole('link', { name: 'Original source' })).not.toBeInTheDocument();
     expect(screen.getByText('Stage: Unknown')).toBeInTheDocument();
   });
+  it('summarizes shown permit and planning source records without coverage claims', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      items: [
+        { id: 'p1', kind: 'permit', title: 'Expansion filing', latitude: 40, longitude: -83, raw_record_id: 'raw1' },
+        { id: 'hearing-42', kind: 'planning', title: 'Planning hearing', latitude: 40, longitude: -83, raw_record_id: 'raw42' },
+      ],
+      truncated_layers: [],
+      limit_per_layer: 100,
+    });
+    show();
+
+    expect(await screen.findByText(/2 geocoded source records shown: 1 permits, 1 planning/)).toBeInTheDocument();
+    expect(screen.getByText(/Not unique projects, confirmed openings, or properties for sale/)).toBeInTheDocument();
+  });
   it('keeps transport failures distinct from empty data', async () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('offline'));
     show();

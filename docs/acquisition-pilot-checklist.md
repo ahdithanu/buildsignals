@@ -556,6 +556,10 @@ limits. Its evidence, company matches, and source details use the existing
 planning record presentation. A missing or failed detail request remains an error,
 not a silent fallback to unrelated records. Explicit browsing clears record focus.
 Planning browser-cache keys include organization and user identity.
+The Signal geography panel now summarizes the loaded page by shown permit versus
+planning records while preserving the caveat that these are not unique projects,
+confirmed openings, or parcels for sale. Focused frontend tests and TypeScript
+pass.
 
 ## ZIP3 opportunity heatmap
 
