@@ -418,11 +418,24 @@ export interface MeasuredSourceCoverage {
   observed_states: ObservedStateCoverage[];
 }
 
+export interface MeasuredCoverageTotals {
+  source_count: number;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  unknown_source_date_records: number;
+  future_source_date_records: number;
+  recent_source_date_records: number;
+  observed_state_count: number;
+  observed_jurisdiction_count: number;
+}
+
 export interface MeasuredCoverage extends MeasuredCoverageParams {
   measured_at: string;
   scope: string;
   count_semantics: string;
   has_more: boolean;
+  page_totals: MeasuredCoverageTotals;
   sources: MeasuredSourceCoverage[];
   warnings: string[];
 }

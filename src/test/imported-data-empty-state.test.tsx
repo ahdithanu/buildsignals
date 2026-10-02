@@ -15,6 +15,17 @@ function report(params: MeasuredCoverageParams, stored = 0, hasMore = false): Me
   return {
     ...params, measured_at: '2026-09-11T12:00:00Z', has_more: hasMore,
     scope: 'Stored records for this organization.', count_semantics: 'Source-local counts.', warnings: [],
+    page_totals: {
+      source_count: 1,
+      stored_records: stored,
+      geocoded_records: 0,
+      recently_seen_records: 0,
+      unknown_source_date_records: 0,
+      future_source_date_records: 0,
+      recent_source_date_records: 0,
+      observed_state_count: 0,
+      observed_jurisdiction_count: 0,
+    },
     sources: [{
       source_id: `${params.record_type}-${params.offset}`, source_key: 'public_records',
       configured_active: false, configured_jurisdiction: 'TX', stored_records: stored, observed_states: [],

@@ -10,6 +10,9 @@ buckets so a reviewer can quickly see where stored records, geocoded rows,
 collection recency and source-date recency actually exist. This rollup is still
 source-page scoped; it is not a statewide coverage score or a substitute for
 production inventory measurement across every page.
+The API returns `page_totals` for the current query page so the frontend can
+display measured source, stored-record, geocoded-record, freshness and observed
+geography counts without deriving broader coverage claims in the browser.
 
 ## API and Semantics
 
@@ -28,6 +31,9 @@ production inventory measurement across every page.
 - Valid coordinate counts and observed extents do not prove geocoding accuracy or
   complete geographic coverage. Jurisdiction labels are not nationwide totals.
 - Parcel inventory does not establish verified for-sale availability.
+- `page_totals` is scoped to the returned source page and request filters. It is
+  not a tenant-wide total unless the caller has paginated through every page and
+  retained the same query parameters.
 
 The UI hides unconfirmed totals when measurement fails, provides retry and bounded
 pagination, and keys queries by organization and all parameters. The surrounding

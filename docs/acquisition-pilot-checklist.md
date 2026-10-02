@@ -520,7 +520,11 @@ application, production diagnostics, and release coverage measurement.
   current measured source page, including stored, geocoded, collected, and
   source-updated counts. It remains explicitly scoped to tenant stored records and
   does not present source-page observations as statewide or nationwide coverage.
-  Focused coverage-panel tests and TypeScript pass.
+  The API now returns page-scoped measured totals for source count, stored records,
+  geocoded records, collection/source-date freshness, unknown/future source dates,
+  and observed geography counts, and the UI renders those server-provided totals
+  instead of deriving broader claims in the browser. Focused backend/frontend
+  coverage-panel tests and TypeScript pass.
   Source-health now honors `record_type` URL handoffs, so readiness links such as
   `/source-health?record_type=parcel` open directly on parcel inventory instead
   of defaulting back to permits. Changing record type keeps the URL shareable and

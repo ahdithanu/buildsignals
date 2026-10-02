@@ -57,8 +57,6 @@ export function MeasuredCoveragePanel() {
     record_type: recordType, freshness_hours: hours, limit: PAGE_SIZE, offset,
   });
   const states = data?.sources.flatMap(source => source.observed_states) ?? [];
-  const stored = data?.sources.reduce((total, source) => total + source.stored_records, 0) ?? 0;
-  const observedStates = new Set(states.flatMap(state => state.state ? [state.state] : []));
   const stateRollup = Array.from(states.reduce((map, state) => {
     const key = state.state ?? 'Unknown';
     const current = map.get(key) ?? {
@@ -113,10 +111,14 @@ export function MeasuredCoveragePanel() {
         : isPending ? <p role="status" className="mt-4 text-sm text-muted-foreground">Measuring stored records...</p>
           : data ? <>
             <dl aria-label="Current page measurements" className="mt-5 grid grid-cols-2 gap-4 border-y py-3 sm:grid-cols-4">
-              <Metric label="Stored records on this page" value={stored} />
-              <Metric label="Observed state/DC codes on this page" value={observedStates.size} />
-              <Metric label="Valid coordinates on this page" value={states.reduce((sum, state) => sum + state.geocoded_records, 0)} />
-              <Metric label="Unknown source dates on this page" value={states.reduce((sum, state) => sum + state.unknown_source_date_records, 0)} />
+              <Metric label="Sources on this page" value={data.page_totals.source_count} />
+              <Metric label="Stored records on this page" value={data.page_totals.stored_records} />
+              <Metric label="Valid coordinates on this page" value={data.page_totals.geocoded_records} />
+              <Metric label="Unknown source dates on this page" value={data.page_totals.unknown_source_date_records} />
+              <Metric label={`Collected (${hours}h)`} value={data.page_totals.recently_seen_records} />
+              <Metric label={`Source updated (${hours}h)`} value={data.page_totals.recent_source_date_records} />
+              <Metric label="Observed state/DC codes" value={data.page_totals.observed_state_count} />
+              <Metric label="Observed jurisdiction labels" value={data.page_totals.observed_jurisdiction_count} />
             </dl>
             <p className="mt-2 text-[11px] text-muted-foreground">Measured {dateLabel(data.measured_at)} | Source-local counts; overlaps are not deduplicated.</p>
             {recordType === 'parcel' && <p className="mt-1 text-xs text-muted-foreground">Parcel inventory is not verified for-sale inventory.</p>}

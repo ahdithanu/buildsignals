@@ -17,6 +17,17 @@ function report(params: Partial<MeasuredCoverageParams> = {}): MeasuredCoverage 
     scope: 'Stored records for this organization, not statewide completeness.',
     count_semantics: 'Source-local counts; overlapping sources are not deduplicated.',
     warnings: ['Collection time is not source freshness.', 'Parcel records do not establish for-sale availability.'],
+    page_totals: {
+      source_count: 1,
+      stored_records: 100,
+      geocoded_records: 80,
+      recently_seen_records: 70,
+      unknown_source_date_records: 40,
+      future_source_date_records: 1,
+      recent_source_date_records: 12,
+      observed_state_count: 1,
+      observed_jurisdiction_count: 2,
+    },
     sources: [{
       source_id: 'source-a', source_key: 'county_public_records', configured_active: true,
       configured_jurisdiction: 'County, TX', stored_records: 100,
@@ -57,6 +68,9 @@ describe('MeasuredCoveragePanel', () => {
     expect(within(source).getByText('Unknown source date').nextElementSibling).toHaveTextContent('40');
     expect(within(source).getByText('Future source date').nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText('Stored records on this page')).toBeInTheDocument();
+    expect(screen.getByText('Sources on this page').nextElementSibling).toHaveTextContent('1');
+    expect(screen.getByText('Valid coordinates on this page').nextElementSibling).toHaveTextContent('80');
+    expect(screen.getByText('Observed jurisdiction labels').nextElementSibling).toHaveTextContent('2');
     expect(screen.getByText('Observed states on this source page')).toBeInTheDocument();
     const rollup = screen.getByRole('region', { name: 'Observed state rollup' });
     expect(within(rollup).getByText('TX')).toBeInTheDocument();
