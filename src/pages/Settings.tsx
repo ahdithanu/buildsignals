@@ -635,7 +635,26 @@ export default function Settings() {
                       Refresh deliveries
                     </button>
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-4">
+                  <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+                    <div>
+                      <label htmlFor="webhook-delivery-endpoint-filter" className="text-xs font-medium text-muted-foreground">
+                        Endpoint
+                      </label>
+                      <select
+                        id="webhook-delivery-endpoint-filter"
+                        value={selectedWebhookSubscriptionId ?? "all"}
+                        onChange={(event) => {
+                          setSelectedWebhookSubscriptionId(event.target.value === "all" ? null : event.target.value);
+                          resetWebhookDeliveryPaging();
+                        }}
+                        className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="all">All endpoints</option>
+                        {webhookSubscriptions.data?.map((subscription) => (
+                          <option key={subscription.id} value={subscription.id}>{subscription.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div>
                       <label htmlFor="webhook-delivery-status-filter" className="text-xs font-medium text-muted-foreground">
                         Status
@@ -762,6 +781,9 @@ export default function Settings() {
                               <p className="text-sm font-medium text-foreground">{delivery.event_type}</p>
                               <p className="mt-1 text-xs text-muted-foreground">
                                 Event {delivery.event_id} · Created {formatDate(delivery.created_at)}
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Endpoint: {webhookSubscriptions.data?.find((subscription) => subscription.id === delivery.subscription_id)?.name ?? delivery.subscription_id.slice(0, 8)}
                               </p>
                             </div>
                             <span className={`rounded-full px-2 py-0.5 text-xs ${
