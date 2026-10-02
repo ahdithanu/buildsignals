@@ -95,6 +95,7 @@ export default function Settings() {
   const [webhookDeliveryQueueStatusFilter, setWebhookDeliveryQueueStatusFilter] = useState<WebhookDeliveryQueueStatus | "all">("all");
   const [webhookDeliveryEventTypeFilter, setWebhookDeliveryEventTypeFilter] = useState<WebhookEventType | "all">("all");
   const [webhookDeliveryEventIdFilter, setWebhookDeliveryEventIdFilter] = useState("");
+  const [webhookDeliverySkip, setWebhookDeliverySkip] = useState(0);
   const [expandedWebhookDeliveryId, setExpandedWebhookDeliveryId] = useState<string | null>(null);
 
   const apiKeys = useQuery({
@@ -142,6 +143,7 @@ export default function Settings() {
       webhookDeliveryQueueStatusFilter,
       webhookDeliveryEventTypeFilter,
       webhookDeliveryEventIdFilter,
+      webhookDeliverySkip,
     ],
     queryFn: () => organizationsApi.listWebhookDeliveries(orgId, {
       subscriptionId: selectedWebhookSubscriptionId ?? undefined,
@@ -150,6 +152,7 @@ export default function Settings() {
       eventType: webhookDeliveryEventTypeFilter === "all" ? undefined : webhookDeliveryEventTypeFilter,
       eventId: webhookDeliveryEventIdFilter,
       limit: 10,
+      skip: webhookDeliverySkip,
     }),
     enabled: Boolean(orgId && isAdmin),
   });
@@ -371,6 +374,12 @@ export default function Settings() {
     setWebhookDeliveryQueueStatusFilter(queueStatus);
     setWebhookDeliveryEventTypeFilter("all");
     setWebhookDeliveryEventIdFilter("");
+    setWebhookDeliverySkip(0);
+    setExpandedWebhookDeliveryId(null);
+  };
+
+  const resetWebhookDeliveryPaging = () => {
+    setWebhookDeliverySkip(0);
     setExpandedWebhookDeliveryId(null);
   };
 
@@ -564,6 +573,7 @@ export default function Settings() {
                                 setWebhookDeliveryQueueStatusFilter("all");
                                 setWebhookDeliveryEventTypeFilter("all");
                                 setWebhookDeliveryEventIdFilter("");
+                                setWebhookDeliverySkip(0);
                                 setExpandedWebhookDeliveryId(null);
                               }}
                               className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
@@ -636,6 +646,7 @@ export default function Settings() {
                         onChange={(event) => {
                           setWebhookDeliveryStatusFilter(event.target.value as WebhookDeliveryStatus | "all");
                           setWebhookDeliveryQueueStatusFilter("all");
+                          resetWebhookDeliveryPaging();
                         }}
                         className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
                       >
@@ -656,6 +667,7 @@ export default function Settings() {
                           const nextQueueStatus = event.target.value as WebhookDeliveryQueueStatus | "all";
                           setWebhookDeliveryQueueStatusFilter(nextQueueStatus);
                           setWebhookDeliveryStatusFilter(nextQueueStatus === "all" ? "all" : "pending");
+                          resetWebhookDeliveryPaging();
                         }}
                         className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
                       >
@@ -672,7 +684,10 @@ export default function Settings() {
                       <select
                         id="webhook-delivery-event-type-filter"
                         value={webhookDeliveryEventTypeFilter}
-                        onChange={(event) => setWebhookDeliveryEventTypeFilter(event.target.value as WebhookEventType | "all")}
+                        onChange={(event) => {
+                          setWebhookDeliveryEventTypeFilter(event.target.value as WebhookEventType | "all");
+                          resetWebhookDeliveryPaging();
+                        }}
                         className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
                       >
                         <option value="all">All event types</option>
@@ -688,7 +703,10 @@ export default function Settings() {
                       <input
                         id="webhook-delivery-event-id-filter"
                         value={webhookDeliveryEventIdFilter}
-                        onChange={(event) => setWebhookDeliveryEventIdFilter(event.target.value)}
+                        onChange={(event) => {
+                          setWebhookDeliveryEventIdFilter(event.target.value);
+                          resetWebhookDeliveryPaging();
+                        }}
                         placeholder="admin-test, deal id, event id"
                         className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
                       />
@@ -702,6 +720,36 @@ export default function Settings() {
                   )}
                   {webhookDeliveries.data && (
                     <div className="mt-3 space-y-2">
+                      <div className="flex flex-col gap-2 rounded-lg border bg-secondary/30 p-3 md:flex-row md:items-center md:justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          Showing {webhookDeliveries.data.length.toLocaleString()} deliveries
+                          {webhookDeliverySkip > 0 ? ` after skipping ${webhookDeliverySkip.toLocaleString()}` : ""}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={webhookDeliverySkip === 0 || webhookDeliveries.isFetching}
+                            onClick={() => {
+                              setWebhookDeliverySkip((current) => Math.max(current - 10, 0));
+                              setExpandedWebhookDeliveryId(null);
+                            }}
+                            className="rounded-lg border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          >
+                            Previous
+                          </button>
+                          <button
+                            type="button"
+                            disabled={webhookDeliveries.data.length < 10 || webhookDeliveries.isFetching}
+                            onClick={() => {
+                              setWebhookDeliverySkip((current) => current + 10);
+                              setExpandedWebhookDeliveryId(null);
+                            }}
+                            className="rounded-lg border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          >
+                            Next 10
+                          </button>
+                        </div>
+                      </div>
                       {webhookDeliveries.data.length === 0 && (
                         <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
                           No deliveries match these filters. Send a test event or broaden the status, event type, or event ID search.
