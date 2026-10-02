@@ -6,6 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 interface Readiness {
   permits: number;
   geocoded_permits: number;
+  planning_records?: number;
+  geocoded_planning_records?: number;
+  signals?: number;
+  geocoded_signals?: number;
   parcels: number;
   geocoded_parcels: number;
   saved_searches: number;
@@ -24,8 +28,10 @@ export function MapReadiness() {
   });
   if (error) return <section className="p-6" role="alert">Workspace diagnostics unavailable. <button onClick={() => refetch()} className="underline">Retry diagnostics</button></section>;
   if (isPending) return <p className="p-6" role="status">Checking workspace inventory...</p>;
-  const message = !data.permits ? 'No active permit records in this workspace.'
-    : !data.geocoded_permits ? 'Permit records are missing usable coordinates.'
+  const signals = data.signals ?? data.permits;
+  const geocodedSignals = data.geocoded_signals ?? data.geocoded_permits;
+  const message = !signals ? 'No active permit or planning records in this workspace.'
+    : !geocodedSignals ? 'Permit and planning records are missing usable coordinates.'
     : !data.parcels ? 'No active parcel records in this workspace.'
     : !data.geocoded_parcels ? 'Parcel records are missing usable coordinates.'
     : !data.saved_searches ? 'No nearby-parcel searches have been saved.'
@@ -47,6 +53,8 @@ export function MapReadiness() {
     </div>
     <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
       {Object.entries({ 'Active permits': data.permits, 'Permits with coordinates': data.geocoded_permits,
+        'Planning records': data.planning_records ?? 0, 'Planning with coordinates': data.geocoded_planning_records ?? 0,
+        'Geocoded signals': geocodedSignals,
         'Active parcels': data.parcels, 'Parcels with coordinates': data.geocoded_parcels,
         'Saved searches': data.saved_searches }).map(([label, count]) => <div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="font-semibold">{count.toLocaleString()}</dd></div>)}
     </dl>

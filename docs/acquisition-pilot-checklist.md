@@ -489,6 +489,11 @@ application, production diagnostics, and release coverage measurement.
   filings, mapped parcels, saved searches, and ranked-map readiness, and the map
   panel labels each prerequisite as ready or missing without treating empty counts
   as market coverage or parcel availability.
+  The same readiness contract now includes planning records in `signals` and
+  `geocoded_signals`, so early planning agendas and staff reports can satisfy the
+  geocoded-signal prerequisite even when permit records are absent. Focused
+  backend/frontend tests and TypeScript pass. This remains a workspace diagnostic,
+  not live coverage or for-sale evidence.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

@@ -20,6 +20,10 @@ describe('map diagnostics', () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       permits: 10,
       geocoded_permits: 8,
+      planning_records: 0,
+      geocoded_planning_records: 0,
+      signals: 10,
+      geocoded_signals: 8,
       parcels: 0,
       geocoded_parcels: 0,
       saved_searches: 0,
@@ -45,6 +49,10 @@ describe('map diagnostics', () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       permits: 10,
       geocoded_permits: 8,
+      planning_records: 0,
+      geocoded_planning_records: 0,
+      signals: 10,
+      geocoded_signals: 8,
       parcels: 40,
       geocoded_parcels: 40,
       saved_searches: 0,
@@ -56,5 +64,27 @@ describe('map diagnostics', () => {
     show();
     expect(await screen.findByText('No nearby-parcel searches have been saved.')).toBeInTheDocument();
     expect(screen.getByLabelText('Map readiness prerequisites')).toHaveTextContent('Saved searches: missing');
+  });
+  it('counts geocoded planning records as early map signals', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      permits: 0,
+      geocoded_permits: 0,
+      planning_records: 3,
+      geocoded_planning_records: 2,
+      signals: 3,
+      geocoded_signals: 2,
+      parcels: 12,
+      geocoded_parcels: 12,
+      saved_searches: 1,
+      has_geocoded_signals: true,
+      has_geocoded_parcels: true,
+      has_saved_searches: true,
+      ready_for_ranked_map: true,
+    });
+    show();
+    expect(await screen.findByText('Saved searches have not produced visible ranked parcels. Review their radius, filters, and source coverage.')).toBeInTheDocument();
+    expect(screen.getByText('Planning records')).toBeInTheDocument();
+    expect(screen.getByText('Geocoded signals')).toBeInTheDocument();
+    expect(screen.getByLabelText('Map readiness prerequisites')).toHaveTextContent('Geocoded filings: ready');
   });
 });
