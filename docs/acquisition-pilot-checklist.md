@@ -511,6 +511,11 @@ application, production diagnostics, and release coverage measurement.
   historical cohort into earlier evidence, identity graph, geography layer, and
   parcel follow-up workstreams while explicitly withholding live-coverage or
   for-sale claims. Focused demo workspace tests and TypeScript pass.
+  The demo evidence graph now has a focused regression requiring both mobile and
+  desktop relationship visuals, source-backed relationship rationale, linked
+  filings, and historical activity counts to render. This protects the graph
+  section from becoming a text-only permit detail. Focused graph tests and
+  TypeScript pass.
   The measured source-health panel now rolls up observed state/DC buckets for the
   current measured source page, including stored, geocoded, collected, and
   source-updated counts. It remains explicitly scoped to tenant stored records and
