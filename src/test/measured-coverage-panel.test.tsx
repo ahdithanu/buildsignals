@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ingestionApi } from '@/api/ingestion';
 import { MeasuredCoveragePanel } from '@/components/MeasuredCoveragePanel';
@@ -46,9 +46,14 @@ function LocationProbe() {
   return <span data-testid="location-search">{location.search}</span>;
 }
 
+function QueryNavigator() {
+  const [, setSearchParams] = useSearchParams();
+  return <button type="button" onClick={() => setSearchParams({ record_type: 'planning' })}>Navigate to planning inventory</button>;
+}
+
 function setup(initialEntry = '/source-health') {
   const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } });
-  const app = <QueryClientProvider client={client}><MemoryRouter initialEntries={[initialEntry]}><LocationProbe /><MeasuredCoveragePanel /></MemoryRouter></QueryClientProvider>;
+  const app = <QueryClientProvider client={client}><MemoryRouter initialEntries={[initialEntry]}><LocationProbe /><QueryNavigator /><MeasuredCoveragePanel /></MemoryRouter></QueryClientProvider>;
   return { ...render(app), app, client };
 }
 
@@ -110,6 +115,17 @@ describe('MeasuredCoveragePanel', () => {
     fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'permit' } });
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'permit', freshness_hours: 72, limit: 25, offset: 0 }));
     expect(screen.getByTestId('location-search')).toHaveTextContent('');
+  });
+
+  it('reacts when in-app navigation changes the measured inventory record type', async () => {
+    setup('/source-health?record_type=parcel');
+    await screen.findByRole('article', { name: 'county_public_records' });
+    expect(screen.getByLabelText('Records')).toHaveValue('parcel');
+
+    fireEvent.click(screen.getByText('Navigate to planning inventory'));
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'planning', freshness_hours: 72, limit: 25, offset: 0 }));
+    expect(screen.getByLabelText('Records')).toHaveValue('planning');
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=planning');
   });
 
   it('shows zero for a measured empty source, not inferred coverage from its configuration', async () => {

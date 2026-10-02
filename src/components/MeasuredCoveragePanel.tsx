@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -50,6 +50,7 @@ function StateMeasurements({ state, hours }: { state: ObservedStateCoverage; hou
 
 export function MeasuredCoveragePanel() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const recordTypeParam = searchParams.get('record_type');
   const [recordType, setRecordType] = useState<CoverageRecordType>(() => queryRecordType(searchParams.get('record_type')));
   const [hours, setHours] = useState(72);
   const [offset, setOffset] = useState(0);
@@ -73,6 +74,12 @@ export function MeasuredCoveragePanel() {
   }, new Map<string, { state: string; stored_records: number; geocoded_records: number; recently_seen_records: number; recent_source_date_records: number; source_count: number }>()).values())
     .sort((a, b) => b.stored_records - a.stored_records || a.state.localeCompare(b.state))
     .slice(0, 6);
+
+  useEffect(() => {
+    const nextRecordType = queryRecordType(recordTypeParam);
+    setRecordType(current => current === nextRecordType ? current : nextRecordType);
+    setOffset(0);
+  }, [recordTypeParam]);
 
   function changeRecordType(value: CoverageRecordType) {
     setRecordType(value);
