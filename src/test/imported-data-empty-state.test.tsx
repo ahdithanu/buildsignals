@@ -112,6 +112,18 @@ describe('Imported data empty states', () => {
     expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
   });
 
+  it('uses server page totals instead of client-side source row aggregation', async () => {
+    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => {
+      const response = report(params, 0);
+      response.page_totals.stored_records = 3;
+      response.sources = [];
+      return response;
+    });
+    setup(['parcel']);
+    await screen.findByText('No matching signals');
+    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
+  });
+
   it('leaves availability unknown when a later page fails and supports retry', async () => {
     vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => {
       if (params.offset > 0) throw new Error('Offline');

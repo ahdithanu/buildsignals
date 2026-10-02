@@ -534,7 +534,9 @@ application, production diagnostics, and release coverage measurement.
   path lands on the relevant record class.
   Imported-data empty states also route single-record workflows to their matching
   measured inventory view, so parcel-only and planning-only gaps land on parcel
-  or planning source health without another manual filter step.
+  or planning source health without another manual filter step. The availability
+  hook now uses server-provided measured page totals rather than client-side
+  source-row aggregation.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved
