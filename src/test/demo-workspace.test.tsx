@@ -73,6 +73,32 @@ it('describes populated demo surfaces without claiming live parcel inventory', a
   expect(screen.queryByText(/are not populated by this historical permit cohort/)).not.toBeInTheDocument();
 });
 
+it('treats reported parcel references as review-needed leads when geometry is absent', async () => {
+  vi.mocked(apiClient.get).mockImplementation(async (endpoint) => {
+    if (endpoint === '/demo/summary') return {
+      permit_records: 2049,
+      graph_entities: 4852,
+      relationships: 8115,
+      captured_at: '2026-09-23T00:00:00Z',
+      parcel_references: 1031,
+      parcel_records: 0,
+      mapped_permits: 0,
+      mapped_parcels: 0,
+      derived_geocoded_permits: 0,
+      mapped_filing_locations: 0,
+    };
+    if (endpoint === '/ingestion/permits') return [];
+    throw new Error(`Unexpected request: ${endpoint}`);
+  });
+
+  render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DemoWorkspace /></MemoryRouter></QueryClientProvider>);
+
+  await screen.findByText(/Reported parcel IDs are investigation leads/);
+  expect(screen.getAllByText('1,031').length).toBeGreaterThanOrEqual(1);
+  expect(screen.getByText('Parcel candidates')).toBeInTheDocument();
+  expect(screen.getByText('Review needed')).toBeInTheDocument();
+});
+
 it('renders a mapped demo layer for geocoded filings and parcels', async () => {
   render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DemoWorkspace /></MemoryRouter></QueryClientProvider>);
   fireEvent.click(await screen.findByRole('button', { name: /open map/i }));

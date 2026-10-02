@@ -503,6 +503,10 @@ application, production diagnostics, and release coverage measurement.
   prerequisite: source coverage, planning review, parcel-source review, permit
   review for nearby searches, or Acquisition Radar when the prerequisites exist.
   Focused frontend tests and TypeScript pass.
+  The read-only demo readiness view now treats reported parcel IDs without
+  qualified geometry as review-needed investigation leads, not blocked workflow
+  data and not mapped/for-sale parcel inventory. Focused demo workspace tests and
+  TypeScript pass.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

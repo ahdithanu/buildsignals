@@ -94,11 +94,15 @@ export default function DemoWorkspace() {
       },
       {
         label: 'Parcel candidates',
-        value: data.mapped_parcels.toLocaleString(),
-        status: data.mapped_parcels > 0 ? 'partial' : 'blocked',
+        value: data.mapped_parcels > 0
+          ? data.mapped_parcels.toLocaleString()
+          : data.parcel_references.toLocaleString(),
+        status: data.mapped_parcels > 0 || data.parcel_references > 0 ? 'partial' : 'blocked',
         detail: data.mapped_parcels > 0
           ? 'Mapped parcels are context candidates only until zoning, ownership, availability, and source rights are verified.'
-          : 'Reported parcel IDs exist, but qualified parcel geometry/centroids are not loaded for ranked nearby candidates.',
+          : data.parcel_references > 0
+            ? 'Reported parcel IDs are investigation leads; qualified geometry, ownership, availability, and source rights are still needed for ranked nearby candidates.'
+            : 'Qualified parcel geometry/centroids are not loaded for ranked nearby candidates.',
         action: 'parcels',
       },
     ];
