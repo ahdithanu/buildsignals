@@ -41,7 +41,8 @@ which preserves user-facing latency and avoids turning customer endpoint downtim
 
 Only organization admins can manage subscriptions or inspect deliveries. All records are organization-scoped and
 covered by Postgres row-level security in production. Delivery listing supports operational filters for
-`subscription_id`, `status`, `event_type`, partial `event_id`, `skip`, and bounded `limit` so support teams can
+`subscription_id`, `status`, worker `queue_status` (`due`, `scheduled`, `exhausted`), `event_type`, partial
+`event_id`, `skip`, and bounded `limit` so support teams can
 isolate one customer integration incident without exporting the full tenant history.
 
 ## Delivery Queue

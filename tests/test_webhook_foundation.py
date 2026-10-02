@@ -963,6 +963,91 @@ def test_admin_can_view_webhook_queue_snapshot(client, db):
     assert invalid.status_code == 422
 
 
+def test_admin_can_filter_webhook_deliveries_by_worker_queue_bucket(client, db):
+    identity = _register(client, email="webhook-queue-filter@example.com", org_name="Webhook Queue Filter")
+    headers = _headers(identity)
+    org_id = identity["organization_id"]
+    now = datetime.now(timezone.utc)
+    subscription = WebhookSubscription(
+        organization_id=org_id,
+        name="Queue filter endpoint",
+        target_url="https://queue-filter.example.test/build-signals",
+        event_types=["deal.created"],
+    )
+    db.add(subscription)
+    db.flush()
+    db.add_all([
+        WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=subscription.id,
+            event_type="deal.created",
+            event_id="due-now",
+            payload={},
+            status="pending",
+            attempt_count=1,
+            next_attempt_at=now - timedelta(minutes=5),
+        ),
+        WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=subscription.id,
+            event_type="deal.created",
+            event_id="scheduled",
+            payload={},
+            status="pending",
+            attempt_count=1,
+            next_attempt_at=now + timedelta(hours=1),
+        ),
+        WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=subscription.id,
+            event_type="deal.created",
+            event_id="exhausted",
+            payload={},
+            status="pending",
+            attempt_count=8,
+        ),
+        WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=subscription.id,
+            event_type="deal.created",
+            event_id="delivered",
+            payload={},
+            status="delivered",
+            attempt_count=1,
+        ),
+    ])
+    db.commit()
+
+    due = client.get(
+        f"/organizations/{org_id}/webhook-deliveries",
+        headers=headers,
+        params={"queue_status": "due"},
+    )
+    scheduled = client.get(
+        f"/organizations/{org_id}/webhook-deliveries",
+        headers=headers,
+        params={"queue_status": "scheduled"},
+    )
+    exhausted = client.get(
+        f"/organizations/{org_id}/webhook-deliveries",
+        headers=headers,
+        params={"queue_status": "exhausted"},
+    )
+    invalid = client.get(
+        f"/organizations/{org_id}/webhook-deliveries",
+        headers=headers,
+        params={"queue_status": "stalled"},
+    )
+
+    assert due.status_code == 200, due.text
+    assert [row["event_id"] for row in due.json()] == ["due-now"]
+    assert scheduled.status_code == 200, scheduled.text
+    assert [row["event_id"] for row in scheduled.json()] == ["scheduled"]
+    assert exhausted.status_code == 200, exhausted.text
+    assert [row["event_id"] for row in exhausted.json()] == ["exhausted"]
+    assert invalid.status_code == 422
+
+
 def test_process_due_webhook_deliveries_marks_exhausted_retry_failed(db):
     subscription = WebhookSubscription(
         organization_id="org-exhausted",

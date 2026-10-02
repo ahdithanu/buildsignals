@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { motion } from "framer-motion";
 import { ApiError } from "@/api/client";
-import { WEBHOOK_EVENT_TYPES, organizationsApi, type ApiKeyCreateResponse, type ApiKeyScope, type WebhookDeliveryStatus, type WebhookEventType } from "@/api/organizations";
+import { WEBHOOK_EVENT_TYPES, organizationsApi, type ApiKeyCreateResponse, type ApiKeyScope, type WebhookDeliveryQueueStatus, type WebhookDeliveryStatus, type WebhookEventType } from "@/api/organizations";
 import { ErrorState, LoadingState } from "@/components/DataStates";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -92,6 +92,7 @@ export default function Settings() {
   const [webhookTestEventType, setWebhookTestEventType] = useState<WebhookEventType>("deal.created");
   const [selectedWebhookSubscriptionId, setSelectedWebhookSubscriptionId] = useState<string | null>(null);
   const [webhookDeliveryStatusFilter, setWebhookDeliveryStatusFilter] = useState<WebhookDeliveryStatus | "all">("all");
+  const [webhookDeliveryQueueStatusFilter, setWebhookDeliveryQueueStatusFilter] = useState<WebhookDeliveryQueueStatus | "all">("all");
   const [webhookDeliveryEventTypeFilter, setWebhookDeliveryEventTypeFilter] = useState<WebhookEventType | "all">("all");
   const [webhookDeliveryEventIdFilter, setWebhookDeliveryEventIdFilter] = useState("");
   const [expandedWebhookDeliveryId, setExpandedWebhookDeliveryId] = useState<string | null>(null);
@@ -138,17 +139,19 @@ export default function Settings() {
       orgId,
       selectedWebhookSubscriptionId,
       webhookDeliveryStatusFilter,
+      webhookDeliveryQueueStatusFilter,
       webhookDeliveryEventTypeFilter,
       webhookDeliveryEventIdFilter,
     ],
     queryFn: () => organizationsApi.listWebhookDeliveries(orgId, {
       subscriptionId: selectedWebhookSubscriptionId ?? undefined,
       status: webhookDeliveryStatusFilter === "all" ? undefined : webhookDeliveryStatusFilter,
+      queueStatus: webhookDeliveryQueueStatusFilter === "all" ? undefined : webhookDeliveryQueueStatusFilter,
       eventType: webhookDeliveryEventTypeFilter === "all" ? undefined : webhookDeliveryEventTypeFilter,
       eventId: webhookDeliveryEventIdFilter,
       limit: 10,
     }),
-    enabled: Boolean(orgId && isAdmin && selectedWebhookSubscriptionId),
+    enabled: Boolean(orgId && isAdmin),
   });
 
   const invalidateKeys = () =>
@@ -362,6 +365,15 @@ export default function Settings() {
     });
   };
 
+  const focusWebhookDeliveries = (queueStatus: WebhookDeliveryQueueStatus | "all") => {
+    setSelectedWebhookSubscriptionId(null);
+    setWebhookDeliveryStatusFilter("pending");
+    setWebhookDeliveryQueueStatusFilter(queueStatus);
+    setWebhookDeliveryEventTypeFilter("all");
+    setWebhookDeliveryEventIdFilter("");
+    setExpandedWebhookDeliveryId(null);
+  };
+
   const copySecret = async () => {
     if (!createdKey?.secret) return;
     await navigator.clipboard.writeText(createdKey.secret);
@@ -549,6 +561,7 @@ export default function Settings() {
                               onClick={() => {
                                 setSelectedWebhookSubscriptionId(subscription.id);
                                 setWebhookDeliveryStatusFilter("all");
+                                setWebhookDeliveryQueueStatusFilter("all");
                                 setWebhookDeliveryEventTypeFilter("all");
                                 setWebhookDeliveryEventIdFilter("");
                                 setExpandedWebhookDeliveryId(null);
@@ -589,16 +602,18 @@ export default function Settings() {
                   </div>
                 )}
               </div>
+            </div>
 
-              {selectedWebhookSubscriptionId && (
                 <div className="mt-5 rounded-lg border bg-background p-3">
                   <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        Recent endpoint deliveries
+                        Recent deliveries
                       </p>
                       <p className="mt-1 text-sm font-medium text-foreground">
-                        {webhookSubscriptions.data?.find((subscription) => subscription.id === selectedWebhookSubscriptionId)?.name ?? "Selected endpoint"}
+                        {selectedWebhookSubscriptionId
+                          ? webhookSubscriptions.data?.find((subscription) => subscription.id === selectedWebhookSubscriptionId)?.name ?? "Selected endpoint"
+                          : "All webhook endpoints"}
                       </p>
                     </div>
                     <button
@@ -610,7 +625,7 @@ export default function Settings() {
                       Refresh deliveries
                     </button>
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <div className="mt-3 grid gap-3 md:grid-cols-4">
                     <div>
                       <label htmlFor="webhook-delivery-status-filter" className="text-xs font-medium text-muted-foreground">
                         Status
@@ -618,13 +633,36 @@ export default function Settings() {
                       <select
                         id="webhook-delivery-status-filter"
                         value={webhookDeliveryStatusFilter}
-                        onChange={(event) => setWebhookDeliveryStatusFilter(event.target.value as WebhookDeliveryStatus | "all")}
+                        onChange={(event) => {
+                          setWebhookDeliveryStatusFilter(event.target.value as WebhookDeliveryStatus | "all");
+                          setWebhookDeliveryQueueStatusFilter("all");
+                        }}
                         className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
                       >
                         <option value="all">All statuses</option>
                         <option value="pending">Pending</option>
                         <option value="delivered">Delivered</option>
                         <option value="failed">Failed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="webhook-delivery-queue-filter" className="text-xs font-medium text-muted-foreground">
+                        Queue bucket
+                      </label>
+                      <select
+                        id="webhook-delivery-queue-filter"
+                        value={webhookDeliveryQueueStatusFilter}
+                        onChange={(event) => {
+                          const nextQueueStatus = event.target.value as WebhookDeliveryQueueStatus | "all";
+                          setWebhookDeliveryQueueStatusFilter(nextQueueStatus);
+                          setWebhookDeliveryStatusFilter(nextQueueStatus === "all" ? "all" : "pending");
+                        }}
+                        className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="all">All queue buckets</option>
+                        <option value="due">Due now</option>
+                        <option value="scheduled">Scheduled retry</option>
+                        <option value="exhausted">Exhausted attempts</option>
                       </select>
                     </div>
                     <div>
@@ -751,8 +789,6 @@ export default function Settings() {
                     </div>
                   )}
                 </div>
-              )}
-            </div>
 
             <div className="mb-6 rounded-xl border bg-secondary/30 p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -852,13 +888,22 @@ export default function Settings() {
                     </span>
                   </div>
                   <div className="mt-3 grid gap-3 md:grid-cols-4">
-                    <div className="rounded-lg border bg-secondary/30 p-3">
+                    <button
+                      type="button"
+                      onClick={() => focusWebhookDeliveries("all")}
+                      className="rounded-lg border bg-secondary/30 p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                    >
                       <p className="text-xs text-muted-foreground">Pending</p>
                       <p className="mt-1 text-2xl font-semibold text-foreground">
                         {webhookQueue.data.pending.toLocaleString()}
                       </p>
-                    </div>
-                    <div className="rounded-lg border bg-secondary/30 p-3">
+                      <p className="mt-1 text-xs font-medium text-primary">View pending deliveries</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => focusWebhookDeliveries("scheduled")}
+                      className="rounded-lg border bg-secondary/30 p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                    >
                       <p className="text-xs text-muted-foreground">Scheduled retry</p>
                       <p className="mt-1 text-2xl font-semibold text-foreground">
                         {webhookQueue.data.scheduled.toLocaleString()}
@@ -866,8 +911,13 @@ export default function Settings() {
                       <p className="text-xs text-muted-foreground">
                         Next: {formatDate(webhookQueue.data.next_due_at)}
                       </p>
-                    </div>
-                    <div className="rounded-lg border bg-secondary/30 p-3">
+                      <p className="mt-1 text-xs font-medium text-primary">View pending retry queue</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => focusWebhookDeliveries("exhausted")}
+                      className="rounded-lg border bg-secondary/30 p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                    >
                       <p className="text-xs text-muted-foreground">Exhausted</p>
                       <p className="mt-1 text-2xl font-semibold text-foreground">
                         {webhookQueue.data.exhausted.toLocaleString()}
@@ -875,13 +925,19 @@ export default function Settings() {
                       <p className="text-xs text-muted-foreground">
                         Limit: {webhookQueue.data.max_attempts.toLocaleString()} attempts
                       </p>
-                    </div>
-                    <div className="rounded-lg border bg-secondary/30 p-3">
+                      <p className="mt-1 text-xs font-medium text-primary">View exhausted attempts</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => focusWebhookDeliveries("due")}
+                      className="rounded-lg border bg-secondary/30 p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                    >
                       <p className="text-xs text-muted-foreground">Oldest due</p>
                       <p className="mt-1 text-sm font-semibold text-foreground">
                         {formatDate(webhookQueue.data.oldest_due_at)}
                       </p>
-                    </div>
+                      <p className="mt-1 text-xs font-medium text-primary">Review due deliveries</p>
+                    </button>
                   </div>
                 </div>
               )}

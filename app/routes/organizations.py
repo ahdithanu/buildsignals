@@ -1,6 +1,8 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -469,15 +471,19 @@ def list_webhook_deliveries(
     org_id: str,
     subscription_id: str | None = None,
     status: str | None = None,
+    queue_status: str | None = None,
     event_type: str | None = None,
     event_id: str | None = None,
     limit: int = 50,
     skip: int = 0,
+    max_attempts: int = 8,
     principal: dict = Depends(require_role_of(MemberRole.admin)),
     db: Session = Depends(get_db),
 ):
     if not db.get(Organization, org_id):
         raise HTTPException(status_code=404, detail="Organization not found")
+    if max_attempts < 1 or max_attempts > 25:
+        raise HTTPException(status_code=422, detail="max_attempts must be between 1 and 25")
     query = db.query(WebhookDelivery).filter(WebhookDelivery.organization_id == org_id)
     if subscription_id:
         query = query.filter(WebhookDelivery.subscription_id == subscription_id)
@@ -485,6 +491,27 @@ def list_webhook_deliveries(
         if status not in {"pending", "delivered", "failed"}:
             raise HTTPException(status_code=422, detail="Unsupported webhook delivery status")
         query = query.filter(WebhookDelivery.status == status)
+    if queue_status:
+        now = datetime.now(timezone.utc)
+        if queue_status == "due":
+            query = query.filter(
+                WebhookDelivery.status == "pending",
+                WebhookDelivery.attempt_count < max_attempts,
+                or_(WebhookDelivery.next_attempt_at.is_(None), WebhookDelivery.next_attempt_at <= now),
+            )
+        elif queue_status == "scheduled":
+            query = query.filter(
+                WebhookDelivery.status == "pending",
+                WebhookDelivery.attempt_count < max_attempts,
+                WebhookDelivery.next_attempt_at > now,
+            )
+        elif queue_status == "exhausted":
+            query = query.filter(
+                WebhookDelivery.status == "pending",
+                WebhookDelivery.attempt_count >= max_attempts,
+            )
+        else:
+            raise HTTPException(status_code=422, detail="Unsupported webhook queue status")
     if event_type:
         normalized_event_type = event_type.strip().lower()
         if normalized_event_type not in WEBHOOK_EVENT_TYPES:

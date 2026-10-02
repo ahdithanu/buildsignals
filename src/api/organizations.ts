@@ -80,6 +80,7 @@ export interface ApiKeyUsageRollupRebuildResponse {
 }
 
 export type WebhookDeliveryStatus = "pending" | "delivered" | "failed";
+export type WebhookDeliveryQueueStatus = "due" | "scheduled" | "exhausted";
 export type WebhookSubscriptionStatus = "active" | "disabled";
 
 export const WEBHOOK_EVENT_TYPES = [
@@ -298,6 +299,7 @@ export const organizationsApi = {
     params?: {
       subscriptionId?: string;
       status?: WebhookDeliveryStatus;
+      queueStatus?: WebhookDeliveryQueueStatus;
       eventType?: WebhookEventType;
       eventId?: string;
       limit?: number;
@@ -306,6 +308,7 @@ export const organizationsApi = {
     const search = new URLSearchParams();
     if (params?.subscriptionId) search.set("subscription_id", params.subscriptionId);
     if (params?.status) search.set("status", params.status);
+    if (params?.queueStatus) search.set("queue_status", params.queueStatus);
     if (params?.eventType) search.set("event_type", params.eventType);
     if (params?.eventId?.trim()) search.set("event_id", params.eventId.trim());
     search.set("limit", String(params?.limit ?? 10));
