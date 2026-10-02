@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,45 @@ interface Screen {
   }[];
 }
 
+interface StoredScreenSelection {
+  profile?: string;
+  city?: string;
+  state?: string;
+  market?: { market_city?: string; market_state?: string };
+  buyBoxId?: string;
+}
+
+const profiles = new Set(['small_multifamily', 'small_bay_retail']);
+
+function readSelection(key: string | null): StoredScreenSelection {
+  if (!key) return {};
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as StoredScreenSelection;
+    if (typeof parsed !== 'object' || parsed === null) return {};
+    const profile = profiles.has(String(parsed.profile)) ? parsed.profile : undefined;
+    const city = typeof parsed.city === 'string' ? parsed.city.slice(0, 100) : '';
+    const state = typeof parsed.state === 'string' ? parsed.state.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) : '';
+    const market = parsed.market?.market_city && parsed.market.market_state
+      ? { market_city: String(parsed.market.market_city).slice(0, 100), market_state: String(parsed.market.market_state).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) }
+      : {};
+    const buyBoxId = typeof parsed.buyBoxId === 'string' ? parsed.buyBoxId : '';
+    return { profile, city, state, market, buyBoxId };
+  } catch {
+    return {};
+  }
+}
+
+function writeSelection(key: string | null, selection: StoredScreenSelection) {
+  if (!key) return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(selection));
+  } catch {
+    // Local persistence is a convenience only; screening still works without it.
+  }
+}
+
 export function AcquisitionScreenPanel({ dealId }: { dealId: string }) {
   const { organizationId, user } = useAuth();
   return <AcquisitionScreenContent key={`${organizationId}:${user?.id}:${dealId}`} dealId={dealId} />;
@@ -26,14 +65,19 @@ export function AcquisitionScreenPanel({ dealId }: { dealId: string }) {
 function AcquisitionScreenContent({ dealId }: { dealId: string }) {
   const queryClient = useQueryClient();
   const { organizationId, user, role } = useAuth();
+  const selectionKey = organizationId && user?.id ? `buildsignals:acquisition-screen:${organizationId}:${user.id}:${dealId}` : null;
+  const initialSelection = readSelection(selectionKey);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
-  const [profile, setProfile] = useState('small_multifamily');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [market, setMarket] = useState<{ market_city?: string; market_state?: string }>({});
-  const [buyBoxId, setBuyBoxId] = useState('');
+  const [profile, setProfile] = useState(initialSelection.profile ?? 'small_multifamily');
+  const [city, setCity] = useState(initialSelection.city ?? '');
+  const [state, setState] = useState(initialSelection.state ?? '');
+  const [market, setMarket] = useState<{ market_city?: string; market_state?: string }>(initialSelection.market ?? {});
+  const [buyBoxId, setBuyBoxId] = useState(initialSelection.buyBoxId ?? '');
   const parameters = buyBoxId ? { buy_box_id: buyBoxId } : { profile, ...market };
+  useEffect(() => {
+    writeSelection(selectionKey, { profile, city, state, market, buyBoxId });
+  }, [buyBoxId, city, market, profile, selectionKey, state]);
   const { data, error, isPending, refetch } = useQuery({
     queryKey: ['acquisition-screen', organizationId, user?.id, dealId, parameters],
     enabled: !!organizationId && !!user,

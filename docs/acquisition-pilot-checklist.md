@@ -801,8 +801,10 @@ diligence yields needs_diligence. No investment score or recommendation is issue
 Market matching requires exact city and state rather than substring matching.
 The existing legacy buy-box matcher is unchanged for compatibility. New criteria
 are a preliminary separate view, not a completed underwriting or source-verification
-workflow. The panel's profile and target market selection are not yet persisted;
-saved criteria can now be selected in the panel but selection itself resets on reload.
+workflow. The panel now persists the active profile, typed/applied target market,
+and selected saved buy box locally per organization, user, and deal; persisted
+values are sanitized before reuse and do not change backend screening semantics.
+Focused UI tests and TypeScript pass.
 
 ### Local browser qualification (2026-09-20)
 
