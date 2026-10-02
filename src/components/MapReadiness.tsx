@@ -36,8 +36,10 @@ export function MapReadiness() {
     : !data.geocoded_parcels ? 'Parcel records are missing usable coordinates.'
     : !data.saved_searches ? 'No nearby-parcel searches have been saved.'
     : 'Saved searches have not produced visible ranked parcels. Review their radius, filters, and source coverage.';
-  const primaryAction = !signals || !data.parcels
+  const primaryAction = !signals
     ? { label: 'Review source coverage', href: '/source-health' }
+    : !data.parcels
+      ? { label: 'Review parcel sources', href: '/source-health?record_type=parcel' }
     : !geocodedSignals
       ? { label: 'Review planning signals', href: '/planning' }
       : !data.geocoded_parcels

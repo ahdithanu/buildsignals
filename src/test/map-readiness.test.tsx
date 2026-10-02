@@ -37,7 +37,7 @@ describe('map diagnostics', () => {
     const prerequisites = screen.getByLabelText('Map readiness prerequisites');
     expect(prerequisites).toHaveTextContent('Geocoded filings: ready');
     expect(prerequisites).toHaveTextContent('Mapped parcels: missing');
-    expect(screen.getByRole('link', { name: 'Review source coverage' })).toHaveAttribute('href', '/source-health');
+    expect(screen.getByRole('link', { name: 'Review parcel sources' })).toHaveAttribute('href', '/source-health?record_type=parcel');
   });
   it('does not show failed diagnostics as zero inventory', async () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('unavailable'));

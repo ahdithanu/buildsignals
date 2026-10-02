@@ -525,7 +525,9 @@ application, production diagnostics, and release coverage measurement.
   `/source-health?record_type=parcel` open directly on parcel inventory instead
   of defaulting back to permits. Changing record type keeps the URL shareable and
   clears the parameter for the default permit view. Focused coverage/readiness
-  tests and TypeScript pass.
+  tests and TypeScript pass. Missing parcel inventory now uses that parcel-specific
+  handoff instead of generic source coverage, so the map's empty-state recovery
+  path lands on the relevant record class.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved
