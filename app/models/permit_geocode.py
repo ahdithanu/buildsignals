@@ -14,7 +14,12 @@ class PermitGeocode(OrgMixin, Base):
     __table_args__ = (UniqueConstraint("organization_id", "permit_id", name="uq_permit_geocodes_org_permit"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    permit_id: Mapped[str] = mapped_column(String(36), ForeignKey("permit_records.id", ondelete="CASCADE"), nullable=False)
+    permit_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("permit_records.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     address_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
