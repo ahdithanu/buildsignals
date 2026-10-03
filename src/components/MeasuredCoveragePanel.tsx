@@ -117,6 +117,30 @@ export function MeasuredCoveragePanel() {
       {error ? <div role="alert" className="mt-4 text-sm text-destructive">Measured inventory is unavailable. No coverage totals are confirmed.<Button variant="ghost" size="sm" onClick={() => void refetch()}>Retry measurement</Button></div>
         : isPending ? <p role="status" className="mt-4 text-sm text-muted-foreground">Measuring stored records...</p>
           : data ? <>
+            <section aria-label="Production ingestion readiness" className="mt-5 border-y py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-semibold">Production readiness rollup</h4>
+                  <p className="mt-1 text-[11px] text-muted-foreground">All measured {recordType} sources for this organization, not just the current page.</p>
+                </div>
+                <span className="text-[11px] text-muted-foreground">
+                  {number.format(data.readiness.total_source_count)} configured source{data.readiness.total_source_count === 1 ? '' : 's'}
+                </span>
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <Metric label="Sources with records" value={data.readiness.sources_with_records} />
+                <Metric label="Empty sources" value={data.readiness.empty_source_count} />
+                <Metric label={`Collected (${hours}h)`} value={data.readiness.sources_with_recent_collection} />
+                <Metric label={`Source dated (${hours}h)`} value={data.readiness.sources_with_recent_source_date} />
+                <Metric label="Geocoded sources" value={data.readiness.sources_with_geocoded_records} />
+                <Metric label="Stale collection" value={data.readiness.stale_collection_source_count} />
+                <Metric label="Unknown source dates" value={data.readiness.sources_with_unknown_source_dates} />
+                <Metric label="Disabled sources" value={data.readiness.disabled_source_count} />
+              </dl>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Stored records: {number.format(data.readiness.stored_records)} | Valid coordinates: {number.format(data.readiness.geocoded_records)} | Observed state/DC codes: {number.format(data.readiness.observed_state_count)}
+              </p>
+            </section>
             <dl aria-label="Current page measurements" className="mt-5 grid grid-cols-2 gap-4 border-y py-3 sm:grid-cols-4">
               <Metric label="Sources on this page" value={data.page_totals.source_count} />
               <Metric label="Stored records on this page" value={data.page_totals.stored_records} />

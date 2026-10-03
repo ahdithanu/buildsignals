@@ -28,6 +28,26 @@ function report(params: Partial<MeasuredCoverageParams> = {}): MeasuredCoverage 
       observed_state_count: 1,
       observed_jurisdiction_count: 2,
     },
+    readiness: {
+      total_source_count: 4,
+      active_source_count: 3,
+      disabled_source_count: 1,
+      sources_with_records: 2,
+      empty_source_count: 2,
+      sources_with_recent_collection: 1,
+      sources_with_recent_source_date: 1,
+      sources_with_unknown_source_dates: 1,
+      sources_with_future_source_dates: 1,
+      sources_with_geocoded_records: 1,
+      stale_collection_source_count: 1,
+      stale_source_date_source_count: 1,
+      stored_records: 150,
+      geocoded_records: 80,
+      recently_seen_records: 70,
+      recent_source_date_records: 12,
+      observed_state_count: 2,
+      observed_jurisdiction_count: 3,
+    },
     sources: [{
       source_id: 'source-a', source_key: 'county_public_records', configured_active: true,
       configured_jurisdiction: 'County, TX', stored_records: 100,
@@ -73,6 +93,12 @@ describe('MeasuredCoveragePanel', () => {
     expect(within(source).getByText('Unknown source date').nextElementSibling).toHaveTextContent('40');
     expect(within(source).getByText('Future source date').nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText('Stored records on this page')).toBeInTheDocument();
+    const readiness = screen.getByRole('region', { name: 'Production ingestion readiness' });
+    expect(within(readiness).getByText('4 configured sources')).toBeInTheDocument();
+    expect(within(readiness).getByText('Sources with records').nextElementSibling).toHaveTextContent('2');
+    expect(within(readiness).getByText('Empty sources').nextElementSibling).toHaveTextContent('2');
+    expect(within(readiness).getByText('Stale collection').nextElementSibling).toHaveTextContent('1');
+    expect(within(readiness).getByText(/Stored records: 150/)).toBeInTheDocument();
     expect(screen.getByText('Sources on this page').nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText('Valid coordinates on this page').nextElementSibling).toHaveTextContent('80');
     expect(screen.getByText('Observed jurisdiction labels').nextElementSibling).toHaveTextContent('2');

@@ -430,12 +430,34 @@ export interface MeasuredCoverageTotals {
   observed_jurisdiction_count: number;
 }
 
+export interface MeasuredCoverageReadiness {
+  total_source_count: number;
+  active_source_count: number;
+  disabled_source_count: number;
+  sources_with_records: number;
+  empty_source_count: number;
+  sources_with_recent_collection: number;
+  sources_with_recent_source_date: number;
+  sources_with_unknown_source_dates: number;
+  sources_with_future_source_dates: number;
+  sources_with_geocoded_records: number;
+  stale_collection_source_count: number;
+  stale_source_date_source_count: number;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  recent_source_date_records: number;
+  observed_state_count: number;
+  observed_jurisdiction_count: number;
+}
+
 export interface MeasuredCoverage extends MeasuredCoverageParams {
   measured_at: string;
   scope: string;
   count_semantics: string;
   has_more: boolean;
   page_totals: MeasuredCoverageTotals;
+  readiness: MeasuredCoverageReadiness;
   sources: MeasuredSourceCoverage[];
   warnings: string[];
 }

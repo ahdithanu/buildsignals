@@ -42,6 +42,27 @@ class MeasuredCoverageTotals(BaseModel):
     observed_jurisdiction_count: int
 
 
+class MeasuredCoverageReadiness(BaseModel):
+    total_source_count: int
+    active_source_count: int
+    disabled_source_count: int
+    sources_with_records: int
+    empty_source_count: int
+    sources_with_recent_collection: int
+    sources_with_recent_source_date: int
+    sources_with_unknown_source_dates: int
+    sources_with_future_source_dates: int
+    sources_with_geocoded_records: int
+    stale_collection_source_count: int
+    stale_source_date_source_count: int
+    stored_records: int
+    geocoded_records: int
+    recently_seen_records: int
+    recent_source_date_records: int
+    observed_state_count: int
+    observed_jurisdiction_count: int
+
+
 class MeasuredCoverageResponse(BaseModel):
     measured_at: datetime
     record_type: Literal["parcel", "permit", "planning"]
@@ -52,5 +73,6 @@ class MeasuredCoverageResponse(BaseModel):
     offset: int
     has_more: bool
     page_totals: MeasuredCoverageTotals
+    readiness: MeasuredCoverageReadiness
     sources: list[MeasuredSourceCoverage]
     warnings: list[str]

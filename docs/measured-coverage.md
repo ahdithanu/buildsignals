@@ -3,16 +3,19 @@
 The Coverage page (`/source-health`) now distinguishes configured sources from
 canonical records stored for the signed-in organization. The report supports
 permits, parcels and planning records, with 25 sources per page and adjustable
-freshness windows. Summary numbers apply only to the current source page, across
-all observed states, not to the whole organization or the nation.
+freshness windows. The readiness rollup spans every measured source for the
+selected record type in the signed-in organization, while the detailed source
+list remains paginated. These are stored-record measurements, not provider
+totals or national coverage claims.
 The UI also rolls the current source page into up to six observed state/DC
 buckets so a reviewer can quickly see where stored records, geocoded rows,
 collection recency and source-date recency actually exist. This rollup is still
 source-page scoped; it is not a statewide coverage score or a substitute for
-production inventory measurement across every page.
-The API returns `page_totals` for the current query page so the frontend can
-display measured source, stored-record, geocoded-record, freshness and observed
-geography counts without deriving broader coverage claims in the browser.
+statewide completeness.
+The API returns `readiness` for the selected record type and `page_totals` for
+the current query page so the frontend can display measured source,
+stored-record, geocoded-record, freshness and observed geography counts without
+deriving broader coverage claims in the browser.
 
 ## API and Semantics
 
@@ -31,6 +34,9 @@ geography counts without deriving broader coverage claims in the browser.
 - Valid coordinate counts and observed extents do not prove geocoding accuracy or
   complete geographic coverage. Jurisdiction labels are not nationwide totals.
 - Parcel inventory does not establish verified for-sale availability.
+- `readiness` spans all configured sources for the selected record type in the
+  signed-in organization. It is tenant-scoped measured inventory, not a market
+  coverage claim.
 - `page_totals` is scoped to the returned source page and request filters. It is
   not a tenant-wide total unless the caller has paginated through every page and
   retained the same query parameters.
@@ -54,8 +60,9 @@ Frontend tests cover page/filter changes, loading/error/retry and organization
 changes. The authenticated browser regression covers a new empty organization;
 the CSP smoke test uses synthetic populated data at mobile, tablet and desktop
 widths. None of those synthetic counts are production coverage evidence.
-The focused coverage-panel regression also verifies the observed-state rollup and
-guards against presenting it as nationwide coverage.
+The focused coverage-panel regression also verifies the production readiness
+rollup and observed-state source-page rollup, while guarding against presenting
+either as nationwide coverage.
 
 For customer-facing claims, capture an authorized production measurement with
 its timestamp, record type, source pages and freshness window. Configured feed

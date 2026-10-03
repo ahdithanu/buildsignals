@@ -49,6 +49,16 @@ def test_counts_are_measured_scoped_and_do_not_confuse_collection_with_freshness
     assert report["page_totals"]["recent_source_date_records"] == 0
     assert report["page_totals"]["observed_state_count"] == 1
     assert report["page_totals"]["observed_jurisdiction_count"] == 2
+    assert report["readiness"]["total_source_count"] == 2
+    assert report["readiness"]["active_source_count"] == 2
+    assert report["readiness"]["sources_with_records"] == 1
+    assert report["readiness"]["empty_source_count"] == 1
+    assert report["readiness"]["sources_with_recent_collection"] == 1
+    assert report["readiness"]["sources_with_recent_source_date"] == 0
+    assert report["readiness"]["sources_with_geocoded_records"] == 1
+    assert report["readiness"]["stale_collection_source_count"] == 0
+    assert report["readiness"]["stale_source_date_source_count"] == 1
+    assert report["readiness"]["stored_records"] == 2
     assert report["sources"][0]["stored_records"] == 0
     states = report["sources"][1]["observed_states"]
     assert {s["state"] for s in states} == {None, "FL"}
@@ -71,8 +81,13 @@ def test_unknown_dates_pagination_and_no_synthetic_rows(db):
         reset_current_context(token)
     assert first["has_more"]
     assert first["page_totals"]["source_count"] == 1
+    assert first["readiness"]["total_source_count"] == 2
+    assert first["readiness"]["sources_with_records"] == 1
+    assert first["readiness"]["empty_source_count"] == 1
     assert first["sources"][0]["observed_states"][0]["unknown_source_date_records"] == 1
     assert empty["page_totals"]["source_count"] == 0
+    assert empty["readiness"]["total_source_count"] == 2
+    assert empty["readiness"]["stored_records"] == 1
     assert empty["page_totals"]["stored_records"] == 0
     assert not empty["sources"] and not empty["has_more"]
 
