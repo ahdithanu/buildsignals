@@ -4648,12 +4648,6 @@
         "title": "DeleteAccountRequest",
         "type": "object"
       },
-      "DemoLoginRequest": {
-        "additionalProperties": false,
-        "properties": {},
-        "title": "DemoLoginRequest",
-        "type": "object"
-      },
       "DeploymentReadiness": {
         "properties": {
           "checks": {
@@ -18237,8 +18231,25 @@
         ]
       },
       "post": {
-        "description": "Open the seeded demo workspace without exposing credentials client-side.",
         "operationId": "demo_login_v1_auth_demo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -18249,6 +18260,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Demo Login",
