@@ -1,14 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
-from sqlalchemy.orm import aliased, joinedload
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased, joinedload
 
 from app.db import get_db
-from app.models.graph import GraphEntity, GraphEntityLink, GraphEntityType, GraphRelationship, GraphRelationshipType
-from app.schemas.graph import GraphEntityResponse, GraphRelationshipResponse
+from app.models.graph import (
+    GraphEntity,
+    GraphEntityLink,
+    GraphEntityType,
+    GraphRelationship,
+    GraphRelationshipType,
+)
 from app.models.ingestion import PermitRecord
 from app.models.parcel import ParcelRecord
 from app.models.permit_geocode import PermitGeocode
+from app.schemas.graph import GraphEntityResponse, GraphRelationshipResponse
 from app.services.demo_geocoding import address_hash
 from app.utils.auth_deps import get_current_user
 from app.utils.org_scope import active_query, get_org_id

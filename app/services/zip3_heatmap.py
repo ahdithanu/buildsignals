@@ -8,8 +8,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.parcel import NearbyParcelCandidate, ParcelRecord
 from app.models.ingestion import PermitRecord
+from app.models.parcel import NearbyParcelCandidate, ParcelRecord
 from app.services.parcel_availability import availability_label, verified_availability_fact
 from app.utils.org_scope import active_query
 
