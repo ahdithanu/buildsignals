@@ -169,7 +169,7 @@ def test_deactivate_revokes_sessions_and_deactivates(org_with_two_admins):
 def test_ensure_demo_workspace_creates_isolated_synthetic_tenant(capsys):
     email = f"demo-{uuid4().hex[:8]}@buildsignals.test"
     password = "SyntheticDemoPass123"
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         _delete_demo_org_if_present(db)
 
     previous_password = os.environ.get("BUILD_SIGNALS_DEMO_PASSWORD")
@@ -198,7 +198,7 @@ def test_ensure_demo_workspace_creates_isolated_synthetic_tenant(capsys):
     assert payload["role"] == "viewer"
     assert payload["seeded_data"] is True
 
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         org = db.query(Organization).filter(Organization.slug == admin_cli.DEMO_ORG_SLUG).one()
         user = db.query(User).filter(User.email == email).one()
         memberships = (
@@ -255,7 +255,7 @@ def test_ensure_demo_workspace_creates_isolated_synthetic_tenant(capsys):
 def test_ensure_demo_workspace_refuses_auth_reset_for_existing_demo_user(capsys):
     email = f"demo-existing-{uuid4().hex[:8]}@buildsignals.test"
     original_hash = hash_password("ExistingDemoPass123")
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         _delete_demo_org_if_present(db)
         org = Organization(id=str(uuid4()), name="Build Signals Demo Workspace", slug=admin_cli.DEMO_ORG_SLUG)
         user = User(
@@ -296,7 +296,7 @@ def test_ensure_demo_workspace_refuses_auth_reset_for_existing_demo_user(capsys)
             os.environ["BUILD_SIGNALS_DEMO_PASSWORD"] = previous_password
 
     assert "refusing to reset credentials" in capsys.readouterr().err
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         user = db.query(User).filter(User.email == email).one()
         assert user.password_hash == original_hash
         assert user.totp_enabled is False
