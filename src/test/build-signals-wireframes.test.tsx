@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -12,7 +12,23 @@ const demoLogin = vi.fn();
 const register = vi.fn();
 const exportSearch = { mutate: vi.fn(), isPending: false };
 
+// Map data/loading and Leaflet interactions have their own focused/browser tests.
+vi.mock('@/components/SignalMapExplorer', () => ({ SignalMapExplorer: () => null }));
+vi.mock('@/components/GeographicMap', () => ({ default: () => null }));
+
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
+  useZip3Heatmap: () => ({
+    data: {
+      items: [],
+      limit: 12,
+      generated_at: '2026-08-12T12:00:00Z',
+      method_version: 'zip3-opportunity-heat-v1',
+      for_sale_semantics: {
+        nearby_candidate: 'Nearby candidate is not a listing.',
+        verified_for_sale: 'Verified for sale requires listing evidence.',
+      },
+    },
+  }),
   useAcquisitionRadar: () => ({
     data: {
       items: [
@@ -49,7 +65,7 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
         },
       ],
       total: 2, limit: 100, offset: 0,
-      summary: { total_parcels: 2, shortlisted_parcels: 1, multi_opportunity_parcels: 0, assigned_parcels: 0, state_count: 1 },
+      summary: { total_parcels: 2, shortlisted_parcels: 1, multi_opportunity_parcels: 0, assigned_parcels: 0, promoted_parcels: 0, contacted_parcels: 0, follow_up_parcels: 0, due_follow_up_parcels: 0, state_count: 1 },
     },
     isLoading: false,
     error: null,
@@ -77,8 +93,8 @@ describe('Build Signals wireframe screens', () => {
     vi.clearAllMocks();
   });
 
-  it('renders live radar parcels without inferring listing or owner intent', () => {
-    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+  it('renders live radar parcels without inferring listing or owner intent', async () => {
+    await act(async () => { render(<MemoryRouter><AcquisitionMap /></MemoryRouter>); });
 
     expect(screen.getByRole('heading', { name: /ranked parcels near retail shell project/i })).toBeInTheDocument();
     expect(screen.getAllByText('Congress Holdings LLC').length).toBeGreaterThan(0);

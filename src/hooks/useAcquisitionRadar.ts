@@ -1,16 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { parcelsApi } from '@/api/parcels';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   AcquisitionRadarParams,
   ParcelAcquisitionActivityCreate,
   ParcelAcquisitionCaseUpdate,
 } from '@/types/parcel';
 
+export function useZip3Heatmap(params: { state?: string; limit?: number } = {}) {
+  const { organizationId, user } = useAuth();
+  return useQuery({
+    queryKey: ['zip3-heatmap', organizationId, user?.id, params],
+    enabled: !!organizationId && !!user,
+    queryFn: () => parcelsApi.zip3Heatmap(params),
+  });
+}
+
 export function useAcquisitionRadar(params: AcquisitionRadarParams) {
+  const { organizationId, user } = useAuth();
   const queryClient = useQueryClient();
   const radar = useQuery({
-    queryKey: ['acquisition-radar', params],
+    queryKey: ['acquisition-radar', organizationId, user?.id, params],
+    enabled: !!organizationId && !!user,
     queryFn: () => parcelsApi.radar(params),
   });
   const updateCase = useMutation({

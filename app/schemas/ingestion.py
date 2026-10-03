@@ -242,6 +242,12 @@ class StateCoverageBucket(BaseModel):
     retailer_opening_sources: int
     pre_approval_sources: int
     approved_only_sources: int
+    live_record_type_counts: dict[str, int] = Field(default_factory=dict)
+    candidate_record_type_counts: dict[str, int] = Field(default_factory=dict)
+    candidate_status_counts: dict[str, int] = Field(default_factory=dict)
+    readiness_level: str = "uncovered"
+    next_action: str = "discover_first_source"
+    next_action_label: str = "Discover first official source"
     priority_score: int
     priority_reasons: list[str]
 
@@ -287,6 +293,7 @@ class IngestionCoverageResponse(BaseModel):
     live_signal_stage_counts: dict[str, int]
     live_signal_sources_by_stage: dict[str, list[RetailerOpeningCoverageSourceResponse]]
     candidate_status_counts: dict[str, int]
+    state_readiness_counts: dict[str, int] = Field(default_factory=dict)
     top_jurisdictions: list[CoverageJurisdictionBucket]
     state_buckets: list[StateCoverageBucket]
     activation_queue: list[StateCoverageBucket]

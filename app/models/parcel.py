@@ -155,8 +155,14 @@ class NearbyParcelSearch(OrgMixin, Base):
             name="ck_nearby_parcel_search_radius",
         ),
         CheckConstraint("result_limit > 0", name="ck_nearby_parcel_search_result_limit"),
+        CheckConstraint(
+            "(anchor_permit_id IS NOT NULL AND anchor_planning_id IS NULL) OR "
+            "(anchor_permit_id IS NULL AND anchor_planning_id IS NOT NULL)",
+            name="ck_nearby_parcel_search_one_anchor",
+        ),
         Index("ix_nearby_parcel_search_deal_created", "organization_id", "deal_id", "created_at"),
         Index("ix_nearby_parcel_search_permit", "anchor_permit_id"),
+        Index("ix_nearby_parcel_search_planning", "anchor_planning_id"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
@@ -166,8 +172,11 @@ class NearbyParcelSearch(OrgMixin, Base):
     anchor_brand_match_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("permit_brand_matches.id", ondelete="SET NULL")
     )
-    anchor_permit_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("permit_records.id", ondelete="RESTRICT"), nullable=False
+    anchor_permit_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("permit_records.id", ondelete="RESTRICT")
+    )
+    anchor_planning_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("planning_records.id", ondelete="RESTRICT")
     )
     anchor_latitude: Mapped[float] = mapped_column(Float, nullable=False)
     anchor_longitude: Mapped[float] = mapped_column(Float, nullable=False)
@@ -182,6 +191,7 @@ class NearbyParcelSearch(OrgMixin, Base):
     deal = relationship("Deal")
     anchor_brand_match = relationship("PermitBrandMatch")
     anchor_permit = relationship("PermitRecord")
+    anchor_planning = relationship("PlanningRecord")
     candidates: Mapped[list["NearbyParcelCandidate"]] = relationship(
         "NearbyParcelCandidate", back_populates="search", cascade="all, delete-orphan",
         order_by="NearbyParcelCandidate.rank",

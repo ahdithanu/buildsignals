@@ -42,6 +42,13 @@ def test_counts_are_measured_scoped_and_do_not_confuse_collection_with_freshness
     finally:
         reset_current_context(token)
     assert [s["source_key"] for s in report["sources"]] == ["empty", "populated"]
+    assert report["page_totals"]["source_count"] == 2
+    assert report["page_totals"]["stored_records"] == 2
+    assert report["page_totals"]["geocoded_records"] == 1
+    assert report["page_totals"]["recently_seen_records"] == 2
+    assert report["page_totals"]["recent_source_date_records"] == 0
+    assert report["page_totals"]["observed_state_count"] == 1
+    assert report["page_totals"]["observed_jurisdiction_count"] == 2
     assert report["sources"][0]["stored_records"] == 0
     states = report["sources"][1]["observed_states"]
     assert {s["state"] for s in states} == {None, "FL"}
@@ -63,7 +70,10 @@ def test_unknown_dates_pagination_and_no_synthetic_rows(db):
     finally:
         reset_current_context(token)
     assert first["has_more"]
+    assert first["page_totals"]["source_count"] == 1
     assert first["sources"][0]["observed_states"][0]["unknown_source_date_records"] == 1
+    assert empty["page_totals"]["source_count"] == 0
+    assert empty["page_totals"]["stored_records"] == 0
     assert not empty["sources"] and not empty["has_more"]
 
 

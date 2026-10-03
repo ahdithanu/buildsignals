@@ -2,11 +2,12 @@ import re
 from uuid import uuid4
 
 import pyotp
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Body, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import config
 from app.config import (
     DEMO_LOGIN_EMAIL,
     DEMO_LOGIN_ENABLED,
@@ -18,6 +19,7 @@ from app.config import (
     REFRESH_TOKEN_EXPIRE_DAYS,
 )
 from app.db import get_db
+from app.models.ingestion import PermitRecord
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
@@ -31,6 +33,7 @@ from app.schemas.auth import (
 )
 from app.services.account_lockout import lockout
 from app.services.audit_service import log_change
+from app.services.demo_access import DEMO_EMAIL, DEMO_MINUTES, DEMO_ORG_ID, DEMO_USER_ID
 from app.services.password_policy import PasswordPolicyError, validate_password
 from app.services.rate_limiter import (
     LOGIN_LIMIT,
@@ -50,6 +53,7 @@ from app.services.security import (
     verify_password,
 )
 from app.utils.auth_deps import get_current_user
+from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
 
 
 def _set_refresh_cookie(
@@ -90,6 +94,56 @@ def _refresh_failure(detail: str, *, clear: bool = True) -> JSONResponse:
     return resp
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.get("/demo")
+def demo_availability():
+    return {
+        "enabled": config.DEMO_ENABLED
+        or (DEMO_LOGIN_ENABLED and bool(DEMO_LOGIN_EMAIL) and bool(DEMO_LOGIN_PASSWORD))
+    }
+
+
+@router.post("/demo", response_model=TokenResponse)
+def demo_login(request: Request, response: Response, db: Session = Depends(get_db),
+               payload: dict | None = Body(default=None)):
+    if not config.DEMO_ENABLED:
+        if not DEMO_LOGIN_ENABLED or not DEMO_LOGIN_EMAIL or not DEMO_LOGIN_PASSWORD:
+            raise HTTPException(status_code=404, detail="Demo workspace is not enabled")
+        return login(
+            LoginRequest(email=DEMO_LOGIN_EMAIL, password=DEMO_LOGIN_PASSWORD),
+            request=request,
+            response=response,
+            db=db,
+        )
+    if payload:
+        raise HTTPException(status_code=422, detail="Demo login does not accept client-selected identity")
+    # Use the server-resolved peer, not a client-supplied forwarding header.
+    ip = request.client.host if request.client else "unknown"
+    decision = limiter.check(key=f"demo:{ip}", limit=10, window_seconds=60)
+    if not decision.allowed:
+        return _too_many("Too many demo sessions. Try again shortly.", decision.retry_after)
+    context = set_current_context(RequestContext(DEMO_ORG_ID, DEMO_USER_ID))
+    try:
+        user = db.get(User, DEMO_USER_ID)
+        org = db.get(Organization, DEMO_ORG_ID)
+        membership = db.query(OrganizationMembership).filter_by(
+            organization_id=DEMO_ORG_ID, user_id=DEMO_USER_ID, role=MemberRole.viewer,
+        ).first()
+        if (not user or not user.is_active or not org or not org.is_active or not membership
+                or user.email != DEMO_EMAIL or user.password_hash != "!nologin"
+                or user.totp_enabled or user.is_superuser):
+            raise HTTPException(status_code=503, detail="Demo is not prepared yet")
+        if not db.query(PermitRecord.id).filter_by(organization_id=DEMO_ORG_ID, is_active=True).first():
+            raise HTTPException(status_code=503, detail="Demo records are not prepared yet")
+        token = create_access_token(user_id=DEMO_USER_ID, org_id=DEMO_ORG_ID,
+                                    expires_minutes=DEMO_MINUTES, demo=True)
+    finally:
+        reset_current_context(context)
+    _clear_refresh_cookie(response)
+    response.headers["Cache-Control"] = "no-store"
+    return TokenResponse(access_token=token, user_id=DEMO_USER_ID,
+                         organization_id=DEMO_ORG_ID, role="viewer", is_demo=True)
 
 
 def _client_ip(request: Request) -> str:
@@ -154,6 +208,8 @@ def register(
         raise HTTPException(status_code=422, detail=str(e))
 
     # Check email uniqueness
+    if payload.email.lower() == DEMO_EMAIL:
+        raise HTTPException(status_code=409, detail="Email already registered")
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
@@ -270,7 +326,7 @@ def login(
         )
 
     user = db.query(User).filter(User.email == payload.email).first()
-    if user:
+    if user and user.id != DEMO_USER_ID:
         password_ok = verify_password(payload.password, user.password_hash)
     else:
         # Burn the same bcrypt CPU as a real verify so a missing email can't be
@@ -348,29 +404,6 @@ def login(
     )
 
 
-# ── demo login ──────────────────────────────────────────────────────────────
-
-@router.post("/demo", response_model=TokenResponse)
-def demo_login(
-    request: Request,
-    response: Response,
-    db: Session = Depends(get_db),
-):
-    """Open the seeded demo workspace without exposing credentials client-side."""
-    if not DEMO_LOGIN_ENABLED or not DEMO_LOGIN_EMAIL or not DEMO_LOGIN_PASSWORD:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Demo workspace is not enabled",
-        )
-
-    return login(
-        LoginRequest(email=DEMO_LOGIN_EMAIL, password=DEMO_LOGIN_PASSWORD),
-        request=request,
-        response=response,
-        db=db,
-    )
-
-
 # ── refresh ─────────────────────────────────────────────────────────────────
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -409,7 +442,7 @@ def refresh(
 
     user_id = claims.get("sub")
     org_id = claims.get("org_id")
-    if not user_id or not org_id:
+    if not user_id or not org_id or user_id == DEMO_USER_ID or org_id == DEMO_ORG_ID:
         return _refresh_failure("Malformed refresh token")
 
     user = db.get(User, user_id)
@@ -494,6 +527,7 @@ def logout_all(
 @router.get("/me", response_model=MeResponse)
 def me(principal: dict = Depends(get_current_user)):
     return MeResponse(
+        is_demo=principal.get("is_demo", False),
         user=UserResponse.model_validate(principal["user"]),
         organization_id=principal["org_id"],
         role=principal["role"],

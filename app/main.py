@@ -38,6 +38,7 @@ from app.routes.data_portability import router as data_portability_router
 from app.routes.deal_intelligence import router as intelligence_router
 from app.routes.deal_summary import router as deal_summary_router
 from app.routes.deals import router as deals_router
+from app.routes.demo import router as demo_router
 from app.routes.distributions import router as distributions_router
 from app.routes.documents import router as documents_router
 from app.routes.evaluations import router as evaluations_router
@@ -57,6 +58,7 @@ from app.routes.planning import router as planning_router
 from app.routes.prompt_registry import router as prompt_registry_router
 from app.routes.public_api import router as public_api_router
 from app.routes.signals import router as signals_router
+from app.routes.temporal import router as temporal_router
 from app.routes.twofa import router as twofa_router
 
 app = FastAPI(
@@ -132,6 +134,7 @@ app.include_router(buy_box_router, prefix=CURRENT_API_PREFIX)
 app.include_router(distributions_router, prefix=CURRENT_API_PREFIX)
 app.include_router(deal_summary_router, prefix=CURRENT_API_PREFIX)
 app.include_router(auth_router, prefix=CURRENT_API_PREFIX)
+app.include_router(demo_router, prefix=CURRENT_API_PREFIX)
 app.include_router(password_reset_router, prefix=CURRENT_API_PREFIX)
 app.include_router(twofa_router, prefix=CURRENT_API_PREFIX)
 app.include_router(audit_router, prefix=CURRENT_API_PREFIX)
@@ -145,6 +148,7 @@ app.include_router(ingestion_onboarding_router, prefix=CURRENT_API_PREFIX)
 app.include_router(brands_router, prefix=CURRENT_API_PREFIX)
 app.include_router(parcels_router, prefix=CURRENT_API_PREFIX)
 app.include_router(planning_router, prefix=CURRENT_API_PREFIX)
+app.include_router(temporal_router, prefix=CURRENT_API_PREFIX)
 app.include_router(public_api_router, prefix=CURRENT_API_PREFIX)
 
 # NOTE: Schema is managed exclusively by Alembic. Production runs

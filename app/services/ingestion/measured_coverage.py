@@ -56,11 +56,24 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
         item = dict(row._mapping)
         source_id = item.pop("source_id")
         by_source.setdefault(source_id, []).append(item)
+    observed_states = [row for rows in by_source.values() for row in rows]
+    observed_state_codes = {row["state"] for row in observed_states if row["state"]}
     return {
         "measured_at": now, "record_type": record_type,
         "scope": "Stored active canonical records for the authenticated organization; not provider totals or statewide completeness",
         "count_semantics": "Unique within each source; overlapping sources are not deduplicated",
         "freshness_hours": freshness_hours, "limit": limit, "offset": offset, "has_more": has_more,
+        "page_totals": {
+            "source_count": len(sources),
+            "stored_records": sum(row["stored_records"] for row in observed_states),
+            "geocoded_records": sum(row["geocoded_records"] for row in observed_states),
+            "recently_seen_records": sum(row["recently_seen_records"] for row in observed_states),
+            "unknown_source_date_records": sum(row["unknown_source_date_records"] for row in observed_states),
+            "future_source_date_records": sum(row["future_source_date_records"] for row in observed_states),
+            "recent_source_date_records": sum(row["recent_source_date_records"] for row in observed_states),
+            "observed_state_count": len(observed_state_codes),
+            "observed_jurisdiction_count": sum(row["observed_jurisdiction_count"] for row in observed_states),
+        },
         "sources": [{"source_id": source.id, "source_key": source.key,
                      "configured_active": source.is_active, "configured_jurisdiction": source.jurisdiction,
                      "stored_records": sum(row["stored_records"] for row in by_source.get(source.id, [])),

@@ -78,6 +78,14 @@ const planningResult = {
 };
 
 describe('<PlanningSignals>', () => {
+  it('opens an exact record and offers an explicit return to browsing', () => {
+    usePlanningSignalsMock.mockReturnValue(planningResult);
+    render(<MemoryRouter initialEntries={['/planning?record_id=planning-1']}><PlanningSignals /></MemoryRouter>);
+    expect(usePlanningSignalsMock).toHaveBeenCalledWith(expect.objectContaining({ record_id: 'planning-1' }));
+    expect(screen.getByRole('link', { name: 'Browse all planning records' })).toHaveAttribute('href', '/planning');
+    expect(screen.queryByRole('button', { name: 'Apply filters' })).not.toBeInTheDocument();
+    expect(screen.getByText('Selected source record')).toBeInTheDocument();
+  });
   beforeEach(() => {
     usePlanningSignalsMock.mockReset();
     usePlanningSignalsMock.mockReturnValue(planningResult);

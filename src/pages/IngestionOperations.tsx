@@ -62,6 +62,30 @@ function formatStageLabel(stage: string | undefined) {
   return stage.replace(/_/g, ' ');
 }
 
+function formatReadiness(value?: string) {
+  if (!value) return 'unclassified';
+  return value.replace(/_/g, ' ');
+}
+
+function sourceMixLabel(counts?: Record<string, number>) {
+  const entries = Object.entries(counts ?? {}).filter(([, count]) => count > 0);
+  if (entries.length === 0) return 'no typed live sources';
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([type, count]) => `${type} ${count}`)
+    .join(' · ');
+}
+
+const readinessLegend = [
+  { level: 'investor_ready', label: 'Pre-approval, parcel, and opening-intent coverage are all live' },
+  { level: 'early_warning_ready', label: 'Pre-approval coverage is live; parcel or retailer context needs depth' },
+  { level: 'live_foundation', label: 'At least one live source exists, but early-warning coverage is incomplete' },
+  { level: 'candidate_only', label: 'Source research exists; production admission is still pending' },
+  { level: 'uncovered', label: 'No live or candidate source is currently selected' },
+];
+
+const readinessOrder = ['investor_ready', 'early_warning_ready', 'live_foundation', 'candidate_only', 'uncovered'];
+
 function HealthRow({
   source,
   canManage,
@@ -808,6 +832,29 @@ export default function IngestionOperations() {
                 <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">{coverage.approved_only_source_count}</p>
               </div>
             </div>
+            <div className="mt-4 rounded-md border bg-background px-3 py-3" aria-label="State readiness distribution">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-foreground">50-state readiness funnel</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Counts classify states by the strongest configured or candidate source position, not record freshness or full-market completeness.
+                  </p>
+                </div>
+                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  50 states
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-5">
+                {readinessOrder.map((level) => (
+                  <div key={level} className="rounded-md border bg-secondary/25 px-2.5 py-2">
+                    <p className="text-[10px] text-muted-foreground">{formatReadiness(level)}</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">
+                      {coverage.state_readiness_counts?.[level] ?? 0}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="mt-4 rounded-md border bg-background px-3 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -836,7 +883,7 @@ export default function IngestionOperations() {
                 <div>
                   <p className="text-xs font-medium text-foreground">State leaders</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    States with the most configured and candidate sources
+                    States with the strongest readiness mix
                   </p>
                 </div>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -849,10 +896,31 @@ export default function IngestionOperations() {
                     key={bucket.state}
                     to={`/source-health?state=${bucket.state}`}
                     className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                    title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
+                    title={`${formatReadiness(bucket.readiness_level)} · ${sourceMixLabel(bucket.live_record_type_counts)} · ${(bucket.priority_reasons ?? []).join(' · ')}`}
                   >
-                    {bucket.state} · {bucket.live_sources + bucket.candidate_sources}
+                    {bucket.state} · {formatReadiness(bucket.readiness_level)}
                   </Link>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 rounded-md border bg-background px-3 py-3" aria-label="Coverage readiness legend">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-foreground">Readiness levels</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Use these labels to separate demoable investor markets from markets still in source qualification.
+                  </p>
+                </div>
+                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  evidence first
+                </span>
+              </div>
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                {readinessLegend.map((item) => (
+                  <div key={item.level} className="rounded-md border bg-secondary/25 px-2.5 py-2">
+                    <p className="text-[11px] font-medium text-foreground">{formatReadiness(item.level)}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{item.label}</p>
+                  </div>
                 ))}
               </div>
             </div>
@@ -879,7 +947,7 @@ export default function IngestionOperations() {
                     className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
                     title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
                   >
-                    {bucket.state} · {bucket.candidate_sources}
+                    {bucket.state} · {bucket.next_action_label ?? 'Resolve candidate blocker'}
                   </Link>
                 ))}
               </div>
@@ -900,8 +968,8 @@ export default function IngestionOperations() {
                   </div>
                   <span className="text-[11px] text-muted-foreground">{coverage.rollout_queue?.length} states</span>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {coverage.rollout_queue?.slice(0, 12).map((item) => (
+                <div className="mt-3 grid max-h-[28rem] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                  {coverage.rollout_queue?.map((item) => (
                     <Link
                       key={item.state}
                       to={`/source-health?state=${item.state}`}

@@ -7,10 +7,12 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.db import Base, SessionLocal, engine  # noqa: E402
+from app.db import Base  # noqa: E402
 from app.models.audit_log import AuditLog  # noqa: E402
 from app.models.organization import Organization  # noqa: E402
 from app.models.organization_membership import (  # noqa: E402
@@ -22,20 +24,21 @@ from app.services.security import hash_password  # noqa: E402
 from scripts import admin as admin_cli  # noqa: E402
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _create_tables():
-    # Admin CLI opens SessionLocal directly (script use), so it hits the DB
-    # named by DATABASE_URL rather than a per-test fixture. Ensure tables
-    # exist on that DB. Uses create_all rather than alembic — the CLI's
-    # behavior is what's under test, not migration order.
+@pytest.fixture(autouse=True)
+def _isolated_cli_database(tmp_path, monkeypatch):
+    # The CLI bypasses get_db; never let tests touch the configured app database.
+    engine = create_engine(f"sqlite:///{tmp_path / 'admin-cli.db'}")
     Base.metadata.create_all(bind=engine)
-    yield
-    # Leave the file — other tests in the run may use it. CI cleans up.
+    monkeypatch.setattr(admin_cli, "SessionLocal", sessionmaker(bind=engine))
+    try:
+        yield
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture()
 def org_with_two_admins():
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         org = Organization(id=str(uuid4()), name="Admin CLI Org", slug=f"acli-{uuid4().hex[:8]}")
         db.add(org)
         db.flush()
@@ -81,12 +84,12 @@ def test_mutation_refuses_without_yes(org_with_two_admins, capsys):
 
 def test_revoke_sessions_bumps_token_version(org_with_two_admins):
     email = org_with_two_admins["alice"]
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         before = db.query(User).filter(User.email == email).first().token_version
 
     _run("--yes", "--reason", "test", "revoke-sessions", email)
 
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         user = db.query(User).filter(User.email == email).first()
         assert user.token_version == before + 1
         # And an audit-log row landed with actor_id=None.
@@ -119,12 +122,12 @@ def test_set_role_prevents_last_admin_demotion(org_with_two_admins, capsys):
 
 def test_deactivate_revokes_sessions_and_deactivates(org_with_two_admins):
     email = org_with_two_admins["alice"]
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         before = db.query(User).filter(User.email == email).first().token_version
 
     _run("--yes", "--reason", "test", "deactivate", email)
 
-    with SessionLocal() as db:
+    with admin_cli.SessionLocal() as db:
         user = db.query(User).filter(User.email == email).first()
         assert user.is_active is False
         assert user.token_version == before + 1

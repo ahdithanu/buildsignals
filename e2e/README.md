@@ -1,7 +1,22 @@
 # End-to-end tests (Playwright)
 
 Browser-level critical journeys cover registration, login/logout, deal creation,
-dashboard activity, organization-scoped ingestion inventory, and AI evaluations.
+dashboard activity, organization-scoped ingestion inventory, acquisition
+screening, and AI evaluations.
+
+## Verification status
+
+On 2026-09-20 the acquisition screening spec passed at desktop (1440x1000)
+and mobile (390x844) sizes with real local API responses in disposable SQLite.
+It exercises registration, fixture deal creation, profile switching, market
+validation, unknown diligence, and overflow checks. A subsequent full run on the
+same date passed all nine configured workflows, including auth, activity display,
+deal creation, and measured empty inventory. This is local SQLite qualification,
+not a claim that production data or PostgreSQL isolation is ready.
+
+```bash
+PYTHON=.venv/bin/python npx playwright test -c e2e/playwright.config.ts acquisition-screen.spec.ts
+```
 
 ## Requirements
 
@@ -19,6 +34,9 @@ explicit ready signal before starting the app or running tests.
 # All specs; the config starts and stops BOTH servers.
 npm run e2e
 
+# Acquisition screening only.
+npm run e2e -- acquisition-screen.spec.ts
+
 # Evaluation dashboard only.
 npm run e2e -- evaluations.spec.ts
 
@@ -26,6 +44,8 @@ npm run e2e -- evaluations.spec.ts
 PYTHON=/path/to/python npm run e2e -- evaluations.spec.ts
 
 # Interactive sessions, still using the isolated backend.
+npx playwright test -c e2e/playwright.config.ts --headed
+npx playwright test -c e2e/playwright.config.ts --debug
 npx playwright test -c e2e/playwright.config.ts evaluations.spec.ts --headed
 npx playwright test -c e2e/playwright.config.ts evaluations.spec.ts --debug
 ```

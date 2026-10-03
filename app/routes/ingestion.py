@@ -41,6 +41,11 @@ from app.schemas.ingestion import (
     SourceSchedulePlanResponse,
 )
 from app.schemas.measured_coverage import MeasuredCoverageResponse
+from app.schemas.parcel_reference import (
+    ParcelReferenceAcceptance,
+    ParcelReferenceAudit,
+    PermitParcelCandidates,
+)
 from app.services.brand_intelligence import list_permit_brand_matches
 from app.services.graph_service import entity_for_record, relationships_for_entity
 from app.services.ingestion.catalog import (
@@ -70,10 +75,71 @@ from app.services.ingestion.service import (
     list_sources,
     update_source,
 )
-from app.utils.auth_deps import get_current_user, require_role
+from app.utils.auth_deps import get_current_user, require_role, require_role_strict
 from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
+
+
+@router.post("/permits/{permit_id}/parcel-acceptance", response_model=GraphRelationshipResponse)
+def accept_permit_parcel(
+    permit_id: str, payload: ParcelReferenceAcceptance, response: Response,
+    principal: dict = Depends(require_role_strict(MemberRole.admin, MemberRole.editor)),
+    db: Session = Depends(get_db),
+):
+    from app.services.parcel_reference_review import accept_parcel_reference
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        relationship = accept_parcel_reference(db, permit_id, payload, actor_id=principal["user"].id)
+        db.commit()
+        db.refresh(relationship)
+        return relationship
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get(
+    "/sources/{source_id}/parcel-reference-audit", response_model=ParcelReferenceAudit,
+    dependencies=[Depends(get_current_user)],
+)
+def get_parcel_reference_audit(
+    source_id: str, response: Response,
+    parcel_source_id: str = Query(min_length=1, max_length=36),
+    limit: int = Query(default=50, ge=1, le=100),
+    after_id: str | None = Query(default=None, min_length=1, max_length=36),
+    db: Session = Depends(get_db),
+):
+    from app.services.parcel_reference import audit_parcel_references
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return audit_parcel_references(db, source_id, parcel_source_id, limit=limit, after_id=after_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/permits/{permit_id}/parcel-candidates", response_model=PermitParcelCandidates,
+    dependencies=[Depends(get_current_user)],
+)
+def get_permit_parcel_candidates(
+    permit_id: str,
+    response: Response,
+    parcel_source_id: str = Query(min_length=1, max_length=36),
+    db: Session = Depends(get_db),
+):
+    from app.services.parcel_reference import permit_parcel_candidates
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return permit_parcel_candidates(db, permit_id, parcel_source_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/coverage/measured", response_model=MeasuredCoverageResponse, dependencies=[Depends(get_current_user)])
@@ -467,6 +533,7 @@ def get_permits(
         default=None, pattern=r"^(pre_approval|approved)$"
     ),
     limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0, le=100000),
     db: Session = Depends(get_db),
 ):
     query = active_query(db.query(PermitRecord), PermitRecord).filter(
@@ -480,7 +547,10 @@ def get_permits(
         query = query.filter(PermitRecord.status == status)
     if approval_stage:
         query = query.filter(PermitRecord.approval_stage == approval_stage)
-    return query.order_by(PermitRecord.last_seen_at.desc()).limit(limit).all()
+    from app.services.demo_access import demo_read_only
+    if demo_read_only.get() and limit > 25:
+        raise HTTPException(status_code=403, detail="Demo permits are limited to 25 records per page")
+    return query.order_by(PermitRecord.last_seen_at.desc(), PermitRecord.id).offset(offset).limit(limit).all()
 
 
 @router.get("/permits/{permit_id}", response_model=PermitDetailResponse)

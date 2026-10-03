@@ -30,6 +30,18 @@ class MeasuredSourceCoverage(BaseModel):
     observed_states: list[ObservedStateCoverage]
 
 
+class MeasuredCoverageTotals(BaseModel):
+    source_count: int
+    stored_records: int
+    geocoded_records: int
+    recently_seen_records: int
+    unknown_source_date_records: int
+    future_source_date_records: int
+    recent_source_date_records: int
+    observed_state_count: int
+    observed_jurisdiction_count: int
+
+
 class MeasuredCoverageResponse(BaseModel):
     measured_at: datetime
     record_type: Literal["parcel", "permit", "planning"]
@@ -39,5 +51,6 @@ class MeasuredCoverageResponse(BaseModel):
     limit: int
     offset: int
     has_more: bool
+    page_totals: MeasuredCoverageTotals
     sources: list[MeasuredSourceCoverage]
     warnings: list[str]

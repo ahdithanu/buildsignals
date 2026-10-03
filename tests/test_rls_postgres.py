@@ -27,6 +27,7 @@ import pytest
 from sqlalchemy import create_engine, literal, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
 
@@ -44,7 +45,8 @@ def pg_engine():
     TEST_POSTGRES_URL (CI does this in a setup step). If the policy is
     missing, the first assertion will fail loud.
     """
-    engine = create_engine(POSTGRES_URL, future=True)
+    # Adversarial temp-table tests must not leak connection-local state to peers.
+    engine = create_engine(POSTGRES_URL, future=True, poolclass=NullPool)
     with engine.connect() as connection:
         role = connection.execute(text("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")).one()
         assert not role.rolsuper and not role.rolbypassrls, "RLS tests require a restricted role"
@@ -156,6 +158,146 @@ def test_rls_blocks_writes_with_wrong_org(pg_session):
         )
     assert getattr(error.value.orig, "pgcode", None) == "42501"
     pg_session.rollback()
+
+
+def test_structured_buy_boxes_preserve_rls_after_criteria_migration(pg_session):
+    from app.models.buy_box import BuyBox
+    from app.models.organization import Organization
+    from tests.test_acquisition_criteria import CRITERIA
+
+    policy = pg_session.execute(text(
+        "SELECT relrowsecurity, relforcerowsecurity FROM pg_class "
+        "WHERE oid = 'public.buy_boxes'::regclass"
+    )).one()
+    assert policy.relrowsecurity and policy.relforcerowsecurity
+    orgs = [str(uuid.uuid4()), str(uuid.uuid4())]
+    ids = []
+    for org in orgs:
+        pg_session.add(Organization(id=org, name='Criteria RLS fixture', slug=org))
+        pg_session.flush()
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        row = BuyBox(organization_id=org, acquisition_criteria=CRITERIA)
+        pg_session.add(row)
+        pg_session.flush()
+        ids.append(row.id)
+    for org, expected in zip(orgs, ids):
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        visible = pg_session.execute(select(BuyBox.id, BuyBox.acquisition_criteria).where(BuyBox.id.in_(ids))).all()
+        assert len(visible) == 1
+        assert visible[0].id == expected
+        assert visible[0].acquisition_criteria == CRITERIA
+    pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': orgs[0]})
+    updated = pg_session.execute(text(
+        "UPDATE buy_boxes SET acquisition_criteria = '{}' WHERE id = :id"
+    ), {'id': ids[1]})
+    assert updated.rowcount == 0
+    with pg_session.begin_nested() as savepoint:
+        with pytest.raises(DBAPIError) as error:
+            pg_session.execute(text(
+                "INSERT INTO buy_boxes (id, organization_id, acquisition_criteria) "
+                "VALUES (:id, :org, '{}')"
+            ), {'id': str(uuid.uuid4()), 'org': orgs[1]})
+        assert getattr(error.value.orig, 'pgcode', None) == '42501'
+        savepoint.rollback()
+    pg_session.execute(text("SELECT set_config('app.current_org', '', true)"))
+    assert pg_session.execute(select(BuyBox.id).where(BuyBox.id.in_(ids))).all() == []
+
+
+def test_acquisition_history_forces_tenant_isolation(pg_session):
+    from app.models.acquisition_screen import AcquisitionScreenSnapshot
+    from app.models.deal import Deal
+    from app.models.organization import Organization
+
+    policy = pg_session.execute(text(
+        "SELECT relrowsecurity, relforcerowsecurity FROM pg_class "
+        "WHERE oid = 'public.acquisition_screen_snapshots'::regclass"
+    )).one()
+    assert policy.relrowsecurity and policy.relforcerowsecurity
+    orgs = [str(uuid.uuid4()), str(uuid.uuid4())]
+    ids = []
+    deal_ids = []
+    for org in orgs:
+        pg_session.add(Organization(id=org, name='Screen history RLS', slug=org))
+        pg_session.flush()
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        deal = Deal(organization_id=org, name='Screen fixture')
+        pg_session.add(deal)
+        pg_session.flush()
+        row = AcquisitionScreenSnapshot(organization_id=org, deal_id=deal.id,
+                                        content='{}', content_sha256='0' * 64)
+        pg_session.add(row)
+        pg_session.flush()
+        ids.append(row.id)
+        deal_ids.append(deal.id)
+    for org, expected in zip(orgs, ids):
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        assert pg_session.execute(select(AcquisitionScreenSnapshot.id).where(
+            AcquisitionScreenSnapshot.id.in_(ids),
+        )).scalars().all() == [expected]
+    pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': orgs[0]})
+    assert pg_session.execute(text(
+        "UPDATE acquisition_screen_snapshots SET content = '{}' WHERE id = :id"
+    ), {'id': ids[1]}).rowcount == 0
+    with pg_session.begin_nested() as savepoint:
+        with pytest.raises(DBAPIError) as error:
+            pg_session.execute(text(
+                "INSERT INTO acquisition_screen_snapshots "
+                "(id, organization_id, deal_id, content, content_sha256, created_at) "
+                "VALUES (:id, :org, :deal, '{}', :hash, now())"
+            ), {'id': str(uuid.uuid4()), 'org': orgs[1], 'deal': deal_ids[1], 'hash': '0' * 64})
+        assert getattr(error.value.orig, 'pgcode', None) == '42501'
+        savepoint.rollback()
+    pg_session.execute(text("SELECT set_config('app.current_org', '', true)"))
+    assert pg_session.execute(select(AcquisitionScreenSnapshot.id).where(
+        AcquisitionScreenSnapshot.id.in_(ids),
+    )).all() == []
+
+
+def test_diligence_reviews_force_tenant_isolation(pg_session):
+    from app.models.deal import Deal
+    from app.models.diligence_review import DiligenceReview
+    from app.models.document import Document
+    from app.models.organization import Organization
+
+    policy = pg_session.execute(text(
+        "SELECT relrowsecurity, relforcerowsecurity FROM pg_class "
+        "WHERE oid = 'public.diligence_reviews'::regclass"
+    )).one()
+    assert policy.relrowsecurity and policy.relforcerowsecurity
+    orgs = [str(uuid.uuid4()), str(uuid.uuid4())]
+    rows = []
+    for org in orgs:
+        pg_session.add(Organization(id=org, name='Diligence RLS', slug=org))
+        pg_session.flush()
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        deal = Deal(organization_id=org, name='Fixture')
+        pg_session.add(deal)
+        pg_session.flush()
+        doc = Document(organization_id=org, deal_id=deal.id, filename='Excerpt')
+        pg_session.add(doc)
+        pg_session.flush()
+        row = DiligenceReview(organization_id=org, deal_id=deal.id, document_id=doc.id,
+                              criterion='occupancy', snapshot={'assessment': 'inconclusive'})
+        pg_session.add(row)
+        pg_session.flush()
+        rows.append(row)
+    for org, row in zip(orgs, rows):
+        pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': org})
+        assert pg_session.execute(select(DiligenceReview.id).where(
+            DiligenceReview.id.in_([r.id for r in rows]),
+        )).scalars().all() == [row.id]
+    pg_session.execute(text("SELECT set_config('app.current_org', :org, true)"), {'org': orgs[0]})
+    assert pg_session.execute(text("DELETE FROM diligence_reviews WHERE id = :id"), {'id': rows[1].id}).rowcount == 0
+    with pg_session.begin_nested() as savepoint:
+        with pytest.raises(DBAPIError) as error:
+            pg_session.execute(text(
+                "INSERT INTO diligence_reviews (id, organization_id, deal_id, document_id, criterion, snapshot, created_at) "
+                "VALUES (:id, :org, :deal, :doc, 'occupancy', '{}', now())"
+            ), {'id': str(uuid.uuid4()), 'org': orgs[1], 'deal': rows[1].deal_id, 'doc': rows[1].document_id})
+        assert getattr(error.value.orig, 'pgcode', None) == '42501'
+        savepoint.rollback()
+    pg_session.execute(text("SELECT set_config('app.current_org', '', true)"))
+    assert pg_session.execute(select(DiligenceReview.id)).all() == []
 
 
 def test_restored_copy_probe_rolls_back_its_synthetic_records(pg_engine):
@@ -354,12 +496,54 @@ def test_raw_record_trigger_blocks_direct_mutation_but_allows_org_erasure(
         {"id": raw_id},
     ).scalar_one() == 0
 
-    # This test created a session-lived TEMP TABLE "organizations" (above) to
-    # prove the immutability trigger holds even when the real table is shadowed.
-    # Temp tables persist for the whole pooled connection (pg_engine is
-    # module-scoped), so drop it here — otherwise it shadows public.organizations
-    # for every later test that inserts an org (was silently breaking them).
+    # Explicitly clean up the connection-local adversarial shadow table.
     pg_session.execute(text("DROP TABLE IF EXISTS pg_temp.organizations"))
+    pg_session.commit()
+
+def test_temporal_tables_force_rls_and_preserve_immutable_history(pg_session):
+    from app.schemas.temporal import EventCreate
+    from app.services.temporal_service import record_event, record_observation
+    from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
+    from tests.test_temporal_foundation import _payload, _seed
+
+    org_id = f"temporal-{uuid.uuid4().hex[:8]}"
+    token = set_current_context(RequestContext(org_id, "system"))
+    try:
+        pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id})
+        entity, raw = _seed(pg_session, org_id=org_id)
+        row, _ = record_observation(pg_session, _payload(entity, raw))
+        derived, _ = record_event(pg_session, EventCreate(observation_id=row.id, event_type="capacity.reported"))
+        row_id, event_id = row.id, derived.id
+        pg_session.commit()
+    finally:
+        reset_current_context(token)
+    tables = ["temporal_observations", "temporal_events"]
+    policies = pg_session.execute(text(
+        "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, p.polname "
+        "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "LEFT JOIN pg_policy p ON p.polrelid = c.oid "
+        "WHERE n.nspname = current_schema() AND c.relname = ANY(:tables)"
+    ), {"tables": tables}).all()
+    assert {row.relname for row in policies} == set(tables)
+    assert all(row.relrowsecurity and row.relforcerowsecurity and row.polname == "tenant_isolation" for row in policies)
+    pg_session.commit()
+    for table, key in zip(tables, [row_id, event_id]):
+        pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": "wrong-org"})
+        assert pg_session.execute(text(f"SELECT count(*) FROM {table} WHERE id = :id"), {"id": key}).scalar_one() == 0
+        pg_session.commit()
+        pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id})
+        assert pg_session.execute(text(f"SELECT count(*) FROM {table} WHERE id = :id"), {"id": key}).scalar_one() == 1
+        pg_session.commit()
+        for statement in (
+            f"UPDATE {table} SET recorded_at = CURRENT_TIMESTAMP WHERE id = :id",
+            f"DELETE FROM {table} WHERE id = :id",
+            f"TRUNCATE {table} CASCADE",
+        ):
+            pg_session.execute(text("SELECT set_config('app.current_org', :o, true)"), {"o": org_id})
+            with pytest.raises(DBAPIError, match="immutable"):
+                pg_session.execute(text(statement), {"id": key})
+            pg_session.rollback()
+    pg_session.execute(text("DELETE FROM public.organizations WHERE id = :id"), {"id": org_id})
     pg_session.commit()
 
 

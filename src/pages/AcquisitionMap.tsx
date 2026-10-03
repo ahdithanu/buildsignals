@@ -1,23 +1,25 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Check,
+  Copy,
   Download,
   ExternalLink,
   Layers3,
-  MapPin,
-  MousePointer2,
-  Radius,
   Users,
 } from 'lucide-react';
 
 import { Layout } from '@/components/Layout';
+import { MapReadiness } from '@/components/MapReadiness';
+import { SignalMapExplorer, type MapSignal } from '@/components/SignalMapExplorer';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAcquisitionRadar } from '@/hooks/useAcquisitionRadar';
+import { useAcquisitionRadar, useZip3Heatmap } from '@/hooks/useAcquisitionRadar';
 import { useToast } from '@/hooks/use-toast';
 import {
+  availabilityEvidenceSource,
+  availabilitySummary,
   hasTaxEvidence,
   lastSale,
   ownerName,
@@ -29,7 +31,12 @@ import {
 import { cn } from '@/lib/utils';
 import type { AcquisitionRadarItem } from '@/types/parcel';
 
-const evidenceFilters = ['Shortlisted', 'Owner evidence', 'Held 10+ yrs', 'Tax evidence'];
+const evidenceFilters = ['Shortlisted', 'Verified availability', 'Owner evidence', 'Held 10+ yrs', 'Tax evidence'];
+const GeographicMap = lazy(() => import('@/components/GeographicMap'));
+
+function normalizedZip3(value: string | null) {
+  return value && /^\d{3}$/.test(value) ? value : '';
+}
 
 function acres(item: AcquisitionRadarItem) {
   return item.parcel.land_area_sq_ft == null ? null : item.parcel.land_area_sq_ft / 43_560;
@@ -41,48 +48,96 @@ function formatDate(value: string | null | undefined) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 }
 
-function pointPosition(items: AcquisitionRadarItem[], item: AcquisitionRadarItem) {
-  const latitudes = items.map((row) => row.parcel.latitude);
-  const longitudes = items.map((row) => row.parcel.longitude);
-  const minLat = Math.min(...latitudes);
-  const maxLat = Math.max(...latitudes);
-  const minLng = Math.min(...longitudes);
-  const maxLng = Math.max(...longitudes);
-  const x = minLng === maxLng ? 50 : 15 + ((item.parcel.longitude - minLng) / (maxLng - minLng)) * 57;
-  const y = minLat === maxLat ? 50 : 75 - ((item.parcel.latitude - minLat) / (maxLat - minLat)) * 50;
-  return { left: `${x}%`, top: `${y}%` };
-}
-
 export default function AcquisitionMap() {
   const { role } = useAuth();
   const { toast } = useToast();
-  const { data, isLoading, error, refetch, exportSearch } = useAcquisitionRadar({ limit: 100, offset: 0 });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [stateFilter, setStateFilter] = useState(searchParams.get('state') || '');
+  const [selectedSourceRecord, setSelectedSourceRecord] = useState<MapSignal | null>(null);
+  const selectedState = stateFilter.trim().toUpperCase() || undefined;
+  const { data, isLoading, error, refetch, exportSearch } = useAcquisitionRadar({ state: selectedState, limit: 100, offset: 0 });
+  const { data: heatmap } = useZip3Heatmap({ state: selectedState, limit: 25 });
   const [selectedSignalId, setSelectedSignalId] = useState('');
   const [selectedParcelId, setSelectedParcelId] = useState('');
+  const [selectedZip3, setSelectedZip3] = useState(normalizedZip3(searchParams.get('zip3')));
   const [assemblage, setAssemblage] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [activeOnly, setActiveOnly] = useState(true);
 
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (selectedState) next.set('state', selectedState);
+    if (selectedZip3) next.set('zip3', selectedZip3);
+    setSearchParams(next, { replace: true });
+  }, [selectedState, selectedZip3, setSearchParams]);
+
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const signals = useMemo(() => radarSignals(items), [items]);
-  const activeSignalId = selectedSignalId || signals[0]?.id || '';
+  const activeSignalId = selectedZip3 && !selectedSignalId ? '' : selectedSignalId || signals[0]?.id || '';
   const selectedSignal = signals.find((signal) => signal.id === activeSignalId);
-  const connectedItems = activeSignalId
+  const selectedSourcePermitId = selectedSourceRecord?.kind === 'permit'
+    ? selectedSourceRecord.id.replace(/^permit:/, '')
+    : '';
+  const selectedSourcePlanningId = selectedSourceRecord?.kind === 'planning'
+    ? selectedSourceRecord.id.replace(/^planning:/, '')
+    : '';
+  const selectedPlanningMarket = selectedSourceRecord?.kind === 'planning'
+    ? {
+      city: selectedSourceRecord.city?.trim().toLowerCase() || '',
+      state: selectedSourceRecord.state?.trim().toUpperCase() || '',
+    }
+    : null;
+  const exactPlanningItems = selectedSourcePlanningId
+    ? items.filter((item) => item.signals.some((signal) => signal.anchor_planning_id === selectedSourcePlanningId))
+    : [];
+  const connectedItems = selectedSourcePermitId
+    ? items.filter((item) => item.signals.some((signal) => signal.anchor_permit_id === selectedSourcePermitId))
+    : exactPlanningItems.length
+      ? exactPlanningItems
+    : selectedPlanningMarket
+      ? items.filter((item) => {
+        const stateMatches = !selectedPlanningMarket.state || item.parcel.state?.toUpperCase() === selectedPlanningMarket.state;
+        const cityMatches = !selectedPlanningMarket.city || item.parcel.city?.trim().toLowerCase() === selectedPlanningMarket.city;
+        return stateMatches && cityMatches;
+      })
+    : activeSignalId
     ? items.filter((item) => item.signals.some((signal) => signal.deal_id === activeSignalId))
     : items;
+  const heatItems = heatmap?.items ?? [];
+  const topHeatScore = Math.max(...heatItems.map((item) => item.score), 1);
   const visibleItems = connectedItems.filter((item) => {
+    if (selectedZip3) {
+      const digits = (item.parcel.postal_code || '').replace(/\D/g, '');
+      if (!digits.startsWith(selectedZip3)) return false;
+    }
     if (activeOnly && item.review_status === 'dismissed') return false;
     if (activeFilters.has('Shortlisted') && item.review_status !== 'shortlisted') return false;
+    if (activeFilters.has('Verified availability') && !availabilityEvidenceSource(item.facts ?? [])) return false;
     if (activeFilters.has('Owner evidence') && !ownerName(item.facts ?? [])) return false;
     if (activeFilters.has('Held 10+ yrs') && (ownershipTenureYears(item) ?? 0) < 10) return false;
     if (activeFilters.has('Tax evidence') && !hasTaxEvidence(item.facts ?? [])) return false;
     return true;
   });
+  const selectedSourcePoint = selectedSourceRecord
+    && Number.isFinite(selectedSourceRecord.latitude)
+    && Number.isFinite(selectedSourceRecord.longitude)
+    ? {
+      id: `source:${selectedSourceRecord.id}`,
+      title: `Selected ${selectedSourceRecord.kind}: ${selectedSourceRecord.title}`,
+      latitude: selectedSourceRecord.latitude,
+      longitude: selectedSourceRecord.longitude,
+      kind: selectedSourceRecord.kind,
+    } as const
+    : null;
   const selectedParcel = visibleItems.find((item) => item.parcel.id === selectedParcelId) || visibleItems[0];
   const selectedAcreage = items
     .filter((item) => assemblage.has(item.parcel.id))
     .reduce((sum, item) => sum + (acres(item) ?? 0), 0);
   const canExport = (role === 'admin' || role === 'editor') && !!selectedSignal?.searchId;
+  const acquisitionWorkspaceParams = new URLSearchParams();
+  if (selectedState) acquisitionWorkspaceParams.set('state', selectedState);
+  if (selectedZip3) acquisitionWorkspaceParams.set('zip3', selectedZip3);
+  const acquisitionWorkspaceHref = `/acquisition-radar${acquisitionWorkspaceParams.toString() ? `?${acquisitionWorkspaceParams.toString()}` : ''}`;
 
   function toggleFilter(filter: string) {
     setActiveFilters((current) => {
@@ -129,22 +184,48 @@ export default function AcquisitionMap() {
     });
   }
 
-  if (isLoading) return <Layout><LoadingState message="Loading acquisition map..." /></Layout>;
-  if (error) return <Layout><ErrorState message="The acquisition map could not be loaded." onRetry={() => refetch()} /></Layout>;
+  async function copyMapLink() {
+    const next = new URLSearchParams();
+    if (selectedState) next.set('state', selectedState);
+    if (selectedZip3) next.set('zip3', selectedZip3);
+    const query = next.toString();
+    const url = `${window.location.origin}/map${query ? `?${query}` : ''}`;
+    await navigator.clipboard.writeText(url);
+    toast({
+      title: 'Map view copied',
+      description: selectedZip3
+        ? `ZIP3 ${selectedZip3} map filters are ready to share.`
+        : 'Current acquisition map filters are ready to share.',
+    });
+  }
+
+  const signalMap = (
+    <SignalMapExplorer
+      state={stateFilter}
+      onStateChange={setStateFilter}
+      onRecordSelect={setSelectedSourceRecord}
+    />
+  );
+
+  if (isLoading) return <Layout>{signalMap}<LoadingState message="Loading acquisition map..." /></Layout>;
+  if (error) return <Layout>{signalMap}<ErrorState message="The acquisition map could not be loaded." onRetry={() => refetch()} /></Layout>;
   if (!items.length) {
     return (
       <Layout>
+        {signalMap}
         <EmptyState
           title="No ranked parcels yet"
           description="Run a nearby-parcel search from a geocoded opportunity to populate this workspace."
           action={<Link to="/permit-review" className="border-2 border-foreground px-3 py-2 text-xs font-semibold">Open permit review</Link>}
         />
+        <MapReadiness />
       </Layout>
     );
   }
 
   return (
     <Layout>
+      {signalMap}
       <div className="grid min-h-[calc(100vh-48px)] lg:grid-cols-[320px_1fr]">
         <aside className="hidden min-h-0 border-r-2 border-foreground bg-card lg:flex lg:flex-col">
           <div className="border-b-2 border-foreground p-3">
@@ -186,34 +267,128 @@ export default function AcquisitionMap() {
         </aside>
 
         <div className="flex min-w-0 flex-col">
-          <section className="relative h-[300px] shrink-0 overflow-hidden border-b-2 border-foreground bg-secondary md:h-[390px] lg:min-h-[340px] lg:flex-1">
-            <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(hsl(var(--border))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border))_1px,transparent_1px)] [background-size:46px_46px]" />
+          <section className="border-b-2 border-foreground">
+            <div className="flex flex-wrap items-end gap-2 border-b border-border p-3">
+              <label className="text-[10px] font-semibold uppercase text-muted-foreground">
+                State
+                <input
+                  value={stateFilter}
+                  onChange={(event) => {
+                    setStateFilter(event.target.value.slice(0, 2).toUpperCase());
+                    setSelectedSignalId('');
+                    setSelectedParcelId('');
+                    setSelectedZip3('');
+                    setSelectedSourceRecord(null);
+                  }}
+                  placeholder="All"
+                  aria-label="Filter acquisition map by state"
+                  className="mt-1 h-8 w-20 border border-foreground bg-card px-2 text-xs font-semibold uppercase text-foreground"
+                />
+              </label>
+              {stateFilter && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStateFilter('');
+                    setSelectedSignalId('');
+                    setSelectedParcelId('');
+                    setSelectedZip3('');
+                    setSelectedSourceRecord(null);
+                  }}
+                  className="h-8 border border-foreground px-2 text-[10px] font-semibold"
+                >
+                  Clear state
+                </button>
+              )}
+              <p className="text-[10px] text-muted-foreground">
+                Filters ranked parcels and ZIP3 heat using the same tenant-scoped backend queries.
+              </p>
+            </div>
             <select
               value={activeSignalId}
               onChange={(event) => { setSelectedSignalId(event.target.value); setSelectedParcelId(''); }}
               aria-label="Connected opportunity"
-              className="absolute left-3 top-3 z-10 h-8 max-w-[55%] border border-foreground bg-card px-2 text-[9px] font-semibold lg:hidden"
+              className="m-3 h-8 max-w-[90%] border border-foreground bg-card px-2 text-xs font-semibold lg:hidden"
             >
               {signals.map((signal) => <option key={signal.id} value={signal.id}>{signal.name}</option>)}
             </select>
 
-            {visibleItems.map((item) => {
-              const position = pointPosition(visibleItems, item);
-              return (
-                <ParcelPoint
-                  key={item.parcel.id}
-                  item={item}
-                  selected={selectedParcel?.parcel.id === item.parcel.id}
-                  style={position}
-                  labelAbove={Number.parseFloat(position.top) > 60}
-                  onClick={() => setSelectedParcelId(item.parcel.id)}
-                />
-              );
-            })}
-
-            <div className="absolute right-3 top-3 flex flex-col gap-1.5">
-              <MapTool icon={Radius} label="Verified coordinates" />
-              <MapTool icon={MousePointer2} label="Select parcels" />
+            <Suspense fallback={<p>Loading parcel map...</p>}>
+              <GeographicMap points={[
+                ...(selectedSourcePoint ? [selectedSourcePoint] : []),
+                ...heatItems
+                  .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+                  .map((item) => ({
+                    id: `zip3:${item.zip3}`,
+                    title: `ZIP3 ${item.zip3}: ${item.pre_approval_signals} pre-approval signals, ${item.parcel_candidate_count} nearby candidates`,
+                    latitude: item.latitude as number,
+                    longitude: item.longitude as number,
+                    kind: 'heat' as const,
+                    weight: 12 + (item.score / topHeatScore) * 16,
+                  })),
+                ...visibleItems.map(item => ({ id: item.parcel.id,
+                title: item.parcel.address || item.parcel.external_parcel_id,
+                latitude: item.parcel.latitude, longitude: item.parcel.longitude, kind: 'parcel' as const,
+              })),
+              ]} onSelect={(id) => {
+                if (id.startsWith('source:')) return;
+                if (id.startsWith('zip3:')) {
+                  setSelectedZip3(id.slice(5));
+                  setSelectedSignalId('');
+                  setSelectedParcelId('');
+                } else {
+                  setSelectedParcelId(id);
+                }
+              }} />
+            </Suspense>
+            <div className="space-y-3 p-3">
+              {!!heatItems.length && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="section-label text-foreground">ZIP3 opportunity heat</p>
+                    {selectedZip3 && <button type="button" className="text-[10px] font-semibold underline" onClick={() => setSelectedZip3('')}>Clear ZIP3</button>}
+                  </div>
+                  {heatmap?.for_sale_semantics && (
+                    <p className="mb-2 max-w-3xl text-[10px] leading-relaxed text-muted-foreground">
+                      Nearby candidates are investigation leads, not verified listings.
+                      {' '}Verified for-sale requires source evidence: {heatmap.for_sale_semantics.verified_for_sale}
+                    </p>
+                  )}
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {heatItems.slice(0, 10).map((item) => (
+                      <button
+                        key={item.zip3}
+                        type="button"
+                        onClick={() => { setSelectedZip3(item.zip3); setSelectedSignalId(''); setSelectedParcelId(''); }}
+                        className={cn(
+                          'shrink-0 border border-input bg-card px-3 py-2 text-left text-[10px]',
+                          selectedZip3 === item.zip3 && 'border-foreground bg-foreground text-background',
+                        )}
+                      >
+                        <span className="block text-xs font-semibold">ZIP3 {item.zip3}</span>
+                        <span className="mt-1 block">{item.pre_approval_signals} pre-approval · {item.parcel_candidate_count} candidates</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedSourcePermitId && (
+                <div className="border border-foreground bg-card px-3 py-2 text-[10px]">
+                  <span className="font-semibold">Source-linked parcels:</span>{' '}
+                  {selectedSourceRecord?.title || selectedSourcePermitId}
+                  <button type="button" className="ml-2 font-semibold underline" onClick={() => setSelectedSourceRecord(null)}>Clear source</button>
+                </div>
+              )}
+              {selectedPlanningMarket && !selectedSourcePermitId && (
+                <div className="border border-foreground bg-card px-3 py-2 text-[10px]">
+                  <span className="font-semibold">{exactPlanningItems.length ? 'Planning-linked parcels:' : 'Planning market filter:'}</span>{' '}
+                  {selectedSourceRecord?.title || [selectedSourceRecord?.city, selectedSourceRecord?.state].filter(Boolean).join(', ')}
+                  {!exactPlanningItems.length && (
+                    <span className="ml-1 text-muted-foreground">Matched by city/state; not a direct planning-to-parcel search.</span>
+                  )}
+                  <button type="button" className="ml-2 font-semibold underline" onClick={() => setSelectedSourceRecord(null)}>Clear source</button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setActiveOnly((value) => !value)}
@@ -221,9 +396,16 @@ export default function AcquisitionMap() {
               >
                 <Layers3 className="h-3 w-3" /> Active only
               </button>
+              <button
+                type="button"
+                onClick={() => void copyMapLink()}
+                className="inline-flex h-8 items-center gap-1.5 border border-foreground bg-card px-2 text-[9px] font-semibold"
+              >
+                <Copy className="h-3 w-3" /> Copy map view
+              </button>
             </div>
-            <div className="absolute bottom-3 left-3 max-w-[75%] border border-input bg-card px-2 py-1 text-[9px] text-muted-foreground">
-              {selectedSignal?.market || 'National'} · {connectedItems.length} ranked parcels · {visibleItems.length} shown
+            <div className="px-3 pb-3 text-xs text-muted-foreground">
+              {selectedSignal?.market || 'National'}{selectedZip3 ? ` · ZIP3 ${selectedZip3}` : ''} · {connectedItems.length} ranked parcels · {visibleItems.length} shown
             </div>
           </section>
 
@@ -287,7 +469,7 @@ export default function AcquisitionMap() {
               )}
 
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t-2 border-foreground pt-2">
-                <Link to="/acquisition-radar" className="inline-flex h-8 items-center gap-1.5 bg-foreground px-3 text-[10px] font-semibold text-background">
+                <Link to={acquisitionWorkspaceHref} className="inline-flex h-8 items-center gap-1.5 bg-foreground px-3 text-[10px] font-semibold text-background">
                   <Users className="h-3.5 w-3.5" /> Open acquisition workspace ({assemblage.size} selected{selectedAcreage ? ` · ${selectedAcreage.toFixed(1)} ac` : ''})
                 </Link>
                 <button
@@ -316,6 +498,7 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
   const facts = item.facts ?? [];
   const owner = ownerName(facts);
   const sale = lastSale(facts);
+  const availabilityEvidence = availabilityEvidenceSource(facts);
   const area = acres(item);
   return (
     <>
@@ -325,13 +508,28 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
       <div className="mt-3 border-t-2 border-foreground">
         <ParcelFact label="Workflow" value={workflowLabel(item.review_status)} />
         <ParcelFact label="Owner evidence" value={owner || 'Not available in admitted parcel facts'} />
+        <ParcelFact label="Availability" value={availabilitySummary(facts)} />
         <ParcelFact label="Evidence" value={sourceLabel(facts)} />
         <ParcelFact label="Last transfer" value={sale ? [sale.price, formatDate(sale.date)].filter(Boolean).join(' · ') : 'No admitted sale fact'} />
         <ParcelFact label="Last verified" value={formatDate(item.parcel.last_verified_at)} />
       </div>
+      {availabilityEvidence && (
+        <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-[10px] text-emerald-950">
+          <p className="font-semibold capitalize">{availabilityEvidence.evidenceType} availability source</p>
+          <p className="mt-1 text-emerald-900">
+            {Math.round(availabilityEvidence.confidence * 100)}% confidence
+            {availabilityEvidence.excerpt ? ` · ${availabilityEvidence.excerpt}` : ''}
+          </p>
+          {availabilityEvidence.url && (
+            <a href={availabilityEvidence.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold underline">
+              Open availability evidence <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+      )}
       <div className="mt-3 flex flex-wrap gap-1.5">
         <Link to={`/parcels/${item.parcel.id}`} className="inline-flex h-8 items-center gap-1.5 bg-foreground px-2.5 text-[9px] font-semibold text-background">
-          <ExternalLink className="h-3.5 w-3.5" /> Open parcel record
+          <ExternalLink className="h-3.5 w-3.5" /> Review parcel evidence
         </Link>
         {item.signals[0] && <Link to={`/deal/${item.signals[0].deal_id}`} className="inline-flex h-8 items-center border border-foreground px-2.5 text-[9px] font-semibold">Open opportunity</Link>}
       </div>
@@ -341,30 +539,6 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
 
 function Legend({ tone, label }: { tone: string; label: string }) {
   return <div className="flex items-center gap-2"><span className={cn('h-2.5 w-2.5 shrink-0', tone)} /><span>{label}</span></div>;
-}
-
-function MapTool({ icon: Icon, label }: { icon: typeof Radius; label: string }) {
-  return <div className="inline-flex h-8 items-center gap-1.5 border border-foreground bg-card px-2 text-[9px] font-semibold"><Icon className="h-3 w-3" />{label}</div>;
-}
-
-function ParcelPoint({ item, selected, style, labelAbove, onClick }: { item: AcquisitionRadarItem; selected: boolean; style: React.CSSProperties; labelAbove: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={style}
-      aria-label={`Select parcel ${item.parcel.external_parcel_id}`}
-      className={cn('absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 border-2 border-foreground bg-card', item.review_status === 'dismissed' && 'bg-border', selected && 'ring-2 ring-[#1a63c7]')}
-    >
-      <MapPin className="h-3 w-3" />
-      {selected && (
-        <span className={cn('absolute left-5 top-0 w-44 border-2 border-foreground bg-card p-2 text-left text-[9px]', labelAbove && 'bottom-0 top-auto')}>
-          <span className="block truncate font-semibold">{item.parcel.address || item.parcel.external_parcel_id}</span>
-          <span className="mt-1 block text-muted-foreground">{workflowLabel(item.review_status)} · score {Math.round(item.radar_score)}</span>
-        </span>
-      )}
-    </button>
-  );
 }
 
 function ParcelFact({ label, value }: { label: string; value: string }) {

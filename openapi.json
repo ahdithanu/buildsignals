@@ -40,6 +40,74 @@
         "title": "AIInsight",
         "type": "object"
       },
+      "AcquisitionCriteria": {
+        "additionalProperties": false,
+        "properties": {
+          "market_city": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Market City",
+            "type": "string"
+          },
+          "market_state": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "Market State",
+            "type": "string"
+          },
+          "max_price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Max Price",
+            "type": "number"
+          },
+          "max_size": {
+            "exclusiveMinimum": 0.0,
+            "title": "Max Size",
+            "type": "integer"
+          },
+          "min_price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Min Price",
+            "type": "number"
+          },
+          "min_size": {
+            "exclusiveMinimum": 0.0,
+            "title": "Min Size",
+            "type": "integer"
+          },
+          "min_year_built": {
+            "maximum": 9999.0,
+            "minimum": 1000.0,
+            "title": "Min Year Built",
+            "type": "integer"
+          },
+          "profile": {
+            "enum": [
+              "small_multifamily",
+              "small_bay_retail"
+            ],
+            "title": "Profile",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile",
+          "market_city",
+          "market_state",
+          "min_price",
+          "max_price",
+          "min_size",
+          "max_size",
+          "min_year_built"
+        ],
+        "title": "AcquisitionCriteria",
+        "type": "object"
+      },
       "AcquisitionRadarItemResponse": {
         "properties": {
           "acquisition_case_id": {
@@ -237,6 +305,28 @@
       },
       "AcquisitionRadarSignalResponse": {
         "properties": {
+          "anchor_permit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Permit Id"
+          },
+          "anchor_planning_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Planning Id"
+          },
           "approval_stage": {
             "anyOf": [
               {
@@ -312,8 +402,24 @@
             "title": "Assigned Parcels",
             "type": "integer"
           },
+          "contacted_parcels": {
+            "title": "Contacted Parcels",
+            "type": "integer"
+          },
+          "due_follow_up_parcels": {
+            "title": "Due Follow Up Parcels",
+            "type": "integer"
+          },
+          "follow_up_parcels": {
+            "title": "Follow Up Parcels",
+            "type": "integer"
+          },
           "multi_opportunity_parcels": {
             "title": "Multi Opportunity Parcels",
+            "type": "integer"
+          },
+          "promoted_parcels": {
+            "title": "Promoted Parcels",
             "type": "integer"
           },
           "shortlisted_parcels": {
@@ -334,9 +440,156 @@
           "shortlisted_parcels",
           "multi_opportunity_parcels",
           "assigned_parcels",
+          "promoted_parcels",
+          "contacted_parcels",
+          "follow_up_parcels",
+          "due_follow_up_parcels",
           "state_count"
         ],
         "title": "AcquisitionRadarSummaryResponse",
+        "type": "object"
+      },
+      "ActivityBaselineRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "attribute": {
+            "default": "permit.filed_at",
+            "enum": [
+              "permit.filed_at",
+              "permit.issued_at"
+            ],
+            "title": "Attribute",
+            "type": "string"
+          },
+          "baseline_periods": {
+            "default": 6,
+            "maximum": 12.0,
+            "minimum": 3.0,
+            "title": "Baseline Periods",
+            "type": "integer"
+          },
+          "city": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "City",
+            "type": "string"
+          },
+          "minimum_baseline_records": {
+            "default": 20,
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Minimum Baseline Records",
+            "type": "integer"
+          },
+          "period_days": {
+            "default": 30,
+            "maximum": 90.0,
+            "minimum": 7.0,
+            "title": "Period Days",
+            "type": "integer"
+          },
+          "reporting_lag_days": {
+            "default": 7,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Reporting Lag Days",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceCohort"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          },
+          "state": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "sources",
+          "city",
+          "state"
+        ],
+        "title": "ActivityBaselineRequest",
+        "type": "object"
+      },
+      "ActivityBaselineResponse": {
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "attribute": {
+            "title": "Attribute",
+            "type": "string"
+          },
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "request_fingerprint": {
+            "title": "Request Fingerprint",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "null"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceBaseline"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "coverage_unverified",
+              "bounded_query_exceeded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "methodology_version",
+          "request_fingerprint",
+          "as_of",
+          "city",
+          "state",
+          "attribute",
+          "status",
+          "sources",
+          "warnings"
+        ],
+        "title": "ActivityBaselineResponse",
         "type": "object"
       },
       "ActivityCreate": {
@@ -491,6 +744,48 @@
         ],
         "title": "ActivityTypeEnum",
         "type": "string"
+      },
+      "ActivityWindow": {
+        "properties": {
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "evidence_observation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Observation Ids",
+            "type": "array"
+          },
+          "observed_records": {
+            "title": "Observed Records",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "baseline",
+              "current"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "role",
+          "observed_records",
+          "evidence_observation_ids"
+        ],
+        "title": "ActivityWindow",
+        "type": "object"
       },
       "ApiKeyCreateRequest": {
         "properties": {
@@ -2572,6 +2867,16 @@
       },
       "BuyBoxCreate": {
         "properties": {
+          "acquisition_criteria": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AcquisitionCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "asset_type": {
             "anyOf": [
               {
@@ -2665,6 +2970,16 @@
       },
       "BuyBoxResponse": {
         "properties": {
+          "acquisition_criteria": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AcquisitionCriteria"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "asset_type": {
             "anyOf": [
               {
@@ -4333,6 +4648,12 @@
         "title": "DeleteAccountRequest",
         "type": "object"
       },
+      "DemoLoginRequest": {
+        "additionalProperties": false,
+        "properties": {},
+        "title": "DemoLoginRequest",
+        "type": "object"
+      },
       "DeploymentReadiness": {
         "properties": {
           "checks": {
@@ -4401,6 +4722,130 @@
           "summary"
         ],
         "title": "DeploymentReadinessCheck",
+        "type": "object"
+      },
+      "DiligenceObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "methodology": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Methodology",
+            "type": "string"
+          },
+          "metric": {
+            "enum": [
+              "leased_area_occupancy_percent",
+              "largest_tenant_base_rent_percent",
+              "restaurant_base_rent_percent",
+              "base_rent_weighted_lease_term_years",
+              "tenant_bay_count"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "whole_property",
+              "partial"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "value": {
+            "minimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "metric",
+          "value",
+          "as_of",
+          "scope",
+          "methodology"
+        ],
+        "title": "DiligenceObservation",
+        "type": "object"
+      },
+      "DiligenceReviewCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "enum": [
+              "supports",
+              "contradicts",
+              "inconclusive"
+            ],
+            "title": "Assessment",
+            "type": "string"
+          },
+          "criterion": {
+            "enum": [
+              "units",
+              "sq_ft",
+              "year_built",
+              "asking_price",
+              "market",
+              "asset_type",
+              "bays",
+              "occupancy",
+              "concentration",
+              "restaurants",
+              "tenant_mix",
+              "leases",
+              "walt",
+              "rent",
+              "access",
+              "traffic",
+              "parking",
+              "population",
+              "capex"
+            ],
+            "title": "Criterion",
+            "type": "string"
+          },
+          "document_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Document Id",
+            "type": "string"
+          },
+          "expected_text_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Expected Text Sha256",
+            "type": "string"
+          },
+          "observation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DiligenceObservation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "expected_text_sha256",
+          "criterion",
+          "assessment",
+          "rationale"
+        ],
+        "title": "DiligenceReviewCreate",
         "type": "object"
       },
       "DisableRequest": {
@@ -4472,6 +4917,58 @@
         "title": "DocumentCreate",
         "type": "object"
       },
+      "DocumentExcerptCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "authorized_to_store": {
+            "title": "Authorized To Store",
+            "type": "boolean"
+          },
+          "document_type": {
+            "enum": [
+              "rent_roll",
+              "lease",
+              "cam",
+              "capex_report"
+            ],
+            "title": "Document Type",
+            "type": "string"
+          },
+          "locator": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Locator",
+            "type": "string"
+          },
+          "source_date": {
+            "format": "date",
+            "title": "Source Date",
+            "type": "string"
+          },
+          "source_title": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source Title",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_title",
+          "document_type",
+          "source_date",
+          "locator",
+          "text",
+          "authorized_to_store"
+        ],
+        "title": "DocumentExcerptCreate",
+        "type": "object"
+      },
       "DocumentResponse": {
         "properties": {
           "deal_id": {
@@ -4488,6 +4985,17 @@
               }
             ],
             "title": "Doc Type"
+          },
+          "evidence_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Kind"
           },
           "file_path": {
             "anyOf": [
@@ -4788,6 +5296,53 @@
           "daily"
         ],
         "title": "EvaluationCounts",
+        "type": "object"
+      },
+      "EventResponse": {
+        "properties": {
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "observation_id": {
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "observation_id",
+          "event_type",
+          "occurred_at",
+          "recorded_at"
+        ],
+        "title": "EventResponse",
         "type": "object"
       },
       "Evidence": {
@@ -7001,6 +7556,13 @@
             "title": "State Buckets",
             "type": "array"
           },
+          "state_readiness_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "State Readiness Counts",
+            "type": "object"
+          },
           "top_jurisdictions": {
             "items": {
               "$ref": "#/components/schemas/CoverageJurisdictionBucket"
@@ -8231,6 +8793,11 @@
       },
       "MeResponse": {
         "properties": {
+          "is_demo": {
+            "default": false,
+            "title": "Is Demo",
+            "type": "boolean"
+          },
           "organization_id": {
             "title": "Organization Id",
             "type": "string"
@@ -8278,6 +8845,9 @@
             "title": "Offset",
             "type": "integer"
           },
+          "page_totals": {
+            "$ref": "#/components/schemas/MeasuredCoverageTotals"
+          },
           "record_type": {
             "enum": [
               "parcel",
@@ -8315,10 +8885,64 @@
           "limit",
           "offset",
           "has_more",
+          "page_totals",
           "sources",
           "warnings"
         ],
         "title": "MeasuredCoverageResponse",
+        "type": "object"
+      },
+      "MeasuredCoverageTotals": {
+        "properties": {
+          "future_source_date_records": {
+            "title": "Future Source Date Records",
+            "type": "integer"
+          },
+          "geocoded_records": {
+            "title": "Geocoded Records",
+            "type": "integer"
+          },
+          "observed_jurisdiction_count": {
+            "title": "Observed Jurisdiction Count",
+            "type": "integer"
+          },
+          "observed_state_count": {
+            "title": "Observed State Count",
+            "type": "integer"
+          },
+          "recent_source_date_records": {
+            "title": "Recent Source Date Records",
+            "type": "integer"
+          },
+          "recently_seen_records": {
+            "title": "Recently Seen Records",
+            "type": "integer"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          },
+          "stored_records": {
+            "title": "Stored Records",
+            "type": "integer"
+          },
+          "unknown_source_date_records": {
+            "title": "Unknown Source Date Records",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_count",
+          "stored_records",
+          "geocoded_records",
+          "recently_seen_records",
+          "unknown_source_date_records",
+          "future_source_date_records",
+          "recent_source_date_records",
+          "observed_state_count",
+          "observed_jurisdiction_count"
+        ],
+        "title": "MeasuredCoverageTotals",
         "type": "object"
       },
       "MeasuredSourceCoverage": {
@@ -8824,8 +9448,26 @@
             "type": "number"
           },
           "anchor_permit_id": {
-            "title": "Anchor Permit Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Permit Id"
+          },
+          "anchor_planning_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Planning Id"
           },
           "as_of": {
             "format": "date-time",
@@ -8885,7 +9527,6 @@
           "id",
           "deal_id",
           "anchor_brand_match_id",
-          "anchor_permit_id",
           "anchor_latitude",
           "anchor_longitude",
           "radius_miles",
@@ -8921,8 +9562,26 @@
             "type": "number"
           },
           "anchor_permit_id": {
-            "title": "Anchor Permit Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Permit Id"
+          },
+          "anchor_planning_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Planning Id"
           },
           "as_of": {
             "format": "date-time",
@@ -8975,7 +9634,6 @@
           "id",
           "deal_id",
           "anchor_brand_match_id",
-          "anchor_permit_id",
           "anchor_latitude",
           "anchor_longitude",
           "radius_miles",
@@ -8987,6 +9645,119 @@
           "created_at"
         ],
         "title": "NearbyParcelSearchSummary",
+        "type": "object"
+      },
+      "NumericChangeResponse": {
+        "properties": {
+          "absolute_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absolute Change"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "current_observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Observation Id"
+          },
+          "current_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Value"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "percent_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Change"
+          },
+          "previous_observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Observation Id"
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value"
+          },
+          "series_key": {
+            "title": "Series Key",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series_key",
+          "as_of",
+          "methodology_version",
+          "status",
+          "current_observation_id",
+          "previous_observation_id",
+          "current_value",
+          "previous_value",
+          "absolute_change",
+          "percent_change",
+          "direction"
+        ],
+        "title": "NumericChangeResponse",
         "type": "object"
       },
       "ObservabilityOverview": {
@@ -9038,6 +9809,151 @@
           "attention"
         ],
         "title": "ObservabilityOverview",
+        "type": "object"
+      },
+      "ObservationResponse": {
+        "properties": {
+          "attribute": {
+            "title": "Attribute",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective At"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "first_observed_at": {
+            "format": "date-time",
+            "title": "First Observed At",
+            "type": "string"
+          },
+          "geography": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "observation_key": {
+            "title": "Observation Key",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "raw_source_record_id": {
+            "title": "Raw Source Record Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "series_key": {
+            "title": "Series Key",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "source_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Updated At"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "entity_id",
+          "raw_source_record_id",
+          "source_id",
+          "observation_key",
+          "series_key",
+          "attribute",
+          "value",
+          "unit",
+          "effective_at",
+          "first_observed_at",
+          "recorded_at",
+          "source_updated_at",
+          "source_system",
+          "source_type",
+          "source_url",
+          "confidence",
+          "geography",
+          "methodology_version",
+          "content_hash"
+        ],
+        "title": "ObservationResponse",
         "type": "object"
       },
       "ObservedStateCoverage": {
@@ -9968,6 +10884,117 @@
         "title": "ParcelAcquisitionSourceResponse",
         "type": "object"
       },
+      "ParcelAvailabilityEvidenceCreate": {
+        "properties": {
+          "asking_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asking Price"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.7,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "contact_company": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Company"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "evidence_type": {
+            "enum": [
+              "listing",
+              "broker",
+              "owner",
+              "auction"
+            ],
+            "title": "Evidence Type",
+            "type": "string"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "for_sale",
+              "listed",
+              "broker_listed",
+              "owner_indicated_available"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "evidence_type",
+          "confidence"
+        ],
+        "title": "ParcelAvailabilityEvidenceCreate",
+        "type": "object"
+      },
       "ParcelDetailResponse": {
         "properties": {
           "facts": {
@@ -10297,6 +11324,305 @@
           "last_verified_at"
         ],
         "title": "ParcelLineageParticipantResponse",
+        "type": "object"
+      },
+      "ParcelReferenceAcceptance": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "expected_parcel_raw_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Expected Parcel Raw Id",
+            "type": "string"
+          },
+          "expected_permit_raw_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Expected Permit Raw Id",
+            "type": "string"
+          },
+          "parcel_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "parcel_source_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Parcel Source Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parcel_source_id",
+          "parcel_id",
+          "expected_permit_raw_id",
+          "expected_parcel_raw_id",
+          "reason",
+          "confidence"
+        ],
+        "title": "ParcelReferenceAcceptance",
+        "type": "object"
+      },
+      "ParcelReferenceAudit": {
+        "properties": {
+          "after_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Id"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "coverage_verified": {
+            "const": false,
+            "title": "Coverage Verified",
+            "type": "boolean"
+          },
+          "evaluated_permits": {
+            "title": "Evaluated Permits",
+            "type": "integer"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelReferenceAuditItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          },
+          "parcel_source_id": {
+            "title": "Parcel Source Id",
+            "type": "string"
+          },
+          "permit_source_id": {
+            "title": "Permit Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "measured_page",
+              "parcel_evidence_unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "permit_source_id",
+          "parcel_source_id",
+          "measured_at",
+          "status",
+          "counts",
+          "evaluated_permits",
+          "limit",
+          "after_id",
+          "next_after_id",
+          "has_more",
+          "items",
+          "coverage_verified",
+          "limitations"
+        ],
+        "title": "ParcelReferenceAudit",
+        "type": "object"
+      },
+      "ParcelReferenceAuditItem": {
+        "properties": {
+          "category": {
+            "enum": [
+              "missing_reference",
+              "no_match",
+              "ambiguous",
+              "address_corroborated",
+              "conflicting_address",
+              "missing_address_evidence"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/PermitParcelCandidates"
+          }
+        },
+        "required": [
+          "category",
+          "result"
+        ],
+        "title": "ParcelReferenceAuditItem",
+        "type": "object"
+      },
+      "ParcelReferenceCandidate": {
+        "properties": {
+          "address_comparison": {
+            "enum": [
+              "match",
+              "missing",
+              "conflict"
+            ],
+            "title": "Address Comparison",
+            "type": "string"
+          },
+          "address_matches": {
+            "title": "Address Matches",
+            "type": "boolean"
+          },
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "city_comparison": {
+            "enum": [
+              "match",
+              "missing",
+              "conflict"
+            ],
+            "title": "City Comparison",
+            "type": "string"
+          },
+          "external_parcel_id": {
+            "title": "External Parcel Id",
+            "type": "string"
+          },
+          "has_valid_coordinates": {
+            "title": "Has Valid Coordinates",
+            "type": "boolean"
+          },
+          "identity_assessment": {
+            "enum": [
+              "address_corroborated",
+              "needs_review"
+            ],
+            "title": "Identity Assessment",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "parcel_id": {
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "raw_source_record_id": {
+            "title": "Raw Source Record Id",
+            "type": "string"
+          },
+          "reference_kind": {
+            "enum": [
+              "external_id",
+              "parcel_group"
+            ],
+            "title": "Reference Kind",
+            "type": "string"
+          },
+          "source_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Updated At"
+          },
+          "state_comparison": {
+            "enum": [
+              "match",
+              "missing",
+              "conflict"
+            ],
+            "title": "State Comparison",
+            "type": "string"
+          },
+          "state_matches": {
+            "title": "State Matches",
+            "type": "boolean"
+          },
+          "street_comparison": {
+            "enum": [
+              "match",
+              "missing",
+              "conflict"
+            ],
+            "title": "Street Comparison",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parcel_id",
+          "external_parcel_id",
+          "reference_kind",
+          "state_matches",
+          "address_matches",
+          "state_comparison",
+          "city_comparison",
+          "street_comparison",
+          "address_comparison",
+          "identity_assessment",
+          "has_valid_coordinates",
+          "raw_source_record_id",
+          "captured_at",
+          "source_updated_at",
+          "last_verified_at"
+        ],
+        "title": "ParcelReferenceCandidate",
         "type": "object"
       },
       "ParcelSearchHitResponse": {
@@ -11114,6 +12440,78 @@
         "title": "PermitEventResponse",
         "type": "object"
       },
+      "PermitParcelCandidates": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelReferenceCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "parcel_source_id": {
+            "title": "Parcel Source Id",
+            "type": "string"
+          },
+          "permit_id": {
+            "title": "Permit Id",
+            "type": "string"
+          },
+          "permit_parcel_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Parcel Reference"
+          },
+          "permit_raw_source_record_id": {
+            "title": "Permit Raw Source Record Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "no_match",
+              "missing_reference",
+              "ambiguous",
+              "candidate_requires_review"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "permit_id",
+          "permit_raw_source_record_id",
+          "permit_parcel_reference",
+          "parcel_source_id",
+          "status",
+          "method",
+          "candidates",
+          "truncated",
+          "limitations"
+        ],
+        "title": "PermitParcelCandidates",
+        "type": "object"
+      },
       "PermitRecordResponse": {
         "properties": {
           "address": {
@@ -11766,6 +13164,65 @@
           "review_status"
         ],
         "title": "PlanningCompanyMatchReview",
+        "type": "object"
+      },
+      "PlanningNearbyParcelSearchCreate": {
+        "properties": {
+          "land_uses": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Land Uses",
+            "type": "array"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "minimum_land_area_sq_ft": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Land Area Sq Ft"
+          },
+          "persona": {
+            "default": "developer",
+            "enum": [
+              "developer",
+              "investor",
+              "broker",
+              "realtor"
+            ],
+            "title": "Persona",
+            "type": "string"
+          },
+          "radius_miles": {
+            "default": 2.0,
+            "maximum": 5.0,
+            "minimum": 0.25,
+            "title": "Radius Miles",
+            "type": "number"
+          },
+          "zoning_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Zoning Codes",
+            "type": "array"
+          }
+        },
+        "title": "PlanningNearbyParcelSearchCreate",
         "type": "object"
       },
       "PlanningRawEvidenceResponse": {
@@ -13425,6 +14882,60 @@
         "title": "SignalResponse",
         "type": "object"
       },
+      "SourceBaseline": {
+        "properties": {
+          "baseline_mean_observed_records": {
+            "title": "Baseline Mean Observed Records",
+            "type": "number"
+          },
+          "diagnostics": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Diagnostics",
+            "type": "object"
+          },
+          "evidence_fingerprint": {
+            "title": "Evidence Fingerprint",
+            "type": "string"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "needs_coverage_review",
+              "insufficient_observed_sample",
+              "ambiguous_latest_observation"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityWindow"
+            },
+            "title": "Windows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source_id",
+          "methodology_version",
+          "status",
+          "windows",
+          "baseline_mean_observed_records",
+          "diagnostics",
+          "evidence_fingerprint"
+        ],
+        "title": "SourceBaseline",
+        "type": "object"
+      },
       "SourceCanaryRequest": {
         "properties": {
           "sample_size": {
@@ -13511,6 +15022,29 @@
           "errors"
         ],
         "title": "SourceCanaryResponse",
+        "type": "object"
+      },
+      "SourceCohort": {
+        "additionalProperties": false,
+        "properties": {
+          "methodology_version": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "source_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "methodology_version"
+        ],
+        "title": "SourceCohort",
         "type": "object"
       },
       "SourceHealthResponse": {
@@ -14088,13 +15622,44 @@
             "title": "Approved Only Sources",
             "type": "integer"
           },
+          "candidate_record_type_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Candidate Record Type Counts",
+            "type": "object"
+          },
           "candidate_sources": {
             "title": "Candidate Sources",
             "type": "integer"
           },
+          "candidate_status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Candidate Status Counts",
+            "type": "object"
+          },
+          "live_record_type_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Live Record Type Counts",
+            "type": "object"
+          },
           "live_sources": {
             "title": "Live Sources",
             "type": "integer"
+          },
+          "next_action": {
+            "default": "discover_first_source",
+            "title": "Next Action",
+            "type": "string"
+          },
+          "next_action_label": {
+            "default": "Discover first official source",
+            "title": "Next Action Label",
+            "type": "string"
           },
           "pre_approval_sources": {
             "title": "Pre Approval Sources",
@@ -14110,6 +15675,11 @@
           "priority_score": {
             "title": "Priority Score",
             "type": "integer"
+          },
+          "readiness_level": {
+            "default": "uncovered",
+            "title": "Readiness Level",
+            "type": "string"
           },
           "retailer_opening_sources": {
             "title": "Retailer Opening Sources",
@@ -14429,6 +15999,11 @@
           "access_token": {
             "title": "Access Token",
             "type": "string"
+          },
+          "is_demo": {
+            "default": false,
+            "title": "Is Demo",
+            "type": "boolean"
           },
           "organization_id": {
             "title": "Organization Id",
@@ -15422,6 +16997,217 @@
         ]
       }
     },
+    "/v1/acquisition-map/readiness": {
+      "get": {
+        "operationId": "get_map_readiness_v1_acquisition_map_readiness_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Map Readiness",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/acquisition-map/signals": {
+      "get": {
+        "operationId": "get_map_signals_v1_acquisition_map_signals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z]{2}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Map Signals",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/acquisition-map/zip3-heatmap": {
+      "get": {
+        "operationId": "get_zip3_heatmap_v1_acquisition_map_zip3_heatmap_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z]{2}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Zip3 Heatmap",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
     "/v1/acquisition-radar": {
       "get": {
         "operationId": "get_acquisition_radar_v1_acquisition_radar_get",
@@ -15511,6 +17297,74 @@
                 }
               ],
               "title": "Assignment"
+            }
+          },
+          {
+            "in": "query",
+            "name": "follow_up",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(due|scheduled|none)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Follow Up"
+            }
+          },
+          {
+            "in": "query",
+            "name": "signal_overlap",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(multi|single)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal Overlap"
+            }
+          },
+          {
+            "in": "query",
+            "name": "availability",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(verified|unverified)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Availability"
+            }
+          },
+          {
+            "in": "query",
+            "name": "zip3",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Zip3"
             }
           },
           {
@@ -16365,6 +18219,23 @@
       }
     },
     "/v1/auth/demo": {
+      "get": {
+        "operationId": "demo_availability_v1_auth_demo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Demo Availability",
+        "tags": [
+          "auth"
+        ]
+      },
       "post": {
         "description": "Open the seeded demo workspace without exposing credentials client-side.",
         "operationId": "demo_login_v1_auth_demo_post",
@@ -17744,6 +19615,386 @@
         ]
       }
     },
+    "/v1/deals/{deal_id}/acquisition-screen": {
+      "get": {
+        "operationId": "acquisition_screen_v1_deals__deal_id__acquisition_screen_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "profile",
+            "required": false,
+            "schema": {
+              "default": "small_multifamily",
+              "pattern": "^(small_multifamily|small_bay_retail)$",
+              "title": "Profile",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "market_city",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Market City"
+            }
+          },
+          {
+            "in": "query",
+            "name": "market_state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z]{2}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Market State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "buy_box_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Buy Box Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acquisition Screen",
+        "tags": [
+          "buy-box"
+        ]
+      }
+    },
+    "/v1/deals/{deal_id}/acquisition-screen/export": {
+      "post": {
+        "operationId": "export_acquisition_screen_v1_deals__deal_id__acquisition_screen_export_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "profile",
+            "required": false,
+            "schema": {
+              "default": "small_multifamily",
+              "pattern": "^(small_multifamily|small_bay_retail)$",
+              "title": "Profile",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "market_city",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Market City"
+            }
+          },
+          {
+            "in": "query",
+            "name": "market_state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z]{2}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Market State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "buy_box_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Buy Box Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Acquisition Screen",
+        "tags": [
+          "buy-box"
+        ]
+      }
+    },
+    "/v1/deals/{deal_id}/acquisition-screen/history": {
+      "get": {
+        "operationId": "acquisition_screen_history_v1_deals__deal_id__acquisition_screen_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acquisition Screen History",
+        "tags": [
+          "buy-box"
+        ]
+      }
+    },
+    "/v1/deals/{deal_id}/acquisition-screen/history/{snapshot_id}": {
+      "get": {
+        "operationId": "acquisition_screen_snapshot_v1_deals__deal_id__acquisition_screen_history__snapshot_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acquisition Screen Snapshot",
+        "tags": [
+          "buy-box"
+        ]
+      }
+    },
     "/v1/deals/{deal_id}/activities": {
       "get": {
         "operationId": "list_activities_v1_deals__deal_id__activities_get",
@@ -18122,6 +20373,149 @@
         ]
       }
     },
+    "/v1/deals/{deal_id}/diligence-reviews": {
+      "get": {
+        "operationId": "list_diligence_reviews_v1_deals__deal_id__diligence_reviews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Diligence Reviews",
+        "tags": [
+          "documents"
+        ]
+      },
+      "post": {
+        "operationId": "create_diligence_review_v1_deals__deal_id__diligence_reviews_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiligenceReviewCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Diligence Review",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
     "/v1/deals/{deal_id}/distributions": {
       "get": {
         "operationId": "list_distributions_v1_deals__deal_id__distributions_get",
@@ -18204,6 +20598,74 @@
         "summary": "List Distributions",
         "tags": [
           "distributions"
+        ]
+      }
+    },
+    "/v1/deals/{deal_id}/document-excerpts": {
+      "post": {
+        "operationId": "create_document_excerpt_v1_deals__deal_id__document_excerpts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentExcerptCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Document Excerpt",
+        "tags": [
+          "documents"
         ]
       }
     },
@@ -18337,6 +20799,71 @@
           }
         },
         "summary": "Create Document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/v1/deals/{deal_id}/documents/{document_id}/excerpt": {
+      "get": {
+        "operationId": "get_document_excerpt_v1_deals__deal_id__documents__document_id__excerpt_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Document Excerpt",
         "tags": [
           "documents"
         ]
@@ -18994,6 +21521,83 @@
         ]
       }
     },
+    "/v1/deals/{deal_id}/planning-records/{planning_record_id}/nearby-parcel-searches": {
+      "post": {
+        "operationId": "create_planning_search_v1_deals__deal_id__planning_records__planning_record_id__nearby_parcel_searches_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "planning_record_id",
+            "required": true,
+            "schema": {
+              "title": "Planning Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanningNearbyParcelSearchCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyParcelSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Planning Search",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
     "/v1/deals/{deal_id}/recalculate": {
       "post": {
         "operationId": "recalculate_v1_deals__deal_id__recalculate_post",
@@ -19302,6 +21906,475 @@
         "summary": "Get Deal Summary",
         "tags": [
           "deal-summary"
+        ]
+      }
+    },
+    "/v1/demo/activity": {
+      "get": {
+        "operationId": "demo_activity_v1_demo_activity_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Activity",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/v1/demo/graph-hubs": {
+      "get": {
+        "operationId": "demo_graph_hubs_v1_demo_graph_hubs_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Graph Hubs",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/v1/demo/graph-neighbors": {
+      "get": {
+        "operationId": "demo_graph_neighbors_v1_demo_graph_neighbors_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 36,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exclude_entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "minLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude Entity Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Graph Neighbors",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/v1/demo/map": {
+      "get": {
+        "operationId": "demo_map_v1_demo_map_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Map",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/v1/demo/parcel-filings": {
+      "get": {
+        "operationId": "demo_parcel_filings_v1_demo_parcel_filings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "reference",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Reference",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Parcel Filings",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/v1/demo/parcel-paths": {
+      "get": {
+        "operationId": "demo_parcel_paths_v1_demo_parcel_paths_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 36,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exclude_entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "minLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude Entity Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Parcel Paths",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/v1/demo/parcel-references": {
+      "get": {
+        "operationId": "demo_parcel_references_v1_demo_parcel_references_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 25,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 5000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Parcel References",
+        "tags": [
+          "demo"
+        ]
+      }
+    },
+    "/v1/demo/summary": {
+      "get": {
+        "operationId": "demo_summary_v1_demo_summary_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Demo Summary",
+        "tags": [
+          "demo"
         ]
       }
     },
@@ -21353,6 +24426,18 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -21424,6 +24509,143 @@
           }
         },
         "summary": "Get Permit",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/permits/{permit_id}/parcel-acceptance": {
+      "post": {
+        "operationId": "accept_permit_parcel_v1_ingestion_permits__permit_id__parcel_acceptance_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "permit_id",
+            "required": true,
+            "schema": {
+              "title": "Permit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParcelReferenceAcceptance"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphRelationshipResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Permit Parcel",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/permits/{permit_id}/parcel-candidates": {
+      "get": {
+        "operationId": "get_permit_parcel_candidates_v1_ingestion_permits__permit_id__parcel_candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "permit_id",
+            "required": true,
+            "schema": {
+              "title": "Permit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parcel_source_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Parcel Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermitParcelCandidates"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Permit Parcel Candidates",
         "tags": [
           "ingestion"
         ]
@@ -21877,6 +25099,105 @@
           }
         },
         "summary": "Get Source Health",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/sources/{source_id}/parcel-reference-audit": {
+      "get": {
+        "operationId": "get_parcel_reference_audit_v1_ingestion_sources__source_id__parcel_reference_audit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parcel_source_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Parcel Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelReferenceAudit"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Parcel Reference Audit",
         "tags": [
           "ingestion"
         ]
@@ -24310,6 +27631,74 @@
         ]
       }
     },
+    "/v1/parcels/{parcel_id}/availability-evidence": {
+      "post": {
+        "operationId": "create_parcel_availability_evidence_v1_parcels__parcel_id__availability_evidence_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "parcel_id",
+            "required": true,
+            "schema": {
+              "title": "Parcel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParcelAvailabilityEvidenceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelFactResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Parcel Availability Evidence",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
     "/v1/permit-brand-matches": {
       "get": {
         "operationId": "get_permit_brand_matches_v1_permit_brand_matches_get",
@@ -26584,6 +29973,432 @@
         "summary": "Create Assessment Revision",
         "tags": [
           "signals"
+        ]
+      }
+    },
+    "/v1/temporal/activity-baseline": {
+      "post": {
+        "description": "Read-only diagnostics for a pinned cohort; does not qualify market coverage.",
+        "operationId": "get_activity_baseline_v1_temporal_activity_baseline_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityBaselineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityBaselineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Activity Baseline",
+        "tags": [
+          "temporal"
+        ]
+      }
+    },
+    "/v1/temporal/changes": {
+      "get": {
+        "operationId": "get_change_v1_temporal_changes_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "series_key",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9]{64}$",
+              "title": "Series Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumericChangeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Change",
+        "tags": [
+          "temporal"
+        ]
+      }
+    },
+    "/v1/temporal/events": {
+      "get": {
+        "operationId": "list_events_v1_temporal_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventResponse"
+                  },
+                  "title": "Response List Events V1 Temporal Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Events",
+        "tags": [
+          "temporal"
+        ]
+      }
+    },
+    "/v1/temporal/observations": {
+      "get": {
+        "operationId": "list_observations_v1_temporal_observations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "observation_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Observation Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "attribute",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Attribute"
+            }
+          },
+          {
+            "in": "query",
+            "name": "series_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-f0-9]{64}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Series Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObservationResponse"
+                  },
+                  "title": "Response List Observations V1 Temporal Observations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Observations",
+        "tags": [
+          "temporal"
         ]
       }
     }

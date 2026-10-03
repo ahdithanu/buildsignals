@@ -85,6 +85,9 @@ def match_deal(db: Session, deal: Deal) -> List[dict]:
 
     results = []
     for box in boxes:
+        # Structured acquisition screens have explicit unknowns, not legacy scores.
+        if box.acquisition_criteria is not None:
+            continue
         score = score_deal_vs_box(deal, box, deal_irr)
         results.append({
             "buy_box_id": box.id,

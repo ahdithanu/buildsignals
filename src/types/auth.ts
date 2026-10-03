@@ -10,6 +10,7 @@ export interface User {
 }
 
 export interface TokenResponse {
+  is_demo?: boolean;
   access_token: string;
   token_type: string;
   user_id: string;
@@ -18,6 +19,7 @@ export interface TokenResponse {
 }
 
 export interface MeResponse {
+  is_demo?: boolean;
   user: User;
   organization_id: string;
   role: MemberRole;

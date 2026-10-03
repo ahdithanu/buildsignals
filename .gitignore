@@ -11,6 +11,7 @@ dist/
 *.db
 *.db-wal
 *.db-shm
+*.qualification.json
 
 # Environment
 .env

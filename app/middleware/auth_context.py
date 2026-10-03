@@ -3,7 +3,7 @@
 Posture is governed by `ALLOW_ANONYMOUS` in app.config:
 
 - ALLOW_ANONYMOUS=True  (dev/staging default)
-    A missing or invalid Authorization header falls through without raising;
+    A missing Authorization header falls through without raising;
     the request continues and `get_current_context()` returns the default org +
     system user. Preserves the demo workflow and legacy tests.
 
@@ -22,7 +22,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from app import config
 from app.config import ALLOW_ANONYMOUS, is_public_path
+from app.services.demo_access import (
+    demo_path_allowed,
+    demo_read_only,
+    is_demo_identity,
+    valid_demo_claims,
+)
 from app.services.security import decode_access_token
 from app.utils.org_scope import (
     RequestContext,
@@ -47,6 +54,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         token_obj = None
+        demo_context = None
         has_valid_token = False
         auth_header = request.headers.get("authorization")
 
@@ -58,6 +66,12 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                     user_id = claims.get("sub")
                     org_id = claims.get("org_id")
                     if user_id and org_id:
+                        if is_demo_identity(claims):
+                            if not valid_demo_claims(claims):
+                                return _unauthorized("Demo session is unavailable")
+                            if not demo_path_allowed(request.method, request.url.path):
+                                return JSONResponse(status_code=403, content={"detail": "Demo sessions are read-only; this endpoint is unavailable"})
+                            demo_context = demo_read_only.set(True)
                         token_obj = set_current_context(
                             RequestContext(org_id=org_id, user_id=user_id)
                         )
@@ -65,10 +79,10 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
 
         if (
             not has_valid_token
-            and not ALLOW_ANONYMOUS
             and not is_public_path(request.url.path)
+            and (bool(auth_header) or not ALLOW_ANONYMOUS)
         ):
-            # Strict mode: reject anonymous requests to protected paths.
+            # Invalid supplied credentials never downgrade to the default tenant.
             # Distinguish "token was sent but invalid" from "no token at all".
             detail = (
                 "Invalid or expired authentication token"
@@ -82,4 +96,8 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         finally:
             if token_obj is not None:
                 reset_current_context(token_obj)
+            if demo_context is not None:
+                demo_read_only.reset(demo_context)
+        if demo_context is not None or "/auth/demo" in request.url.path:
+            response.headers["Cache-Control"] = "no-store"
         return response

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import and_, case, desc, func, or_
+from sqlalchemy import and_, case, desc, exists, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.acquisition import ParcelAcquisitionCase
@@ -10,7 +10,8 @@ from app.models.brand import PermitBrandMatch
 from app.models.deal import Deal
 from app.models.graph import GraphEntityType, GraphRelationshipType
 from app.models.organization_membership import OrganizationMembership
-from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelRecord
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
+from app.models.planning import PlanningRecord
 from app.models.user import User
 from app.schemas.deal import DealCreate
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
@@ -27,6 +28,7 @@ from app.services.graph_service import (
 )
 from app.services.parcel_proximity import find_nearby_parcels
 from app.services.parcel_ranking import rank_parcel_candidate, ranker_version
+from app.services.parcel_availability import AVAILABILITY_FACT_TYPES, VERIFIED_AVAILABILITY_STATUSES
 from app.utils.org_scope import active_query, get_org_id
 
 
@@ -46,6 +48,8 @@ def _radar_candidate_query(
     persona: str | None = None,
     review_status: str | None = None,
     assignment: str | None = None,
+    follow_up: str | None = None,
+    zip3: str | None = None,
 ):
     rows = active_query(db.query(NearbyParcelCandidate), NearbyParcelCandidate).join(
         NearbyParcelSearch,
@@ -86,6 +90,8 @@ def _radar_candidate_query(
         ))
     if state:
         rows = rows.filter(func.upper(ParcelRecord.state) == state.strip().upper())
+    if zip3:
+        rows = rows.filter(ParcelRecord.postal_code.like(f"{zip3.strip()}%"))
     if persona:
         rows = rows.filter(NearbyParcelSearch.persona == persona)
     if review_status:
@@ -106,7 +112,39 @@ def _radar_candidate_query(
             ParcelAcquisitionCase.assigned_to_user_id.is_(None),
             NearbyParcelCandidate.assigned_to_user_id.is_(None),
         )
+    if follow_up == "due":
+        rows = rows.filter(ParcelAcquisitionCase.follow_up_at <= utcnow())
+    elif follow_up == "scheduled":
+        rows = rows.filter(ParcelAcquisitionCase.follow_up_at.isnot(None))
+    elif follow_up == "none":
+        rows = rows.filter(ParcelAcquisitionCase.follow_up_at.is_(None))
     return rows
+
+
+def _verified_availability_exists(parcel_id_column, organization_id_column):
+    status = func.lower(func.coalesce(
+        ParcelFact.value["status"].as_string(),
+        ParcelFact.value["availability_status"].as_string(),
+        "",
+    ))
+    evidence_type = func.lower(func.coalesce(
+        ParcelFact.value["evidence_type"].as_string(),
+        ParcelFact.value["source_type"].as_string(),
+        "",
+    ))
+    return exists().where(
+        ParcelFact.parcel_id == parcel_id_column,
+        ParcelFact.organization_id == organization_id_column,
+        ParcelFact.is_current.is_(True),
+        ParcelFact.fact_type.in_(AVAILABILITY_FACT_TYPES),
+        status.in_(VERIFIED_AVAILABILITY_STATUSES),
+        evidence_type.in_(("listing", "broker", "owner", "auction")),
+        ParcelFact.confidence >= 0.7,
+        or_(
+            and_(ParcelFact.source_url.isnot(None), ParcelFact.source_url != ""),
+            and_(ParcelFact.excerpt.isnot(None), ParcelFact.excerpt != ""),
+        ),
+    )
 
 
 def list_acquisition_radar(
@@ -117,6 +155,10 @@ def list_acquisition_radar(
     persona: str | None = None,
     review_status: str | None = None,
     assignment: str | None = None,
+    follow_up: str | None = None,
+    signal_overlap: str | None = None,
+    availability: str | None = None,
+    zip3: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict:
@@ -129,6 +171,8 @@ def list_acquisition_radar(
         persona=persona,
         review_status=review_status,
         assignment=assignment,
+        follow_up=follow_up,
+        zip3=zip3,
     )
     grouped = base.with_entities(
         ParcelRecord.id.label("parcel_id"),
@@ -146,12 +190,41 @@ def list_acquisition_radar(
             "shortlisted_count"
         ),
         func.sum(case((func.coalesce(
+            ParcelAcquisitionCase.status, NearbyParcelCandidate.review_status
+        ) == "contacted", 1), else_=0)).label(
+            "contacted_count"
+        ),
+        func.sum(case((ParcelAcquisitionCase.follow_up_at.isnot(None), 1), else_=0)).label(
+            "follow_up_count"
+        ),
+        func.sum(case((ParcelAcquisitionCase.follow_up_at <= now, 1), else_=0)).label(
+            "due_follow_up_count"
+        ),
+        func.sum(case((func.coalesce(
             ParcelAcquisitionCase.assigned_to_user_id,
             NearbyParcelCandidate.assigned_to_user_id,
         ).isnot(None), 1), else_=0)).label(
             "assigned_count"
         ),
+        func.sum(case((func.coalesce(
+            ParcelAcquisitionCase.status, NearbyParcelCandidate.review_status
+        ) == "promoted", 1), else_=0)).label(
+            "promoted_count"
+        ),
     ).group_by(ParcelRecord.id, ParcelRecord.state).subquery()
+    grouped_filters = []
+    if signal_overlap == "multi":
+        grouped_filters.append(grouped.c.opportunity_count > 1)
+    elif signal_overlap == "single":
+        grouped_filters.append(grouped.c.opportunity_count == 1)
+    if availability:
+        availability_exists = _verified_availability_exists(
+            grouped.c.parcel_id, get_org_id()
+        )
+        if availability == "verified":
+            grouped_filters.append(availability_exists)
+        elif availability == "unverified":
+            grouped_filters.append(~availability_exists)
 
     opportunity_points = case(
         (grouped.c.opportunity_count >= 3, 15.0),
@@ -172,14 +245,18 @@ def list_acquisition_radar(
         + freshness_points
     ).label("radar_score")
 
-    total = db.query(func.count()).select_from(grouped).scalar() or 0
+    total = db.query(func.count()).select_from(grouped).filter(*grouped_filters).scalar() or 0
     summary_row = db.query(
         func.sum(case((grouped.c.shortlisted_count > 0, 1), else_=0)),
         func.sum(case((grouped.c.opportunity_count > 1, 1), else_=0)),
         func.sum(case((grouped.c.assigned_count > 0, 1), else_=0)),
+        func.sum(case((grouped.c.promoted_count > 0, 1), else_=0)),
+        func.sum(case((grouped.c.contacted_count > 0, 1), else_=0)),
+        func.sum(case((grouped.c.follow_up_count > 0, 1), else_=0)),
+        func.sum(case((grouped.c.due_follow_up_count > 0, 1), else_=0)),
         func.count(func.distinct(grouped.c.state)),
-    ).one()
-    ranked_rows = db.query(grouped, radar_score).order_by(
+    ).select_from(grouped).filter(*grouped_filters).one()
+    ranked_rows = db.query(grouped, radar_score).filter(*grouped_filters).order_by(
         desc(radar_score), desc(grouped.c.opportunity_count), desc(grouped.c.latest_signal_at)
     ).offset(offset).limit(limit).all()
     parcel_ids = [row.parcel_id for row in ranked_rows]
@@ -194,7 +271,11 @@ def list_acquisition_radar(
                 "shortlisted_parcels": int(summary_row[0] or 0),
                 "multi_opportunity_parcels": int(summary_row[1] or 0),
                 "assigned_parcels": int(summary_row[2] or 0),
-                "state_count": int(summary_row[3] or 0),
+                "promoted_parcels": int(summary_row[3] or 0),
+                "contacted_parcels": int(summary_row[4] or 0),
+                "follow_up_parcels": int(summary_row[5] or 0),
+                "due_follow_up_parcels": int(summary_row[6] or 0),
+                "state_count": int(summary_row[7] or 0),
             },
         }
 
@@ -205,12 +286,15 @@ def list_acquisition_radar(
         persona=persona,
         review_status=review_status,
         assignment=assignment,
+        follow_up=follow_up,
+        zip3=zip3,
     ).options(
         joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.source),
         joinedload(NearbyParcelCandidate.parcel).joinedload(ParcelRecord.facts),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.deal),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_brand_match),
         joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_permit),
+        joinedload(NearbyParcelCandidate.search).joinedload(NearbyParcelSearch.anchor_planning),
     ).filter(NearbyParcelCandidate.parcel_id.in_(parcel_ids)).all()
     acquisition_cases = active_query(
         db.query(ParcelAcquisitionCase), ParcelAcquisitionCase
@@ -266,13 +350,16 @@ def list_acquisition_radar(
             seen_deals.add(candidate.search.deal_id)
             match = candidate.search.anchor_brand_match
             permit = candidate.search.anchor_permit
+            planning = candidate.search.anchor_planning
             signals.append({
                 "candidate_id": candidate.id,
                 "search_id": candidate.search_id,
                 "deal_id": candidate.search.deal_id,
                 "deal_name": candidate.search.deal.name,
+                "anchor_permit_id": permit.id if permit else None,
+                "anchor_planning_id": planning.id if planning else None,
                 "persona": candidate.search.persona,
-                "approval_stage": permit.approval_stage if permit else None,
+                "approval_stage": permit.approval_stage if permit else planning.stage if planning else None,
                 "signal_confidence": match.confidence if match else None,
                 "distance_miles": candidate.distance_miles,
                 "candidate_score": candidate.score,
@@ -319,7 +406,11 @@ def list_acquisition_radar(
             "shortlisted_parcels": int(summary_row[0] or 0),
             "multi_opportunity_parcels": int(summary_row[1] or 0),
             "assigned_parcels": int(summary_row[2] or 0),
-            "state_count": int(summary_row[3] or 0),
+            "promoted_parcels": int(summary_row[3] or 0),
+            "contacted_parcels": int(summary_row[4] or 0),
+            "follow_up_parcels": int(summary_row[5] or 0),
+            "due_follow_up_parcels": int(summary_row[6] or 0),
+            "state_count": int(summary_row[7] or 0),
         },
     }
 
@@ -448,6 +539,115 @@ def list_nearby_parcel_searches(
     return active_query(db.query(NearbyParcelSearch), NearbyParcelSearch).filter(
         NearbyParcelSearch.deal_id == deal_id
     ).order_by(NearbyParcelSearch.created_at.desc()).limit(limit).all()
+
+
+def create_planning_nearby_parcel_search(
+    db: Session,
+    *,
+    deal_id: str,
+    planning_record_id: str,
+    radius_miles: float,
+    persona: str,
+    minimum_land_area_sq_ft: float | None,
+    zoning_codes: list[str],
+    land_uses: list[str],
+    limit: int,
+) -> NearbyParcelSearch:
+    deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()
+    if deal is None:
+        raise LookupError("Deal not found")
+    planning = active_query(db.query(PlanningRecord), PlanningRecord).filter(
+        PlanningRecord.id == planning_record_id
+    ).first()
+    if planning is None:
+        raise LookupError("Planning record not found")
+    if planning.latitude is None or planning.longitude is None:
+        raise ValueError("The planning record does not have verified coordinates")
+    if not -90 <= planning.latitude <= 90 or not -180 <= planning.longitude <= 180:
+        raise ValueError("The planning record has invalid coordinates")
+
+    filters = {
+        "minimum_land_area_sq_ft": minimum_land_area_sq_ft,
+        "zoning_codes": zoning_codes,
+        "land_uses": land_uses,
+        "anchor_source": "planning_record",
+    }
+    search = NearbyParcelSearch(
+        organization_id=get_org_id(),
+        deal_id=deal.id,
+        anchor_brand_match_id=None,
+        anchor_permit_id=None,
+        anchor_planning_id=planning.id,
+        anchor_latitude=planning.latitude,
+        anchor_longitude=planning.longitude,
+        radius_miles=radius_miles,
+        persona=persona,
+        filters=filters,
+        result_limit=limit,
+        as_of=utcnow(),
+        ranker_version=ranker_version(persona),
+    )
+    db.add(search)
+    db.flush()
+
+    nearby = find_nearby_parcels(
+        db,
+        latitude=planning.latitude,
+        longitude=planning.longitude,
+        radius_miles=radius_miles,
+        minimum_land_area_sq_ft=minimum_land_area_sq_ft,
+        zoning_codes=zoning_codes,
+        land_uses=land_uses,
+        limit=limit,
+    )
+    ranked = []
+    for parcel, distance in nearby:
+        score = rank_parcel_candidate(
+            parcel,
+            parcel.facts,
+            persona=persona,
+            distance_miles=distance,
+            radius_miles=radius_miles,
+        )
+        ranked.append((parcel, distance, score))
+    ranked.sort(key=lambda row: (-row[2].score, row[1], row[0].external_parcel_id))
+
+    for rank, (parcel, distance, score) in enumerate(ranked, start=1):
+        candidate = NearbyParcelCandidate(
+            organization_id=get_org_id(),
+            search_id=search.id,
+            parcel_id=parcel.id,
+            rank=rank,
+            distance_miles=round(distance, 4),
+            score=score.score,
+            score_confidence=score.confidence,
+            explanation={
+                **score.explanation,
+                "anchor_planning_id": planning.id,
+                "anchor_source": "planning_record",
+            },
+            review_status="candidate",
+            ranker_version=ranker_version(persona),
+        )
+        db.add(candidate)
+        db.flush()
+        ensure_acquisition_case_for_candidate(db, candidate)
+    log_change(
+        db,
+        "nearby_parcel_search",
+        search.id,
+        "create",
+        organization_id=get_org_id(),
+        new_values={
+            "deal_id": deal.id,
+            "anchor_planning_id": planning.id,
+            "radius_miles": radius_miles,
+            "persona": persona,
+            "candidate_count": len(ranked),
+        },
+    )
+    db.flush()
+    return get_nearby_parcel_search(db, search.id) or search
 
 
 def get_nearby_parcel_search(
@@ -676,6 +876,12 @@ def promote_nearby_parcel_candidate_to_deal(
     if candidate is None:
         raise LookupError("Nearby parcel candidate not found")
     acquisition_case = ensure_acquisition_case_for_candidate(db, candidate)
+    if acquisition_case.promoted_deal_id:
+        existing_deal = active_query(db.query(Deal), Deal).filter(
+            Deal.id == acquisition_case.promoted_deal_id
+        ).first()
+        if existing_deal is not None:
+            return existing_deal, False
     if acquisition_case.status not in {"shortlisted", "contacted"}:
         raise ValueError("Only shortlisted or contacted parcels can be promoted")
 

@@ -67,6 +67,8 @@ export interface GraphEvidence {
 
 export interface GraphRelationship {
   id: string;
+  source_entity_id: string;
+  target_entity_id: string;
   relationship_type: GraphRelationshipType;
   confidence: number;
   source_system?: string | null;

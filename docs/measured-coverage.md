@@ -5,6 +5,14 @@ canonical records stored for the signed-in organization. The report supports
 permits, parcels and planning records, with 25 sources per page and adjustable
 freshness windows. Summary numbers apply only to the current source page, across
 all observed states, not to the whole organization or the nation.
+The UI also rolls the current source page into up to six observed state/DC
+buckets so a reviewer can quickly see where stored records, geocoded rows,
+collection recency and source-date recency actually exist. This rollup is still
+source-page scoped; it is not a statewide coverage score or a substitute for
+production inventory measurement across every page.
+The API returns `page_totals` for the current query page so the frontend can
+display measured source, stored-record, geocoded-record, freshness and observed
+geography counts without deriving broader coverage claims in the browser.
 
 ## API and Semantics
 
@@ -23,10 +31,16 @@ all observed states, not to the whole organization or the nation.
 - Valid coordinate counts and observed extents do not prove geocoding accuracy or
   complete geographic coverage. Jurisdiction labels are not nationwide totals.
 - Parcel inventory does not establish verified for-sale availability.
+- `page_totals` is scoped to the returned source page and request filters. It is
+  not a tenant-wide total unless the caller has paginated through every page and
+  retained the same query parameters.
 
 The UI hides unconfirmed totals when measurement fails, provides retry and bounded
 pagination, and keys queries by organization and all parameters. The surrounding
 configured-state filter does not restrict this organization-wide inventory.
+The observed-state rollup is intentionally absent while the measurement is
+loading or unavailable, and unknown geography remains labeled as unknown instead
+of being inferred from configured jurisdictions.
 
 ## Deployment and Verification
 
@@ -40,6 +54,8 @@ Frontend tests cover page/filter changes, loading/error/retry and organization
 changes. The authenticated browser regression covers a new empty organization;
 the CSP smoke test uses synthetic populated data at mobile, tablet and desktop
 widths. None of those synthetic counts are production coverage evidence.
+The focused coverage-panel regression also verifies the observed-state rollup and
+guards against presenting it as nationwide coverage.
 
 For customer-facing claims, capture an authorized production measurement with
 its timestamp, record type, source pages and freshness window. Configured feed
@@ -48,5 +64,6 @@ counts alone must not be marketed as live geographic completeness.
 This release also changes organization user exports to a profile-field allowlist.
 Password hashes, MFA shared secrets, encrypted secret fields, token-revocation
 versions and superuser flags are excluded. The serializer and authenticated export
-route have regressions for secret omission. MFA encryption at rest is still a
-separate gated release; export filtering does not resolve plaintext storage.
+route have regressions for secret omission. MFA encryption at rest is implemented
+in the application layer, but production readiness still depends on managed key
+provisioning, legacy-secret backfill and disabling legacy plaintext reads.

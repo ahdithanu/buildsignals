@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parcelsApi } from '@/api/parcels';
 import { queryKeys } from '@/lib/queryKeys';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   NearbyParcelCandidateAssignment,
   NearbyParcelOpportunityCreate,
   NearbyParcelSearchCreate,
+  PlanningNearbyParcelSearchCreate,
   ParcelPersona,
   ParcelReviewStatus,
 } from '@/types/parcel';
@@ -22,44 +24,66 @@ export function selectLatestNearbyParcelSearch(
 }
 
 export function useNearbyParcels(dealId: string | undefined, persona: ParcelPersona) {
+  const { organizationId, user } = useAuth();
+  const scope = [organizationId, user?.id] as const;
   const queryClient = useQueryClient();
   const history = useQuery({
-    queryKey: queryKeys.parcels.history(dealId || ''),
+    queryKey: [...queryKeys.parcels.history(dealId || ''), ...scope],
     queryFn: () => parcelsApi.history(dealId!),
-    enabled: !!dealId,
+    enabled: !!dealId && !!organizationId && !!user,
   });
   const latestForPersona = selectLatestNearbyParcelSearch(history.data, persona);
   const latestId = latestForPersona?.id || history.data?.[0]?.id;
   const search = useQuery({
-    queryKey: queryKeys.parcels.search(latestId || ''),
+    queryKey: [...queryKeys.parcels.search(latestId || ''), ...scope],
     queryFn: () => parcelsApi.get(latestId!),
-    enabled: !!latestId,
+    enabled: !!latestId && !!organizationId && !!user,
   });
+  const refreshRadar = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['acquisition-radar', ...scope] });
+    await queryClient.invalidateQueries({ queryKey: ['map-readiness', organizationId] });
+  };
   const create = useMutation({
     mutationFn: (payload: NearbyParcelSearchCreate) => parcelsApi.create(dealId!, payload),
     onSuccess: async (created) => {
-      queryClient.setQueryData(queryKeys.parcels.search(created.id), created);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.parcels.history(dealId || '') });
+      queryClient.setQueryData([...queryKeys.parcels.search(created.id), ...scope], created);
+      await queryClient.invalidateQueries({ queryKey: [...queryKeys.parcels.history(dealId || ''), ...scope] });
+      await refreshRadar();
+    },
+  });
+  const createFromPlanning = useMutation({
+    mutationFn: ({ planningRecordId, payload }: {
+      planningRecordId: string;
+      payload: PlanningNearbyParcelSearchCreate;
+    }) => parcelsApi.createFromPlanning(dealId!, planningRecordId, payload),
+    onSuccess: async (created) => {
+      queryClient.setQueryData([...queryKeys.parcels.search(created.id), ...scope], created);
+      await queryClient.invalidateQueries({ queryKey: [...queryKeys.parcels.history(dealId || ''), ...scope] });
+      await refreshRadar();
     },
   });
   const review = useMutation({
     mutationFn: ({ candidateId, status }: { candidateId: string; status: ParcelReviewStatus }) =>
       parcelsApi.review(candidateId, status),
-    onSuccess: () => queryClient.invalidateQueries({
-      queryKey: queryKeys.parcels.search(latestId || ''),
-    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...queryKeys.parcels.search(latestId || ''), ...scope] });
+      await refreshRadar();
+    },
   });
   const assign = useMutation({
     mutationFn: ({ candidateId, payload }: { candidateId: string; payload: NearbyParcelCandidateAssignment }) =>
       parcelsApi.assign(candidateId, payload),
-    onSuccess: () => queryClient.invalidateQueries({
-      queryKey: queryKeys.parcels.search(latestId || ''),
-    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...queryKeys.parcels.search(latestId || ''), ...scope] });
+      await refreshRadar();
+    },
   });
   const promote = useMutation({
     mutationFn: ({ candidateId, payload }: { candidateId: string; payload: NearbyParcelOpportunityCreate }) =>
       parcelsApi.promote(candidateId, payload),
     onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: [...queryKeys.parcels.search(latestId || ''), ...scope] });
+      await refreshRadar();
       queryClient.invalidateQueries({ queryKey: queryKeys.deals.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.parcels.history(result.deal.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.graph.opportunityContext(result.deal.id) });
@@ -69,5 +93,5 @@ export function useNearbyParcels(dealId: string | undefined, persona: ParcelPers
   const exportSearch = useMutation({
     mutationFn: (searchId: string) => parcelsApi.exportSearch(searchId),
   });
-  return { history, search, create, review, assign, promote, exportSearch };
+  return { history, search, create, createFromPlanning, review, assign, promote, exportSearch };
 }
