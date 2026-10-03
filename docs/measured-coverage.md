@@ -16,6 +16,8 @@ The API returns `readiness` for the selected record type and `page_totals` for
 the current query page so the frontend can display measured source,
 stored-record, geocoded-record, freshness and observed geography counts without
 deriving broader coverage claims in the browser.
+It also returns `readiness_states`, an all-source observed state/DC breakdown for
+the selected record type. Unknown geography stays explicit.
 
 ## API and Semantics
 
@@ -37,6 +39,9 @@ deriving broader coverage claims in the browser.
 - `readiness` spans all configured sources for the selected record type in the
   signed-in organization. It is tenant-scoped measured inventory, not a market
   coverage claim.
+- `readiness_states` rolls up observed canonical-record state/DC values across
+  all measured sources for the selected record type. It is not statewide source
+  completeness and does not infer geography from configured jurisdiction names.
 - `page_totals` is scoped to the returned source page and request filters. It is
   not a tenant-wide total unless the caller has paginated through every page and
   retained the same query parameters.

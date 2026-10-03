@@ -59,6 +59,9 @@ def test_counts_are_measured_scoped_and_do_not_confuse_collection_with_freshness
     assert report["readiness"]["stale_collection_source_count"] == 0
     assert report["readiness"]["stale_source_date_source_count"] == 1
     assert report["readiness"]["stored_records"] == 2
+    assert [row["state"] for row in report["readiness_states"]] == ["FL", None]
+    assert report["readiness_states"][0]["source_count"] == 1
+    assert report["readiness_states"][0]["stored_records"] == 1
     assert report["sources"][0]["stored_records"] == 0
     states = report["sources"][1]["observed_states"]
     assert {s["state"] for s in states} == {None, "FL"}
@@ -88,6 +91,7 @@ def test_unknown_dates_pagination_and_no_synthetic_rows(db):
     assert empty["page_totals"]["source_count"] == 0
     assert empty["readiness"]["total_source_count"] == 2
     assert empty["readiness"]["stored_records"] == 1
+    assert empty["readiness_states"][0]["stored_records"] == 1
     assert empty["page_totals"]["stored_records"] == 0
     assert not empty["sources"] and not empty["has_more"]
 

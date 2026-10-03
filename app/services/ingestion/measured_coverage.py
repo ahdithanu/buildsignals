@@ -76,6 +76,35 @@ def _readiness_rollup(all_sources: list[IngestionSource], rows_by_source: dict[s
     }
 
 
+def _state_rollup(rows_by_source: dict[str, list[dict]]) -> list[dict]:
+    states: dict[str | None, dict] = {}
+    source_sets: dict[str | None, set[str]] = {}
+    for source_id, rows in rows_by_source.items():
+        for row in rows:
+            state = row["state"]
+            current = states.setdefault(state, {
+                "state": state,
+                "source_count": 0,
+                "stored_records": 0,
+                "geocoded_records": 0,
+                "recently_seen_records": 0,
+                "recent_source_date_records": 0,
+                "unknown_source_date_records": 0,
+            })
+            source_sets.setdefault(state, set()).add(source_id)
+            current["stored_records"] += row["stored_records"]
+            current["geocoded_records"] += row["geocoded_records"]
+            current["recently_seen_records"] += row["recently_seen_records"]
+            current["recent_source_date_records"] += row["recent_source_date_records"]
+            current["unknown_source_date_records"] += row["unknown_source_date_records"]
+    for state, source_ids in source_sets.items():
+        states[state]["source_count"] = len(source_ids)
+    return sorted(
+        states.values(),
+        key=lambda row: (-row["stored_records"], row["state"] is None, row["state"] or ""),
+    )
+
+
 def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
                       freshness_hours: int = 72, now: datetime | None = None) -> dict:
     if record_type not in MODELS or not 1 <= limit <= 100 or offset < 0 or not 1 <= freshness_hours <= 8760:
@@ -131,6 +160,7 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
         "freshness_hours": freshness_hours, "limit": limit, "offset": offset, "has_more": has_more,
         "page_totals": _sum_totals(page_states, source_count=len(sources)) if page_states else _zero_totals(len(sources)),
         "readiness": _readiness_rollup(all_sources, by_source),
+        "readiness_states": _state_rollup(by_source),
         "sources": [{"source_id": source.id, "source_key": source.key,
                      "configured_active": source.is_active, "configured_jurisdiction": source.jurisdiction,
                      "stored_records": sum(row["stored_records"] for row in by_source.get(source.id, [])),

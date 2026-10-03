@@ -48,6 +48,26 @@ function report(params: Partial<MeasuredCoverageParams> = {}): MeasuredCoverage 
       observed_state_count: 2,
       observed_jurisdiction_count: 3,
     },
+    readiness_states: params.record_type === 'permit' && (params.offset ?? 0) === 0 ? [
+      {
+        state: 'TX',
+        source_count: 2,
+        stored_records: 125,
+        geocoded_records: 75,
+        recently_seen_records: 70,
+        recent_source_date_records: 12,
+        unknown_source_date_records: 40,
+      },
+      {
+        state: null,
+        source_count: 1,
+        stored_records: 25,
+        geocoded_records: 5,
+        recently_seen_records: 0,
+        recent_source_date_records: 0,
+        unknown_source_date_records: 25,
+      },
+    ] : [],
     sources: [{
       source_id: 'source-a', source_key: 'county_public_records', configured_active: true,
       configured_jurisdiction: 'County, TX', stored_records: 100,
@@ -99,6 +119,9 @@ describe('MeasuredCoveragePanel', () => {
     expect(within(readiness).getByText('Empty sources').nextElementSibling).toHaveTextContent('2');
     expect(within(readiness).getByText('Stale collection').nextElementSibling).toHaveTextContent('1');
     expect(within(readiness).getByText(/Stored records: 150/)).toBeInTheDocument();
+    expect(within(readiness).getByText(/Observed geography across measured permit inventory/)).toBeInTheDocument();
+    expect(within(readiness).getByText('TX')).toBeInTheDocument();
+    expect(within(readiness).getByText('Unknown state')).toBeInTheDocument();
     expect(screen.getByText('Sources on this page').nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText('Valid coordinates on this page').nextElementSibling).toHaveTextContent('80');
     expect(screen.getByText('Observed jurisdiction labels').nextElementSibling).toHaveTextContent('2');
@@ -157,6 +180,7 @@ describe('MeasuredCoveragePanel', () => {
   it('shows zero for a measured empty source, not inferred coverage from its configuration', async () => {
     const empty = report();
     empty.has_more = false;
+    empty.readiness_states = [];
     empty.sources[0] = { ...empty.sources[0], stored_records: 0, observed_states: [], configured_active: false };
     vi.mocked(ingestionApi.measuredCoverage).mockResolvedValue(empty);
     setup();

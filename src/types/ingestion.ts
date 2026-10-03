@@ -451,6 +451,16 @@ export interface MeasuredCoverageReadiness {
   observed_jurisdiction_count: number;
 }
 
+export interface MeasuredCoverageStateRollup {
+  state: string | null;
+  source_count: number;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  recent_source_date_records: number;
+  unknown_source_date_records: number;
+}
+
 export interface MeasuredCoverage extends MeasuredCoverageParams {
   measured_at: string;
   scope: string;
@@ -458,6 +468,7 @@ export interface MeasuredCoverage extends MeasuredCoverageParams {
   has_more: boolean;
   page_totals: MeasuredCoverageTotals;
   readiness: MeasuredCoverageReadiness;
+  readiness_states: MeasuredCoverageStateRollup[];
   sources: MeasuredSourceCoverage[];
   warnings: string[];
 }

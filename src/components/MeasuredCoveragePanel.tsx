@@ -140,6 +140,23 @@ export function MeasuredCoveragePanel() {
               <p className="mt-2 text-[11px] text-muted-foreground">
                 Stored records: {number.format(data.readiness.stored_records)} | Valid coordinates: {number.format(data.readiness.geocoded_records)} | Observed state/DC codes: {number.format(data.readiness.observed_state_count)}
               </p>
+              {data.readiness_states.length > 0 && <div className="mt-3">
+                <p className="text-[11px] font-medium text-foreground">Observed geography across measured {recordType} inventory</p>
+                <div className="mt-2 grid gap-2 md:grid-cols-3">
+                  {data.readiness_states.slice(0, 6).map(item => <article key={item.state ?? 'unknown'} className="border p-3 text-xs">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h5 className="font-semibold">{item.state ?? 'Unknown state'}</h5>
+                      <span className="tabular-nums">{number.format(item.source_count)} source{item.source_count === 1 ? '' : 's'}</span>
+                    </div>
+                    <dl className="mt-2 grid grid-cols-2 gap-2">
+                      <Metric label="Stored" value={item.stored_records} />
+                      <Metric label="Geocoded" value={item.geocoded_records} />
+                      <Metric label={`Collected (${hours}h)`} value={item.recently_seen_records} />
+                      <Metric label={`Source dated (${hours}h)`} value={item.recent_source_date_records} />
+                    </dl>
+                  </article>)}
+                </div>
+              </div>}
             </section>
             <dl aria-label="Current page measurements" className="mt-5 grid grid-cols-2 gap-4 border-y py-3 sm:grid-cols-4">
               <Metric label="Sources on this page" value={data.page_totals.source_count} />
