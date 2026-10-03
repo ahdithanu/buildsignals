@@ -25,8 +25,8 @@ from sqlalchemy.exc import IntegrityError
 from app.db import Base
 
 ROOT = Path(__file__).resolve().parents[1]
-PREVIOUS = "20260920_0001"
-REVISION = "20260923_0001"
+PREVIOUS = "20260927_0001"
+REVISION = "20260923_0002"
 HEAD_REVISION = "20260928_0005"
 PG_URL = os.environ.get("TEST_SCHEMA_RECONCILIATION_POSTGRES_URL")
 PATH = ROOT / "alembic/versions/20260923_0001_reconcile_schema.py"

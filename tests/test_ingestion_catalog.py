@@ -602,6 +602,8 @@ def test_summarize_coverage_requires_active_database_source():
         key=catalog_source.key,
         name=catalog_source.name,
         jurisdiction=catalog_source.jurisdiction,
+        base_url=catalog_source.base_url,
+        record_type=catalog_source.record_type,
         settings=catalog_source.settings,
         is_active=True,
     )

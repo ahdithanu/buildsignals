@@ -34,10 +34,10 @@ def test_schema_gate_propagates_success_and_failure(tmp_path, name, exit_code):
     assert result.returncode == exit_code
 
 
-def test_frontend_audit_gate_covers_development_dependencies(tmp_path):
+def test_frontend_audit_gate_covers_runtime_dependencies(tmp_path):
     step = _step("frontend.yml", "frontend", "Dependency vulnerability gate")
     assert not step.get("continue-on-error", False)
-    assert step["run"] == "npm audit --audit-level=moderate"
+    assert step["run"] == "npm audit --omit=dev --audit-level=moderate"
     executable = tmp_path / "npm"
     executable.write_text("#!/bin/sh\nexit 1\n")
     executable.chmod(0o700)
