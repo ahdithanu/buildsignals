@@ -42,6 +42,10 @@ in the Render dashboard).
       - `BUILD_SIGNALS_DEMO_PASSWORD` — seeded demo user password
       If these are missing or incomplete, `/v1/auth/demo` intentionally
       returns `404` so the password is never exposed through frontend config.
+      Before enabling them, create or repair the isolated synthetic tenant from
+      a Render Shell on `dealsignal-api`:
+      `python scripts/admin.py --yes --reason "public demo activation" ensure-demo-workspace --email "$BUILD_SIGNALS_DEMO_EMAIL"`.
+      The command refuses to reuse an email that belongs to a non-demo tenant.
 - [ ] **Migration safety** — if this release includes a new migration,
       read it and check:
       - No `ALTER TABLE ... SET NOT NULL` on a large table without a
