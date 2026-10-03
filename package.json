@@ -67,7 +67,6 @@
     "recharts": "^3.8.1",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
     "zod": "^3.25.76"
   },
@@ -92,6 +91,7 @@
     "lovable-tagger": "^1.1.13",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.70.1",
     "vite": "^6.4.3",
