@@ -53,10 +53,6 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        if (request.method == "POST" and request.url.path.removeprefix("/v1").rstrip("/") == "/auth/demo"
-                and not config.DEMO_ENABLED):
-            return JSONResponse(status_code=404, content={"detail": "Not found"}, headers={"Cache-Control": "no-store"})
-
         token_obj = None
         demo_context = None
         has_valid_token = False

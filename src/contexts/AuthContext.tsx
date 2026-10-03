@@ -21,10 +21,11 @@ interface AuthState {
   role: MemberRole | null;
   isAuthenticated: boolean;
   isDemo: boolean;
-  demoLogin: () => Promise<User>;
   isLoading: boolean;
   /** Login + persist token. Returns the resolved user. */
   login: (data: LoginRequest) => Promise<User>;
+  /** Demo login + persist token. Returns the resolved demo user. */
+  demoLogin: () => Promise<User>;
   /** Register + persist token. */
   register: (data: RegisterRequest) => Promise<User>;
   /** Clear token + server-side refresh cookie. */
@@ -154,9 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role,
       isAuthenticated: user !== null,
       isDemo,
-      demoLogin,
       isLoading,
       login,
+      demoLogin,
       register,
       logout,
       refresh,

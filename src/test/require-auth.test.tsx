@@ -9,7 +9,8 @@ import {
 
 /**
  * These tests pin the UX contract for route guards:
- *   - during silent-refresh hydrate we show a placeholder, NOT a login flash
+ *   - protected routes show a placeholder during silent refresh
+ *   - public auth routes remain usable while silent refresh runs
  *   - unauthenticated users are sent to /login with the intended path in state
  *   - authenticated users bounce off /login onto the app (or prior `from`)
  */
@@ -88,7 +89,7 @@ describe("<RequireAuth>", () => {
 });
 
 describe("<RedirectIfAuthenticated>", () => {
-  it("shows a placeholder while hydrating", () => {
+  it("keeps the login form usable while auth is hydrating", () => {
     mockAuth({ isLoading: true });
     render(
       <MemoryRouter initialEntries={["/login"]}>
@@ -105,9 +106,9 @@ describe("<RedirectIfAuthenticated>", () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.queryByText("LOGIN_FORM")).not.toBeInTheDocument();
+    expect(screen.getByText("LOGIN_FORM")).toBeInTheDocument();
     expect(screen.queryByText("HOME")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("renders children when anonymous", () => {

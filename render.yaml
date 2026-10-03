@@ -78,6 +78,15 @@ services:
       #   emails are logged instead of sent.
       - key: RESEND_API_KEY
         sync: false
+      # Demo mode is intentionally opt-in. Set the flag plus the seeded
+      # workspace credentials in the dashboard; the frontend never receives
+      # the password and the API returns 404 when this is incomplete.
+      - key: BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS
+        sync: false
+      - key: BUILD_SIGNALS_DEMO_EMAIL
+        sync: false
+      - key: BUILD_SIGNALS_DEMO_PASSWORD
+        sync: false
       # SENTRY_DSN: backend error tracking. Leave unset to disable Sentry.
       - key: SENTRY_DSN
         sync: false
@@ -279,17 +288,22 @@ services:
   - type: web
     name: dealsignal-frontend
     runtime: static
-    # `npm install` (not `npm ci`) until package-lock.json is regenerated on a
-    # Node 18+ machine — the lock is currently behind package.json.
-    buildCommand: npm install && npm run build
+    # Deploy the same locked dependency tree verified by CI.
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
+      - key: NODE_VERSION
+        value: "22.23.3"
       # VITE_* vars are baked into the bundle AT BUILD TIME. Changing one needs
       # a rebuild, not just a restart. Set these in the dashboard on first apply.
       # VITE_API_BASE_URL MUST point at the API service URL — without it the
       # frontend calls localhost and every request fails in production.
       - key: VITE_API_BASE_URL
         sync: false
+      # Render static hosting has no /v1 reverse proxy. Keep direct API mode
+      # there; the canonical Vercel deployment uses the same-origin proxy.
+      - key: VITE_API_SAME_ORIGIN
+        value: "false"
       - key: VITE_SENTRY_DSN
         sync: false
       - key: VITE_SENTRY_ENVIRONMENT

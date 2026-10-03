@@ -1,15 +1,24 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.models.api_key import OrganizationApiKey
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
+from app.models.webhook import WebhookDelivery, WebhookSubscription
 from app.routes.auth import _set_refresh_cookie
 from app.schemas.auth import TokenResponse
 from app.schemas.organization import (
+    ApiKeyCreateRequest,
+    ApiKeyCreateResponse,
+    ApiKeyResponse,
+    ApiKeyUsageRollupRebuildResponse,
+    ApiKeyUsageSummary,
     InviteMemberRequest,
     MemberResponse,
     MyOrganizationItem,
@@ -17,8 +26,36 @@ from app.schemas.organization import (
     SwitchOrgRequest,
     UpdateMemberRequest,
 )
+from app.schemas.webhook import (
+    WEBHOOK_EVENT_TYPES,
+    WebhookDeadLetterAcknowledgeRequest,
+    WebhookDeliveryResponse,
+    WebhookDeliverySummaryResponse,
+    WebhookQueueSnapshotResponse,
+    WebhookSubscriptionCreate,
+    WebhookSubscriptionResponse,
+    WebhookSubscriptionUpdate,
+    WebhookTestEventRequest,
+)
+from app.services.api_key_service import create_api_key, revoke_api_key, to_response
+from app.services.api_usage_service import (
+    get_api_key_usage_totals,
+    rebuild_api_key_usage_rollups,
+    summarize_api_key_usage,
+)
 from app.services.audit_service import log_change
 from app.services.security import create_access_token
+from app.services.webhook_service import (
+    attempt_webhook_delivery,
+    create_subscription,
+    enqueue_webhook_event,
+    get_failed_webhook_delivery,
+    list_dead_letter_webhook_deliveries,
+    replay_webhook_delivery,
+    summarize_webhook_deliveries,
+    summarize_webhook_queue,
+    update_subscription,
+)
 from app.utils.auth_deps import get_current_user, require_role_of
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -243,6 +280,417 @@ def remove_member(
     )
     db.commit()
     return None
+
+
+# ── organization API keys ──────────────────────────────────────────────────
+
+@router.get("/{org_id}/api-keys", response_model=list[ApiKeyResponse])
+def list_api_keys(
+    org_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(OrganizationApiKey)
+        .filter(OrganizationApiKey.organization_id == org_id)
+        .order_by(OrganizationApiKey.created_at.desc())
+        .all()
+    )
+    usage = get_api_key_usage_totals(db, api_key_ids=[row.id for row in rows])
+    return [
+        to_response(
+            row,
+            usage_total_calls=usage.get(row.id, (0, None))[0],
+            usage_last_called_at=usage.get(row.id, (0, None))[1],
+        )
+        for row in rows
+    ]
+
+
+@router.post("/{org_id}/api-keys", response_model=ApiKeyCreateResponse, status_code=201)
+def create_organization_api_key(
+    org_id: str,
+    payload: ApiKeyCreateRequest,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    api_key, secret = create_api_key(
+        db,
+        organization_id=org_id,
+        name=payload.name,
+        scopes=payload.scopes,
+        actor_id=principal["user_id"],
+        expires_at=payload.expires_at,
+    )
+    db.flush()
+    log_change(
+        db, "organization_api_key", api_key.id, "create",
+        actor_id=principal["user_id"], organization_id=org_id,
+        new_values={
+            "name": api_key.name,
+            "key_prefix": api_key.key_prefix,
+            "scopes": payload.scopes,
+            "expires_at": api_key.expires_at.isoformat() if api_key.expires_at else None,
+        },
+    )
+    db.commit()
+    db.refresh(api_key)
+    response = to_response(api_key).model_dump()
+    return ApiKeyCreateResponse(**response, secret=secret)
+
+
+@router.delete("/{org_id}/api-keys/{key_id}", response_model=ApiKeyResponse)
+def revoke_organization_api_key(
+    org_id: str,
+    key_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    api_key = (
+        db.query(OrganizationApiKey)
+        .filter(OrganizationApiKey.organization_id == org_id, OrganizationApiKey.id == key_id)
+        .first()
+    )
+    if not api_key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    was_revoked = api_key.revoked_at is not None
+    revoke_api_key(db, api_key=api_key, actor_id=principal["user_id"])
+    if not was_revoked:
+        log_change(
+            db, "organization_api_key", api_key.id, "revoke",
+            actor_id=principal["user_id"], organization_id=org_id,
+            old_values={"name": api_key.name, "key_prefix": api_key.key_prefix},
+        )
+    db.commit()
+    db.refresh(api_key)
+    return to_response(api_key)
+
+
+@router.get("/{org_id}/api-keys/{key_id}/usage", response_model=ApiKeyUsageSummary)
+def get_organization_api_key_usage(
+    org_id: str,
+    key_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    api_key = (
+        db.query(OrganizationApiKey)
+        .filter(OrganizationApiKey.organization_id == org_id, OrganizationApiKey.id == key_id)
+        .first()
+    )
+    if not api_key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    return summarize_api_key_usage(db, organization_id=org_id, api_key_id=key_id)
+
+
+@router.post(
+    "/{org_id}/api-keys/{key_id}/usage/rebuild-rollups",
+    response_model=ApiKeyUsageRollupRebuildResponse,
+)
+def rebuild_organization_api_key_usage_rollups(
+    org_id: str,
+    key_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    api_key = (
+        db.query(OrganizationApiKey)
+        .filter(OrganizationApiKey.organization_id == org_id, OrganizationApiKey.id == key_id)
+        .first()
+    )
+    if not api_key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    rebuilt_events = rebuild_api_key_usage_rollups(db, organization_id=org_id, api_key_id=key_id)
+    log_change(
+        db, "organization_api_key", api_key.id, "rebuild_usage_rollups",
+        actor_id=principal["user_id"], organization_id=org_id,
+        new_values={"rebuilt_events": rebuilt_events},
+    )
+    db.commit()
+    return ApiKeyUsageRollupRebuildResponse(api_key_id=key_id, rebuilt_events=rebuilt_events)
+
+
+# ── webhook subscriptions ─────────────────────────────────────────────────
+
+@router.get("/{org_id}/webhook-subscriptions", response_model=list[WebhookSubscriptionResponse])
+def list_webhook_subscriptions(
+    org_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return (
+        db.query(WebhookSubscription)
+        .filter(WebhookSubscription.organization_id == org_id)
+        .order_by(WebhookSubscription.created_at.desc(), WebhookSubscription.id.desc())
+        .all()
+    )
+
+
+@router.post("/{org_id}/webhook-subscriptions", response_model=WebhookSubscriptionResponse, status_code=201)
+def create_webhook_subscription(
+    org_id: str,
+    payload: WebhookSubscriptionCreate,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return create_subscription(
+        db,
+        organization_id=org_id,
+        payload=payload,
+        actor_id=principal["user_id"],
+    )
+
+
+@router.patch("/{org_id}/webhook-subscriptions/{subscription_id}", response_model=WebhookSubscriptionResponse)
+def update_webhook_subscription(
+    org_id: str,
+    subscription_id: str,
+    payload: WebhookSubscriptionUpdate,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return update_subscription(
+        db,
+        organization_id=org_id,
+        subscription_id=subscription_id,
+        payload=payload,
+        actor_id=principal["user_id"],
+    )
+
+
+@router.get("/{org_id}/webhook-deliveries", response_model=list[WebhookDeliveryResponse])
+def list_webhook_deliveries(
+    org_id: str,
+    subscription_id: str | None = None,
+    status: str | None = None,
+    queue_status: str | None = None,
+    event_type: str | None = None,
+    event_id: str | None = None,
+    limit: int = 50,
+    skip: int = 0,
+    max_attempts: int = 8,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    if max_attempts < 1 or max_attempts > 25:
+        raise HTTPException(status_code=422, detail="max_attempts must be between 1 and 25")
+    query = db.query(WebhookDelivery).filter(WebhookDelivery.organization_id == org_id)
+    if subscription_id:
+        query = query.filter(WebhookDelivery.subscription_id == subscription_id)
+    if status:
+        if status not in {"pending", "delivered", "failed"}:
+            raise HTTPException(status_code=422, detail="Unsupported webhook delivery status")
+        query = query.filter(WebhookDelivery.status == status)
+    if queue_status:
+        now = datetime.now(timezone.utc)
+        if queue_status == "due":
+            query = query.filter(
+                WebhookDelivery.status == "pending",
+                WebhookDelivery.attempt_count < max_attempts,
+                or_(WebhookDelivery.next_attempt_at.is_(None), WebhookDelivery.next_attempt_at <= now),
+            )
+        elif queue_status == "scheduled":
+            query = query.filter(
+                WebhookDelivery.status == "pending",
+                WebhookDelivery.attempt_count < max_attempts,
+                WebhookDelivery.next_attempt_at > now,
+            )
+        elif queue_status == "exhausted":
+            query = query.filter(
+                WebhookDelivery.status == "pending",
+                WebhookDelivery.attempt_count >= max_attempts,
+            )
+        else:
+            raise HTTPException(status_code=422, detail="Unsupported webhook queue status")
+    if event_type:
+        normalized_event_type = event_type.strip().lower()
+        if normalized_event_type not in WEBHOOK_EVENT_TYPES:
+            raise HTTPException(status_code=422, detail="Unsupported webhook event type")
+        query = query.filter(WebhookDelivery.event_type == normalized_event_type)
+    if event_id:
+        query = query.filter(WebhookDelivery.event_id.ilike(f"%{event_id.strip()}%"))
+    return (
+        query.order_by(WebhookDelivery.created_at.desc(), WebhookDelivery.id.desc())
+        .offset(skip)
+        .limit(min(max(limit, 1), 100))
+        .all()
+    )
+
+
+@router.get("/{org_id}/webhook-delivery-summary", response_model=WebhookDeliverySummaryResponse)
+def get_webhook_delivery_summary(
+    org_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return summarize_webhook_deliveries(db, organization_id=org_id)
+
+
+@router.get("/{org_id}/webhook-queue", response_model=WebhookQueueSnapshotResponse)
+def get_webhook_queue_snapshot(
+    org_id: str,
+    max_attempts: int = 8,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    try:
+        return summarize_webhook_queue(db, organization_id=org_id, max_attempts=max_attempts)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/{org_id}/webhook-dead-letters", response_model=list[WebhookDeliveryResponse])
+def list_webhook_dead_letters(
+    org_id: str,
+    limit: int = 50,
+    skip: int = 0,
+    principal: dict = Depends(require_role_of(MemberRole.admin, must_match_active_org=True)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return list_dead_letter_webhook_deliveries(db, organization_id=org_id, limit=limit, skip=skip)
+
+
+@router.post("/{org_id}/webhook-test-events", response_model=list[WebhookDeliveryResponse], status_code=201)
+def create_webhook_test_event(
+    org_id: str,
+    payload: WebhookTestEventRequest,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    if not db.get(Organization, org_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
+    deliveries = enqueue_webhook_event(
+        db,
+        organization_id=org_id,
+        event_type=payload.event_type,
+        event_id=payload.event_id,
+        subscription_id=payload.subscription_id,
+        payload={
+            **payload.payload,
+            "event_type": payload.event_type,
+            "event_id": payload.event_id,
+            "organization_id": org_id,
+            "triggered_by": principal["user_id"],
+        },
+    )
+    log_change(
+        db,
+        "webhook_delivery",
+        payload.event_id,
+        "enqueue_test_event",
+        actor_id=principal["user_id"],
+        organization_id=org_id,
+        new_values={
+            "event_type": payload.event_type,
+            "delivery_count": len(deliveries),
+            "subscription_id": payload.subscription_id,
+        },
+    )
+    db.commit()
+    for delivery in deliveries:
+        db.refresh(delivery)
+    return deliveries
+
+
+@router.post("/{org_id}/webhook-deliveries/{delivery_id}/attempt", response_model=WebhookDeliveryResponse)
+def attempt_organization_webhook_delivery(
+    org_id: str,
+    delivery_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    delivery = (
+        db.query(WebhookDelivery)
+        .filter(WebhookDelivery.organization_id == org_id, WebhookDelivery.id == delivery_id)
+        .first()
+    )
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Webhook delivery not found")
+    attempted = attempt_webhook_delivery(db, delivery_id=delivery.id)
+    log_change(
+        db,
+        "webhook_delivery",
+        attempted.id,
+        "attempt",
+        actor_id=principal["user_id"],
+        organization_id=org_id,
+        new_values={
+            "status": attempted.status,
+            "attempt_count": attempted.attempt_count,
+            "response_status_code": attempted.response_status_code,
+        },
+    )
+    db.commit()
+    db.refresh(attempted)
+    return attempted
+
+
+@router.post("/{org_id}/webhook-deliveries/{delivery_id}/replay", response_model=WebhookDeliveryResponse)
+def replay_organization_webhook_delivery(
+    org_id: str,
+    delivery_id: str,
+    principal: dict = Depends(require_role_of(MemberRole.admin)),
+    db: Session = Depends(get_db),
+):
+    replayed = replay_webhook_delivery(db, organization_id=org_id, delivery_id=delivery_id)
+    log_change(
+        db,
+        "webhook_delivery",
+        replayed.id,
+        "replay",
+        actor_id=principal["user_id"],
+        organization_id=org_id,
+        new_values={
+            "status": replayed.status,
+            "attempt_count": replayed.attempt_count,
+        },
+    )
+    db.commit()
+    db.refresh(replayed)
+    return replayed
+
+
+@router.post("/{org_id}/webhook-dead-letters/{delivery_id}/acknowledge", response_model=WebhookDeliveryResponse)
+def acknowledge_webhook_dead_letter(
+    org_id: str,
+    delivery_id: str,
+    payload: WebhookDeadLetterAcknowledgeRequest,
+    principal: dict = Depends(require_role_of(MemberRole.admin, must_match_active_org=True)),
+    db: Session = Depends(get_db),
+):
+    delivery = get_failed_webhook_delivery(db, organization_id=org_id, delivery_id=delivery_id)
+    log_change(
+        db,
+        "webhook_delivery",
+        delivery.id,
+        "acknowledge_dead_letter",
+        actor_id=principal["user_id"],
+        organization_id=org_id,
+        new_values={
+            "status": delivery.status,
+            "attempt_count": delivery.attempt_count,
+            "note": payload.note,
+        },
+    )
+    db.commit()
+    db.refresh(delivery)
+    return delivery
 
 
 # ── switch active org ──────────────────────────────────────────────────────

@@ -66,3 +66,8 @@ from app.models.ingestion_onboarding import (  # noqa
 from app.models.buildsignal import BuildSignalPublication, BuildSignalRevision, BuildSignalReview  # noqa: F401
 from app.models.temporal import TemporalEvent, TemporalObservation  # noqa: F401
 from app.models.permit_geocode import PermitGeocode  # noqa: F401
+from app.models.evaluation import EvalCase, EvalDataset, EvalMetric, EvalResult, EvalRun  # noqa: F401
+from app.models.prompt_registry import PromptTemplate, PromptVersion  # noqa: F401
+from app.models.api_key import OrganizationApiKey  # noqa: F401
+from app.models.api_usage import OrganizationApiKeyUsageDailyRollup, OrganizationApiKeyUsageEvent  # noqa: F401
+from app.models.webhook import WebhookDelivery, WebhookSubscription  # noqa: F401

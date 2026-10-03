@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 
 from app import config
 from app.config import (
+    DEMO_LOGIN_EMAIL,
+    DEMO_LOGIN_ENABLED,
+    DEMO_LOGIN_PASSWORD,
     REFRESH_COOKIE_NAME,
     REFRESH_COOKIE_PATH,
     REFRESH_COOKIE_SAMESITE,
@@ -22,7 +25,6 @@ from app.models.organization_membership import MemberRole, OrganizationMembershi
 from app.models.user import User
 from app.schemas.auth import (
     DeleteAccountRequest,
-    DemoLoginRequest,
     LoginRequest,
     MeResponse,
     RegisterRequest,
@@ -96,14 +98,26 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.get("/demo")
 def demo_availability():
-    return {"enabled": config.DEMO_ENABLED}
+    return {
+        "enabled": config.DEMO_ENABLED
+        or (DEMO_LOGIN_ENABLED and bool(DEMO_LOGIN_EMAIL) and bool(DEMO_LOGIN_PASSWORD))
+    }
 
 
 @router.post("/demo", response_model=TokenResponse)
 def demo_login(request: Request, response: Response, db: Session = Depends(get_db),
-               payload: DemoLoginRequest | None = Body(default=None)):
+               payload: dict | None = Body(default=None)):
     if not config.DEMO_ENABLED:
-        raise HTTPException(status_code=404, detail="Not found")
+        if not DEMO_LOGIN_ENABLED or not DEMO_LOGIN_EMAIL or not DEMO_LOGIN_PASSWORD:
+            raise HTTPException(status_code=404, detail="Demo workspace is not enabled")
+        return login(
+            LoginRequest(email=DEMO_LOGIN_EMAIL, password=DEMO_LOGIN_PASSWORD),
+            request=request,
+            response=response,
+            db=db,
+        )
+    if payload:
+        raise HTTPException(status_code=422, detail="Demo login does not accept client-selected identity")
     # Use the server-resolved peer, not a client-supplied forwarding header.
     ip = request.client.host if request.client else "unknown"
     decision = limiter.check(key=f"demo:{ip}", limit=10, window_seconds=60)

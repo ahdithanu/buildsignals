@@ -9,7 +9,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, demoLogin } = useAuth();
-  const [demoEnabled, setDemoEnabled] = useState(false);
+  const [demoEnabled, setDemoEnabled] = useState<boolean | null>(null);
   useEffect(() => {
     let active = true;
     authApi.demoAvailability().then(result => {
@@ -22,6 +22,7 @@ export default function Login() {
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [openingDemo, setOpeningDemo] = useState(false);
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
 
@@ -39,6 +40,23 @@ export default function Login() {
     }
   }
 
+  async function handleDemoLogin() {
+    setError(null);
+    setOpeningDemo(true);
+    try {
+      await demoLogin();
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Demo mode is not available on this deployment.',
+      );
+    } finally {
+      setOpeningDemo(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <section className="mx-auto flex w-full max-w-lg flex-col px-5 py-10 sm:px-8 sm:py-16">
@@ -47,12 +65,28 @@ export default function Login() {
           <p className="mt-2 text-[9px] uppercase text-muted-foreground">Infrastructure opportunities. Early.</p>
         </div>
 
-        <div className="mt-10 w-full">
+        <div className="mt-10 w-full max-w-md sm:mt-12">
           <p className="section-label">Enterprise access</p>
           <h1 className="mt-3 text-2xl font-semibold">Sign in</h1>
           <p className="mt-1 text-xs text-muted-foreground">Development, ownership and permit intelligence.</p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          {demoEnabled !== false && <button
+            type="button"
+            disabled={openingDemo || submitting}
+            onClick={handleDemoLogin}
+            className="mt-6 flex h-11 w-full items-center justify-between bg-foreground px-4 text-xs font-semibold text-background disabled:opacity-50"
+          >
+            {openingDemo ? 'Opening demo mode...' : 'Enter demo mode'}
+            <ArrowRight className="h-4 w-4" />
+          </button>}
+
+          {demoEnabled !== false && <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            <span>or use enterprise access</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <label className="block">
               <span className="section-label">Work email</span>
               <input
@@ -99,26 +133,20 @@ export default function Login() {
               <ArrowRight className="h-4 w-4" />
             </button>
 
-            {demoEnabled && <button type="button" disabled={submitting}
-              className="flex h-11 w-full items-center justify-between border-2 border-foreground px-4 text-xs font-semibold disabled:opacity-50"
-              onClick={async () => {
-                setError(null);
-                setSubmitting(true);
-                try {
-                  await demoLogin();
-                  navigate('/demo', { replace: true });
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : 'Demo is unavailable');
-                } finally { setSubmitting(false); }
-              }}>
-              View live demo <ArrowRight className="h-4 w-4" />
-            </button>}
+            <div className="flex items-center gap-3 text-[9px] text-muted-foreground"><span className="h-px flex-1 bg-border" />OR<span className="h-px flex-1 bg-border" /></div>
+            <button type="button" className="h-11 w-full border-2 border-foreground bg-card px-4 text-left text-xs font-semibold">Continue with SSO (SAML)</button>
 
+            <p className="text-center text-xs text-muted-foreground">
+              No account?{' '}
+              <Link to="/register" className="font-semibold text-foreground underline-offset-4 hover:underline">
+                Create account
+              </Link>
+            </p>
           </form>
         </div>
 
-        <p className="mt-6 text-sm text-muted-foreground">
-          No account? <Link to="/register" className="font-semibold text-foreground hover:underline">Create account</Link>
+        <p className="mt-auto pt-8 text-[10px] text-muted-foreground">
+          Status · Security · Terms
         </p>
       </section>
 

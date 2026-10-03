@@ -18,6 +18,9 @@ export const authApi = {
   login: (data: LoginRequest) =>
     apiClient.post<TokenResponse>('/auth/login', data),
 
+  demoLogin: () =>
+    apiClient.post<TokenResponse>('/auth/demo'),
+
   me: () => apiClient.get<MeResponse>('/auth/me'),
 
   refresh: () => apiClient.post<TokenResponse>('/auth/refresh'),

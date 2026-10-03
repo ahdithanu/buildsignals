@@ -16,6 +16,7 @@ sample rates, cookie names) are not listed here — those live in
 | `SENTRY_DSN` | Sentry ingest token. Low-sensitivity — DSNs are per-project and can only send events, not read them. | Render dashboard env var. | If leaked externally (spam events); otherwise long-lived. |
 | `RESEND_API_KEY` | Outbound email (password-reset). | Render dashboard env var. | On suspected compromise, or if a Resend account admin leaves. |
 | `REDIS_URL` | Optional — enables the shared-state rate limiter. When unset, the in-memory backend runs. The URL embeds the Redis auth password. | Render dashboard env var, auto-injected if the Redis instance is linked. | On suspected compromise. Rotate at the Redis layer (dashboard → *Reset Password*). |
+| `BUILD_SIGNALS_DEMO_PASSWORD` | Optional seeded demo workspace login used only by the backend `/v1/auth/demo` route. | Render dashboard env var on `dealsignal-api`. | Any time demo access should be refreshed, after a public demo, or on suspected compromise. |
 
 ## Storage
 

@@ -31,6 +31,9 @@ import AcquisitionRadar from "./pages/AcquisitionRadar";
 import AcquisitionMap from "./pages/AcquisitionMap";
 import Settings from "./pages/Settings";
 import AuditLog from "./pages/AuditLog";
+import Evaluations from "./pages/Evaluations";
+import Observability from "./pages/Observability";
+import PromptRegistry from "./pages/PromptRegistry";
 import Team from "./pages/Team";
 import Account from "./pages/Account";
 import Login from "./pages/Login";
@@ -86,6 +89,9 @@ const App = () => (
 
             {/* Authenticated routes */}
             <Route path="/demo" element={<RequireAuth><DemoWorkspace /></RequireAuth>} />
+            <Route path="/admin/evals" element={<RequireAuth><Evaluations /></RequireAuth>} />
+            <Route path="/admin/observability" element={<RequireAuth><Observability /></RequireAuth>} />
+            <Route path="/admin/prompts" element={<RequireAuth><PromptRegistry /></RequireAuth>} />
             <Route
               path="/"
               element={
