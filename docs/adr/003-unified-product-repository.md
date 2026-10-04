@@ -39,9 +39,11 @@ Signals product development.
 The Vercel project must use this repository and its root directory. Required
 build configuration is checked in as `vercel.json`.
 
-The production project must define:
+The production project uses the checked-in `/v1` reverse proxy by default. It
+may also define:
 
-- `VITE_API_BASE_URL`: HTTPS origin of the production FastAPI service;
+- `VITE_API_BASE_URL`: direct HTTPS API origin for non-Vercel deployments;
+- `VITE_API_SAME_ORIGIN=false`: explicit opt-out when the host has no `/v1` proxy;
 - `VITE_SENTRY_DSN`: optional frontend Sentry project;
 - `VITE_SENTRY_ENVIRONMENT=production`.
 
@@ -55,7 +57,8 @@ verified on a Vercel preview before domain cutover.
 1. Port and verify the redesigned signals feed and opportunity detail UX.
 2. Create a Vercel preview from this repository.
 3. Configure the production API URL and optional Sentry environment values.
-4. Add the preview and production origins to API CORS configuration.
+4. Add the preview and production origins to API CORS configuration for direct
+   API access and operational tooling.
 5. Run frontend tests, production build, browser smoke tests, auth checks, and
    `npm audit --omit=dev`; resolve high-severity production advisories before
    promoting the deployment.

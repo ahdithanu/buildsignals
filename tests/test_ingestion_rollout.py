@@ -15,6 +15,7 @@ from app.services.ingestion.host_policy import audit_ingestion_hosts
 from app.services.ingestion.rollout import (
     DEFAULT_ROLLOUT_MANIFEST_PATH,
     build_production_rollout_manifest,
+    require_current_rollout_manifest,
     rollout_manifest_json,
     source_rollout_wave,
 )
@@ -235,7 +236,7 @@ def test_rollout_classification_uses_settings_state_and_rejects_unknown_state():
         source_rollout_wave(unknown)
 
 
-@pytest.mark.parametrize("field", ["adapter", "is_active", "field_mappings"])
+@pytest.mark.parametrize("field", ["adapter", "is_active", "field_mappings", "settings"])
 def test_catalog_fingerprint_covers_behavior_critical_source_fields(field):
     source = IngestionSourceCreate(
         key="source",
@@ -248,6 +249,7 @@ def test_catalog_fingerprint_covers_behavior_critical_source_fields(field):
     updates = {
         "adapter": "arcgis",
         "is_active": False,
+        "settings": {"connector": {}, "freshness_semantics": "record_updated_at"},
         "field_mappings": [{
             "source_field": "permit_id",
             "canonical_field": "source_record_id",
@@ -262,3 +264,28 @@ def test_catalog_fingerprint_covers_behavior_critical_source_fields(field):
 
     assert modified.catalog_fingerprint != original.catalog_fingerprint
     assert modified.manifest_digest != original.manifest_digest
+
+
+def test_settings_drift_requires_a_new_manifest(tmp_path):
+    source = IngestionSourceCreate(
+        key="source",
+        name="Source",
+        adapter="csv",
+        jurisdiction="Austin, TX",
+        base_url="https://example.gov/data.csv",
+        settings={"freshness_semantics": "filing_event_at"},
+    )
+    path = tmp_path / "rollout.json"
+    original = build_production_rollout_manifest([source])
+    path.write_text(rollout_manifest_json(original), encoding="utf-8")
+    assert require_current_rollout_manifest([source], path=path) == original
+
+    changed = source.model_copy(update={
+        "settings": {"freshness_semantics": "record_updated_at"},
+    })
+    with pytest.raises(ValueError, match="manifest is stale or missing"):
+        require_current_rollout_manifest([changed], path=path)
+
+    # Scope equality cannot authorize a changed interpretation of source dates.
+    assert build_production_rollout_manifest([changed]).required_hosts == original.required_hosts
+    assert path.read_text(encoding="utf-8") == rollout_manifest_json(original)

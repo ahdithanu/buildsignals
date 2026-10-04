@@ -18,6 +18,18 @@ export interface ParcelFact {
   last_verified_at: string;
 }
 
+export interface ParcelAvailabilityEvidenceCreate {
+  status: 'available' | 'for_sale' | 'listed' | 'broker_listed' | 'owner_indicated_available';
+  evidence_type: 'listing' | 'broker' | 'owner' | 'auction';
+  source_url?: string | null;
+  excerpt?: string | null;
+  confidence: number;
+  observed_at?: string | null;
+  asking_price?: number | null;
+  contact_name?: string | null;
+  contact_company?: string | null;
+}
+
 export type ParcelLineageEventType = 'split' | 'merge' | 'replat' | 'correction';
 
 export interface ParcelLineageEvidence {
@@ -101,7 +113,8 @@ export interface NearbyParcelSearchSummary {
   id: string;
   deal_id: string;
   anchor_brand_match_id?: string | null;
-  anchor_permit_id: string;
+  anchor_permit_id?: string | null;
+  anchor_planning_id?: string | null;
   anchor_latitude: number;
   anchor_longitude: number;
   radius_miles: number;
@@ -119,6 +132,15 @@ export interface NearbyParcelSearch extends NearbyParcelSearchSummary {
 
 export interface NearbyParcelSearchCreate {
   anchor_brand_match_id: string;
+  radius_miles: number;
+  persona: ParcelPersona;
+  limit?: number;
+  minimum_land_area_sq_ft?: number | null;
+  zoning_codes?: string[];
+  land_uses?: string[];
+}
+
+export interface PlanningNearbyParcelSearchCreate {
   radius_miles: number;
   persona: ParcelPersona;
   limit?: number;
@@ -170,6 +192,8 @@ export interface AcquisitionRadarSignal {
   search_id: string;
   deal_id: string;
   deal_name: string;
+  anchor_permit_id?: string | null;
+  anchor_planning_id?: string | null;
   persona: ParcelPersona;
   approval_stage?: string | null;
   signal_confidence?: number | null;
@@ -211,6 +235,10 @@ export interface AcquisitionRadarResponse {
     shortlisted_parcels: number;
     multi_opportunity_parcels: number;
     assigned_parcels: number;
+    promoted_parcels: number;
+    contacted_parcels: number;
+    follow_up_parcels: number;
+    due_follow_up_parcels: number;
     state_count: number;
   };
 }
@@ -221,8 +249,66 @@ export interface AcquisitionRadarParams {
   persona?: ParcelPersona;
   review_status?: AcquisitionCaseStatus;
   assignment?: 'assigned' | 'unassigned';
+  follow_up?: 'due' | 'scheduled' | 'none';
+  signal_overlap?: 'multi' | 'single';
+  availability?: 'verified' | 'unverified';
+  zip3?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface Zip3HeatmapSignal {
+  id: string;
+  title?: string | null;
+  stage?: string | null;
+  status?: string | null;
+  city?: string | null;
+  state?: string | null;
+  source_url?: string | null;
+}
+
+export interface Zip3HeatmapParcel {
+  id: string;
+  external_parcel_id: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  review_status: string;
+  candidate_score: number;
+  availability_label: 'nearby_candidate_not_verified_for_sale' | 'verified_for_sale';
+  availability_source_url?: string | null;
+}
+
+export interface Zip3HeatmapItem {
+  zip3: string;
+  score: number;
+  signal_count: number;
+  pre_approval_signals: number;
+  approved_signals: number;
+  mapped_signals: number;
+  parcel_candidate_count: number;
+  shortlisted_parcel_count: number;
+  verified_for_sale_count: number;
+  candidate_not_listing_count: number;
+  states: string[];
+  cities: string[];
+  latitude?: number | null;
+  longitude?: number | null;
+  sample_signals: Zip3HeatmapSignal[];
+  sample_parcels: Zip3HeatmapParcel[];
+  latest_signal_at?: string | null;
+}
+
+export interface Zip3HeatmapResponse {
+  items: Zip3HeatmapItem[];
+  limit: number;
+  generated_at: string;
+  method_version: string;
+  state?: string | null;
+  for_sale_semantics: {
+    nearby_candidate: string;
+    verified_for_sale: string;
+  };
 }
 
 export interface ParcelAcquisitionSource {

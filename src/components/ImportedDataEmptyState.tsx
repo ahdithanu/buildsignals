@@ -13,8 +13,15 @@ interface ImportedDataEmptyStateProps {
   action?: ReactNode;
 }
 
+function sourceHealthHref(recordTypes: InventoryRecordTypes) {
+  const unique = Array.from(new Set(recordTypes));
+  if (unique.length !== 1 || unique[0] === 'permit') return '/source-health';
+  return `/source-health?record_type=${unique[0]}`;
+}
+
 export function ImportedDataEmptyState({ recordTypes, recordLabel, title, description, action }: ImportedDataEmptyStateProps) {
   const inventory = useImportedRecordAvailability(recordTypes);
+  const sourceHealth = sourceHealthHref(recordTypes);
   if (inventory.isPending) return <LoadingState message="Checking imported records..." />;
 
   const unknown = !!inventory.error || inventory.data === undefined;
@@ -30,7 +37,7 @@ export function ImportedDataEmptyState({ recordTypes, recordLabel, title, descri
           <div className="flex flex-wrap justify-center gap-2">
             {!unknown && inventory.data && action}
             <Button asChild variant="outline" size="sm">
-              <Link to="/source-health">Open Source Health<ArrowRight className="h-3.5 w-3.5" /></Link>
+              <Link to={sourceHealth}>Open Source Health<ArrowRight className="h-3.5 w-3.5" /></Link>
             </Button>
             <Button variant="ghost" size="sm" disabled={inventory.isFetching} onClick={() => void inventory.refetch()}>
               <RefreshCw className={`h-3.5 w-3.5 ${inventory.isFetching ? 'animate-spin' : ''}`} />

@@ -81,12 +81,13 @@ Status meanings:
 
 ## Expansion Order
 
-1. Every state now has an explicit production or candidate-catalog decision;
-   40 states have production sources and 10 are candidate-only. This pass added
-   official-source holds for the 10 states that previously had no catalog
-   representation; Georgia has now moved from candidate-only to production.
-   Re-audit those holds
-   when publishers add licensed bulk feeds or materially change platforms.
+1. Every state now has an explicit production or candidate-catalog decision.
+   The validated backend catalog currently reports 134 configured live sources
+   across 43 states, with seven candidate-only state gaps: Iowa, Mississippi,
+   Montana, New Mexico, Oklahoma, West Virginia, and Wyoming. Candidate-only and
+   held states remain in the candidate catalog until their rights, lifecycle,
+   freshness, identity, and technical gates clear. Re-audit holds when publishers
+   add licensed bulk feeds or materially change platforms.
 2. Run parcel-source admission loops in production permit markets, starting
    with Austin/Travis County, Seattle/King County, and New York City tax lots.
 3. Continue in three-state loops, onboarding only sources that pass technical,
@@ -144,3 +145,26 @@ from research into production without losing the broader nationwide picture.
 Those state chips now link into the Source Health page with a state filter
 applied, so operators can jump from the coverage map straight into the relevant
 source rows and candidate worklist.
+
+The coverage response now carries a per-state readiness classification and source
+mix rather than only raw counts. Readiness levels are:
+
+- `investor_ready`: live pre-approval coverage, parcel context, and
+  retailer-opening/opening-intent coverage are all present.
+- `early_warning_ready`: live pre-approval coverage exists, but parcel or
+  retailer-opening context still needs to be deepened.
+- `live_foundation`: at least one live source exists, usually confirmation or
+  parcel context, but early-warning coverage is incomplete.
+- `candidate_only`: source research exists but no active source is admitted.
+- `uncovered`: no live or candidate source has been selected yet.
+
+Each state also exposes live and candidate record-type counts, candidate blocker
+counts, and the next recommended scale action. This makes the expansion loop
+operational: deepen investor-ready markets, promote candidate-only markets, and
+avoid presenting parcel-only or approved-only states as full early-warning
+coverage.
+
+The Source Health page also summarizes those classifications into a 50-state
+readiness funnel. The funnel is intentionally catalog-derived: it helps operators
+prioritize activation work, but it is not measured live inventory, freshness, or
+full-market completeness.

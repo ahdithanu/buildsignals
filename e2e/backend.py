@@ -34,6 +34,7 @@ def main():
             "SENTRY_DSN": "",
             "RESEND_API_KEY": "",
             "REDIS_URL": "",
+            "DEMO_ENABLED": "true",
         })
         import uvicorn
         from alembic.config import Config
@@ -43,8 +44,21 @@ def main():
         config = Config(str(root / "alembic.ini"))
         config.set_main_option("script_location", str(root / "alembic"))
         command.upgrade(config, "head")
-        from app.db import engine
+        from app.db import SessionLocal, engine
         from app.main import app
+        from app.services.demo_seed import seed_demo
+        from tests.demo_fixtures import create_snapshot
+
+        snapshot_dir = os.environ.get("DEMO_TEST_SNAPSHOT_DIR")
+        if snapshot_dir:
+            snapshots = [Path(snapshot_dir) / f"columbus-{kind}-20240{month}-live.db"
+                         for kind in ("commercial", "site") for month in (1, 2, 3)]
+        else:
+            snapshot = Path(directory) / "demo-snapshot.db"
+            create_snapshot(snapshot)
+            snapshots = [snapshot]
+        with SessionLocal() as db:
+            seed_demo(db, snapshots)
 
         try:
             uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")

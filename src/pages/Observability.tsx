@@ -11,6 +11,11 @@ import type { ObservabilityDays, ObservabilityOverview } from '@/types/observabi
 
 const count = (value: number) => value.toLocaleString();
 const known = (value: number | null, format: (value: number) => string) => value == null ? 'Unknown' : format(value);
+const statusTone = {
+  pass: 'border-emerald-700 bg-emerald-50 text-emerald-900',
+  warning: 'border-amber-700 bg-amber-50 text-amber-950',
+  fail: 'border-destructive bg-destructive/10 text-destructive',
+} as const;
 
 function Metric({ label, value, note }: { label: string; value: string; note?: string }) {
   return <Card className="rounded-none border-2 border-foreground"><CardContent className="p-4">
@@ -50,6 +55,28 @@ function OverviewContent({ data }: { data: ObservabilityOverview }) {
   const maxRuns = Math.max(1, ...e.daily.map(day => day.runs));
   return <>
     <p className="text-xs text-muted-foreground">{data.days}-day window · {new Date(data.window_start).toLocaleString()} to {new Date(data.window_end).toLocaleString()} · Updated {new Date(data.generated_at).toLocaleString()}</p>
+    <Section title="Deployment readiness">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Environment <strong className="text-foreground">{data.deployment.environment}</strong> · Database <strong className="text-foreground">{data.deployment.database_provider}</strong>
+        </p>
+        <span className={`border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${statusTone[data.deployment.overall_status]}`}>
+          {data.deployment.overall_status}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {data.deployment.checks.map(check => (
+          <div key={check.code} className={`border-2 p-3 ${statusTone[check.status]}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <p className="text-sm font-semibold">{check.label}</p>
+              <span className="text-[10px] font-bold uppercase tracking-widest">{check.status}</span>
+            </div>
+            <p className="mt-1 text-sm">{check.summary}</p>
+            {check.action && <p className="mt-2 text-xs opacity-85">{check.action}</p>}
+          </div>
+        ))}
+      </div>
+    </Section>
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Metric label="Evaluation runs" value={count(e.runs)} note={`${count(e.completed)} completed · ${count(e.running)} running`} />
       <Metric label="Gates passed" value={count(e.gates_passed)} note={`${count(e.failed)} failed runs · ${count(e.case_errors)} case errors`} />

@@ -20,9 +20,12 @@ interface AuthState {
   organizationId: string | null;
   role: MemberRole | null;
   isAuthenticated: boolean;
+  isDemo: boolean;
   isLoading: boolean;
   /** Login + persist token. Returns the resolved user. */
   login: (data: LoginRequest) => Promise<User>;
+  /** Demo login + persist token. Returns the resolved demo user. */
+  demoLogin: () => Promise<User>;
   /** Register + persist token. */
   register: (data: RegisterRequest) => Promise<User>;
   /** Clear token + server-side refresh cookie. */
@@ -37,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [role, setRole] = useState<MemberRole | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   // Start loading — we need to attempt a silent refresh before we know
   // whether the user is authenticated.
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -48,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setOrganizationId(null);
     setRole(null);
+    setIsDemo(false);
     setIsLoading(false);
   }, []);
 
@@ -59,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(me.user);
       setOrganizationId(me.organization_id);
       setRole(me.role);
+      setIsDemo(me.is_demo === true);
     } catch {
       // /auth/me failed even after the client tried a silent refresh.
       // We're really logged out.
@@ -105,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(me.user);
         setOrganizationId(me.organization_id);
         setRole(me.role);
+        setIsDemo(me.is_demo === true);
         return me.user;
       } catch (error) {
         if (operation === authOperation.current) reset();
@@ -123,6 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (data: RegisterRequest) => authenticate(() => authApi.register(data)),
     [authenticate],
   );
+
+  const demoLogin = useCallback(() => authenticate(() => authApi.demo()), [authenticate]);
 
   const logout = useCallback(async () => {
     try {
@@ -145,13 +154,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organizationId,
       role,
       isAuthenticated: user !== null,
+      isDemo,
       isLoading,
       login,
+      demoLogin,
       register,
       logout,
       refresh,
     }),
-    [user, organizationId, role, isLoading, login, register, logout, refresh],
+    [user, organizationId, role, isDemo, demoLogin, isLoading, login, register, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

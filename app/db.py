@@ -2,7 +2,7 @@ import sqlite3
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import DATABASE_URL
 
@@ -32,6 +32,22 @@ class Base(DeclarativeBase):
     pass
 
 
+@event.listens_for(Session, "after_begin")
+def _demo_read_only_transaction(session, transaction, connection):
+    from app.services.demo_access import demo_read_only
+
+    if demo_read_only.get() and connection.dialect.name == "postgresql":
+        connection.execute(text("SET TRANSACTION READ ONLY"))
+
+
+@event.listens_for(Session, "before_flush")
+def _demo_reject_orm_mutations(session, flush_context, instances):
+    from app.services.demo_access import demo_read_only
+
+    if demo_read_only.get() and (session.new or session.dirty or session.deleted):
+        raise PermissionError("Demo sessions cannot mutate stored data")
+
+
 # ── Postgres RLS glue ─────────────────────────────────────────────────────
 #
 # Migration 003 enables row-level security on every tenant table with a
@@ -49,19 +65,16 @@ class Base(DeclarativeBase):
 #
 # On SQLite (dev/test) this is a no-op.
 
-if engine.dialect.name == "postgresql":
+@event.listens_for(SessionLocal, "after_begin")
+def _set_rls_org(session, transaction, connection):  # noqa: ARG001
+    if connection.dialect.name != "postgresql":
+        return
+    from app.utils.org_scope import get_org_id
 
-    @event.listens_for(SessionLocal, "after_begin")
-    def _set_rls_org(session, transaction, connection):  # noqa: ARG001
-        # Imported lazily to avoid a circular import (org_scope → nothing, but
-        # keeps db.py import-light at module load).
-        from app.utils.org_scope import get_org_id
-
-        org_id = get_org_id()
-        connection.execute(
-            text("SELECT set_config('app.current_org', :org, true)"),
-            {"org": org_id},
-        )
+    connection.execute(
+        text("SELECT set_config('app.current_org', :org, true)"),
+        {"org": get_org_id()},
+    )
 
 
 def get_db():

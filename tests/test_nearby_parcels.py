@@ -16,6 +16,7 @@ from app.models.audit_log import AuditLog
 from app.models.brand import PermitBrandMatch
 from app.models.graph import GraphEntity, GraphRelationship, GraphRelationshipEvidence
 from app.models.ingestion import (
+    IngestionRun,
     IngestionSource,
     RawSourceRecord,
     RawSourceRecordObservation,
@@ -23,6 +24,7 @@ from app.models.ingestion import (
 from app.models.organization import Organization
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
+from app.models.planning import PlanningRecord
 from app.models.user import User
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.catalog import load_catalog
@@ -322,6 +324,93 @@ def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tm
         assert "No owner willingness to sell" in persona_body["candidates"][0]["explanation"]["cautions"][0]
 
 
+def test_planning_record_creates_ranked_reviewable_parcel_search(client, db):
+    headers = _admin_headers(db)
+    deal = client.post("/deals", headers=headers, json={
+        "name": "Planning-led acquisition",
+        "address": "100 Main Street",
+        "city": "Austin",
+        "state": "TX",
+        "property_type": "retail",
+    }).json()
+    source = IngestionSource(
+        id=str(uuid4()),
+        organization_id="default-org",
+        key="planning_test",
+        name="Planning test",
+        adapter="test",
+        record_type="planning",
+        jurisdiction="Austin",
+        base_url="https://example.gov/planning",
+        field_mappings=[],
+        settings={},
+    )
+    db.add(source)
+    db.flush()
+    run = IngestionRun(
+        organization_id="default-org",
+        source_id=source.id,
+        status="completed",
+        trigger="manual",
+    )
+    db.add(run)
+    db.flush()
+    raw = RawSourceRecord(
+        id=str(uuid4()),
+        organization_id="default-org",
+        source_id=source.id,
+        run_id=run.id,
+        external_record_id="PLAN-1",
+        record_type="planning",
+        payload={"id": "PLAN-1"},
+        content_hash="plan-hash",
+    )
+    planning = PlanningRecord(
+        id=str(uuid4()),
+        organization_id="default-org",
+        source_id=source.id,
+        latest_raw_record_id=raw.id,
+        external_record_id="PLAN-1",
+        normalization_hash="plan-normalized",
+        event_type="planning_hearing_agenda_item",
+        stage="pre_approval",
+        title="Austin planning hearing",
+        address="100 Main St",
+        city="Austin",
+        state="TX",
+        latitude=30.2672,
+        longitude=-97.7431,
+        priority_score=80,
+        confidence=0.9,
+    )
+    db.add_all([raw, planning])
+    db.flush()
+    _add_parcel(
+        db, source.id, raw.id, "P-PLAN", -97.735,
+        land_area_sq_ft=80_000,
+        land_value=1_000_000,
+        improvement_value=100_000,
+        zoning_code="Commercial Retail",
+        land_use="Retail",
+    )
+    db.commit()
+
+    response = client.post(
+        f"/deals/{deal['id']}/planning-records/{planning.id}/nearby-parcel-searches",
+        headers=headers,
+        json={"radius_miles": 2, "persona": "developer"},
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["anchor_permit_id"] is None
+    assert body["anchor_planning_id"] == planning.id
+    assert body["candidates"][0]["parcel"]["external_parcel_id"] == "P-PLAN"
+    assert body["candidates"][0]["explanation"]["anchor_planning_id"] == planning.id
+    radar = client.get("/acquisition-radar", headers=headers).json()
+    assert radar["items"][0]["signals"][0]["anchor_planning_id"] == planning.id
+
+
 def test_nearby_parcel_export_is_policy_gated_safe_and_audited(
     client, db, tmp_path
 ):
@@ -562,6 +651,20 @@ def test_parcel_acquisition_case_tracks_provenance_status_and_outreach(
     assert detail.json()["follow_up_at"].startswith("2026-08-21T17:00:00")
     assert len(detail.json()["sources"]) == 1
     assert len(detail.json()["activities"]) == 1
+    radar = client.get("/acquisition-radar", headers=headers)
+    assert radar.status_code == 200, radar.text
+    assert radar.json()["summary"]["contacted_parcels"] == 1
+    assert radar.json()["summary"]["follow_up_parcels"] == 1
+    assert radar.json()["summary"]["due_follow_up_parcels"] == 1
+    scheduled = client.get("/acquisition-radar?follow_up=scheduled", headers=headers)
+    assert scheduled.status_code == 200, scheduled.text
+    assert scheduled.json()["total"] == 1
+    due = client.get("/acquisition-radar?follow_up=due", headers=headers)
+    assert due.status_code == 200, due.text
+    assert due.json()["total"] == 1
+    unscheduled = client.get("/acquisition-radar?follow_up=none", headers=headers)
+    assert unscheduled.status_code == 200, unscheduled.text
+    assert unscheduled.json()["items"] == []
     assert db.query(ParcelAcquisitionActivity).count() == 1
     assert db.query(AuditLog).filter_by(
         entity_type="parcel_acquisition_case"
@@ -693,6 +796,10 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
         "shortlisted_parcels": 1,
         "multi_opportunity_parcels": 1,
         "assigned_parcels": 0,
+        "promoted_parcels": 0,
+        "contacted_parcels": 0,
+        "follow_up_parcels": 0,
+        "due_follow_up_parcels": 0,
         "state_count": 1,
     }
     item = body["items"][0]
@@ -714,6 +821,33 @@ def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcel
     filtered = client.get("/acquisition-radar?persona=developer&review_status=candidate")
     assert filtered.status_code == 200
     assert filtered.json()["items"] == []
+    multi = client.get("/acquisition-radar?signal_overlap=multi")
+    assert multi.status_code == 200
+    assert multi.json()["total"] == 1
+    single = client.get("/acquisition-radar?signal_overlap=single")
+    assert single.status_code == 200
+    assert single.json()["items"] == []
+    zip3_match = client.get("/acquisition-radar?zip3=787")
+    assert zip3_match.status_code == 200
+    assert zip3_match.json()["total"] == 1
+    zip3_miss = client.get("/acquisition-radar?zip3=432")
+    assert zip3_miss.status_code == 200
+    assert zip3_miss.json()["items"] == []
+
+
+def test_acquisition_radar_rejects_invalid_shared_filter_values(client):
+    invalid_urls = [
+        "/acquisition-radar?follow_up=tomorrow",
+        "/acquisition-radar?signal_overlap=cross",
+        "/acquisition-radar?availability=maybe",
+        "/acquisition-radar?zip3=78",
+        "/acquisition-radar?zip3=78A",
+    ]
+
+    for url in invalid_urls:
+        response = client.get(url)
+
+        assert response.status_code == 422, url
 
 
 def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path):
@@ -802,6 +936,13 @@ def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path)
     assert body["assigned_by_user_id"] == admin_user.id
     assert body["assigned_at"]
 
+    radar = client.get("/acquisition-radar", headers=headers)
+    assert radar.status_code == 200, radar.text
+    assert radar.json()["summary"]["assigned_parcels"] == 1
+    assert radar.json()["summary"]["contacted_parcels"] == 0
+    assert radar.json()["summary"]["follow_up_parcels"] == 0
+    assert radar.json()["summary"]["due_follow_up_parcels"] == 0
+
 
 def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_path):
     org = Organization(id="default-org", name="Default Org", slug="default-org", is_active=True)
@@ -825,6 +966,14 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     headers = {"Authorization": f"Bearer {create_access_token(user_id=admin_user.id, org_id=org.id)}"}
 
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path, headers=headers)
+    # Exercise the analyst's evidence and lifecycle reads before selecting land.
+    permit_detail = client.get(f"/ingestion/permits/{match.permit_id}", headers=headers)
+    assert permit_detail.status_code == 200, permit_detail.text
+    permit_body = permit_detail.json()
+    assert permit_body["permit"]["approval_stage"] == "pre_approval"
+    assert permit_body["source_key"] == source_data["key"]
+    assert permit_body["events"]
+    assert all(event["raw_source_record_id"] for event in permit_body["events"])
     source = db.get(IngestionSource, source_data["id"])
     raw = db.query(RawSourceRecord).one()
     _add_parcel(
@@ -873,12 +1022,56 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     assert body["candidate_id"] == candidate_id
     assert body["deal"]["name"] == "125 Main St Opportunity"
     assert body["deal"]["address"] == "P-PROMOTE Congress Ave"
+    repeated = client.post(
+        f"/parcel-candidates/{candidate_id}/opportunity",
+        headers=headers,
+        json={"name": "Duplicate click should reuse existing opportunity"},
+    )
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["created"] is False
+    assert repeated.json()["deal"]["id"] == body["deal"]["id"]
+
+    radar = client.get("/acquisition-radar", headers=headers)
+    assert radar.status_code == 200, radar.text
+    assert radar.json()["summary"]["promoted_parcels"] == 1
+    assert radar.json()["summary"]["contacted_parcels"] == 0
+    assert radar.json()["summary"]["follow_up_parcels"] == 0
+    assert radar.json()["summary"]["due_follow_up_parcels"] == 0
+    assert radar.json()["items"][0]["promoted_deal_id"] == body["deal"]["id"]
 
     graph = client.get(f"/deals/{body['deal']['id']}/graph-context", headers=headers)
     assert graph.status_code == 200, graph.text
     payload = graph.json()
     assert payload["parcels"]
     assert payload["parcels"][0]["entity"]["display_name"] == "P-PROMOTE"
+
+    # Assessed land value and nearby retail activity are not listing terms or
+    # verified building facts. Promotion must not fill these screening unknowns.
+    saved_id = body["deal"]["id"]
+    saved = client.get(f"/deals/{saved_id}", headers=headers)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["source"] == "nearby_parcel_promotion"
+    screen_url = f"/deals/{saved_id}/acquisition-screen"
+    params = {"profile": "small_bay_retail", "market_city": "Austin", "market_state": "TX"}
+    screened = client.get(screen_url, headers=headers, params=params)
+    assert screened.status_code == 200, screened.text
+    criteria = {row["key"]: row for row in screened.json()["criteria"]}
+    for key in ("asking_price", "sq_ft", "year_built", "asset_type", "occupancy", "leases"):
+        assert criteria[key]["status"] == "unknown"
+        assert criteria[key]["value"] is None
+    assert criteria["market"]["status"] == "pass"
+    assert screened.json()["evidence_verified"] is False
+
+    exported = client.post(screen_url + "/export", headers=headers, params=params)
+    assert exported.status_code == 200, exported.text
+    snapshot_id = exported.headers["x-acquisition-snapshot-id"]
+    history = client.get(screen_url + "/history", headers=headers)
+    assert history.status_code == 200
+    assert history.json()["items"][0]["id"] == snapshot_id
+    archived = client.get(screen_url + f"/history/{snapshot_id}", headers=headers)
+    assert archived.content == exported.content
+    assert archived.json()["screen"]["deal_id"] == saved_id
+    assert db.query(AuditLog).filter_by(entity_id=saved_id, action="acquisition_screen_export").count() == 1
 
 
 def test_search_requires_confirmation_and_enforces_radius(client, db, tmp_path):

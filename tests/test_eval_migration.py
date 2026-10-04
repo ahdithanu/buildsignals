@@ -102,8 +102,8 @@ def test_migration_matches_model_metadata(connection):
 
 
 def test_migration_round_trip_with_data(seeded, migration):
-    assert migration.revision == "20260920_0001"
-    assert migration.down_revision == "20260915_0001"
+    assert migration.revision == "20260920_0002"
+    assert migration.down_revision == "20260920_0001"
     migration.downgrade()
     assert set(sa.inspect(seeded).get_table_names()) == {"organizations", "users"}
     migration.upgrade()

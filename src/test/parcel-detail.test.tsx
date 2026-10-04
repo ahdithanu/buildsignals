@@ -1,9 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { render, screen } from "@testing-library/react";
 
 import ParcelDetail from "@/pages/ParcelDetail";
 
+const apiMocks = vi.hoisted(() => ({
+  createAvailabilityEvidence: vi.fn(),
+}));
+
+vi.mock("@/api/parcels", () => ({
+  parcelsApi: {
+    createAvailabilityEvidence: apiMocks.createAvailabilityEvidence,
+  },
+}));
 vi.mock("@/hooks/useParcelDetail", () => ({
   useParcelDetail: vi.fn(),
 }));
@@ -14,6 +23,11 @@ vi.mock("@/contexts/AuthContext", () => ({
 import { useParcelDetail } from "@/hooks/useParcelDetail";
 
 describe("<ParcelDetail>", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    apiMocks.createAvailabilityEvidence.mockResolvedValue({ id: 'fact-new' });
+  });
+
   it("retains the closest distance when a farther hit has a better score", () => {
     (useParcelDetail as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
@@ -232,7 +246,7 @@ describe("<ParcelDetail>", () => {
     );
     expect(screen.getByText("Buyer Lens")).toBeInTheDocument();
     expect(screen.getByText("Developer")).toBeInTheDocument();
-    expect(screen.getByText("Broker")).toBeInTheDocument();
+    expect(screen.getAllByText("Broker").length).toBeGreaterThan(0);
     expect(screen.getByText("Realtor")).toBeInTheDocument();
     expect(screen.getByText("Main Street Holdings · owner")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /permit filing 22-100 · permit/i })).toHaveAttribute(
@@ -307,5 +321,62 @@ describe("<ParcelDetail>", () => {
 
     expect(screen.getByText("Boundary")).toBeInTheDocument();
     expect(screen.queryByText("No boundary geometry is attached to this parcel yet.")).not.toBeInTheDocument();
+  });
+
+  it("submits source-backed availability evidence", async () => {
+    const refetch = vi.fn();
+    (useParcelDetail as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        parcel: {
+          id: "parcel-1",
+          external_parcel_id: "PARCEL-001",
+          state: "TX",
+          address: "125 Main St",
+          latitude: 30.2672,
+          longitude: -97.7431,
+          last_verified_at: "2026-07-23T12:00:00Z",
+        },
+        facts: [],
+        search_count: 0,
+        search_hits: [],
+        graph_entity: null,
+        graph_related: [],
+        lineage_events: [],
+      },
+      isLoading: false,
+      error: null,
+      refetch,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/parcels/parcel-1"]}>
+        <Routes>
+          <Route path="/parcels/:parcelId" element={<ParcelDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByLabelText(/source url/i), {
+      target: { value: "https://broker.example/listing/PARCEL-001" },
+    });
+    fireEvent.change(screen.getByLabelText(/evidence excerpt/i), {
+      target: { value: "Broker listing marks the parcel available for sale." },
+    });
+    fireEvent.change(screen.getByLabelText(/asking price/i), {
+      target: { value: "2250000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save availability evidence/i }));
+
+    await waitFor(() => expect(apiMocks.createAvailabilityEvidence).toHaveBeenCalledWith("parcel-1", {
+      status: "for_sale",
+      evidence_type: "broker",
+      source_url: "https://broker.example/listing/PARCEL-001",
+      excerpt: "Broker listing marks the parcel available for sale.",
+      confidence: 0.85,
+      asking_price: 2250000,
+      contact_company: undefined,
+    }));
+    expect(refetch).toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Availability evidence saved.");
   });
 });

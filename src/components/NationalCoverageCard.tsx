@@ -11,6 +11,22 @@ function formatStageLabel(stage: string) {
   return stage.replace(/_/g, " ");
 }
 
+function formatReadiness(value?: string) {
+  if (!value) return "unclassified";
+  return value.replace(/_/g, " ");
+}
+
+function sourceMixLabel(counts?: Record<string, number>) {
+  const entries = Object.entries(counts ?? {}).filter(([, count]) => count > 0);
+  if (entries.length === 0) return "no typed live sources";
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([type, count]) => `${type} ${count}`)
+    .join(" · ");
+}
+
+const readinessOrder = ["investor_ready", "early_warning_ready", "live_foundation", "candidate_only", "uncovered"];
+
 export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
   const liveStageEntries = Object.entries(coverage.live_signal_stage_counts);
   const candidateStatusEntries = Object.entries(coverage.candidate_status_counts);
@@ -40,6 +56,30 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
         <Metric label="Pre-approval" value={coverage.pre_approval_source_count} />
         <Metric label="Approved only" value={coverage.approved_only_source_count} />
         <Metric label="Retailer openings" value={coverage.retailer_opening_source_count} />
+      </div>
+
+      <div className="mt-4 rounded-lg border bg-background px-3 py-3" aria-label="National readiness funnel">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-foreground">50-state readiness funnel</p>
+            <p className="text-[11px] text-muted-foreground">
+              Catalog-derived activation posture, not measured record freshness or full-market completeness
+            </p>
+          </div>
+          <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            50 states
+          </span>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {readinessOrder.map((level) => (
+            <div key={level} className="rounded-md border bg-secondary/35 px-2.5 py-2">
+              <p className="text-[10px] text-muted-foreground">{formatReadiness(level)}</p>
+              <p className="mt-1 text-base font-semibold text-foreground tabular-nums">
+                {coverage.state_readiness_counts?.[level] ?? 0}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {rolloutNow.length > 0 && (
@@ -110,9 +150,9 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
                 key={bucket.state}
                 to={`/source-health?state=${bucket.state}`}
                 className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
-                title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
+                title={`${formatReadiness(bucket.readiness_level)} · ${sourceMixLabel(bucket.live_record_type_counts)} · ${(bucket.priority_reasons ?? []).join(' · ')}`}
               >
-                {bucket.state} · {bucket.live_sources + bucket.candidate_sources}
+                {bucket.state} · {formatReadiness(bucket.readiness_level)}
               </Link>
             ))
           )}
@@ -143,7 +183,7 @@ export function NationalCoverageCard({ coverage }: NationalCoverageCardProps) {
                 className="rounded-md border bg-secondary/35 px-2.5 py-1 text-[11px] text-muted-foreground"
                 title={`${bucket.priority_score ?? 0} priority · ${(bucket.priority_reasons ?? []).join(' · ')}`}
               >
-                {bucket.state} · {bucket.candidate_sources}
+                {bucket.state} · {bucket.next_action_label ?? "Resolve candidate blocker"}
               </Link>
             ))
           )}

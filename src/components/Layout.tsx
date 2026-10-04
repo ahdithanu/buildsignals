@@ -29,8 +29,21 @@ const primaryNavigation = [
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, isDemo } = useAuth();
   const location = useLocation();
+
+  if (isDemo) {
+    return <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-40 border-b-2 border-foreground bg-card px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <BuildSignalsLogo compact />
+          <Link to="/login" onClick={() => void logout()} className="text-sm font-semibold underline">Back to sign in</Link>
+        </div>
+        <p role="status" className="mt-3 text-sm">You're viewing a read-only demo with historical Columbus data.</p>
+      </header>
+      <main>{children}</main>
+    </div>;
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background text-foreground">
@@ -64,7 +77,9 @@ export function Layout({ children }: LayoutProps) {
               <DropdownMenuItem asChild><Link to="/permit-review">Permit review</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/team">Team</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/audit">Audit log</Link></DropdownMenuItem>
+              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/evals">AI Evaluations</Link></DropdownMenuItem>}
               {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/observability">Observability</Link></DropdownMenuItem>}
+              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/prompts">Prompt registry</Link></DropdownMenuItem>}
               <DropdownMenuItem asChild><Link to="/settings">Settings</Link></DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -101,7 +116,8 @@ export function Layout({ children }: LayoutProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link to="/account">Account</Link></DropdownMenuItem>
-              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/observability">Observability</Link></DropdownMenuItem>}
+              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/evals">AI Evaluations</Link></DropdownMenuItem>}
+              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/prompts">Prompt registry</Link></DropdownMenuItem>}
               <DropdownMenuItem onSelect={() => void logout()}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

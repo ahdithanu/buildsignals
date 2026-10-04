@@ -8,10 +8,12 @@ from app.models.contact import Contact  # noqa
 from app.models.outreach_activity import OutreachActivity  # noqa
 from app.models.signal import Signal  # noqa
 from app.models.document import Document  # noqa
+from app.models.diligence_review import DiligenceReview  # noqa
 from app.models.memo import Memo  # noqa
 from app.models.pipeline_event import PipelineEvent  # noqa
 from app.models.audit_log import AuditLog  # noqa
 from app.models.buy_box import BuyBox  # noqa
+from app.models.acquisition_screen import AcquisitionScreenSnapshot  # noqa
 from app.models.deal_distribution import DealDistribution  # noqa
 from app.models.password_reset_token import PasswordResetToken  # noqa
 from app.models.graph import (  # noqa
@@ -62,4 +64,10 @@ from app.models.ingestion_onboarding import (  # noqa
     OrganizationIngestionEnrollmentSource,
 )
 from app.models.buildsignal import BuildSignalPublication, BuildSignalRevision, BuildSignalReview  # noqa: F401
+from app.models.temporal import TemporalEvent, TemporalObservation  # noqa: F401
+from app.models.permit_geocode import PermitGeocode  # noqa: F401
 from app.models.evaluation import EvalCase, EvalDataset, EvalMetric, EvalResult, EvalRun  # noqa: F401
+from app.models.prompt_registry import PromptTemplate, PromptVersion  # noqa: F401
+from app.models.api_key import OrganizationApiKey  # noqa: F401
+from app.models.api_usage import OrganizationApiKeyUsageDailyRollup, OrganizationApiKeyUsageEvent  # noqa: F401
+from app.models.webhook import WebhookDelivery, WebhookSubscription  # noqa: F401

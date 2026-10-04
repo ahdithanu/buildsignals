@@ -9,8 +9,8 @@
     "required_hosts": [],
     "sample_size": 10
   },
-  "catalog_fingerprint": "d934fae4c936abf16326fe569b1f46c221c3eea27ed79f0ab0e93841ed13e87c",
-  "manifest_digest": "0c9f4437464a111dd61ec6a8df91a1f593e641b4b7300e60e874fdb2e5cbe896",
+  "catalog_fingerprint": "1940011ba3f9ad93430e9e1e255cd721c4abe374e8882f3d6ad478c4f7e47d4a",
+  "manifest_digest": "c073515ea66829e3055a67397ae2990ea2079ed2e184a6d9ee48c37baba339cf",
   "policy_digest": "fb6ebf49f5e17c919b614f13118a7fdb38bda42244cd045b3b000f73795ee480",
   "required_hosts": [
     "anrmaps.vermont.gov",

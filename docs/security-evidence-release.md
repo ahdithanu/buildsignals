@@ -132,6 +132,9 @@ page, with permit/parcel/planning and freshness-window controls. All summary
 counts are explicitly current-page measurements, not national totals. The panel
 is organization-wide even when another part of the operations page is filtered
 to a configured state. Unknown state values are not attributed to that filter.
+The measured endpoint now returns `page_totals` for the returned source page,
+covering source count, stored records, geocoded records, collection freshness,
+source-date freshness, unknown/future source dates and observed geography counts.
 Changing record type or freshness resets pagination. Failed measurements hide
 old totals rather than presenting them as current. A missing older-backend
 endpoint produces an unavailable state, never catalog-derived fallback counts.

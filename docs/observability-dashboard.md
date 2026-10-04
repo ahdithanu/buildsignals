@@ -34,3 +34,24 @@ history grows, add `(organization_id, started_at)` and consider hourly rollups o
 materialized summaries. At a million opportunities, this query still scales with run
 history, not opportunity count. Do not add raw log or evidence payloads to the response;
 link to appropriately authorized detail pages instead.
+
+## Deployment readiness
+
+The overview response also includes a non-secret deployment readiness block for
+admin operators. It reports environment, database provider, and pass/warning/fail
+checks for production-critical switches:
+
+- Postgres-backed production data
+- CORS frontend allowlist
+- application base URL
+- backend-gated demo workspace credentials
+- shared Redis/Valkey rate limiting
+- metrics token protection
+- backend error tracking
+
+Readiness checks never return credential values. They only report whether a
+setting is configured and include the next action. For example, if the public
+demo CTA is visible but `/v1/auth/demo` returns `404`, the demo workspace check
+stays in warning state until `BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS`,
+`BUILD_SIGNALS_DEMO_EMAIL`, and `BUILD_SIGNALS_DEMO_PASSWORD` are set on the API
+service and the API is redeployed.

@@ -274,7 +274,7 @@ export default function DealInbox() {
                         <td className="px-3 py-3 text-muted-foreground hidden md:table-cell">{(deal.market || '').split(',')[0]}</td>
                         <td className="px-3 py-3 text-muted-foreground hidden lg:table-cell">{deal.assetClass}</td>
                         <td className="px-3 py-3 text-right font-medium tabular-nums hidden sm:table-cell">{formatCurrency(deal.askingPrice)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-muted-foreground hidden xl:table-cell">{formatCurrency(deal.noi)}</td>
+                        <td className="px-3 py-3 text-right tabular-nums text-muted-foreground hidden xl:table-cell">{deal.noi == null ? 'Not calculated' : formatCurrency(deal.noi)}</td>
                         <td className="px-3 py-3 text-center"><DealScoreBadge score={deal.dealScore} /></td>
                         <td className="px-3 py-3 hidden md:table-cell"><StatusBadge status={deal.status} label={stageLabels[deal.status]} /></td>
                         <td className="px-3 py-3 text-muted-foreground text-xs hidden xl:table-cell">{deal.lastUpdated}</td>

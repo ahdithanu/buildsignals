@@ -265,6 +265,7 @@ graph path traversal so distance queries use spatial indexes.
 ## API Shape
 
 - `POST /deals/{deal_id}/nearby-parcel-searches`
+- `POST /deals/{deal_id}/planning-records/{planning_record_id}/nearby-parcel-searches`
 - `GET /deals/{deal_id}/nearby-parcel-searches`
 - `GET /nearby-parcel-searches/{search_id}`
 - `POST /nearby-parcel-searches/{search_id}/export`
@@ -284,9 +285,10 @@ score confidence, top reasons, cautions, source freshness, and map geometry.
 
 The opportunity page currently includes a `Nearby Parcels` panel with bounded
 radius, buyer lens, evidence freshness, and shortlist/dismiss actions. The
-panel can start from a geocoded pre-approval retailer signal or a confirmed
-signal, and confirmed opportunity creation now seeds the same parcel context
-automatically for linked deals. The implemented workspace includes:
+panel can start from a geocoded pre-approval retailer signal, a confirmed
+signal, or a geocoded planning record from the opportunity's market. Confirmed
+opportunity creation now seeds the same parcel context automatically for linked
+deals. The implemented workspace includes:
 
 - map and synchronized sortable result table
 - radius control capped at 5 miles
@@ -301,13 +303,29 @@ signal confidence, repeated opportunity exposure, review state, and freshness.
 It is also the team queue for canonical case status, assignment, outreach,
 follow-up, pagination, and explicit opportunity promotion.
 
+Radar now exposes the daily acquisition workflow as first-class filtered work:
+alert intake, evidence review, shortlist review, owner assignment, outreach,
+due follow-up, and saved opportunity. Filters are URL-backed for handoff and
+demo workflows: `follow_up=due|scheduled|none`,
+`signal_overlap=multi|single`, `availability=verified|unverified`, and
+`zip3=NNN` sit alongside market, buyer-lens, status, assignment, and text
+search filters. ZIP3 heat cards can now focus the Radar queue on parcels whose
+postal code begins with the selected market-cluster prefix.
+
+The `availability=verified` path requires source-backed listing, broker, owner,
+auction, or explicit availability evidence stored as a current parcel fact with
+recognized status, confidence, and source URL or excerpt. Parcels found only
+because they are near a permit, planning record, or retailer signal remain
+nearby candidates and are labeled separately from verified sale availability.
+
 No parcel becomes an opportunity automatically. Promotion is an explicit user
 action that preserves the originating search, ranking version, and evidence.
 
 ## Phase 2 Definition Of Done
 
-1. An operator can run a 0.25-5 mile search from a confirmed signal property or
-   a geocoded pre-approval retailer signal linked to the opportunity.
+1. An operator can run a 0.25-5 mile search from a confirmed signal property,
+   a geocoded pre-approval retailer signal linked to the opportunity, or a
+   geocoded planning record from the opportunity's market.
 2. Results use official parcel identities and spatially indexed distance.
 3. Every candidate shows explainable developer, investor, or broker relevance.
 4. Ownership, zoning, improvement, and transaction facts retain provenance and

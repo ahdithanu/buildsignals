@@ -230,9 +230,9 @@ export default function MemoGenerator() {
                     <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">Key Metrics</h3>
                     <div className="grid grid-cols-4 gap-3">
                       {[
-                        { label: 'IRR', value: `${deal.projectedIrr ?? 0}%` },
-                        { label: 'Equity Multiple', value: `${deal.equityMultiple ?? 0}x` },
-                        { label: 'Cash on Cash', value: `${deal.cashOnCash ?? 0}%` },
+                        { label: 'IRR', value: deal.projectedIrr == null ? 'Not calculated' : `${deal.projectedIrr}%` },
+                        { label: 'Equity Multiple', value: deal.equityMultiple == null ? 'Not calculated' : `${deal.equityMultiple}x` },
+                        { label: 'Cash on Cash', value: deal.cashOnCash == null ? 'Not calculated' : `${deal.cashOnCash}%` },
                         { label: 'Deal Score', value: `${deal.dealScore ?? 0}/100` },
                       ].map((m, i) => (
                         <div key={i} className="rounded-lg bg-secondary/50 p-3 text-center">

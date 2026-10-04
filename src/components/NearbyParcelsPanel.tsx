@@ -6,10 +6,13 @@ import { useOrganizationMembers } from '@/hooks/useOrganizationMembers';
 import { usePermitBrandMatches } from '@/hooks/usePermitBrandMatches';
 import { useNearbyParcels } from '@/hooks/useNearbyParcels';
 import { useToast } from '@/hooks/use-toast';
+import { usePlanningSignals } from '@/hooks/usePlanningSignals';
 import { ApiError } from '@/api/client';
 import { safeSourceUrl } from '@/lib/sourceUrl';
 import { ParcelMap, type ParcelMapPoint, type ParcelMapPointTone } from '@/components/ParcelMap';
+import type { Deal } from '@/types/deal';
 import type { NearbyParcelCandidate, ParcelPersona } from '@/types/parcel';
+import type { PlanningRecord } from '@/types/planning';
 
 const PERSONAS: Array<{ value: ParcelPersona; label: string }> = [
   { value: 'developer', label: 'Developer' },
@@ -44,6 +47,17 @@ function anchorLabel(match: {
       : match.review_status;
   const location = match.permit.address || match.permit.application_number || 'Signal';
   return `${match.brand.name} · ${location} · ${stage} · ${review}`;
+}
+
+function planningAnchorLabel(record: PlanningRecord) {
+  const stage = record.stage ? record.stage.replace(/_/g, ' ') : 'planning';
+  const location = record.address || [record.city, record.state].filter(Boolean).join(', ') || record.jurisdiction || 'Location pending';
+  return `${record.title} · ${location} · ${stage}`;
+}
+
+function marketParts(deal?: Deal) {
+  const [city = '', state = ''] = (deal?.market || '').split(',').map((part) => part.trim());
+  return { city, state };
 }
 
 function CandidateRow({
@@ -232,19 +246,25 @@ function CandidateRow({
   );
 }
 
-export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
+export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefined; deal?: Deal }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, organizationId, role } = useAuth();
   const { data: matches = [] } = usePermitBrandMatches(dealId);
+  const dealMarket = marketParts(deal);
+  const { data: planningRecords = [] } = usePlanningSignals({
+    state: dealMarket.state || undefined,
+    city: dealMarket.city || undefined,
+    limit: 25,
+  });
   const { data: members = [] } = useOrganizationMembers(organizationId);
   const [persona, setPersona] = useState<ParcelPersona>('developer');
   const [minimumLandAreaSqFt, setMinimumLandAreaSqFt] = useState('');
   const [zoningCodes, setZoningCodes] = useState('');
   const [landUses, setLandUses] = useState('');
   const [resultLimit, setResultLimit] = useState(50);
-  const { history, search, create, review, assign, promote, exportSearch } = useNearbyParcels(dealId, persona);
-  const anchors = useMemo(
+  const { history, search, create, createFromPlanning, review, assign, promote, exportSearch } = useNearbyParcels(dealId, persona);
+  const permitAnchors = useMemo(
     () => matches.filter((match) =>
       (match.review_status === 'confirmed' || (
         match.review_status === 'candidate'
@@ -254,15 +274,41 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
       && match.permit.longitude != null),
     [matches],
   );
+  const planningAnchors = useMemo(
+    () => planningRecords.filter((record) => record.latitude != null && record.longitude != null),
+    [planningRecords],
+  );
+  const anchors = useMemo(() => [
+    ...permitAnchors.map((match) => ({
+      kind: 'permit' as const,
+      id: match.id,
+      value: `permit:${match.id}`,
+      label: anchorLabel(match),
+      latitude: match.permit.latitude as number,
+      longitude: match.permit.longitude as number,
+      centerLabel: match.permit.address || match.permit.application_number || 'Signal anchor',
+      subtitle: match.brand.name,
+    })),
+    ...planningAnchors.map((record) => ({
+      kind: 'planning' as const,
+      id: record.id,
+      value: `planning:${record.id}`,
+      label: planningAnchorLabel(record),
+      latitude: record.latitude as number,
+      longitude: record.longitude as number,
+      centerLabel: record.address || record.title || 'Planning anchor',
+      subtitle: record.governing_body || record.jurisdiction || 'Planning record',
+    })),
+  ], [permitAnchors, planningAnchors]);
   const [anchorId, setAnchorId] = useState('');
   const [radius, setRadius] = useState(2);
   useEffect(() => {
-    if (!anchors.some(match => match.id === anchorId)) setAnchorId(anchors[0]?.id || '');
+    if (!anchors.some(anchor => anchor.value === anchorId)) setAnchorId(anchors[0]?.value || '');
   }, [anchorId, anchors]);
 
   const latest = search.data;
   const bestCandidate = latest?.candidates[0];
-  const activeAnchor = anchors.find((match) => match.id === anchorId) || anchors[0];
+  const activeAnchor = anchors.find((anchor) => anchor.value === anchorId) || anchors[0];
   const savedAnchor = matches.find(match => match.id === latest?.anchor_brand_match_id);
   const mapPoints: ParcelMapPoint[] = latest?.candidates.map((candidate, index) => ({
     id: candidate.id,
@@ -275,7 +321,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
     boundary: candidate.parcel.boundary_geometry ?? undefined,
   })) ?? [];
   const isLoading = history.isLoading || (!!history.data?.length && search.isLoading);
-  const error = create.error || history.error || search.error;
+  const error = create.error || createFromPlanning.error || history.error || search.error;
   const canManage = role === 'admin' || role === 'editor';
   const canExport = canManage && !!latest && latest.candidates.length > 0;
   const parseDelimitedList = (value: string) =>
@@ -341,6 +387,30 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
   const parsedZoningCodes = parseDelimitedList(zoningCodes);
   const parsedLandUses = parseDelimitedList(landUses);
   const parsedResultLimit = Number.isFinite(resultLimit) ? Math.min(Math.max(Math.trunc(resultLimit), 1), 100) : 50;
+  const parcelSearchPayload = {
+    radius_miles: radius,
+    persona,
+    limit: parsedResultLimit,
+    minimum_land_area_sq_ft: parsedMinimumLandAreaSqFt,
+    zoning_codes: parsedZoningCodes,
+    land_uses: parsedLandUses,
+  };
+  const searchPending = create.isPending || createFromPlanning.isPending;
+
+  function handleSearch() {
+    if (!activeAnchor) return;
+    if (activeAnchor.kind === 'planning') {
+      createFromPlanning.mutate({
+        planningRecordId: activeAnchor.id,
+        payload: parcelSearchPayload,
+      });
+      return;
+    }
+    create.mutate({
+      anchor_brand_match_id: activeAnchor.id,
+      ...parcelSearchPayload,
+    });
+  }
 
   return (
     <div id="nearby-parcels" className="rounded-lg border bg-card p-4 md:p-5 card-shadow">
@@ -398,9 +468,9 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
                 onChange={(event) => setAnchorId(event.target.value)}
                 className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm text-foreground"
               >
-                {anchors.map((match) => (
-                  <option key={match.id} value={match.id}>
-                    {anchorLabel(match)}
+                {anchors.map((anchor) => (
+                  <option key={anchor.value} value={anchor.value}>
+                    {anchor.kind === 'planning' ? 'Planning · ' : 'Permit · '}{anchor.label}
                   </option>
                 ))}
               </select>
@@ -421,16 +491,8 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
             type="button"
             title="Search nearby parcels"
             aria-label="Search nearby parcels"
-            disabled={!canManage || !anchorId || create.isPending}
-            onClick={() => create.mutate({
-              anchor_brand_match_id: anchorId,
-              radius_miles: radius,
-              persona,
-              limit: parsedResultLimit,
-              minimum_land_area_sq_ft: parsedMinimumLandAreaSqFt,
-              zoning_codes: parsedZoningCodes,
-              land_uses: parsedLandUses,
-            })}
+            disabled={!canManage || !activeAnchor || searchPending}
+            onClick={handleSearch}
             className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground transition-opacity disabled:opacity-50"
           >
             <Search className="h-4 w-4" />
@@ -490,10 +552,10 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
               title="Search Map"
               subtitle={latest ? `Saved search · Radius ${latest.radius_miles.toFixed(2)} mi · ${latest.persona} lens` : `Radius ${radius.toFixed(2)} mi · ${persona} lens`}
               center={{
-                label: latest ? (savedAnchor?.permit.address || 'Saved search anchor') : (activeAnchor.permit.address || activeAnchor.permit.application_number || 'Signal anchor'),
-                latitude: latest?.anchor_latitude ?? activeAnchor.permit.latitude,
-                longitude: latest?.anchor_longitude ?? activeAnchor.permit.longitude,
-                subtitle: latest ? savedAnchor?.brand.name : activeAnchor.brand.name,
+                label: latest ? (savedAnchor?.permit.address || 'Saved search anchor') : activeAnchor.centerLabel,
+                latitude: latest?.anchor_latitude ?? activeAnchor.latitude,
+                longitude: latest?.anchor_longitude ?? activeAnchor.longitude,
+                subtitle: latest ? savedAnchor?.brand.name : activeAnchor.subtitle,
               }}
               radiusMiles={latest?.radius_miles ?? radius}
               points={mapPoints}
@@ -506,7 +568,7 @@ export function NearbyParcelsPanel({ dealId }: { dealId: string | undefined }) {
       {isLoading && <p className="text-sm text-muted-foreground">Loading parcel context...</p>}
       {error && <p className="text-sm text-destructive">Parcel search is unavailable.</p>}
       {!isLoading && !error && anchors.length === 0 && (
-        <p className="text-sm text-muted-foreground">Pick a geocoded pre-approval or confirmed signal to search nearby parcels.</p>
+        <p className="text-sm text-muted-foreground">Pick a geocoded permit, pre-approval, or planning signal to search nearby parcels.</p>
       )}
       {!isLoading && !error && anchors.length > 0 && !latest && (
         <p className="text-sm text-muted-foreground">No parcel search has been run for this opportunity.</p>

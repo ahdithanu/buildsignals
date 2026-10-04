@@ -1,4 +1,27 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const LOCAL_API_BASE_URL = 'http://localhost:8000';
+
+interface ApiBaseUrlOptions {
+  configuredUrl?: string;
+  isProduction?: boolean;
+  sameOrigin?: boolean;
+}
+
+/**
+ * Production defaults to the same-origin Vercel proxy. Besides avoiding a
+ * cross-origin dependency, this keeps the httpOnly refresh cookie first-party
+ * so browsers can restore a session after a reload. Non-Vercel production
+ * deployments can opt out with VITE_API_SAME_ORIGIN=false.
+ */
+export function resolveApiBaseUrl({
+  configuredUrl = import.meta.env.VITE_API_BASE_URL,
+  isProduction = import.meta.env.PROD,
+  sameOrigin = import.meta.env.VITE_API_SAME_ORIGIN !== 'false',
+}: ApiBaseUrlOptions = {}): string {
+  if (isProduction && sameOrigin) return '';
+  return configuredUrl?.trim().replace(/\/$/, '') || LOCAL_API_BASE_URL;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Current API major version. All requests below are prepended with this so a

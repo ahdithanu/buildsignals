@@ -36,7 +36,7 @@ const server = http.createServer((request, response) => {
       let signedIn = false;
       let measurementFails = false;
       const measurements = [];
-      await context.route('https://buildsignals-api.onrender.com/**', async route => {
+      const handleApiRoute = async route => {
         const url = new URL(route.request().url());
         let status = 401;
         let body = { detail: 'Invalid authenticator code' };
@@ -60,6 +60,15 @@ const server = http.createServer((request, response) => {
             scope: 'Synthetic QA records for this organization, not statewide completeness.',
             count_semantics: 'Source-local counts; overlapping sources are not deduplicated.',
             warnings: ['Collection time is not source freshness.', 'Parcel records do not establish for-sale availability.'],
+            page_totals: offset ? {
+              source_count: 0, stored_records: 0, geocoded_records: 0, recently_seen_records: 0,
+              unknown_source_date_records: 0, future_source_date_records: 0,
+              recent_source_date_records: 0, observed_state_count: 0, observed_jurisdiction_count: 0,
+            } : {
+              source_count: 1, stored_records: 100, geocoded_records: 80, recently_seen_records: 70,
+              unknown_source_date_records: 40, future_source_date_records: 1,
+              recent_source_date_records: 12, observed_state_count: 1, observed_jurisdiction_count: 2,
+            },
             sources: offset ? [] : [{
               source_id: 'synthetic-source', source_key: 'synthetic_county_planning_and_permit_submissions',
               configured_active: true, configured_jurisdiction: 'Synthetic county, TX', stored_records: 100,
@@ -78,7 +87,9 @@ const server = http.createServer((request, response) => {
           headers: { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true',
             'Access-Control-Allow-Headers': 'content-type,authorization', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' },
           contentType: 'application/json', body: route.request().method() === 'OPTIONS' ? '' : JSON.stringify(body) });
-      });
+      };
+      await context.route(`${origin}/v1/**`, handleApiRoute);
+      await context.route('https://buildsignals-api.onrender.com/**', handleApiRoute);
       await context.addInitScript(() => {
         window.policyViolations = [];
         document.addEventListener('securitypolicyviolation', event => window.policyViolations.push(event.effectiveDirective));
@@ -117,7 +128,7 @@ const server = http.createServer((request, response) => {
       await panel.getByText('Parcel inventory is not verified for-sale inventory.').waitFor();
       assert.equal(measurements.at(-1).offset, '0');
       await panel.getByLabel('Freshness window').selectOption('24');
-      await panel.getByText('Collected (24h)', { exact: true }).waitFor();
+      await panel.getByLabel('Current page measurements').getByText('Collected (24h)', { exact: true }).waitFor();
       assert.equal(measurements.at(-1).freshness_hours, '24');
       measurementFails = true;
       await panel.getByRole('button', { name: 'Refresh measured inventory' }).click();

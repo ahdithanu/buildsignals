@@ -125,7 +125,7 @@ describe("<PermitBrandReview>", () => {
 
     const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
     expect(hook).toHaveBeenCalled();
-    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({
+    expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({
       approval_stage: "approved",
       review_status: "candidate",
       sort_by: "freshness",
@@ -151,7 +151,7 @@ describe("<PermitBrandReview>", () => {
     );
 
     const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
-    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({ cohort: "major_builder" });
+    expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({ cohort: "major_builder" });
     expect(screen.getByRole("heading", { name: "Major Builder Review" })).toBeInTheDocument();
   });
 
@@ -173,7 +173,7 @@ describe("<PermitBrandReview>", () => {
     );
 
     const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
-    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({
+    expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({
       freshness: "stale",
       sort_by: "freshness",
       review_status: "candidate",
@@ -200,7 +200,7 @@ describe("<PermitBrandReview>", () => {
     );
 
     const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
-    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({
+    expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({
       detection_method: "historical_party",
       review_status: "candidate",
       limit: 100,
@@ -212,7 +212,7 @@ describe("<PermitBrandReview>", () => {
     await waitFor(() => {
       expect(screen.getByTestId("location-probe")).toHaveTextContent("detection_method=direct_alias");
     });
-    expect(hook.mock.calls.at(-1)?.[0]).toMatchObject({ detection_method: "direct_alias" });
+    expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({ detection_method: "direct_alias" });
   });
 
   it("syncs the filter state back into the queue URL", async () => {

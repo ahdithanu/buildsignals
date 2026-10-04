@@ -59,16 +59,21 @@ npm run dev
 ```
 
 The frontend talks to `http://localhost:8000` by default
-(`VITE_API_BASE_URL`). All API routes are versioned under `/v1`.
+(`VITE_API_BASE_URL`). All API routes are versioned under `/v1`. Production on
+Vercel uses the checked-in same-origin `/v1` proxy so refresh cookies remain
+first-party; set `VITE_API_SAME_ORIGIN=false` only on a host without that proxy.
+Public authentication pages render immediately while session restoration runs,
+so an API cold start cannot trap new users behind a loading screen.
 
 ### Production frontend (Vercel)
 
 This repository is the canonical source for both the Build Signals frontend and
 backend. Vercel builds the React/Vite application from the repository root
-using `vercel.json` and publishes `dist/`. Set `VITE_API_BASE_URL` to the HTTPS
-origin of the production FastAPI service before promoting a preview. The
-separate `deal-signal-terminal` repository is superseded and receives no new
-product work. See [`docs/adr/003-unified-product-repository.md`](docs/adr/003-unified-product-repository.md).
+using `vercel.json` and publishes `dist/`. The same file proxies `/v1` to the
+production FastAPI service, preventing the refresh token from becoming a
+third-party cookie. The separate `deal-signal-terminal` repository is
+superseded and receives no new product work. See
+[`docs/adr/003-unified-product-repository.md`](docs/adr/003-unified-product-repository.md).
 
 ---
 
@@ -164,7 +169,7 @@ captured-output evaluation, metric limitations, and deployment instructions.
 | [docs/slo.md](docs/slo.md) | Service level objectives + error budget |
 | [docs/enterprise_readiness.md](docs/enterprise_readiness.md) | Production readiness checklist (living tracker) |
 | [docs/monitoring.md](docs/monitoring.md) | Dashboards, alerts, uptime setup |
-| [docs/observability-dashboard.md](docs/observability-dashboard.md) | Tenant-scoped evaluation and ingestion health |
+| [docs/prompt-registry.md](docs/prompt-registry.md) | Tenant-scoped prompt versioning, preview, and activation boundaries |
 | [docs/staging.md](docs/staging.md) | Staging environment policy |
 | [docs/runbooks/staging-deploy.md](docs/runbooks/staging-deploy.md) | One-time Render staging blueprint setup |
 | [infra/README.md](infra/README.md) | Uptime URL config + staging env hints |

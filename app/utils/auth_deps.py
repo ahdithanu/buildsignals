@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
+from app.services.demo_access import is_demo_identity, valid_demo_claims
 from app.services.security import decode_access_token
 from app.utils.org_scope import RequestContext
 
@@ -59,6 +60,8 @@ def get_current_user(
     org_id = claims.get("org_id")
     if not user_id or not org_id:
         raise HTTPException(status_code=401, detail="Token missing required claims")
+    if is_demo_identity(claims) and not valid_demo_claims(claims):
+        raise HTTPException(status_code=401, detail="Invalid demo session")
 
     user = db.get(User, user_id)
     if not user or not user.is_active:
@@ -83,6 +86,7 @@ def get_current_user(
         "org_id": org_id,
         "user_id": user_id,
         "role": membership.role.value,
+        "is_demo": claims.get("demo") is True,
     }
 
 
