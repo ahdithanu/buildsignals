@@ -549,6 +549,11 @@ application, production diagnostics, and release coverage measurement.
   preserves the selected record type, readiness status, and freshness window for
   reviewer handoff.
 - [ ] Verify these diagnostics against the authenticated production workspace.
+  Authenticated post-deploy smoke now exercises the measured inventory endpoint
+  for permit, parcel, and planning record types and verifies the no-fabrication
+  response shape (`page_totals`, `readiness`, `readiness_status_counts`, and
+  source arrays). It still allows empty results; real inventory counts remain a
+  separate production measurement receipt.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved
   searches. Verified desktop/mobile with synthetic test data, not live inventory.

@@ -82,6 +82,10 @@ Frontend tests cover page/filter changes, loading/error/retry and organization
 changes. The authenticated browser regression covers a new empty organization;
 the CSP smoke test uses synthetic populated data at mobile, tablet and desktop
 widths. None of those synthetic counts are production coverage evidence.
+The authenticated post-deploy smoke script also checks permit, parcel and
+planning measured-inventory responses for the expected shape. That smoke allows
+empty responses by design; it proves the deployed API contract is reachable, not
+that live records exist.
 The focused coverage-panel regression also verifies the production readiness
 rollup and observed-state source-page rollup, while guarding against presenting
 either as nationwide coverage.
