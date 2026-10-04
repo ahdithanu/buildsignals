@@ -27,6 +27,8 @@ class MeasuredSourceCoverage(BaseModel):
     configured_active: bool
     configured_jurisdiction: str | None
     stored_records: int
+    readiness_status: str
+    readiness_reasons: list[str]
     observed_states: list[ObservedStateCoverage]
 
 

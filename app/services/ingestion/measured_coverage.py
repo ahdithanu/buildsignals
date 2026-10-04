@@ -133,6 +133,37 @@ def _jurisdiction_rollup(db, model, *, state, valid_coordinate, cutoff: datetime
     return [dict(row._mapping) for row in rows]
 
 
+def _source_readiness(source: IngestionSource, rows: list[dict]) -> tuple[str, list[str]]:
+    stored = sum(row["stored_records"] for row in rows)
+    recent_collection = sum(row["recently_seen_records"] for row in rows)
+    recent_source_date = sum(row["recent_source_date_records"] for row in rows)
+    unknown_source_dates = sum(row["unknown_source_date_records"] for row in rows)
+    geocoded = sum(row["geocoded_records"] for row in rows)
+    reasons: list[str] = []
+    if not source.is_active:
+        reasons.append("collection disabled")
+    if stored == 0:
+        reasons.append("no stored records measured")
+        return "empty", reasons
+    if recent_collection == 0:
+        reasons.append("no recent collection evidence")
+    if recent_source_date == 0:
+        reasons.append("no recent source-date evidence")
+    if unknown_source_dates > 0:
+        reasons.append("some records have unknown source dates")
+    if geocoded == 0:
+        reasons.append("no valid coordinates measured")
+    if not source.is_active:
+        return "disabled", reasons
+    if recent_collection == 0:
+        return "stale_collection", reasons
+    if recent_source_date == 0:
+        return "stale_source_date", reasons
+    if unknown_source_dates > 0:
+        return "unknown_source_date", reasons
+    return "fresh", reasons
+
+
 def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
                       freshness_hours: int = 72, now: datetime | None = None) -> dict:
     if record_type not in MODELS or not 1 <= limit <= 100 or offset < 0 or not 1 <= freshness_hours <= 8760:
@@ -193,10 +224,19 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
             db, model, state=state, valid_coordinate=valid_coordinate,
             cutoff=cutoff, now=now, source_ids=all_ids,
         ),
-        "sources": [{"source_id": source.id, "source_key": source.key,
-                     "configured_active": source.is_active, "configured_jurisdiction": source.jurisdiction,
-                     "stored_records": sum(row["stored_records"] for row in by_source.get(source.id, [])),
-                     "observed_states": by_source.get(source.id, [])} for source in sources],
+        "sources": [
+            {
+                "source_id": source.id,
+                "source_key": source.key,
+                "configured_active": source.is_active,
+                "configured_jurisdiction": source.jurisdiction,
+                "stored_records": sum(row["stored_records"] for row in by_source.get(source.id, [])),
+                "readiness_status": _source_readiness(source, by_source.get(source.id, []))[0],
+                "readiness_reasons": _source_readiness(source, by_source.get(source.id, []))[1],
+                "observed_states": by_source.get(source.id, []),
+            }
+            for source in sources
+        ],
         "warnings": ["Last seen is collection evidence, not source publication freshness.",
                      "Coordinate extents bound observed points only; they do not imply complete coverage inside the bounds.",
                      "Unknown source dates and geography remain unknown; no catalog fallback is used.",

@@ -70,6 +70,10 @@ def test_counts_are_measured_scoped_and_do_not_confuse_collection_with_freshness
     assert report["readiness_jurisdictions"][0]["stored_records"] == 1
     assert report["readiness_jurisdictions"][0]["source_count"] == 1
     assert report["sources"][0]["stored_records"] == 0
+    assert report["sources"][0]["readiness_status"] == "empty"
+    assert "no stored records measured" in report["sources"][0]["readiness_reasons"]
+    assert report["sources"][1]["readiness_status"] == "stale_source_date"
+    assert "no recent source-date evidence" in report["sources"][1]["readiness_reasons"]
     states = report["sources"][1]["observed_states"]
     assert {s["state"] for s in states} == {None, "FL"}
     assert sum(s["geocoded_records"] for s in states) == 1

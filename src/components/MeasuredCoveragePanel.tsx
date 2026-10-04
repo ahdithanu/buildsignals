@@ -25,6 +25,15 @@ function Metric({ label, value }: { label: string; value: number }) {
   return <div className="min-w-0"><dt className="text-[11px] text-muted-foreground">{label}</dt><dd className="text-sm font-semibold tabular-nums">{number.format(value)}</dd></div>;
 }
 
+const sourceStatusLabels: Record<string, string> = {
+  fresh: 'Fresh',
+  empty: 'Empty',
+  disabled: 'Disabled',
+  stale_collection: 'Stale collection',
+  stale_source_date: 'Stale source date',
+  unknown_source_date: 'Unknown source dates',
+};
+
 function StateMeasurements({ state, hours }: { state: ObservedStateCoverage; hours: number }) {
   return (
     <div className="border-t border-border/60 py-3">
@@ -222,6 +231,10 @@ export function MeasuredCoveragePanel() {
                     <div className="min-w-0 flex-1">
                       <Link className="break-words text-xs font-medium text-primary underline-offset-4 hover:underline [overflow-wrap:anywhere]" to={`/source-health/sources/${encodeURIComponent(source.source_id)}`}>{source.source_key}</Link>
                       <p className="mt-1 text-[11px] text-muted-foreground">Configured jurisdiction: {source.configured_jurisdiction ?? 'Unknown'} | {source.configured_active ? 'Collection enabled' : 'Collection disabled'}</p>
+                      <p className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                        <span className="border px-1.5 py-0.5 font-medium text-foreground">{sourceStatusLabels[source.readiness_status] ?? source.readiness_status}</span>
+                        {source.readiness_reasons.slice(0, 3).map(reason => <span key={reason}>{reason}</span>)}
+                      </p>
                     </div>
                     <span className="text-xs tabular-nums">{number.format(source.stored_records)} stored records</span>
                   </div>

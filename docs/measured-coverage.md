@@ -19,6 +19,9 @@ deriving broader coverage claims in the browser.
 It also returns `readiness_states`, an all-source observed state/DC breakdown for
 the selected record type, and `readiness_jurisdictions`, a bounded top local
 jurisdiction/city-style rollup. Unknown geography stays explicit.
+Each returned source includes a `readiness_status` and short
+`readiness_reasons` so operators can distinguish empty, disabled, stale, fresh
+and unknown-date sources without inferring from raw counts.
 
 ## API and Semantics
 
@@ -49,6 +52,8 @@ jurisdiction/city-style rollup. Unknown geography stays explicit.
 - `page_totals` is scoped to the returned source page and request filters. It is
   not a tenant-wide total unless the caller has paginated through every page and
   retained the same query parameters.
+- Source-level readiness statuses are operational triage labels. They do not
+  certify source rights, provider uptime, or market completeness.
 
 The UI hides unconfirmed totals when measurement fails, provides retry and bounded
 pagination, and keys queries by organization and all parameters. The surrounding

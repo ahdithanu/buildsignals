@@ -91,6 +91,8 @@ function report(params: Partial<MeasuredCoverageParams> = {}): MeasuredCoverage 
     sources: [{
       source_id: 'source-a', source_key: 'county_public_records', configured_active: true,
       configured_jurisdiction: 'County, TX', stored_records: 100,
+      readiness_status: 'unknown_source_date',
+      readiness_reasons: ['some records have unknown source dates'],
       observed_states: [{
         state: 'TX', stored_records: 100, geocoded_records: 80, recently_seen_records: 70,
         recent_source_date_records: 12, unknown_source_date_records: 40, future_source_date_records: 1,
@@ -132,6 +134,8 @@ describe('MeasuredCoveragePanel', () => {
     expect(within(source).getByText('Source updated (72h)').nextElementSibling).toHaveTextContent('12');
     expect(within(source).getByText('Unknown source date').nextElementSibling).toHaveTextContent('40');
     expect(within(source).getByText('Future source date').nextElementSibling).toHaveTextContent('1');
+    expect(within(source).getByText('Unknown source dates')).toBeInTheDocument();
+    expect(within(source).getByText('some records have unknown source dates')).toBeInTheDocument();
     expect(screen.getByText('Stored records on this page')).toBeInTheDocument();
     const readiness = screen.getByRole('region', { name: 'Production ingestion readiness' });
     expect(within(readiness).getByText('4 configured sources')).toBeInTheDocument();
@@ -205,11 +209,20 @@ describe('MeasuredCoveragePanel', () => {
     empty.has_more = false;
     empty.readiness_states = [];
     empty.readiness_jurisdictions = [];
-    empty.sources[0] = { ...empty.sources[0], stored_records: 0, observed_states: [], configured_active: false };
+    empty.sources[0] = {
+      ...empty.sources[0],
+      stored_records: 0,
+      readiness_status: 'empty',
+      readiness_reasons: ['collection disabled', 'no stored records measured'],
+      observed_states: [],
+      configured_active: false,
+    };
     vi.mocked(ingestionApi.measuredCoverage).mockResolvedValue(empty);
     setup();
     await screen.findByText('0 stored records');
     expect(screen.getByText('No stored records measured.')).toBeInTheDocument();
+    expect(screen.getByText('Empty')).toBeInTheDocument();
+    expect(screen.getByText('no stored records measured')).toBeInTheDocument();
     expect(screen.getByText(/Collection disabled/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next source page' })).toBeDisabled();
     expect(screen.queryByText('TX', { exact: true })).not.toBeInTheDocument();

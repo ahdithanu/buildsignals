@@ -415,6 +415,8 @@ export interface MeasuredSourceCoverage {
   configured_active: boolean;
   configured_jurisdiction: string | null;
   stored_records: number;
+  readiness_status: string;
+  readiness_reasons: string[];
   observed_states: ObservedStateCoverage[];
 }
 
