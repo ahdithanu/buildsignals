@@ -545,7 +545,8 @@ application, production diagnostics, and release coverage measurement.
   Readiness status counts are server-provided in the same no-store measured
   response and render as clickable audit buckets, so reviewers can jump directly
   to empty, stale, disabled, or unknown-date source lists without inferring from
-  raw source rows.
+  raw source rows. The panel now includes a `Copy measured view` action that
+  preserves the selected record type and readiness status for reviewer handoff.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

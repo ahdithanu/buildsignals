@@ -1,8 +1,9 @@
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import { useMeasuredCoverage } from '@/hooks/useMeasuredCoverage';
 import type { CoverageRecordType, MeasuredCoverageParams, MeasuredReadinessStatus, ObservedStateCoverage } from '@/types/ingestion';
 
@@ -80,6 +81,8 @@ function StateMeasurements({ state, hours }: { state: ObservedStateCoverage; hou
 
 export function MeasuredCoveragePanel() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const { toast } = useToast();
   const recordTypeParam = searchParams.get('record_type');
   const statusParam = searchParams.get('readiness_status');
   const [recordType, setRecordType] = useState<CoverageRecordType>(() => queryRecordType(searchParams.get('record_type')));
@@ -135,6 +138,17 @@ export function MeasuredCoveragePanel() {
     setSearchParams(next, { replace: true });
   }
 
+  async function copyMeasuredViewLink() {
+    const queryString = searchParams.toString();
+    const url = `${window.location.origin}${location.pathname}${queryString ? `?${queryString}` : ''}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Measured inventory link copied' });
+    } catch {
+      toast({ title: 'Measured inventory link was not copied', variant: 'destructive' });
+    }
+  }
+
   return (
     <section className="min-w-0 border-y py-5" aria-label="Measured ingestion inventory" aria-busy={isFetching}>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -158,6 +172,7 @@ export function MeasuredCoveragePanel() {
               {sourceStatusOptions.map(option => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
             </select>
           </label>
+          <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => void copyMeasuredViewLink()}><Copy className="h-4 w-4" />Copy measured view</Button>
           <TooltipProvider><Tooltip><TooltipTrigger asChild>
             <Button size="icon" variant="outline" className="h-9 w-9" aria-label="Refresh measured inventory" disabled={isFetching} onClick={() => void refetch()}><RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} /></Button>
           </TooltipTrigger><TooltipContent>Refresh measured inventory</TooltipContent></Tooltip></TooltipProvider>

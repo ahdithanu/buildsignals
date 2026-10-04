@@ -21,13 +21,18 @@ the selected record type, and `readiness_jurisdictions`, a bounded top local
 jurisdiction/city-style rollup. Unknown geography stays explicit.
 Each returned source includes a `readiness_status` and short
 `readiness_reasons` so operators can distinguish empty, disabled, stale, fresh
-and unknown-date sources without inferring from raw counts.
+and unknown-date sources without inferring from raw counts. The response also
+includes all-source `readiness_status_counts` for the selected record type; the
+UI renders those counts as clickable, URL-backed audit buckets and provides a
+copy action for the current measured-inventory view.
 
 ## API and Semantics
 
 `GET /v1/ingestion/coverage/measured` requires authentication and returns
 `Cache-Control: no-store`. Parameters are `record_type` (parcel, permit, planning),
-`limit` (1-100), `offset` (nonnegative), and `freshness_hours` (1-8760).
+`limit` (1-100), `offset` (nonnegative), `freshness_hours` (1-8760), and
+optional `readiness_status` (`fresh`, `empty`, `disabled`, `stale_collection`,
+`stale_source_date`, or `unknown_source_date`).
 
 - Counts are unique within a source, not deduplicated across overlapping sources.
 - Inactive permit/parcel rows are excluded. Disabled sources and zero-record
@@ -52,6 +57,8 @@ and unknown-date sources without inferring from raw counts.
 - `page_totals` is scoped to the returned source page and request filters. It is
   not a tenant-wide total unless the caller has paginated through every page and
   retained the same query parameters.
+- `readiness_status_counts` spans all configured sources for the selected record
+  type and is not affected by pagination or `readiness_status` filtering.
 - Source-level readiness statuses are operational triage labels. They do not
   certify source rights, provider uptime, or market completeness.
 

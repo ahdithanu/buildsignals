@@ -130,6 +130,10 @@ function setup(initialEntry = '/source-health') {
 beforeEach(() => {
   auth.organizationId = 'org-a';
   auth.isAuthenticated = true;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: vi.fn().mockResolvedValue(undefined) },
+  });
   vi.mocked(ingestionApi.measuredCoverage).mockReset().mockImplementation(async params => report(params));
 });
 
@@ -261,6 +265,15 @@ describe('MeasuredCoveragePanel', () => {
       readiness_status: 'stale_collection',
     }));
     expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=planning&readiness_status=stale_collection');
+  });
+
+  it('copies the current measured inventory URL for reviewer handoff', async () => {
+    setup('/source-health?record_type=parcel&readiness_status=empty');
+    await screen.findByRole('article', { name: 'county_public_records' });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy measured view' }));
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      'http://localhost:3000/source-health?record_type=parcel&readiness_status=empty',
+    ));
   });
 
   it('reacts when in-app navigation changes the measured inventory record type', async () => {
