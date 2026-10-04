@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
  *     success (`navigate(from, { replace: true })`).
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isDemo } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -41,6 +41,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
 
+  if (isDemo && location.pathname !== '/demo') {
+    return <Navigate to="/demo" replace />;
+  }
   return <>{children}</>;
 }
 
@@ -49,20 +52,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
  * /register so a signed-in user reloading those URLs lands on the app.
  */
 export function RedirectIfAuthenticated({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
-
-  if (isLoading) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex min-h-screen items-center justify-center text-sm text-muted-foreground"
-      >
-        Loading…
-      </div>
-    );
-  }
 
   if (isAuthenticated) {
     const from =

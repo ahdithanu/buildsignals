@@ -27,9 +27,12 @@ from app.schemas.parcel import (
     NearbyParcelSearchCreate,
     NearbyParcelSearchResponse,
     NearbyParcelSearchSummary,
+    ParcelAvailabilityEvidenceCreate,
     ParcelDetailResponse,
+    ParcelFactResponse,
     ParcelLineageEventResponse,
     ParcelSearchHitResponse,
+    PlanningNearbyParcelSearchCreate,
 )
 from app.services.acquisition_service import (
     get_acquisition_case,
@@ -38,11 +41,15 @@ from app.services.acquisition_service import (
 )
 from app.services.deal_service import deal_to_detail_response
 from app.services.graph_service import relationships_for_entity
+from app.services.map_readiness import map_readiness
+from app.services.map_signals import list_map_signals
+from app.services.parcel_availability_ingestion import create_availability_evidence
 from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
 from app.services.parcel_lineage import get_lineage_event, lineage_events_for_parcel
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,
     create_nearby_parcel_search,
+    create_planning_nearby_parcel_search,
     get_nearby_parcel_search,
     get_parcel_detail,
     list_acquisition_radar,
@@ -50,10 +57,78 @@ from app.services.parcel_service import (
     promote_nearby_parcel_candidate_to_deal,
     review_nearby_parcel_candidate,
 )
+from app.services.zip3_heatmap import zip3_heatmap
 from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(tags=["nearby parcels"])
+
+
+@router.get("/acquisition-map/signals", dependencies=[Depends(get_current_user)])
+def get_map_signals(
+    response: Response,
+    limit: int = Query(default=100, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=100000),
+    state: str | None = Query(default=None, pattern="^[A-Za-z]{2}$"),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "no-store"
+    return list_map_signals(db, limit=limit, offset=offset, state=state)
+
+
+@router.get("/acquisition-map/readiness", dependencies=[Depends(get_current_user)])
+def get_map_readiness(response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    return map_readiness(db)
+
+
+@router.get("/acquisition-map/zip3-heatmap", dependencies=[Depends(get_current_user)])
+def get_zip3_heatmap(
+    response: Response,
+    limit: int = Query(default=50, ge=1, le=100),
+    state: str | None = Query(default=None, pattern="^[A-Za-z]{2}$"),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "no-store"
+    return zip3_heatmap(db, limit=limit, state=state)
+
+
+@router.post(
+    "/parcels/{parcel_id}/availability-evidence",
+    response_model=ParcelFactResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def create_parcel_availability_evidence(
+    parcel_id: str,
+    payload: ParcelAvailabilityEvidenceCreate,
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        fact = create_availability_evidence(
+            db,
+            parcel_id=parcel_id,
+            status=payload.status,
+            evidence_type=payload.evidence_type,
+            source_url=payload.source_url,
+            excerpt=payload.excerpt,
+            confidence=payload.confidence,
+            observed_at=payload.observed_at,
+            asking_price=payload.asking_price,
+            contact_name=payload.contact_name,
+            contact_company=payload.contact_company,
+            actor_user_id=principal["user_id"],
+        )
+        db.commit()
+        db.refresh(fact)
+        return fact
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 def _lineage_response(event) -> dict:
@@ -171,6 +246,10 @@ def get_acquisition_radar(
         pattern="^(candidate|shortlisted|contacted|dismissed|promoted)$",
     ),
     assignment: str | None = Query(default=None, pattern="^(assigned|unassigned)$"),
+    follow_up: str | None = Query(default=None, pattern="^(due|scheduled|none)$"),
+    signal_overlap: str | None = Query(default=None, pattern="^(multi|single)$"),
+    availability: str | None = Query(default=None, pattern="^(verified|unverified)$"),
+    zip3: str | None = Query(default=None, pattern="^[0-9]{3}$"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -182,6 +261,10 @@ def get_acquisition_radar(
         persona=persona,
         review_status=review_status,
         assignment=assignment,
+        follow_up=follow_up,
+        signal_overlap=signal_overlap,
+        availability=availability,
+        zip3=zip3,
         limit=limit,
         offset=offset,
     )
@@ -258,6 +341,40 @@ def create_search(
             db,
             deal_id=deal_id,
             anchor_brand_match_id=payload.anchor_brand_match_id,
+            radius_miles=payload.radius_miles,
+            persona=payload.persona,
+            minimum_land_area_sq_ft=payload.minimum_land_area_sq_ft,
+            zoning_codes=payload.zoning_codes,
+            land_uses=payload.land_uses,
+            limit=payload.limit,
+        )
+        db.commit()
+        return get_nearby_parcel_search(db, search.id)
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/deals/{deal_id}/planning-records/{planning_record_id}/nearby-parcel-searches",
+    response_model=NearbyParcelSearchResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def create_planning_search(
+    deal_id: str,
+    planning_record_id: str,
+    payload: PlanningNearbyParcelSearchCreate,
+    db: Session = Depends(get_db),
+):
+    try:
+        search = create_planning_nearby_parcel_search(
+            db,
+            deal_id=deal_id,
+            planning_record_id=planning_record_id,
             radius_miles=payload.radius_miles,
             persona=payload.persona,
             minimum_land_area_sq_ft=payload.minimum_land_area_sq_ft,

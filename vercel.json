@@ -46,6 +46,10 @@
   ],
   "rewrites": [
     {
+      "source": "/v1/:path*",
+      "destination": "https://xg4xjxc2p2.us-east-1.awsapprunner.com/v1/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/"
     }

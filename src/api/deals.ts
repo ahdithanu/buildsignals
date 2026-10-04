@@ -15,6 +15,12 @@ function unmapStatus(status: string): string {
   return status.replace(/-/g, '_');
 }
 
+function financialOutput(value: unknown, multiplier = 1): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const result = value * multiplier;
+  return Number.isFinite(result) ? result : null;
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function mapDeal(raw: any): Deal {
   const status = mapStatus(raw.status);
@@ -50,10 +56,10 @@ export function mapDeal(raw: any): Deal {
     market: [raw.city, raw.state].filter(Boolean).join(', '),
     assetClass: raw.property_type || '',
     askingPrice: raw.asking_price || 0,
-    noi: outputs.noi || 0,
+    noi: financialOutput(outputs.noi),
     dealScore: raw.score || 0,
-    projectedIrr: outputs.irr != null ? outputs.irr * 100 : 0,
-    equityMultiple: outputs.equity_multiple || 0,
+    projectedIrr: financialOutput(outputs.irr, 100),
+    equityMultiple: financialOutput(outputs.equity_multiple),
     riskLevel: (raw.risk_level as RiskLevel) || 'medium',
     status,
     source: raw.source || '',
@@ -74,7 +80,7 @@ export function mapDeal(raw: any): Deal {
     lastUpdated: raw.updated_at || '',
     dueDate: '',
     owner: '',
-    cashOnCash: outputs.cash_on_cash != null ? outputs.cash_on_cash * 100 : 0,
+    cashOnCash: financialOutput(outputs.cash_on_cash, 100),
     subscores: null,
   };
 }

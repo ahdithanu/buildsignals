@@ -15,9 +15,53 @@ function report(params: MeasuredCoverageParams, stored = 0, hasMore = false): Me
   return {
     ...params, measured_at: '2026-09-11T12:00:00Z', has_more: hasMore,
     scope: 'Stored records for this organization.', count_semantics: 'Source-local counts.', warnings: [],
+    page_totals: {
+      source_count: 1,
+      stored_records: stored,
+      geocoded_records: 0,
+      recently_seen_records: 0,
+      unknown_source_date_records: 0,
+      future_source_date_records: 0,
+      recent_source_date_records: 0,
+      observed_state_count: 0,
+      observed_jurisdiction_count: 0,
+    },
+    readiness: {
+      total_source_count: 1,
+      active_source_count: 0,
+      disabled_source_count: 1,
+      sources_with_records: stored > 0 ? 1 : 0,
+      empty_source_count: stored > 0 ? 0 : 1,
+      sources_with_recent_collection: 0,
+      sources_with_recent_source_date: 0,
+      sources_with_unknown_source_dates: 0,
+      sources_with_future_source_dates: 0,
+      sources_with_geocoded_records: 0,
+      stale_collection_source_count: stored > 0 ? 1 : 0,
+      stale_source_date_source_count: stored > 0 ? 1 : 0,
+      stored_records: stored,
+      geocoded_records: 0,
+      recently_seen_records: 0,
+      recent_source_date_records: 0,
+      observed_state_count: 0,
+      observed_jurisdiction_count: 0,
+    },
+    readiness_status_counts: {
+      fresh: 0,
+      empty: stored > 0 ? 0 : 1,
+      disabled: stored > 0 ? 1 : 0,
+      stale_collection: 0,
+      stale_source_date: 0,
+      unknown_source_date: 0,
+    },
+    readiness_states: [],
+    readiness_jurisdictions: [],
     sources: [{
       source_id: `${params.record_type}-${params.offset}`, source_key: 'public_records',
-      configured_active: false, configured_jurisdiction: 'TX', stored_records: stored, observed_states: [],
+      configured_active: false, configured_jurisdiction: 'TX', stored_records: stored,
+      readiness_status: stored > 0 ? 'disabled' : 'empty',
+      readiness_reasons: ['collection disabled'],
+      observed_states: [],
     }],
   };
 }
@@ -49,6 +93,18 @@ describe('Imported data empty states', () => {
     expect(ingestionApi.measuredCoverage).toHaveBeenNthCalledWith(2, { record_type: 'planning', freshness_hours: 72, limit: 100, offset: 0 });
     expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health');
     expect(screen.queryByText(/No matching signals/)).not.toBeInTheDocument();
+  });
+
+  it('links single-record empty states to the matching measured inventory tab', async () => {
+    setup(['parcel']);
+    await screen.findByText('No imported records available');
+    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=parcel');
+  });
+
+  it('links planning-only empty states to planning measured inventory', async () => {
+    setup(['planning']);
+    await screen.findByText('No imported records available');
+    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=planning');
   });
 
   it('handles an organization with no configured sources', async () => {
@@ -86,6 +142,18 @@ describe('Imported data empty states', () => {
     setup();
     await screen.findByText('No matching signals');
     expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
+  });
+
+  it('uses server page totals instead of client-side source row aggregation', async () => {
+    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => {
+      const response = report(params, 0);
+      response.page_totals.stored_records = 3;
+      response.sources = [];
+      return response;
+    });
+    setup(['parcel']);
+    await screen.findByText('No matching signals');
     expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
   });
 

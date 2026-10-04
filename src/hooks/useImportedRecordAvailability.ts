@@ -20,7 +20,7 @@ export function useImportedRecordAvailability(recordTypes: InventoryRecordTypes)
             record_type: recordType, freshness_hours: 72, limit: PAGE_SIZE, offset,
           });
           if (signal.aborted) throw new Error('Inventory check cancelled.');
-          if (page.sources.some(source => source.stored_records > 0)) return true;
+          if (page.page_totals.stored_records > 0) return true;
           if (!page.has_more) break;
           offset += PAGE_SIZE;
         }

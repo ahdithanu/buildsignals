@@ -38,6 +38,13 @@ describe("<NationalCoverageCard>", () => {
               operational_retry: 5,
               queued: 8,
             },
+            state_readiness_counts: {
+              investor_ready: 2,
+              early_warning_ready: 6,
+              live_foundation: 6,
+              candidate_only: 1,
+              uncovered: 35,
+            },
             top_jurisdictions: [
               { jurisdiction: "TX", live_sources: 10, candidate_sources: 2 },
             ],
@@ -49,6 +56,12 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 2,
                 pre_approval_sources: 1,
                 approved_only_sources: 1,
+                live_record_type_counts: { permit: 7, parcel: 2, planning: 1 },
+                candidate_record_type_counts: { planning: 2 },
+                candidate_status_counts: { operational_retry: 2 },
+                readiness_level: "investor_ready",
+                next_action: "add_secondary_jurisdiction",
+                next_action_label: "Add secondary jurisdiction",
                 priority_score: 0,
                 priority_reasons: [],
               },
@@ -59,6 +72,12 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 0,
                 pre_approval_sources: 0,
                 approved_only_sources: 1,
+                live_record_type_counts: { permit: 1 },
+                candidate_record_type_counts: {},
+                candidate_status_counts: {},
+                readiness_level: "live_foundation",
+                next_action: "add_pre_approval_source",
+                next_action_label: "Add pre-approval source",
                 priority_score: 0,
                 priority_reasons: [],
               },
@@ -71,6 +90,12 @@ describe("<NationalCoverageCard>", () => {
                 retailer_opening_sources: 0,
                 pre_approval_sources: 0,
                 approved_only_sources: 0,
+                live_record_type_counts: {},
+                candidate_record_type_counts: { planning: 1 },
+                candidate_status_counts: { operational_retry: 1 },
+                readiness_level: "candidate_only",
+                next_action: "resolve_candidate_blocker",
+                next_action_label: "Resolve candidate blocker",
                 priority_score: 0,
                 priority_reasons: [],
               },
@@ -109,6 +134,9 @@ describe("<NationalCoverageCard>", () => {
     expect(screen.getByText("28")).toBeInTheDocument();
     expect(screen.getByText("14", { selector: ".mt-1.text-lg" })).toBeInTheDocument();
     expect(screen.getByText("9", { selector: ".mt-1.text-lg" })).toBeInTheDocument();
+    expect(screen.getByText("50-state readiness funnel")).toBeInTheDocument();
+    expect(screen.getByLabelText("National readiness funnel")).toHaveTextContent("investor ready");
+    expect(screen.getByLabelText("National readiness funnel")).toHaveTextContent("uncovered");
     expect(screen.getByText(/pre approval and approved/i)).toBeInTheDocument();
     expect(screen.getAllByText(/approved only/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/operational retry/i).length).toBeGreaterThanOrEqual(1);
@@ -123,8 +151,8 @@ describe("<NationalCoverageCard>", () => {
       "href",
       "/source-health?state=WA",
     );
-    expect(screen.getByText("TX · 1")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "TX · 1" })).toHaveAttribute("href", "/source-health?state=TX");
+    expect(screen.getByRole("link", { name: "TX · investor ready" })).toHaveAttribute("href", "/source-health?state=TX");
+    expect(screen.getByRole("link", { name: "TX · Resolve candidate blocker" })).toHaveAttribute("href", "/source-health?state=TX");
     expect(screen.getByText("Detroit BSEED Building Permits")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Detroit BSEED Building Permits" })).toHaveAttribute(
       "href",

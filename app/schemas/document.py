@@ -28,3 +28,4 @@ class DocumentResponse(BaseModel):
     file_path: Optional[str] = None
     size_bytes: Optional[int] = None
     uploaded_at: datetime
+    evidence_kind: Optional[str] = None

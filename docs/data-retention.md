@@ -9,7 +9,7 @@ answer the two questions every enterprise data-processing agreement asks:
 | Data | Contains PII? | Where |
 |---|---|---|
 | Organizations, memberships | Names | Postgres |
-| Users | Email, name, password hash (bcrypt), TOTP secret | Postgres |
+| Users | Email, name, password hash (bcrypt), encrypted TOTP secret ciphertext; legacy plaintext TOTP only during controlled backfill | Postgres |
 | Deals, assumptions, outputs, contacts, signals, documents, memos, distributions, pipeline events, buy boxes | Contact names/emails; deal financials | Postgres |
 | Audit logs | Actor id + change diffs | Postgres |
 | Password-reset tokens | Hashed token + user id | Postgres |
@@ -68,8 +68,9 @@ to the application log — which lives in separate storage — rather than to
 right to erasure). It requires re-entering the current password and is
 irreversible.
 
-- The user row (email, name, password hash, TOTP secret) is deleted — that's
-  the personal data, so deleting it is the erasure.
+- The user row (email, name, password hash, MFA secret ciphertext and any legacy
+  plaintext MFA backfill value) is deleted — that's the personal data, so
+  deleting it is the erasure.
 - FKs handle the rest: memberships and password-reset tokens cascade away;
   authored records (deals, audit rows, buy boxes) have their
   `created_by`/`actor_id` set NULL. The org keeps its data; the personal

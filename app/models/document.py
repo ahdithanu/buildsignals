@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -24,7 +24,12 @@ class Document(OrgMixin, SoftDeleteMixin, OwnerMixin, Base):
     doc_type: Mapped[Optional[str]] = mapped_column(String(100))
     file_path: Mapped[Optional[str]] = mapped_column(String(1000))
     size_bytes: Mapped[Optional[int]] = mapped_column(Integer)
+    evidence_excerpt: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    @property
+    def evidence_kind(self) -> str | None:
+        return "analyst_provided_excerpt" if self.evidence_excerpt is not None else None
 
     # ── Relationships ──────────────────────────────────────────────────────
     organization = relationship("Organization", back_populates="documents", foreign_keys="[Document.organization_id]")

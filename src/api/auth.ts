@@ -10,11 +10,16 @@ import type {
 } from '@/types/auth';
 
 export const authApi = {
+  demoAvailability: () => apiClient.get<{ enabled: boolean }>('/auth/demo'),
+  demo: () => apiClient.post<TokenResponse>('/auth/demo'),
   register: (data: RegisterRequest) =>
     apiClient.post<TokenResponse>('/auth/register', data),
 
   login: (data: LoginRequest) =>
     apiClient.post<TokenResponse>('/auth/login', data),
+
+  demoLogin: () =>
+    apiClient.post<TokenResponse>('/auth/demo'),
 
   me: () => apiClient.get<MeResponse>('/auth/me'),
 

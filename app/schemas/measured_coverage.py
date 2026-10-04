@@ -27,7 +27,71 @@ class MeasuredSourceCoverage(BaseModel):
     configured_active: bool
     configured_jurisdiction: str | None
     stored_records: int
+    readiness_status: str
+    readiness_reasons: list[str]
     observed_states: list[ObservedStateCoverage]
+
+
+class MeasuredCoverageTotals(BaseModel):
+    source_count: int
+    stored_records: int
+    geocoded_records: int
+    recently_seen_records: int
+    unknown_source_date_records: int
+    future_source_date_records: int
+    recent_source_date_records: int
+    observed_state_count: int
+    observed_jurisdiction_count: int
+
+
+class MeasuredCoverageReadiness(BaseModel):
+    total_source_count: int
+    active_source_count: int
+    disabled_source_count: int
+    sources_with_records: int
+    empty_source_count: int
+    sources_with_recent_collection: int
+    sources_with_recent_source_date: int
+    sources_with_unknown_source_dates: int
+    sources_with_future_source_dates: int
+    sources_with_geocoded_records: int
+    stale_collection_source_count: int
+    stale_source_date_source_count: int
+    stored_records: int
+    geocoded_records: int
+    recently_seen_records: int
+    recent_source_date_records: int
+    observed_state_count: int
+    observed_jurisdiction_count: int
+
+
+class MeasuredCoverageReadinessStatusCounts(BaseModel):
+    fresh: int
+    empty: int
+    disabled: int
+    stale_collection: int
+    stale_source_date: int
+    unknown_source_date: int
+
+
+class MeasuredCoverageStateRollup(BaseModel):
+    state: str | None
+    source_count: int
+    stored_records: int
+    geocoded_records: int
+    recently_seen_records: int
+    recent_source_date_records: int
+    unknown_source_date_records: int
+
+
+class MeasuredCoverageJurisdictionRollup(BaseModel):
+    jurisdiction: str | None
+    state: str | None
+    source_count: int
+    stored_records: int
+    geocoded_records: int
+    recently_seen_records: int
+    recent_source_date_records: int
 
 
 class MeasuredCoverageResponse(BaseModel):
@@ -39,5 +103,10 @@ class MeasuredCoverageResponse(BaseModel):
     limit: int
     offset: int
     has_more: bool
+    page_totals: MeasuredCoverageTotals
+    readiness: MeasuredCoverageReadiness
+    readiness_status_counts: MeasuredCoverageReadinessStatusCounts
+    readiness_states: list[MeasuredCoverageStateRollup]
+    readiness_jurisdictions: list[MeasuredCoverageJurisdictionRollup]
     sources: list[MeasuredSourceCoverage]
     warnings: list[str]

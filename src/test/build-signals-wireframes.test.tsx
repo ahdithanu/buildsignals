@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,10 +8,27 @@ import Register from '@/pages/Register';
 import { signalStageFor } from '@/lib/signalStage';
 
 const login = vi.fn();
+const demoLogin = vi.fn();
 const register = vi.fn();
 const exportSearch = { mutate: vi.fn(), isPending: false };
 
+// Map data/loading and Leaflet interactions have their own focused/browser tests.
+vi.mock('@/components/SignalMapExplorer', () => ({ SignalMapExplorer: () => null }));
+vi.mock('@/components/GeographicMap', () => ({ default: () => null }));
+
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
+  useZip3Heatmap: () => ({
+    data: {
+      items: [],
+      limit: 12,
+      generated_at: '2026-08-12T12:00:00Z',
+      method_version: 'zip3-opportunity-heat-v1',
+      for_sale_semantics: {
+        nearby_candidate: 'Nearby candidate is not a listing.',
+        verified_for_sale: 'Verified for sale requires listing evidence.',
+      },
+    },
+  }),
   useAcquisitionRadar: () => ({
     data: {
       items: [
@@ -48,7 +65,7 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
         },
       ],
       total: 2, limit: 100, offset: 0,
-      summary: { total_parcels: 2, shortlisted_parcels: 1, multi_opportunity_parcels: 0, assigned_parcels: 0, state_count: 1 },
+      summary: { total_parcels: 2, shortlisted_parcels: 1, multi_opportunity_parcels: 0, assigned_parcels: 0, promoted_parcels: 0, contacted_parcels: 0, follow_up_parcels: 0, due_follow_up_parcels: 0, state_count: 1 },
     },
     isLoading: false,
     error: null,
@@ -65,6 +82,7 @@ vi.mock('@/contexts/AuthContext', () => ({
     isAuthenticated: false,
     isLoading: false,
     login,
+    demoLogin,
     register,
     logout: vi.fn(),
   }),
@@ -75,8 +93,8 @@ describe('Build Signals wireframe screens', () => {
     vi.clearAllMocks();
   });
 
-  it('renders live radar parcels without inferring listing or owner intent', () => {
-    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+  it('renders live radar parcels without inferring listing or owner intent', async () => {
+    await act(async () => { render(<MemoryRouter><AcquisitionMap /></MemoryRouter>); });
 
     expect(screen.getByRole('heading', { name: /ranked parcels near retail shell project/i })).toBeInTheDocument();
     expect(screen.getAllByText('Congress Holdings LLC').length).toBeGreaterThan(0);
@@ -110,7 +128,17 @@ describe('Build Signals wireframe screens', () => {
         password: 'secret-password',
       });
     });
-    expect(screen.queryByRole('button', { name: /SSO/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /SSO/i })).toBeInTheDocument();
+  });
+
+  it('opens demo mode from the login screen', async () => {
+    demoLogin.mockResolvedValueOnce(undefined);
+    render(<MemoryRouter initialEntries={['/login']}><Login /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole('button', { name: /enter demo mode/i }));
+
+    await waitFor(() => expect(demoLogin).toHaveBeenCalledTimes(1));
+    expect(login).not.toHaveBeenCalled();
   });
 
   it('submits an authenticator code and permits retry after rejection', async () => {
@@ -128,6 +156,14 @@ describe('Build Signals wireframe screens', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
     await waitFor(() => expect(login).toHaveBeenCalledTimes(2));
     expect(login).toHaveBeenLastCalledWith({ email: 'alex@example.com', password: 'secret-password', totp_code: '123456' });
+  });
+
+  it('shows account creation as a primary login-page action', () => {
+    render(<MemoryRouter initialEntries={['/login']}><Login /></MemoryRouter>);
+
+    const createAccountLinks = screen.getAllByRole('link', { name: /create account/i });
+    expect(createAccountLinks.length).toBeGreaterThan(0);
+    expect(createAccountLinks[0]).toHaveAttribute('href', '/register');
   });
 
   it('shows account creation as a primary login-page action', () => {

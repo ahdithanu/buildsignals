@@ -42,7 +42,46 @@ def test_counts_are_measured_scoped_and_do_not_confuse_collection_with_freshness
     finally:
         reset_current_context(token)
     assert [s["source_key"] for s in report["sources"]] == ["empty", "populated"]
+    assert report["page_totals"]["source_count"] == 2
+    assert report["page_totals"]["stored_records"] == 2
+    assert report["page_totals"]["geocoded_records"] == 1
+    assert report["page_totals"]["recently_seen_records"] == 2
+    assert report["page_totals"]["recent_source_date_records"] == 0
+    assert report["page_totals"]["observed_state_count"] == 1
+    assert report["page_totals"]["observed_jurisdiction_count"] == 2
+    assert report["readiness"]["total_source_count"] == 2
+    assert report["readiness"]["active_source_count"] == 2
+    assert report["readiness"]["sources_with_records"] == 1
+    assert report["readiness"]["empty_source_count"] == 1
+    assert report["readiness"]["sources_with_recent_collection"] == 1
+    assert report["readiness"]["sources_with_recent_source_date"] == 0
+    assert report["readiness"]["sources_with_geocoded_records"] == 1
+    assert report["readiness"]["stale_collection_source_count"] == 0
+    assert report["readiness"]["stale_source_date_source_count"] == 1
+    assert report["readiness"]["stored_records"] == 2
+    assert report["readiness_status_counts"] == {
+        "fresh": 0,
+        "empty": 1,
+        "disabled": 0,
+        "stale_collection": 0,
+        "stale_source_date": 1,
+        "unknown_source_date": 0,
+    }
+    assert [row["state"] for row in report["readiness_states"]] == ["FL", None]
+    assert report["readiness_states"][0]["source_count"] == 1
+    assert report["readiness_states"][0]["stored_records"] == 1
+    assert [(row["jurisdiction"], row["state"]) for row in report["readiness_jurisdictions"]] == [
+        ("County A", "FL"),
+        ("County A", None),
+    ]
+    assert report["readiness_jurisdictions"][0]["state"] == "FL"
+    assert report["readiness_jurisdictions"][0]["stored_records"] == 1
+    assert report["readiness_jurisdictions"][0]["source_count"] == 1
     assert report["sources"][0]["stored_records"] == 0
+    assert report["sources"][0]["readiness_status"] == "empty"
+    assert "no stored records measured" in report["sources"][0]["readiness_reasons"]
+    assert report["sources"][1]["readiness_status"] == "stale_source_date"
+    assert "no recent source-date evidence" in report["sources"][1]["readiness_reasons"]
     states = report["sources"][1]["observed_states"]
     assert {s["state"] for s in states} == {None, "FL"}
     assert sum(s["geocoded_records"] for s in states) == 1
@@ -63,8 +102,39 @@ def test_unknown_dates_pagination_and_no_synthetic_rows(db):
     finally:
         reset_current_context(token)
     assert first["has_more"]
+    assert first["page_totals"]["source_count"] == 1
+    assert first["readiness"]["total_source_count"] == 2
+    assert first["readiness"]["sources_with_records"] == 1
+    assert first["readiness"]["empty_source_count"] == 1
     assert first["sources"][0]["observed_states"][0]["unknown_source_date_records"] == 1
+    assert empty["page_totals"]["source_count"] == 0
+    assert empty["readiness"]["total_source_count"] == 2
+    assert empty["readiness"]["stored_records"] == 1
+    assert empty["readiness_states"][0]["stored_records"] == 1
+    assert empty["readiness_jurisdictions"][0]["jurisdiction"] == "County A"
+    assert empty["page_totals"]["stored_records"] == 0
     assert not empty["sources"] and not empty["has_more"]
+
+
+def test_readiness_status_filter_limits_source_page_without_rewriting_rollups(db):
+    now = datetime.now(timezone.utc)
+    seed(db, "org-a", "populated", count=1, source_date=now - timedelta(days=365), now=now)
+    seed(db, "org-a", "empty", now=now)
+    token = set_current_context(RequestContext("org-a", "test"))
+    try:
+        report = measured_coverage(db, record_type="parcel", readiness_status="empty", now=now)
+    finally:
+        reset_current_context(token)
+    assert [s["source_key"] for s in report["sources"]] == ["empty"]
+    assert report["sources"][0]["readiness_status"] == "empty"
+    assert report["page_totals"]["source_count"] == 1
+    assert report["page_totals"]["stored_records"] == 0
+    assert report["readiness"]["total_source_count"] == 2
+    assert report["readiness"]["sources_with_records"] == 1
+    assert report["readiness"]["empty_source_count"] == 1
+    assert report["readiness_status_counts"]["empty"] == 1
+    assert report["readiness_status_counts"]["stale_source_date"] == 1
+    assert report["readiness_jurisdictions"][0]["jurisdiction"] == "County A"
 
 
 def test_route_requires_authentication_even_in_demo_mode(client):
@@ -82,3 +152,13 @@ def test_authenticated_route_returns_only_the_callers_sources(client, db):
     assert response.headers["Cache-Control"] == "no-store"
     assert [s["source_key"] for s in response.json()["sources"]] == ["mine"]
     assert client.get("/v1/ingestion/coverage/measured?record_type=other", headers=headers).status_code == 422
+    assert client.get(
+        "/v1/ingestion/coverage/measured?readiness_status=not-real",
+        headers=headers,
+    ).status_code == 422
+    filtered = client.get(
+        "/v1/ingestion/coverage/measured?readiness_status=empty",
+        headers=headers,
+    )
+    assert filtered.status_code == 200
+    assert filtered.json()["sources"][0]["readiness_status"] == "empty"

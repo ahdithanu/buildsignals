@@ -121,7 +121,7 @@ export default function Dashboard() {
                         <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{(deal.market || '').split(',')[0]}</td>
                         <td className="px-3 py-3 text-muted-foreground hidden md:table-cell">{deal.assetClass}</td>
                         <td className="px-3 py-3 text-center"><DealScoreBadge score={deal.dealScore} /></td>
-                        <td className="px-3 py-3 text-right font-medium text-foreground hidden sm:table-cell">{deal.projectedIrr}%</td>
+                        <td className="px-3 py-3 text-right font-medium text-foreground hidden sm:table-cell">{deal.projectedIrr == null ? 'Not calculated' : `${deal.projectedIrr}%`}</td>
                         <td className="px-3 py-3 hidden lg:table-cell"><StatusBadge status={deal.status} label={stageLabels[deal.status]} /></td>
                         <td className="px-3 py-3 hidden xl:table-cell"><StatusBadge status={deal.riskLevel} label={deal.riskLevel} /></td>
                       </tr>

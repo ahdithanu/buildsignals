@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime, timezone
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.organization_membership import MemberRole
 
@@ -46,3 +46,82 @@ class UpdateMemberRequest(BaseModel):
 
 class SwitchOrgRequest(BaseModel):
     organization_id: str = Field(..., min_length=1)
+
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str = Field(..., min_length=3, max_length=120)
+    scopes: list[str] = Field(default_factory=lambda: ["read"])
+    expires_at: datetime | None = None
+
+    @field_validator("scopes")
+    @classmethod
+    def validate_scopes(cls, value: list[str]) -> list[str]:
+        allowed = {"read", "write", "admin"}
+        normalized = sorted({scope.strip().lower() for scope in value if scope.strip()})
+        if not normalized:
+            raise ValueError("At least one scope is required")
+        unknown = set(normalized) - allowed
+        if unknown:
+            raise ValueError(f"Unsupported API key scope(s): {', '.join(sorted(unknown))}")
+        return normalized
+
+    @field_validator("expires_at")
+    @classmethod
+    def validate_expiration(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        comparable = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        if comparable <= datetime.now(timezone.utc):
+            raise ValueError("API key expiration must be in the future")
+        return comparable
+
+
+class ApiKeyResponse(BaseModel):
+    id: str
+    name: str
+    key_prefix: str
+    scopes: list[str]
+    created_by: str | None
+    created_at: datetime
+    revoked_at: datetime | None
+    revoked_by: str | None
+    last_used_at: datetime | None
+    expires_at: datetime | None = None
+    rotation_due: bool = False
+    usage_total_calls: int = 0
+    usage_last_called_at: datetime | None = None
+    rate_limit_limit: int | None = None
+    rate_limit_window_seconds: int | None = None
+
+
+class ApiKeyCreateResponse(ApiKeyResponse):
+    secret: str
+
+
+class ApiKeyUsageEndpointSummary(BaseModel):
+    path: str
+    method: str
+    total_calls: int
+    total_items: int
+    last_called_at: datetime | None
+
+
+class ApiKeyUsageDailySummary(BaseModel):
+    usage_date: date
+    total_calls: int
+    total_items: int
+    average_latency_ms: int
+
+
+class ApiKeyUsageSummary(BaseModel):
+    api_key_id: str
+    total_calls: int
+    total_items: int
+    last_called_at: datetime | None
+    endpoints: list[ApiKeyUsageEndpointSummary]
+    daily: list[ApiKeyUsageDailySummary] = Field(default_factory=list)
+
+
+class ApiKeyUsageRollupRebuildResponse(BaseModel):
+    api_key_id: str
+    rebuilt_events: int

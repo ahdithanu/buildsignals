@@ -1,11 +1,13 @@
-import { useMemo, type ComponentType } from 'react';
+import { useMemo, useState, type ComponentType } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, BadgeInfo, Building2, CalendarClock, FileText, GitFork, MapPinned, Network, Store } from 'lucide-react';
 
+import { parcelsApi } from '@/api/parcels';
 import { Layout } from '@/components/Layout';
 import { ParcelMap } from '@/components/ParcelMap';
 import { LoadingState, ErrorState, EmptyState } from '@/components/DataStates';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 import { useParcelDetail } from '@/hooks/useParcelDetail';
 import { safeSourceUrl } from '@/lib/sourceUrl';
 
@@ -51,7 +53,34 @@ function relatedEntityHref(item: {
 export default function ParcelDetail() {
   const { parcelId } = useParams();
   const navigate = useNavigate();
+  const { role } = useAuth();
   const { data, isLoading, error, refetch } = useParcelDetail(parcelId);
+  const [availabilityMessage, setAvailabilityMessage] = useState('');
+  const [availabilitySaving, setAvailabilitySaving] = useState(false);
+  const canManageAvailability = role === 'admin' || role === 'editor';
+  async function saveAvailabilityEvidence(form: FormData) {
+    const sourceUrl = String(form.get('source_url') || '').trim();
+    const excerpt = String(form.get('excerpt') || '').trim();
+    const askingPrice = String(form.get('asking_price') || '').trim();
+    setAvailabilitySaving(true);
+    try {
+      await parcelsApi.createAvailabilityEvidence(parcelId!, {
+        status: 'for_sale',
+        evidence_type: String(form.get('evidence_type') || 'broker') as 'listing' | 'broker' | 'owner' | 'auction',
+        source_url: sourceUrl || undefined,
+        excerpt: excerpt || undefined,
+        confidence: Number(form.get('confidence') || 0.85),
+        asking_price: askingPrice ? Number(askingPrice) : undefined,
+        contact_company: String(form.get('contact_company') || '').trim() || undefined,
+      });
+      setAvailabilityMessage('Availability evidence saved.');
+      refetch();
+    } catch {
+      setAvailabilityMessage('Availability evidence was not saved. Check source evidence and confidence.');
+    } finally {
+      setAvailabilitySaving(false);
+    }
+  }
 
   const facts = useMemo(() => data?.facts ?? [], [data]);
   const hits = useMemo(() => data?.search_hits ?? [], [data]);
@@ -272,6 +301,60 @@ export default function ParcelDetail() {
             </div>
           )}
         </section>
+
+        {canManageAvailability && (
+          <section className="rounded-md border bg-card p-4 card-shadow">
+            <div className="mb-3 flex items-center gap-2">
+              <Store className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-foreground">Add Availability Evidence</h3>
+            </div>
+            <form
+              className="grid gap-3 md:grid-cols-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setAvailabilityMessage('');
+                void saveAvailabilityEvidence(new FormData(event.currentTarget));
+              }}
+            >
+              <label className="text-xs text-muted-foreground">
+                Evidence type
+                <select name="evidence_type" className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" defaultValue="broker">
+                  <option value="broker">Broker</option>
+                  <option value="listing">Listing</option>
+                  <option value="owner">Owner</option>
+                  <option value="auction">Auction</option>
+                </select>
+              </label>
+              <label className="text-xs text-muted-foreground">
+                Confidence
+                <input name="confidence" type="number" min="0.7" max="1" step="0.01" defaultValue="0.85" className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" />
+              </label>
+              <label className="text-xs text-muted-foreground md:col-span-2">
+                Source URL
+                <input name="source_url" type="url" placeholder="https://broker.example/listing" className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" />
+              </label>
+              <label className="text-xs text-muted-foreground">
+                Asking price
+                <input name="asking_price" type="number" min="0" step="1" placeholder="2250000" className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" />
+              </label>
+              <label className="text-xs text-muted-foreground">
+                Contact company
+                <input name="contact_company" placeholder="Brokerage or owner" className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" />
+              </label>
+              <label className="text-xs text-muted-foreground md:col-span-2">
+                Evidence excerpt
+                <textarea name="excerpt" placeholder="Short excerpt proving the parcel is available, listed, or owner-indicated available." className="mt-1 min-h-20 w-full rounded-md border bg-background px-2 py-2 text-sm" />
+              </label>
+              <div className="flex flex-wrap items-center gap-3 md:col-span-2">
+                <button type="submit" disabled={availabilitySaving} className="rounded-md bg-foreground px-3 py-2 text-xs font-semibold text-background disabled:opacity-50">
+                  {availabilitySaving ? 'Saving...' : 'Save availability evidence'}
+                </button>
+                <p className="text-xs text-muted-foreground">Requires a source URL or excerpt. This is what upgrades a nearby candidate to verified availability.</p>
+                {availabilityMessage && <p role="status" className="text-xs font-medium">{availabilityMessage}</p>}
+              </div>
+            </form>
+          </section>
+        )}
 
         <section className="rounded-md border bg-card p-4 card-shadow">
           <div className="mb-3 flex items-center justify-between gap-3">

@@ -78,6 +78,14 @@ const planningResult = {
 };
 
 describe('<PlanningSignals>', () => {
+  it('opens an exact record and offers an explicit return to browsing', () => {
+    usePlanningSignalsMock.mockReturnValue(planningResult);
+    render(<MemoryRouter initialEntries={['/planning?record_id=planning-1']}><PlanningSignals /></MemoryRouter>);
+    expect(usePlanningSignalsMock).toHaveBeenCalledWith(expect.objectContaining({ record_id: 'planning-1' }));
+    expect(screen.getByRole('link', { name: 'Browse all planning records' })).toHaveAttribute('href', '/planning');
+    expect(screen.queryByRole('button', { name: 'Apply filters' })).not.toBeInTheDocument();
+    expect(screen.getByText('Selected source record')).toBeInTheDocument();
+  });
   beforeEach(() => {
     usePlanningSignalsMock.mockReset();
     usePlanningSignalsMock.mockReturnValue(planningResult);
@@ -124,7 +132,7 @@ describe('<PlanningSignals>', () => {
     expect(screen.getByText('No imported records available')).toBeInTheDocument();
     expect(screen.getByText(/No stored planning records were measured for this organization/)).toBeInTheDocument();
     expect(useImportedRecordAvailabilityMock).toHaveBeenCalledWith(['planning']);
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health');
+    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=planning');
     expect(screen.queryByText(/Adjust the active filters|none match the active filters/)).not.toBeInTheDocument();
   });
 

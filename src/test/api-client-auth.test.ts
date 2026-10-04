@@ -8,6 +8,7 @@ import {
   setUnauthorizedHandler,
   // Legacy shims — kept for migration from the localStorage build.
   getStoredToken,
+  resolveApiBaseUrl,
   setStoredToken,
 } from "@/api/client";
 
@@ -40,6 +41,26 @@ describe("ApiClient — auth integration", () => {
     localStorage.clear();
     setAccessToken(null);
     setUnauthorizedHandler(null);
+  });
+
+  it("uses the same-origin API proxy in production", () => {
+    expect(
+      resolveApiBaseUrl({
+        configuredUrl: "https://buildsignals-api.onrender.com",
+        isProduction: true,
+        sameOrigin: true,
+      }),
+    ).toBe("");
+  });
+
+  it("keeps direct API URLs for deployments that opt out of the proxy", () => {
+    expect(
+      resolveApiBaseUrl({
+        configuredUrl: "https://api.example.com/",
+        isProduction: true,
+        sameOrigin: false,
+      }),
+    ).toBe("https://api.example.com");
   });
   afterEach(() => {
     vi.useRealTimers();

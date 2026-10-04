@@ -86,6 +86,19 @@ if [[ -n "$SMOKE_EMAIL" && -n "$SMOKE_PASSWORD" ]]; then
     echo "$records" | jq -e 'type == "array"' >/dev/null || fail "$path returned an unexpected response"
     pass "authenticated GET $path"
   done
+  for record_type in permit parcel planning; do
+    measured=$(curl -sf --max-time 30 "$BASE/v1/ingestion/coverage/measured?record_type=$record_type&limit=1&freshness_hours=72" \
+      -H "Authorization: Bearer $token") || fail "authenticated measured inventory for $record_type failed"
+    echo "$measured" | jq -e \
+      --arg record_type "$record_type" \
+      '.record_type == $record_type
+        and (.page_totals.source_count | type == "number")
+        and (.readiness.total_source_count | type == "number")
+        and (.readiness_status_counts.empty | type == "number")
+        and (.sources | type == "array")' >/dev/null || \
+      fail "measured inventory for $record_type returned an unexpected response"
+    pass "authenticated measured inventory for $record_type"
+  done
   unset token login refresh login_payload
   echo "NOTE: endpoint checks allow empty results; verify real inventory and the demo workflow separately."
 else

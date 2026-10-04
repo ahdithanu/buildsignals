@@ -1,13 +1,27 @@
-// Production API base. `VITE_API_BASE_URL` (set in the Vercel project) always
-// wins; when it is unset, production builds target the AWS App Runner backend
-// (buildsignals.ai migrated off Render → AWS). Dev still defaults to localhost.
-// NOTE: interim — this raw App Runner URL should move to a stable custom domain
-// (e.g. https://api.buildsignals.ai) once its DNS is pointed at App Runner.
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.PROD
-    ? 'https://xg4xjxc2p2.us-east-1.awsapprunner.com'
-    : 'http://localhost:8000');
+const LOCAL_API_BASE_URL = 'http://localhost:8000';
+
+interface ApiBaseUrlOptions {
+  configuredUrl?: string;
+  isProduction?: boolean;
+  sameOrigin?: boolean;
+}
+
+/**
+ * Production defaults to the same-origin Vercel proxy. Besides avoiding a
+ * cross-origin dependency, this keeps the httpOnly refresh cookie first-party
+ * so browsers can restore a session after a reload. Non-Vercel production
+ * deployments can opt out with VITE_API_SAME_ORIGIN=false.
+ */
+export function resolveApiBaseUrl({
+  configuredUrl = import.meta.env.VITE_API_BASE_URL,
+  isProduction = import.meta.env.PROD,
+  sameOrigin = import.meta.env.VITE_API_SAME_ORIGIN !== 'false',
+}: ApiBaseUrlOptions = {}): string {
+  if (isProduction && sameOrigin) return '';
+  return configuredUrl?.trim().replace(/\/$/, '') || LOCAL_API_BASE_URL;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Current API major version. All requests below are prepended with this so a

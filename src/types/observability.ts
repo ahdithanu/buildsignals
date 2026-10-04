@@ -22,5 +22,17 @@ export interface ObservabilityOverview {
     runs: number; completed: number; partial: number; partial_with_errors: number; failed: number; running: number;
     records_seen: number; records_failed: number; stalled_runs: number;
   };
+  deployment: {
+    environment: string;
+    database_provider: string;
+    overall_status: 'pass' | 'warning' | 'fail';
+    checks: {
+      code: string;
+      label: string;
+      status: 'pass' | 'warning' | 'fail';
+      summary: string;
+      action: string | null;
+    }[];
+  };
   attention: { code: string; level: string; summary: string; count: number; href: string }[];
 }

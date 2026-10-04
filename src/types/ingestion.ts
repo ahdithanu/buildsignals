@@ -193,6 +193,12 @@ export interface StateCoverageBucket {
   retailer_opening_sources: number;
   pre_approval_sources: number;
   approved_only_sources: number;
+  live_record_type_counts?: Record<string, number>;
+  candidate_record_type_counts?: Record<string, number>;
+  candidate_status_counts?: Record<string, number>;
+  readiness_level?: 'investor_ready' | 'early_warning_ready' | 'live_foundation' | 'candidate_only' | 'uncovered' | string;
+  next_action?: string;
+  next_action_label?: string;
   priority_score: number;
   priority_reasons: string[];
 }
@@ -239,6 +245,7 @@ export interface IngestionCoverage {
   live_signal_stage_counts: Record<string, number>;
   live_signal_sources_by_stage: Record<string, RetailerOpeningCoverageSource[]>;
   candidate_status_counts: Record<string, number>;
+  state_readiness_counts?: Record<string, number>;
   top_jurisdictions: CoverageJurisdictionBucket[];
   state_buckets: StateCoverageBucket[];
   activation_queue: StateCoverageBucket[];
@@ -377,9 +384,17 @@ export interface PermitDetail {
 }
 
 export type CoverageRecordType = 'parcel' | 'permit' | 'planning';
+export type MeasuredReadinessStatus =
+  | 'fresh'
+  | 'empty'
+  | 'disabled'
+  | 'stale_collection'
+  | 'stale_source_date'
+  | 'unknown_source_date';
 
 export interface MeasuredCoverageParams {
   record_type: CoverageRecordType;
+  readiness_status?: MeasuredReadinessStatus;
   freshness_hours: number;
   limit: number;
   offset: number;
@@ -408,7 +423,64 @@ export interface MeasuredSourceCoverage {
   configured_active: boolean;
   configured_jurisdiction: string | null;
   stored_records: number;
+  readiness_status: MeasuredReadinessStatus;
+  readiness_reasons: string[];
   observed_states: ObservedStateCoverage[];
+}
+
+export interface MeasuredCoverageTotals {
+  source_count: number;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  unknown_source_date_records: number;
+  future_source_date_records: number;
+  recent_source_date_records: number;
+  observed_state_count: number;
+  observed_jurisdiction_count: number;
+}
+
+export interface MeasuredCoverageReadiness {
+  total_source_count: number;
+  active_source_count: number;
+  disabled_source_count: number;
+  sources_with_records: number;
+  empty_source_count: number;
+  sources_with_recent_collection: number;
+  sources_with_recent_source_date: number;
+  sources_with_unknown_source_dates: number;
+  sources_with_future_source_dates: number;
+  sources_with_geocoded_records: number;
+  stale_collection_source_count: number;
+  stale_source_date_source_count: number;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  recent_source_date_records: number;
+  observed_state_count: number;
+  observed_jurisdiction_count: number;
+}
+
+export type MeasuredCoverageReadinessStatusCounts = Record<MeasuredReadinessStatus, number>;
+
+export interface MeasuredCoverageStateRollup {
+  state: string | null;
+  source_count: number;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  recent_source_date_records: number;
+  unknown_source_date_records: number;
+}
+
+export interface MeasuredCoverageJurisdictionRollup {
+  jurisdiction: string | null;
+  state: string | null;
+  source_count: number;
+  stored_records: number;
+  geocoded_records: number;
+  recently_seen_records: number;
+  recent_source_date_records: number;
 }
 
 export interface MeasuredCoverage extends MeasuredCoverageParams {
@@ -416,6 +488,11 @@ export interface MeasuredCoverage extends MeasuredCoverageParams {
   scope: string;
   count_semantics: string;
   has_more: boolean;
+  page_totals: MeasuredCoverageTotals;
+  readiness: MeasuredCoverageReadiness;
+  readiness_status_counts: MeasuredCoverageReadinessStatusCounts;
+  readiness_states: MeasuredCoverageStateRollup[];
+  readiness_jurisdictions: MeasuredCoverageJurisdictionRollup[];
   sources: MeasuredSourceCoverage[];
   warnings: string[];
 }

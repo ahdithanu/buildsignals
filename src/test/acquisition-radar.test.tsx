@@ -1,15 +1,64 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AcquisitionRadar from '@/pages/AcquisitionRadar';
 
 const updateCase = vi.fn();
 const recordActivity = vi.fn();
+const mockRadarParams = vi.fn();
 let currentRole = 'admin';
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
-  useAcquisitionRadar: () => ({
+  useZip3Heatmap: () => ({
+    data: {
+      items: [{
+        zip3: '787',
+        score: 98.4,
+        signal_count: 4,
+        pre_approval_signals: 3,
+        approved_signals: 1,
+        mapped_signals: 4,
+        parcel_candidate_count: 12,
+        shortlisted_parcel_count: 2,
+        verified_for_sale_count: 0,
+        candidate_not_listing_count: 12,
+        states: ['TX'],
+        cities: ['Austin'],
+        sample_signals: [{
+          id: 'permit-1',
+          title: 'Starbucks Coffee build-out',
+          stage: 'pre_approval',
+          status: 'Under Review',
+          city: 'Austin',
+          state: 'TX',
+          source_url: null,
+        }],
+        sample_parcels: [{
+          id: 'parcel-heat-1',
+          external_parcel_id: 'P-HEAT-1',
+          address: '210 Congress Ave',
+          city: 'Austin',
+          state: 'TX',
+          review_status: 'shortlisted',
+          candidate_score: 86,
+          availability_label: 'nearby_candidate_not_verified_for_sale',
+        }],
+        latest_signal_at: '2026-08-08T12:00:00Z',
+      }],
+      limit: 12,
+      generated_at: '2026-08-08T12:00:00Z',
+      method_version: 'zip3-opportunity-heat-v1',
+      state: 'TX',
+      for_sale_semantics: {
+        nearby_candidate: 'Public parcel or ranked nearby result near a signal; not a listing.',
+        verified_for_sale: 'Requires listing, broker, owner, or explicit availability evidence.',
+      },
+    },
+  }),
+  useAcquisitionRadar: (params: Record<string, unknown>) => {
+    mockRadarParams(params);
+    return ({
     data: {
       items: [{
         parcel: {
@@ -33,6 +82,16 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
         opportunity_count: 2,
         personas: ['broker', 'developer'],
         review_status: 'candidate',
+        facts: [{
+          id: 'fact-availability',
+          fact_type: 'availability',
+          value: { status: 'for_sale', evidence_type: 'broker' },
+          source_url: 'https://broker.example/listing/P-100',
+          excerpt: 'Broker listing marks the parcel available for sale.',
+          confidence: 0.88,
+          observed_at: '2026-08-08T12:00:00Z',
+          last_verified_at: '2026-08-08T12:00:00Z',
+        }],
         latest_signal_at: '2026-08-08T12:00:00Z',
         reasons: ['Best parcel fit is 88/100', 'Appears near 2 opportunities'],
         cautions: [],
@@ -44,7 +103,7 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
       total: 1,
       limit: 100,
       offset: 0,
-      summary: { total_parcels: 1, shortlisted_parcels: 0, multi_opportunity_parcels: 1, assigned_parcels: 0, state_count: 1 },
+      summary: { total_parcels: 1, shortlisted_parcels: 0, multi_opportunity_parcels: 1, assigned_parcels: 0, promoted_parcels: 0, contacted_parcels: 0, follow_up_parcels: 0, due_follow_up_parcels: 0, state_count: 1 },
     },
     isLoading: false,
     error: null,
@@ -52,7 +111,8 @@ vi.mock('@/hooks/useAcquisitionRadar', () => ({
     updateCase: { isPending: false, variables: undefined, mutate: updateCase },
     recordActivity: { isPending: false, variables: undefined, mutate: recordActivity },
     promote: { isPending: false, variables: undefined, mutate: vi.fn() },
-  }),
+    });
+  },
 }));
 
 vi.mock('@/hooks/useOrganizationMembers', () => ({
@@ -72,18 +132,57 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 
 describe('<AcquisitionRadar>', () => {
+  beforeEach(() => {
+    mockRadarParams.mockClear();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+  });
+
   it('shows a deduplicated parcel queue with contributing opportunities and review actions', () => {
     render(<MemoryRouter><AcquisitionRadar /></MemoryRouter>);
 
     expect(screen.getByRole('heading', { name: 'Acquisition Radar' })).toBeInTheDocument();
+    expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('ZIP3 787');
+    expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('Candidate parcels are not verified listings');
+    expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('Starbucks Coffee build-out');
+    expect(screen.getByLabelText('ZIP3 opportunity heatmap')).toHaveTextContent('210 Congress Ave');
+    fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by ZIP3 787' }));
+    expect(screen.getByLabelText('Active acquisition radar filters')).toHaveTextContent('ZIP3:');
+    expect(screen.getByLabelText('Active acquisition radar filters')).toHaveTextContent('787');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear ZIP3 filter' }));
+    expect(screen.queryByRole('button', { name: 'Clear ZIP3 filter' })).not.toBeInTheDocument();
+    const workflow = screen.getByLabelText('Daily acquisition workflow');
+    expect(workflow).toHaveTextContent('Alert');
+    expect(workflow).toHaveTextContent('Evidence');
+    expect(workflow).toHaveTextContent('Review');
+    expect(workflow).toHaveTextContent('Outreach');
+    expect(workflow).toHaveTextContent('Follow-up');
+    expect(workflow).toHaveTextContent('Saved');
+    expect(workflow).toHaveTextContent('not market coverage or for-sale inventory');
     const summary = screen.getByLabelText('Acquisition radar summary');
     expect(within(summary).getByText('Cross-signal')).toBeInTheDocument();
+    expect(screen.getByLabelText('Follow-up')).toHaveTextContent('Any follow-up');
+    expect(screen.getByLabelText('Follow-up')).toHaveTextContent('Due now');
+    expect(screen.getByLabelText('Availability')).toHaveTextContent('Verified availability');
     expect(screen.getByText('125 Congress Ave')).toBeInTheDocument();
     expect(screen.getByText('91')).toBeInTheDocument();
     expect(screen.getByText('2 opportunities')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Starbucks South Congress' })).toHaveAttribute('href', '/deal/deal-1');
     expect(screen.getByRole('link', { name: 'Retail Shell Project' })).toHaveAttribute('href', '/deal/deal-2');
     expect(screen.getByRole('link', { name: '125 Congress Ave' })).toHaveAttribute('href', '/parcels/parcel-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Evidence' }));
+    expect(screen.getByLabelText('Signals')).toHaveValue('multi');
+    fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Follow-up' }));
+    expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
+    expect(screen.getByLabelText('Signals')).toHaveValue('');
+    expect(screen.getByTitle('Verified availability evidence: broker')).toHaveTextContent('Verified availability');
+    fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Review' }));
+    expect(screen.getByLabelText('Case status')).toHaveValue('shortlisted');
+    expect(screen.getByLabelText('Follow-up')).toHaveValue('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Shortlist' }));
     expect(updateCase).toHaveBeenCalledWith(
@@ -108,5 +207,69 @@ describe('<AcquisitionRadar>', () => {
     expect(screen.queryByRole('combobox', { name: 'Assign 125 Congress Ave' })).not.toBeInTheDocument();
     expect(screen.getAllByText('Unassigned').length).toBeGreaterThan(0);
     currentRole = 'admin';
+  });
+
+  it('hydrates acquisition radar filters from the URL', async () => {
+    render(
+      <MemoryRouter initialEntries={['/acquisition-radar?availability=verified&signal_overlap=multi&follow_up=due&review_status=contacted&zip3=787']}>
+        <AcquisitionRadar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByLabelText('Availability')).toHaveValue('verified');
+    expect(screen.getByLabelText('Signals')).toHaveValue('multi');
+    expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
+    expect(screen.getByLabelText('Case status')).toHaveValue('contacted');
+    const activeFilters = screen.getByLabelText('Active acquisition radar filters');
+    expect(activeFilters).toHaveTextContent('Availability:');
+    expect(activeFilters).toHaveTextContent('verified availability');
+    expect(activeFilters).toHaveTextContent('Signals:');
+    expect(activeFilters).toHaveTextContent('cross-signal');
+    expect(activeFilters).toHaveTextContent('ZIP3:');
+    expect(activeFilters).toHaveTextContent('787');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy view link' }));
+
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('/acquisition-radar?'),
+    ));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('availability=verified'),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('signal_overlap=multi'),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('follow_up=due'),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('zip3=787'),
+    );
+
+    vi.mocked(navigator.clipboard.writeText).mockClear();
+    fireEvent.change(screen.getByLabelText('Availability'), { target: { value: 'unverified' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy view link' }));
+
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('availability=unverified'),
+    ));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Signals filter' }));
+    expect(screen.getByLabelText('Signals')).toHaveValue('');
+    expect(screen.getByLabelText('Availability')).toHaveValue('unverified');
+  });
+
+  it('ignores malformed ZIP3 URL filters before calling the radar API', () => {
+    render(
+      <MemoryRouter initialEntries={['/acquisition-radar?state=TX&zip3=78A']}>
+        <AcquisitionRadar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Clear ZIP3 filter' })).not.toBeInTheDocument();
+    expect(mockRadarParams).toHaveBeenLastCalledWith(expect.objectContaining({
+      state: 'TX',
+      zip3: undefined,
+    }));
   });
 });

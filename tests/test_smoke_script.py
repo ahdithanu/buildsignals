@@ -21,7 +21,7 @@ def run_smoke(tmp_path):
     fake_curl.write_text(
         f"#!{sys.executable}\n"
         "import json, os, sys\n"
-        "from urllib.parse import urlsplit\n"
+        "from urllib.parse import parse_qs, urlsplit\n"
         "args = sys.argv[1:]\n"
         "url = next(a for a in args if a.startswith('https://'))\n"
         "path = urlsplit(url).path\n"
@@ -37,6 +37,9 @@ def run_smoke(tmp_path):
         "  assert payload['password'] == os.environ['SMOKE_PASSWORD']\n"
         " with open(args[args.index('-c') + 1], 'w') as f: f.write('ds_refresh')\n"
         " print(json.dumps({'access_token': 'test-token-' + 'x' * 30}))\n"
+        "elif path == '/v1/ingestion/coverage/measured':\n"
+        " record_type = parse_qs(urlsplit(url).query).get('record_type', ['permit'])[0]\n"
+        " print(json.dumps({'record_type': record_type, 'page_totals': {'source_count': 0}, 'readiness': {'total_source_count': 0}, 'readiness_status_counts': {'empty': 0}, 'sources': []}))\n"
         "else:\n"
         " assert 'Authorization: Bearer test-token-' + 'x' * 30 in args\n"
         " print('{}' if path == os.environ.get('INVALID_BODY_PATH') else '[]')\n"
@@ -88,8 +91,13 @@ def test_smoke_reads_authenticated_routes_and_handles_quoted_password(run_smoke)
         SMOKE_PASSWORD='test-"quote\\and-space password',
     )
     assert result.returncode == 0, result.stderr
-    assert calls[-3:] == [
-        "/v1/planning/events", "/v1/brand-expansion", "/v1/permit-brand-matches"
+    assert calls[-6:] == [
+        "/v1/planning/events",
+        "/v1/brand-expansion",
+        "/v1/permit-brand-matches",
+        "/v1/ingestion/coverage/measured",
+        "/v1/ingestion/coverage/measured",
+        "/v1/ingestion/coverage/measured",
     ]
     assert "verify real inventory" in result.stdout
     assert "test-token" not in result.stdout + result.stderr

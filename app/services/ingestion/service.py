@@ -56,6 +56,7 @@ from app.services.ingestion.normalization import (
     parse_source_datetime,
     prepare_mapped_record,
 )
+from app.services.ingestion.temporal_projection import project_record_observations
 from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapshot
 from app.services.parcel_lineage import upsert_lineage_from_snapshot
 from app.services.planning_intelligence import enrich_planning_record
@@ -664,6 +665,26 @@ def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
 
+def replay_permit_snapshot(
+    db: Session, source: IngestionSource, run_id: str, record: dict,
+    captured_at: datetime,
+) -> tuple[PermitRecord, str]:
+    """Offline replay through the same normalization, evidence and graph pipeline."""
+    if source.record_type != "permit":
+        raise ValueError("Only permit snapshots are supported")
+    mappings = [mapping for mapping in source.field_mappings if mapping.is_active]
+    missing = missing_required_source_fields(record, mappings)
+    if missing:
+        raise ValueError(f"Missing required source fields: {missing}")
+    prepared, fields = prepare_mapped_record(record, mappings)
+    normalized = normalize_permit(prepared, fields, defaults={
+        **dict((source.settings or {}).get("defaults") or {}),
+        **({"jurisdiction": source.jurisdiction} if source.jurisdiction else {}),
+    })
+    return _persist_permit(db, source, run_id, normalized, record,
+                           captured_at, _normalization_hash(source))
+
+
 def _persist_permit(
     db: Session,
     source: IngestionSource,
@@ -740,12 +761,15 @@ def _persist_permit(
             for brand_id in confirmed_brand_ids:
                 rebuild_brand_party_fingerprints(db, brand_id)
             _project_permit_to_graph(db, source, permit, raw)
+            _capture_temporal_record(db, "permit", permit, raw, run_id)
             return permit, "reprocessed"
         permit_entity_id = _record_entity_id(db, "permit", permit.id)
         if permit_entity_id:
+            _project_permit_applicant(db, source, permit, raw, permit_entity_id)
             _reconcile_planning_permit_links(
                 db, permit=permit, permit_entity_id=permit_entity_id
             )
+        _capture_temporal_record(db, "permit", permit, raw, run_id)
         return permit, "unchanged"
 
     values = {key: value for key, value in normalized.values.items() if key in PERMIT_COLUMNS}
@@ -809,6 +833,7 @@ def _persist_permit(
     db.flush()
     detect_permit_brands(db, permit, raw)
     _project_permit_to_graph(db, source, permit, raw)
+    _capture_temporal_record(db, "permit", permit, raw, run_id)
     return permit, event_type
 
 
@@ -939,13 +964,18 @@ def _persist_planning_record(
             db, source, "planning", planning.id, raw, fetched_at
         )
 
-    if raw_was_existing and planning is not None and planning.normalization_hash == normalization_hash:
+    if (
+        raw_was_existing and planning is not None
+        and planning.latest_raw_record_id == raw.id
+        and planning.normalization_hash == normalization_hash
+    ):
         planning.last_seen_at = fetched_at
         planning_entity_id = _record_entity_id(db, "planning", planning.id)
         if planning_entity_id:
             _reconcile_planning_permit_links(
                 db, planning=planning, planning_entity_id=planning_entity_id
             )
+        _capture_temporal_record(db, "planning", planning, raw, run_id)
         return planning, "unchanged"
 
     values = {key: value for key, value in normalized.values.items() if key in PLANNING_COLUMNS}
@@ -975,7 +1005,18 @@ def _persist_planning_record(
     _sync_record_external_references(db, source, "planning", planning.id, raw, fetched_at)
     matches = enrich_planning_record(db, planning, raw)
     _project_planning_to_graph(db, source, planning, raw, matches)
+    _capture_temporal_record(db, "planning", planning, raw, run_id)
     return planning, action
+
+
+def _capture_temporal_record(
+    db: Session, record_type: str, record: PermitRecord | PlanningRecord,
+    raw: RawSourceRecord, run_id: str,
+) -> None:
+    entity_id = _record_entity_id(db, record_type, record.id)
+    if entity_id is None:
+        raise ValueError("Canonical record has no graph identity for temporal projection")
+    project_record_observations(db, record=record, raw=raw, entity_id=entity_id, run_id=run_id)
 
 
 def _touch_raw_observation(
@@ -2082,6 +2123,7 @@ def _project_permit_to_graph(
         permit_entity_id=permit_entity.id,
     )
     _expire_permit_relationships(db, source, permit)
+    _project_permit_applicant(db, source, permit, raw, permit_entity.id)
 
     if not (permit.address or permit.project_name):
         return
@@ -2169,6 +2211,25 @@ def _project_permit_to_graph(
                 "signal_cohort": signal_cohort,
             },
         )
+
+
+def _project_permit_applicant(
+    db: Session, source: IngestionSource, permit: PermitRecord,
+    raw: RawSourceRecord, permit_entity_id: str,
+) -> None:
+    semantics = {mapping.value_semantics for mapping in source.field_mappings
+                 if mapping.is_active and mapping.canonical_field == "applicant_name"}
+    if (not permit.applicant_name or len(permit.applicant_name) > 255
+            or len(semantics) != 1 or not semantics <= {"legal_entity", "business_dba"}):
+        return
+    # Applicant is only the reported filing party, not necessarily owner or retailer.
+    company, _ = resolve_entity(db, GraphEntityCreate(
+        entity_type=GraphEntityType.company, display_name=permit.applicant_name,
+    ))
+    _relate(db, source, permit, raw, permit_entity_id, company.id,
+            GraphRelationshipType.related_to, "permit_applicant",
+            excerpt=f"Applicant reported by source: {permit.applicant_name}"[:1000],
+            attributes={"value_semantics": next(iter(semantics)), "not_verified_expansion": True})
 
 
 def project_permit_to_graph(db: Session, permit: PermitRecord) -> None:

@@ -8,6 +8,7 @@ import type {
   NearbyParcelSearch,
   NearbyParcelSearchCreate,
   NearbyParcelSearchSummary,
+  PlanningNearbyParcelSearchCreate,
   AcquisitionRadarParams,
   AcquisitionRadarResponse,
   ParcelReviewStatus,
@@ -15,12 +16,20 @@ import type {
   ParcelAcquisitionActivityCreate,
   ParcelAcquisitionCase,
   ParcelAcquisitionCaseUpdate,
+  ParcelAvailabilityEvidenceCreate,
+  ParcelFact,
+  Zip3HeatmapResponse,
 } from '@/types/parcel';
 
 export const parcelsApi = {
   radar: (params?: AcquisitionRadarParams): Promise<AcquisitionRadarResponse> =>
     apiClient.get<AcquisitionRadarResponse>(
       '/acquisition-radar',
+      params as Record<string, string | number | boolean | undefined>,
+    ),
+  zip3Heatmap: (params?: { state?: string; limit?: number }): Promise<Zip3HeatmapResponse> =>
+    apiClient.get<Zip3HeatmapResponse>(
+      '/acquisition-map/zip3-heatmap',
       params as Record<string, string | number | boolean | undefined>,
     ),
   acquisitionCase: (caseId: string): Promise<ParcelAcquisitionCase> =>
@@ -46,8 +55,22 @@ export const parcelsApi = {
     apiClient.download(`/nearby-parcel-searches/${searchId}/export`, 'POST'),
   detail: (parcelId: string): Promise<ParcelDetail> =>
     apiClient.get<ParcelDetail>(`/parcels/${parcelId}`),
+  createAvailabilityEvidence: (
+    parcelId: string,
+    payload: ParcelAvailabilityEvidenceCreate,
+  ): Promise<ParcelFact> =>
+    apiClient.post<ParcelFact>(`/parcels/${parcelId}/availability-evidence`, payload),
   create: (dealId: string, payload: NearbyParcelSearchCreate): Promise<NearbyParcelSearch> =>
     apiClient.post<NearbyParcelSearch>(`/deals/${dealId}/nearby-parcel-searches`, payload),
+  createFromPlanning: (
+    dealId: string,
+    planningRecordId: string,
+    payload: PlanningNearbyParcelSearchCreate,
+  ): Promise<NearbyParcelSearch> =>
+    apiClient.post<NearbyParcelSearch>(
+      `/deals/${dealId}/planning-records/${planningRecordId}/nearby-parcel-searches`,
+      payload,
+    ),
   review: (candidateId: string, reviewStatus: ParcelReviewStatus): Promise<NearbyParcelCandidate> =>
     apiClient.patch<NearbyParcelCandidate>(`/parcel-candidates/${candidateId}`, {
       review_status: reviewStatus,

@@ -22,6 +22,10 @@ class LoginRequest(BaseModel):
     totp_code: Optional[str] = None
 
 
+class DemoLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
 class DeleteAccountRequest(BaseModel):
     # Re-enter the current password to confirm intent + identity before an
     # irreversible account deletion.
@@ -29,6 +33,7 @@ class DeleteAccountRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
+    is_demo: bool = False
     access_token: str
     token_type: str = "bearer"
     user_id: str
@@ -48,6 +53,7 @@ class UserResponse(BaseModel):
 
 
 class MeResponse(BaseModel):
+    is_demo: bool = False
     user: UserResponse
     organization_id: str
     role: str
