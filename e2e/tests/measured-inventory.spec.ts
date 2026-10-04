@@ -6,8 +6,9 @@ test('a new organization measures its own empty inventory and can change record 
   await page.goto('/source-health');
   const panel = page.getByRole('region', { name: 'Measured ingestion inventory' });
   const measurements = panel.getByLabel('Current page measurements');
+  const emptyMeasurements = Array.from({ length: 8 }, () => '0');
   await expect(measurements).toBeVisible();
-  await expect(measurements.locator('dd')).toHaveText(['0', '0', '0', '0']);
+  await expect(measurements.locator('dd')).toHaveText(emptyMeasurements);
 
   for (const type of ['parcel', 'planning']) {
     const response = page.waitForResponse(res => res.url().includes('/ingestion/coverage/measured?') && res.url().includes(`record_type=${type}`));
@@ -20,7 +21,7 @@ test('a new organization measures its own empty inventory and can change record 
     expect(body.offset).toBe(0);
     expect(body.limit).toBe(25);
     expect(body.sources.every((source: { stored_records: number }) => source.stored_records === 0)).toBe(true);
-    await expect(measurements.locator('dd')).toHaveText(['0', '0', '0', '0']);
+    await expect(measurements.locator('dd')).toHaveText(emptyMeasurements);
   }
 
   await signOut(page);
