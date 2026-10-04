@@ -8812,6 +8812,199 @@
         "title": "MeResponse",
         "type": "object"
       },
+      "MeasuredCoverageJurisdictionRollup": {
+        "properties": {
+          "geocoded_records": {
+            "title": "Geocoded Records",
+            "type": "integer"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "recent_source_date_records": {
+            "title": "Recent Source Date Records",
+            "type": "integer"
+          },
+          "recently_seen_records": {
+            "title": "Recently Seen Records",
+            "type": "integer"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "stored_records": {
+            "title": "Stored Records",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jurisdiction",
+          "state",
+          "source_count",
+          "stored_records",
+          "geocoded_records",
+          "recently_seen_records",
+          "recent_source_date_records"
+        ],
+        "title": "MeasuredCoverageJurisdictionRollup",
+        "type": "object"
+      },
+      "MeasuredCoverageReadiness": {
+        "properties": {
+          "active_source_count": {
+            "title": "Active Source Count",
+            "type": "integer"
+          },
+          "disabled_source_count": {
+            "title": "Disabled Source Count",
+            "type": "integer"
+          },
+          "empty_source_count": {
+            "title": "Empty Source Count",
+            "type": "integer"
+          },
+          "geocoded_records": {
+            "title": "Geocoded Records",
+            "type": "integer"
+          },
+          "observed_jurisdiction_count": {
+            "title": "Observed Jurisdiction Count",
+            "type": "integer"
+          },
+          "observed_state_count": {
+            "title": "Observed State Count",
+            "type": "integer"
+          },
+          "recent_source_date_records": {
+            "title": "Recent Source Date Records",
+            "type": "integer"
+          },
+          "recently_seen_records": {
+            "title": "Recently Seen Records",
+            "type": "integer"
+          },
+          "sources_with_future_source_dates": {
+            "title": "Sources With Future Source Dates",
+            "type": "integer"
+          },
+          "sources_with_geocoded_records": {
+            "title": "Sources With Geocoded Records",
+            "type": "integer"
+          },
+          "sources_with_recent_collection": {
+            "title": "Sources With Recent Collection",
+            "type": "integer"
+          },
+          "sources_with_recent_source_date": {
+            "title": "Sources With Recent Source Date",
+            "type": "integer"
+          },
+          "sources_with_records": {
+            "title": "Sources With Records",
+            "type": "integer"
+          },
+          "sources_with_unknown_source_dates": {
+            "title": "Sources With Unknown Source Dates",
+            "type": "integer"
+          },
+          "stale_collection_source_count": {
+            "title": "Stale Collection Source Count",
+            "type": "integer"
+          },
+          "stale_source_date_source_count": {
+            "title": "Stale Source Date Source Count",
+            "type": "integer"
+          },
+          "stored_records": {
+            "title": "Stored Records",
+            "type": "integer"
+          },
+          "total_source_count": {
+            "title": "Total Source Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_source_count",
+          "active_source_count",
+          "disabled_source_count",
+          "sources_with_records",
+          "empty_source_count",
+          "sources_with_recent_collection",
+          "sources_with_recent_source_date",
+          "sources_with_unknown_source_dates",
+          "sources_with_future_source_dates",
+          "sources_with_geocoded_records",
+          "stale_collection_source_count",
+          "stale_source_date_source_count",
+          "stored_records",
+          "geocoded_records",
+          "recently_seen_records",
+          "recent_source_date_records",
+          "observed_state_count",
+          "observed_jurisdiction_count"
+        ],
+        "title": "MeasuredCoverageReadiness",
+        "type": "object"
+      },
+      "MeasuredCoverageReadinessStatusCounts": {
+        "properties": {
+          "disabled": {
+            "title": "Disabled",
+            "type": "integer"
+          },
+          "empty": {
+            "title": "Empty",
+            "type": "integer"
+          },
+          "fresh": {
+            "title": "Fresh",
+            "type": "integer"
+          },
+          "stale_collection": {
+            "title": "Stale Collection",
+            "type": "integer"
+          },
+          "stale_source_date": {
+            "title": "Stale Source Date",
+            "type": "integer"
+          },
+          "unknown_source_date": {
+            "title": "Unknown Source Date",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fresh",
+          "empty",
+          "disabled",
+          "stale_collection",
+          "stale_source_date",
+          "unknown_source_date"
+        ],
+        "title": "MeasuredCoverageReadinessStatusCounts",
+        "type": "object"
+      },
       "MeasuredCoverageResponse": {
         "properties": {
           "count_semantics": {
@@ -8841,6 +9034,26 @@
           },
           "page_totals": {
             "$ref": "#/components/schemas/MeasuredCoverageTotals"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/MeasuredCoverageReadiness"
+          },
+          "readiness_jurisdictions": {
+            "items": {
+              "$ref": "#/components/schemas/MeasuredCoverageJurisdictionRollup"
+            },
+            "title": "Readiness Jurisdictions",
+            "type": "array"
+          },
+          "readiness_states": {
+            "items": {
+              "$ref": "#/components/schemas/MeasuredCoverageStateRollup"
+            },
+            "title": "Readiness States",
+            "type": "array"
+          },
+          "readiness_status_counts": {
+            "$ref": "#/components/schemas/MeasuredCoverageReadinessStatusCounts"
           },
           "record_type": {
             "enum": [
@@ -8880,10 +9093,64 @@
           "offset",
           "has_more",
           "page_totals",
+          "readiness",
+          "readiness_status_counts",
+          "readiness_states",
+          "readiness_jurisdictions",
           "sources",
           "warnings"
         ],
         "title": "MeasuredCoverageResponse",
+        "type": "object"
+      },
+      "MeasuredCoverageStateRollup": {
+        "properties": {
+          "geocoded_records": {
+            "title": "Geocoded Records",
+            "type": "integer"
+          },
+          "recent_source_date_records": {
+            "title": "Recent Source Date Records",
+            "type": "integer"
+          },
+          "recently_seen_records": {
+            "title": "Recently Seen Records",
+            "type": "integer"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "stored_records": {
+            "title": "Stored Records",
+            "type": "integer"
+          },
+          "unknown_source_date_records": {
+            "title": "Unknown Source Date Records",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "source_count",
+          "stored_records",
+          "geocoded_records",
+          "recently_seen_records",
+          "recent_source_date_records",
+          "unknown_source_date_records"
+        ],
+        "title": "MeasuredCoverageStateRollup",
         "type": "object"
       },
       "MeasuredCoverageTotals": {
@@ -8963,6 +9230,17 @@
             "title": "Observed States",
             "type": "array"
           },
+          "readiness_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Readiness Reasons",
+            "type": "array"
+          },
+          "readiness_status": {
+            "title": "Readiness Status",
+            "type": "string"
+          },
           "source_id": {
             "title": "Source Id",
             "type": "string"
@@ -8982,6 +9260,8 @@
           "configured_active",
           "configured_jurisdiction",
           "stored_records",
+          "readiness_status",
+          "readiness_reasons",
           "observed_states"
         ],
         "title": "MeasuredSourceCoverage",
@@ -24015,6 +24295,23 @@
               "pattern": "^(parcel|permit|planning)$",
               "title": "Record Type",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "readiness_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(fresh|empty|disabled|stale_collection|stale_source_date|unknown_source_date)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Readiness Status"
             }
           },
           {
