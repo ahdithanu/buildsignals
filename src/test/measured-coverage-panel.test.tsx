@@ -194,9 +194,11 @@ describe('MeasuredCoveragePanel', () => {
     expect(screen.getByRole('button', { name: 'Previous source page' })).toBeDisabled();
     expect(screen.getByText(/Source list filtered to empty sources./)).toBeInTheDocument();
     expect(screen.getByText('All measured permit sources for this organization, not just the current page.')).toBeInTheDocument();
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?readiness_status=empty');
 
     fireEvent.change(screen.getByLabelText('Source status'), { target: { value: '' } });
     await waitFor(() => expect(screen.getByLabelText('Source status')).toHaveValue(''));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('');
   });
 
   it('honors record_type URL handoffs and keeps the URL shareable when the record type changes', async () => {
@@ -213,6 +215,30 @@ describe('MeasuredCoveragePanel', () => {
     fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'permit' } });
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'permit', freshness_hours: 72, limit: 25, offset: 0 }));
     expect(screen.getByTestId('location-search')).toHaveTextContent('');
+  });
+
+  it('hydrates the source status filter from the URL and preserves it across record type changes', async () => {
+    setup('/source-health?record_type=parcel&readiness_status=stale_collection');
+    await screen.findByRole('article', { name: 'county_public_records' });
+    expect(screen.getByLabelText('Records')).toHaveValue('parcel');
+    expect(screen.getByLabelText('Source status')).toHaveValue('stale_collection');
+    expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
+      record_type: 'parcel',
+      freshness_hours: 72,
+      limit: 25,
+      offset: 0,
+      readiness_status: 'stale_collection',
+    });
+
+    fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'planning' } });
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
+      record_type: 'planning',
+      freshness_hours: 72,
+      limit: 25,
+      offset: 0,
+      readiness_status: 'stale_collection',
+    }));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=planning&readiness_status=stale_collection');
   });
 
   it('reacts when in-app navigation changes the measured inventory record type', async () => {

@@ -10,9 +10,21 @@ const PAGE_SIZE = 25;
 const number = new Intl.NumberFormat('en-US');
 const datetime = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 const recordTypes = new Set<CoverageRecordType>(['permit', 'parcel', 'planning']);
+const sourceStatuses = new Set<MeasuredReadinessStatus>([
+  'fresh',
+  'empty',
+  'disabled',
+  'stale_collection',
+  'stale_source_date',
+  'unknown_source_date',
+]);
 
 function queryRecordType(value: string | null): CoverageRecordType {
   return recordTypes.has(value as CoverageRecordType) ? value as CoverageRecordType : 'permit';
+}
+
+function querySourceStatus(value: string | null): '' | MeasuredReadinessStatus {
+  return sourceStatuses.has(value as MeasuredReadinessStatus) ? value as MeasuredReadinessStatus : '';
 }
 
 function dateLabel(value: string | null) {
@@ -69,9 +81,10 @@ function StateMeasurements({ state, hours }: { state: ObservedStateCoverage; hou
 export function MeasuredCoveragePanel() {
   const [searchParams, setSearchParams] = useSearchParams();
   const recordTypeParam = searchParams.get('record_type');
+  const statusParam = searchParams.get('readiness_status');
   const [recordType, setRecordType] = useState<CoverageRecordType>(() => queryRecordType(searchParams.get('record_type')));
   const [hours, setHours] = useState(72);
-  const [statusFilter, setStatusFilter] = useState<'' | MeasuredReadinessStatus>('');
+  const [statusFilter, setStatusFilter] = useState<'' | MeasuredReadinessStatus>(() => querySourceStatus(searchParams.get('readiness_status')));
   const [offset, setOffset] = useState(0);
   const measuredParams: MeasuredCoverageParams = {
     record_type: recordType, freshness_hours: hours, limit: PAGE_SIZE, offset,
@@ -98,9 +111,11 @@ export function MeasuredCoveragePanel() {
 
   useEffect(() => {
     const nextRecordType = queryRecordType(recordTypeParam);
+    const nextStatus = querySourceStatus(statusParam);
     setRecordType(current => current === nextRecordType ? current : nextRecordType);
+    setStatusFilter(current => current === nextStatus ? current : nextStatus);
     setOffset(0);
-  }, [recordTypeParam]);
+  }, [recordTypeParam, statusParam]);
 
   function changeRecordType(value: CoverageRecordType) {
     setRecordType(value);
@@ -108,6 +123,15 @@ export function MeasuredCoveragePanel() {
     const next = new URLSearchParams(searchParams);
     if (value === 'permit') next.delete('record_type');
     else next.set('record_type', value);
+    setSearchParams(next, { replace: true });
+  }
+
+  function changeSourceStatus(value: '' | MeasuredReadinessStatus) {
+    setStatusFilter(value);
+    setOffset(0);
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('readiness_status', value);
+    else next.delete('readiness_status');
     setSearchParams(next, { replace: true });
   }
 
@@ -130,7 +154,7 @@ export function MeasuredCoveragePanel() {
             </select>
           </label>
           <label className="grid gap-1 text-xs">Source status
-            <select aria-label="Source status" className="h-9 rounded-md border bg-background px-2 text-xs" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as '' | MeasuredReadinessStatus); setOffset(0); }}>
+            <select aria-label="Source status" className="h-9 rounded-md border bg-background px-2 text-xs" value={statusFilter} onChange={event => changeSourceStatus(event.target.value as '' | MeasuredReadinessStatus)}>
               {sourceStatusOptions.map(option => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
             </select>
           </label>

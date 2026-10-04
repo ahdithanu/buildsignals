@@ -537,6 +537,11 @@ application, production diagnostics, and release coverage measurement.
   or planning source health without another manual filter step. The availability
   hook now uses server-provided measured page totals rather than client-side
   source-row aggregation.
+  The measured source-health API and UI now support source readiness status
+  drilldowns for fresh, empty, disabled, stale-collection, stale-source-date, and
+  unknown-source-date sources. The filter narrows the audited source list and
+  page totals while preserving the full readiness rollup as the measured claim
+  boundary. The filter is URL-backed for shareable ops/reviewer handoffs.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved
