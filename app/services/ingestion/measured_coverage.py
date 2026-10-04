@@ -105,6 +105,34 @@ def _state_rollup(rows_by_source: dict[str, list[dict]]) -> list[dict]:
     )
 
 
+def _jurisdiction_rollup(db, model, *, state, valid_coordinate, cutoff: datetime,
+                         now: datetime, source_ids: list[str], limit: int = 10) -> list[dict]:
+    if not source_ids:
+        return []
+    normalized_jurisdiction = func.nullif(func.trim(model.jurisdiction), "").label("jurisdiction")
+    query = scope_query(db.query(
+        normalized_jurisdiction,
+        state,
+        func.count(func.distinct(model.source_id)).label("source_count"),
+        func.count(model.id).label("stored_records"),
+        func.sum(case((valid_coordinate, 1), else_=0)).label("geocoded_records"),
+        func.sum(case((model.last_seen_at.between(cutoff, now), 1), else_=0)).label("recently_seen_records"),
+        func.sum(case((RawSourceRecord.source_updated_at.between(cutoff, now), 1), else_=0)).label("recent_source_date_records"),
+    ), model).outerjoin(RawSourceRecord, and_(
+        RawSourceRecord.id == model.latest_raw_record_id,
+        RawSourceRecord.organization_id == get_org_id(),
+        RawSourceRecord.source_id == model.source_id,
+    )).filter(model.source_id.in_(source_ids))
+    if hasattr(model, "is_active"):
+        query = query.filter(model.is_active.is_(True))
+    rows = query.group_by(normalized_jurisdiction, state).order_by(
+        func.count(model.id).desc(),
+        state.nulls_last(),
+        normalized_jurisdiction.nulls_last(),
+    ).limit(limit).all()
+    return [dict(row._mapping) for row in rows]
+
+
 def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
                       freshness_hours: int = 72, now: datetime | None = None) -> dict:
     if record_type not in MODELS or not 1 <= limit <= 100 or offset < 0 or not 1 <= freshness_hours <= 8760:
@@ -161,6 +189,10 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
         "page_totals": _sum_totals(page_states, source_count=len(sources)) if page_states else _zero_totals(len(sources)),
         "readiness": _readiness_rollup(all_sources, by_source),
         "readiness_states": _state_rollup(by_source),
+        "readiness_jurisdictions": _jurisdiction_rollup(
+            db, model, state=state, valid_coordinate=valid_coordinate,
+            cutoff=cutoff, now=now, source_ids=all_ids,
+        ),
         "sources": [{"source_id": source.id, "source_key": source.key,
                      "configured_active": source.is_active, "configured_jurisdiction": source.jurisdiction,
                      "stored_records": sum(row["stored_records"] for row in by_source.get(source.id, [])),

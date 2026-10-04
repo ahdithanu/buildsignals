@@ -17,7 +17,8 @@ the current query page so the frontend can display measured source,
 stored-record, geocoded-record, freshness and observed geography counts without
 deriving broader coverage claims in the browser.
 It also returns `readiness_states`, an all-source observed state/DC breakdown for
-the selected record type. Unknown geography stays explicit.
+the selected record type, and `readiness_jurisdictions`, a bounded top local
+jurisdiction/city-style rollup. Unknown geography stays explicit.
 
 ## API and Semantics
 
@@ -42,6 +43,9 @@ the selected record type. Unknown geography stays explicit.
 - `readiness_states` rolls up observed canonical-record state/DC values across
   all measured sources for the selected record type. It is not statewide source
   completeness and does not infer geography from configured jurisdiction names.
+- `readiness_jurisdictions` surfaces the highest-volume observed jurisdiction
+  labels from stored canonical records. It is an operations drilldown, not proof
+  of citywide completeness.
 - `page_totals` is scoped to the returned source page and request filters. It is
   not a tenant-wide total unless the caller has paginated through every page and
   retained the same query parameters.

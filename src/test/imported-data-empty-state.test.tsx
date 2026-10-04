@@ -47,6 +47,7 @@ function report(params: MeasuredCoverageParams, stored = 0, hasMore = false): Me
       observed_jurisdiction_count: 0,
     },
     readiness_states: [],
+    readiness_jurisdictions: [],
     sources: [{
       source_id: `${params.record_type}-${params.offset}`, source_key: 'public_records',
       configured_active: false, configured_jurisdiction: 'TX', stored_records: stored, observed_states: [],

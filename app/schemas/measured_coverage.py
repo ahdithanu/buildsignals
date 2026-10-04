@@ -73,6 +73,16 @@ class MeasuredCoverageStateRollup(BaseModel):
     unknown_source_date_records: int
 
 
+class MeasuredCoverageJurisdictionRollup(BaseModel):
+    jurisdiction: str | None
+    state: str | None
+    source_count: int
+    stored_records: int
+    geocoded_records: int
+    recently_seen_records: int
+    recent_source_date_records: int
+
+
 class MeasuredCoverageResponse(BaseModel):
     measured_at: datetime
     record_type: Literal["parcel", "permit", "planning"]
@@ -85,5 +95,6 @@ class MeasuredCoverageResponse(BaseModel):
     page_totals: MeasuredCoverageTotals
     readiness: MeasuredCoverageReadiness
     readiness_states: list[MeasuredCoverageStateRollup]
+    readiness_jurisdictions: list[MeasuredCoverageJurisdictionRollup]
     sources: list[MeasuredSourceCoverage]
     warnings: list[str]

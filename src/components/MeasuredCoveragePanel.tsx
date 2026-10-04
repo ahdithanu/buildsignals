@@ -157,6 +157,33 @@ export function MeasuredCoveragePanel() {
                   </article>)}
                 </div>
               </div>}
+              {data.readiness_jurisdictions.length > 0 && <div className="mt-4">
+                <p className="text-[11px] font-medium text-foreground">Top measured jurisdictions</p>
+                <div className="mt-2 overflow-x-auto">
+                  <table className="w-full min-w-[560px] text-left text-xs">
+                    <thead className="border-b text-[10px] uppercase text-muted-foreground">
+                      <tr>
+                        <th className="py-2 pr-3 font-medium">Jurisdiction</th>
+                        <th className="py-2 pr-3 font-medium">State</th>
+                        <th className="py-2 pr-3 font-medium">Sources</th>
+                        <th className="py-2 pr-3 font-medium">Stored</th>
+                        <th className="py-2 pr-3 font-medium">Geocoded</th>
+                        <th className="py-2 font-medium">Fresh source date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.readiness_jurisdictions.slice(0, 10).map((item, index) => <tr key={`${item.state ?? 'unknown'}-${item.jurisdiction ?? 'unknown'}-${index}`} className="border-b last:border-0">
+                        <td className="py-2 pr-3 font-medium">{item.jurisdiction ?? 'Unknown jurisdiction'}</td>
+                        <td className="py-2 pr-3">{item.state ?? 'Unknown'}</td>
+                        <td className="py-2 pr-3 tabular-nums">{number.format(item.source_count)}</td>
+                        <td className="py-2 pr-3 tabular-nums">{number.format(item.stored_records)}</td>
+                        <td className="py-2 pr-3 tabular-nums">{number.format(item.geocoded_records)}</td>
+                        <td className="py-2 tabular-nums">{number.format(item.recent_source_date_records)}</td>
+                      </tr>)}
+                    </tbody>
+                  </table>
+                </div>
+              </div>}
             </section>
             <dl aria-label="Current page measurements" className="mt-5 grid grid-cols-2 gap-4 border-y py-3 sm:grid-cols-4">
               <Metric label="Sources on this page" value={data.page_totals.source_count} />

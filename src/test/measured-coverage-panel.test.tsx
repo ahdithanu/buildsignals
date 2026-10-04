@@ -68,6 +68,26 @@ function report(params: Partial<MeasuredCoverageParams> = {}): MeasuredCoverage 
         unknown_source_date_records: 25,
       },
     ] : [],
+    readiness_jurisdictions: params.record_type === 'permit' && (params.offset ?? 0) === 0 ? [
+      {
+        jurisdiction: 'Austin',
+        state: 'TX',
+        source_count: 2,
+        stored_records: 125,
+        geocoded_records: 75,
+        recently_seen_records: 70,
+        recent_source_date_records: 12,
+      },
+      {
+        jurisdiction: null,
+        state: null,
+        source_count: 1,
+        stored_records: 25,
+        geocoded_records: 5,
+        recently_seen_records: 0,
+        recent_source_date_records: 0,
+      },
+    ] : [],
     sources: [{
       source_id: 'source-a', source_key: 'county_public_records', configured_active: true,
       configured_jurisdiction: 'County, TX', stored_records: 100,
@@ -120,8 +140,11 @@ describe('MeasuredCoveragePanel', () => {
     expect(within(readiness).getByText('Stale collection').nextElementSibling).toHaveTextContent('1');
     expect(within(readiness).getByText(/Stored records: 150/)).toBeInTheDocument();
     expect(within(readiness).getByText(/Observed geography across measured permit inventory/)).toBeInTheDocument();
-    expect(within(readiness).getByText('TX')).toBeInTheDocument();
+    expect(within(readiness).getAllByText('TX').length).toBeGreaterThanOrEqual(1);
     expect(within(readiness).getByText('Unknown state')).toBeInTheDocument();
+    expect(within(readiness).getByText('Top measured jurisdictions')).toBeInTheDocument();
+    expect(within(readiness).getByText('Austin')).toBeInTheDocument();
+    expect(within(readiness).getByText('Unknown jurisdiction')).toBeInTheDocument();
     expect(screen.getByText('Sources on this page').nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText('Valid coordinates on this page').nextElementSibling).toHaveTextContent('80');
     expect(screen.getByText('Observed jurisdiction labels').nextElementSibling).toHaveTextContent('2');
@@ -181,6 +204,7 @@ describe('MeasuredCoveragePanel', () => {
     const empty = report();
     empty.has_more = false;
     empty.readiness_states = [];
+    empty.readiness_jurisdictions = [];
     empty.sources[0] = { ...empty.sources[0], stored_records: 0, observed_states: [], configured_active: false };
     vi.mocked(ingestionApi.measuredCoverage).mockResolvedValue(empty);
     setup();
