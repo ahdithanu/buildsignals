@@ -22,7 +22,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from app import config
 from app.config import ALLOW_ANONYMOUS, is_public_path
 from app.services.demo_access import (
     demo_path_allowed,

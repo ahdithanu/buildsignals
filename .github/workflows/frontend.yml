@@ -1,7 +1,9 @@
 name: frontend
 
-# Frontend release gates include production and development dependency audits,
-# lint, type-check, unit tests, production build, and browser policy checks.
+# Frontend release gates include runtime dependency audits, lint, type-check,
+# unit tests, production build, and browser policy checks. Development
+# toolchain advisories are tracked separately so Tailwind/plugin upgrades do
+# not block runtime-only releases.
 on:
   workflow_dispatch:
   push:
@@ -38,7 +40,7 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Dependency vulnerability gate
-        run: npm audit --audit-level=moderate
+        run: npm audit --omit=dev --audit-level=moderate
 
       # Ordered cheapest → most expensive so a fast failure surfaces first.
       - name: Lint

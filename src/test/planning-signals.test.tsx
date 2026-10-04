@@ -132,7 +132,7 @@ describe('<PlanningSignals>', () => {
     expect(screen.getByText('No imported records available')).toBeInTheDocument();
     expect(screen.getByText(/No stored planning records were measured for this organization/)).toBeInTheDocument();
     expect(useImportedRecordAvailabilityMock).toHaveBeenCalledWith(['planning']);
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health');
+    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=planning');
     expect(screen.queryByText(/Adjust the active filters|none match the active filters/)).not.toBeInTheDocument();
   });
 

@@ -77,7 +77,8 @@ it('persists profile and target market per authenticated deal workspace', async 
   await waitFor(() => expect(apiClient.get).toHaveBeenLastCalledWith('/deals/d/acquisition-screen', { profile: 'small_bay_retail', market_city: 'Columbus', market_state: 'OH' }));
 
   render(<QueryClientProvider client={new QueryClient()}><AcquisitionScreenPanel dealId="other" /></QueryClientProvider>);
-  expect(screen.getAllByLabelText('Profile').at(-1)).toHaveValue('small_multifamily');
+  const profileFields = screen.getAllByLabelText('Profile');
+  expect(profileFields[profileFields.length - 1]).toHaveValue('small_multifamily');
 });
 
 it('persists selected saved buy box per authenticated deal workspace', async () => {

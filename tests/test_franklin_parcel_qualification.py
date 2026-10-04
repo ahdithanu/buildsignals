@@ -3,7 +3,12 @@ import json
 
 import pytest
 
-from scripts.franklin_parcel_qualification import combine_batches, county_reference, main, qualify_sample
+from scripts.franklin_parcel_qualification import (
+    combine_batches,
+    county_reference,
+    main,
+    qualify_sample,
+)
 
 
 @pytest.mark.parametrize("reference", [None, 10066782, "010-066782", "01006678200", " 010066782", "01006678X"])

@@ -43,8 +43,8 @@ from app.services.deal_service import deal_to_detail_response
 from app.services.graph_service import relationships_for_entity
 from app.services.map_readiness import map_readiness
 from app.services.map_signals import list_map_signals
-from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
 from app.services.parcel_availability_ingestion import create_availability_evidence
+from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
 from app.services.parcel_lineage import get_lineage_event, lineage_events_for_parcel
 from app.services.parcel_service import (
     assign_nearby_parcel_candidate,

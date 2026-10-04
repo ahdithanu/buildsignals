@@ -26,9 +26,9 @@ from app.services.graph_service import (
     resolve_entity,
     upsert_deal_graph_context,
 )
+from app.services.parcel_availability import AVAILABILITY_FACT_TYPES, VERIFIED_AVAILABILITY_STATUSES
 from app.services.parcel_proximity import find_nearby_parcels
 from app.services.parcel_ranking import rank_parcel_candidate, ranker_version
-from app.services.parcel_availability import AVAILABILITY_FACT_TYPES, VERIFIED_AVAILABILITY_STATUSES
 from app.utils.org_scope import active_query, get_org_id
 
 
