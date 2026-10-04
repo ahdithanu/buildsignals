@@ -48,6 +48,14 @@ function report(params: Partial<MeasuredCoverageParams> = {}): MeasuredCoverage 
       observed_state_count: 2,
       observed_jurisdiction_count: 3,
     },
+    readiness_status_counts: {
+      fresh: 1,
+      empty: 1,
+      disabled: 0,
+      stale_collection: 1,
+      stale_source_date: 0,
+      unknown_source_date: 1,
+    },
     readiness_states: params.record_type === 'permit' && (params.offset ?? 0) === 0 ? [
       {
         state: 'TX',
@@ -143,6 +151,10 @@ describe('MeasuredCoveragePanel', () => {
     expect(within(readiness).getByText('Empty sources').nextElementSibling).toHaveTextContent('2');
     expect(within(readiness).getByText('Stale collection').nextElementSibling).toHaveTextContent('1');
     expect(within(readiness).getByText(/Stored records: 150/)).toBeInTheDocument();
+    expect(within(readiness).getByRole('button', { name: 'Fresh: 1' })).toBeInTheDocument();
+    expect(within(readiness).getByRole('button', { name: 'Empty: 1' })).toBeInTheDocument();
+    expect(within(readiness).getByRole('button', { name: 'Disabled: 0' })).toBeDisabled();
+    expect(within(readiness).getByRole('button', { name: 'Unknown source dates: 1' })).toBeInTheDocument();
     expect(within(readiness).getByText(/Observed geography across measured permit inventory/)).toBeInTheDocument();
     expect(within(readiness).getAllByText('TX').length).toBeGreaterThanOrEqual(1);
     expect(within(readiness).getByText('Unknown state')).toBeInTheDocument();
@@ -199,6 +211,16 @@ describe('MeasuredCoveragePanel', () => {
     fireEvent.change(screen.getByLabelText('Source status'), { target: { value: '' } });
     await waitFor(() => expect(screen.getByLabelText('Source status')).toHaveValue(''));
     expect(screen.getByTestId('location-search')).toHaveTextContent('');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stale collection: 1' }));
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
+      record_type: 'permit',
+      freshness_hours: 72,
+      limit: 25,
+      offset: 0,
+      readiness_status: 'stale_collection',
+    }));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?readiness_status=stale_collection');
   });
 
   it('honors record_type URL handoffs and keeps the URL shareable when the record type changes', async () => {

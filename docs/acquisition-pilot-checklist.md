@@ -542,6 +542,10 @@ application, production diagnostics, and release coverage measurement.
   unknown-source-date sources. The filter narrows the audited source list and
   page totals while preserving the full readiness rollup as the measured claim
   boundary. The filter is URL-backed for shareable ops/reviewer handoffs.
+  Readiness status counts are server-provided in the same no-store measured
+  response and render as clickable audit buckets, so reviewers can jump directly
+  to empty, stale, disabled, or unknown-date source lists without inferring from
+  raw source rows.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

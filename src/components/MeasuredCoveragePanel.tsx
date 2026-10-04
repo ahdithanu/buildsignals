@@ -190,6 +190,28 @@ export function MeasuredCoveragePanel() {
               <p className="mt-2 text-[11px] text-muted-foreground">
                 Stored records: {number.format(data.readiness.stored_records)} | Valid coordinates: {number.format(data.readiness.geocoded_records)} | Observed state/DC codes: {number.format(data.readiness.observed_state_count)}
               </p>
+              <div className="mt-3">
+                <p className="text-[11px] font-medium text-foreground">Source readiness status</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {sourceStatusOptions.filter(option => option.value).map(option => {
+                    const value = option.value as MeasuredReadinessStatus;
+                    const count = data.readiness_status_counts[value] ?? 0;
+                    return (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant={statusFilter === value ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-8 text-xs"
+                        disabled={count === 0 && statusFilter !== value}
+                        onClick={() => changeSourceStatus(statusFilter === value ? '' : value)}
+                      >
+                        {option.label}: {number.format(count)}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
               {data.readiness_states.length > 0 && <div className="mt-3">
                 <p className="text-[11px] font-medium text-foreground">Observed geography across measured {recordType} inventory</p>
                 <div className="mt-2 grid gap-2 md:grid-cols-3">

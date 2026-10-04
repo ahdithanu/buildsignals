@@ -59,6 +59,14 @@ def test_counts_are_measured_scoped_and_do_not_confuse_collection_with_freshness
     assert report["readiness"]["stale_collection_source_count"] == 0
     assert report["readiness"]["stale_source_date_source_count"] == 1
     assert report["readiness"]["stored_records"] == 2
+    assert report["readiness_status_counts"] == {
+        "fresh": 0,
+        "empty": 1,
+        "disabled": 0,
+        "stale_collection": 0,
+        "stale_source_date": 1,
+        "unknown_source_date": 0,
+    }
     assert [row["state"] for row in report["readiness_states"]] == ["FL", None]
     assert report["readiness_states"][0]["source_count"] == 1
     assert report["readiness_states"][0]["stored_records"] == 1
@@ -124,6 +132,8 @@ def test_readiness_status_filter_limits_source_page_without_rewriting_rollups(db
     assert report["readiness"]["total_source_count"] == 2
     assert report["readiness"]["sources_with_records"] == 1
     assert report["readiness"]["empty_source_count"] == 1
+    assert report["readiness_status_counts"]["empty"] == 1
+    assert report["readiness_status_counts"]["stale_source_date"] == 1
     assert report["readiness_jurisdictions"][0]["jurisdiction"] == "County A"
 
 

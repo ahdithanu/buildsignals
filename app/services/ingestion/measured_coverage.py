@@ -10,6 +10,14 @@ from app.services.ingestion.catalog import US_STATE_CODES
 from app.utils.org_scope import get_org_id, scope_query
 
 MODELS = {"parcel": ParcelRecord, "permit": PermitRecord, "planning": PlanningRecord}
+READINESS_STATUSES = (
+    "fresh",
+    "empty",
+    "disabled",
+    "stale_collection",
+    "stale_source_date",
+    "unknown_source_date",
+)
 
 
 def _zero_totals(source_count: int = 0) -> dict:
@@ -74,6 +82,13 @@ def _readiness_rollup(all_sources: list[IngestionSource], rows_by_source: dict[s
         "stale_collection_source_count": sources_with_records - sources_with_recent_collection,
         "stale_source_date_source_count": sources_with_records - sources_with_recent_source_date,
     }
+
+
+def _readiness_status_counts(source_payloads: list[dict]) -> dict[str, int]:
+    counts = {status: 0 for status in READINESS_STATUSES}
+    for item in source_payloads:
+        counts[item["status"]] = counts.get(item["status"], 0) + 1
+    return counts
 
 
 def _state_rollup(rows_by_source: dict[str, list[dict]]) -> list[dict]:
@@ -219,6 +234,7 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
             "stored_records": sum(row["stored_records"] for row in rows),
             "observed_states": rows,
         })
+    readiness_status_counts = _readiness_status_counts(source_payloads)
     if readiness_status:
         source_payloads = [item for item in source_payloads if item["status"] == readiness_status]
     page_payloads = source_payloads[offset:offset + limit + 1]
@@ -233,6 +249,7 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
         "freshness_hours": freshness_hours, "limit": limit, "offset": offset, "has_more": has_more,
         "page_totals": _sum_totals(page_states, source_count=len(page_payloads)) if page_states else _zero_totals(len(page_payloads)),
         "readiness": _readiness_rollup(all_sources, by_source),
+        "readiness_status_counts": readiness_status_counts,
         "readiness_states": _state_rollup(by_source),
         "readiness_jurisdictions": _jurisdiction_rollup(
             db, model, state=state, valid_coordinate=valid_coordinate,

@@ -461,6 +461,8 @@ export interface MeasuredCoverageReadiness {
   observed_jurisdiction_count: number;
 }
 
+export type MeasuredCoverageReadinessStatusCounts = Record<MeasuredReadinessStatus, number>;
+
 export interface MeasuredCoverageStateRollup {
   state: string | null;
   source_count: number;
@@ -488,6 +490,7 @@ export interface MeasuredCoverage extends MeasuredCoverageParams {
   has_more: boolean;
   page_totals: MeasuredCoverageTotals;
   readiness: MeasuredCoverageReadiness;
+  readiness_status_counts: MeasuredCoverageReadinessStatusCounts;
   readiness_states: MeasuredCoverageStateRollup[];
   readiness_jurisdictions: MeasuredCoverageJurisdictionRollup[];
   sources: MeasuredSourceCoverage[];

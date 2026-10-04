@@ -46,6 +46,14 @@ function report(params: MeasuredCoverageParams, stored = 0, hasMore = false): Me
       observed_state_count: 0,
       observed_jurisdiction_count: 0,
     },
+    readiness_status_counts: {
+      fresh: 0,
+      empty: stored > 0 ? 0 : 1,
+      disabled: stored > 0 ? 1 : 0,
+      stale_collection: 0,
+      stale_source_date: 0,
+      unknown_source_date: 0,
+    },
     readiness_states: [],
     readiness_jurisdictions: [],
     sources: [{
