@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useMeasuredCoverage } from '@/hooks/useMeasuredCoverage';
-import type { CoverageRecordType, ObservedStateCoverage } from '@/types/ingestion';
+import type { CoverageRecordType, MeasuredCoverageParams, MeasuredReadinessStatus, ObservedStateCoverage } from '@/types/ingestion';
 
 const PAGE_SIZE = 25;
 const number = new Intl.NumberFormat('en-US');
@@ -33,6 +33,15 @@ const sourceStatusLabels: Record<string, string> = {
   stale_source_date: 'Stale source date',
   unknown_source_date: 'Unknown source dates',
 };
+const sourceStatusOptions: Array<{ value: '' | MeasuredReadinessStatus; label: string }> = [
+  { value: '', label: 'All source statuses' },
+  { value: 'fresh', label: 'Fresh' },
+  { value: 'empty', label: 'Empty' },
+  { value: 'disabled', label: 'Disabled' },
+  { value: 'stale_collection', label: 'Stale collection' },
+  { value: 'stale_source_date', label: 'Stale source date' },
+  { value: 'unknown_source_date', label: 'Unknown source dates' },
+];
 
 function StateMeasurements({ state, hours }: { state: ObservedStateCoverage; hours: number }) {
   return (
@@ -62,10 +71,13 @@ export function MeasuredCoveragePanel() {
   const recordTypeParam = searchParams.get('record_type');
   const [recordType, setRecordType] = useState<CoverageRecordType>(() => queryRecordType(searchParams.get('record_type')));
   const [hours, setHours] = useState(72);
+  const [statusFilter, setStatusFilter] = useState<'' | MeasuredReadinessStatus>('');
   const [offset, setOffset] = useState(0);
-  const { data, isPending, isFetching, error, refetch } = useMeasuredCoverage({
+  const measuredParams: MeasuredCoverageParams = {
     record_type: recordType, freshness_hours: hours, limit: PAGE_SIZE, offset,
-  });
+    ...(statusFilter ? { readiness_status: statusFilter } : {}),
+  };
+  const { data, isPending, isFetching, error, refetch } = useMeasuredCoverage(measuredParams);
   const states = data?.sources.flatMap(source => source.observed_states) ?? [];
   const stateRollup = Array.from(states.reduce((map, state) => {
     const key = state.state ?? 'Unknown';
@@ -115,6 +127,11 @@ export function MeasuredCoveragePanel() {
           <label className="grid gap-1 text-xs">Freshness window
             <select aria-label="Freshness window" className="h-9 rounded-md border bg-background px-2 text-xs" value={hours} onChange={event => { setHours(Number(event.target.value)); setOffset(0); }}>
               <option value={24}>24 hours</option><option value={72}>72 hours</option><option value={168}>7 days</option><option value={720}>30 days</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs">Source status
+            <select aria-label="Source status" className="h-9 rounded-md border bg-background px-2 text-xs" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as '' | MeasuredReadinessStatus); setOffset(0); }}>
+              {sourceStatusOptions.map(option => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
             </select>
           </label>
           <TooltipProvider><Tooltip><TooltipTrigger asChild>
@@ -204,7 +221,10 @@ export function MeasuredCoveragePanel() {
               <Metric label="Observed state/DC codes" value={data.page_totals.observed_state_count} />
               <Metric label="Observed jurisdiction labels" value={data.page_totals.observed_jurisdiction_count} />
             </dl>
-            <p className="mt-2 text-[11px] text-muted-foreground">Measured {dateLabel(data.measured_at)} | Source-local counts; overlaps are not deduplicated.</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Measured {dateLabel(data.measured_at)} | Source-local counts; overlaps are not deduplicated.
+              {statusFilter ? ` Source list filtered to ${sourceStatusLabels[statusFilter].toLowerCase()} sources.` : ''}
+            </p>
             {recordType === 'parcel' && <p className="mt-1 text-xs text-muted-foreground">Parcel inventory is not verified for-sale inventory.</p>}
             {stateRollup.length > 0 && <section aria-label="Observed state rollup" className="mt-4 border-y py-3">
               <h4 className="text-xs font-semibold">Observed states on this source page</h4>

@@ -384,9 +384,17 @@ export interface PermitDetail {
 }
 
 export type CoverageRecordType = 'parcel' | 'permit' | 'planning';
+export type MeasuredReadinessStatus =
+  | 'fresh'
+  | 'empty'
+  | 'disabled'
+  | 'stale_collection'
+  | 'stale_source_date'
+  | 'unknown_source_date';
 
 export interface MeasuredCoverageParams {
   record_type: CoverageRecordType;
+  readiness_status?: MeasuredReadinessStatus;
   freshness_hours: number;
   limit: number;
   offset: number;
@@ -415,7 +423,7 @@ export interface MeasuredSourceCoverage {
   configured_active: boolean;
   configured_jurisdiction: string | null;
   stored_records: number;
-  readiness_status: string;
+  readiness_status: MeasuredReadinessStatus;
   readiness_reasons: string[];
   observed_states: ObservedStateCoverage[];
 }

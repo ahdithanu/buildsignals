@@ -177,6 +177,28 @@ describe('MeasuredCoveragePanel', () => {
     expect(screen.getByRole('button', { name: 'Previous source page' })).toBeDisabled();
   });
 
+  it('filters the source page by readiness status without changing the full readiness rollup copy', async () => {
+    setup();
+    await screen.findByRole('article', { name: 'county_public_records' });
+    fireEvent.click(screen.getByRole('button', { name: 'Next source page' }));
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'permit', freshness_hours: 72, limit: 25, offset: 25 }));
+
+    fireEvent.change(screen.getByLabelText('Source status'), { target: { value: 'empty' } });
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
+      record_type: 'permit',
+      freshness_hours: 72,
+      limit: 25,
+      offset: 0,
+      readiness_status: 'empty',
+    }));
+    expect(screen.getByRole('button', { name: 'Previous source page' })).toBeDisabled();
+    expect(screen.getByText(/Source list filtered to empty sources./)).toBeInTheDocument();
+    expect(screen.getByText('All measured permit sources for this organization, not just the current page.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Source status'), { target: { value: '' } });
+    await waitFor(() => expect(screen.getByLabelText('Source status')).toHaveValue(''));
+  });
+
   it('honors record_type URL handoffs and keeps the URL shareable when the record type changes', async () => {
     setup('/source-health?record_type=parcel');
     await screen.findByRole('article', { name: 'county_public_records' });
@@ -219,11 +241,12 @@ describe('MeasuredCoveragePanel', () => {
     };
     vi.mocked(ingestionApi.measuredCoverage).mockResolvedValue(empty);
     setup();
-    await screen.findByText('0 stored records');
-    expect(screen.getByText('No stored records measured.')).toBeInTheDocument();
-    expect(screen.getByText('Empty')).toBeInTheDocument();
-    expect(screen.getByText('no stored records measured')).toBeInTheDocument();
-    expect(screen.getByText(/Collection disabled/)).toBeInTheDocument();
+    const source = await screen.findByRole('article', { name: 'county_public_records' });
+    expect(within(source).getByText('0 stored records')).toBeInTheDocument();
+    expect(within(source).getByText('No stored records measured.')).toBeInTheDocument();
+    expect(within(source).getByText('Empty')).toBeInTheDocument();
+    expect(within(source).getByText('no stored records measured')).toBeInTheDocument();
+    expect(within(source).getByText(/Collection disabled/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next source page' })).toBeDisabled();
     expect(screen.queryByText('TX', { exact: true })).not.toBeInTheDocument();
   });

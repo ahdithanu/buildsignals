@@ -146,6 +146,7 @@ def get_permit_parcel_candidates(
 def get_measured_coverage(
     response: Response,
     record_type: str = Query(default="parcel", pattern="^(parcel|permit|planning)$"),
+    readiness_status: str | None = Query(default=None, pattern="^(fresh|empty|disabled|stale_collection|stale_source_date|unknown_source_date)$"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     freshness_hours: int = Query(default=72, ge=1, le=8760),
@@ -155,7 +156,8 @@ def get_measured_coverage(
 
     response.headers["Cache-Control"] = "no-store"
     return measured_coverage(db, record_type=record_type, limit=limit,
-                             offset=offset, freshness_hours=freshness_hours)
+                             offset=offset, freshness_hours=freshness_hours,
+                             readiness_status=readiness_status)
 
 
 def _normalize_state_filter(state: str | None) -> str | None:

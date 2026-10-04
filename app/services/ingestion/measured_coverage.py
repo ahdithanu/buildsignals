@@ -165,7 +165,8 @@ def _source_readiness(source: IngestionSource, rows: list[dict]) -> tuple[str, l
 
 
 def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
-                      freshness_hours: int = 72, now: datetime | None = None) -> dict:
+                      freshness_hours: int = 72, now: datetime | None = None,
+                      readiness_status: str | None = None) -> dict:
     if record_type not in MODELS or not 1 <= limit <= 100 or offset < 0 or not 1 <= freshness_hours <= 8760:
         raise ValueError("Invalid coverage query")
     now = now or datetime.now(timezone.utc)
@@ -177,10 +178,6 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
         record_type=record_type,
     ).order_by(IngestionSource.key, IngestionSource.id)
     all_sources = source_query.all()
-    sources = all_sources[offset:offset + limit + 1]
-    has_more = len(sources) > limit
-    sources = sources[:limit]
-    page_ids = [source.id for source in sources]
     all_ids = [source.id for source in all_sources]
     valid_coordinate = and_(model.latitude.between(-90, 90), model.longitude.between(-180, 180))
     base_query = scope_query(db.query(
@@ -211,13 +208,30 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
         item = dict(row._mapping)
         source_id = item.pop("source_id")
         by_source.setdefault(source_id, []).append(item)
+    source_payloads = []
+    for source in all_sources:
+        rows = by_source.get(source.id, [])
+        status, reasons = _source_readiness(source, rows)
+        source_payloads.append({
+            "source": source,
+            "status": status,
+            "reasons": reasons,
+            "stored_records": sum(row["stored_records"] for row in rows),
+            "observed_states": rows,
+        })
+    if readiness_status:
+        source_payloads = [item for item in source_payloads if item["status"] == readiness_status]
+    page_payloads = source_payloads[offset:offset + limit + 1]
+    has_more = len(page_payloads) > limit
+    page_payloads = page_payloads[:limit]
+    page_ids = [item["source"].id for item in page_payloads]
     page_states = [row for source_id in page_ids for row in by_source.get(source_id, [])]
     return {
         "measured_at": now, "record_type": record_type,
         "scope": "Stored active canonical records for the authenticated organization; not provider totals or statewide completeness",
         "count_semantics": "Unique within each source; overlapping sources are not deduplicated",
         "freshness_hours": freshness_hours, "limit": limit, "offset": offset, "has_more": has_more,
-        "page_totals": _sum_totals(page_states, source_count=len(sources)) if page_states else _zero_totals(len(sources)),
+        "page_totals": _sum_totals(page_states, source_count=len(page_payloads)) if page_states else _zero_totals(len(page_payloads)),
         "readiness": _readiness_rollup(all_sources, by_source),
         "readiness_states": _state_rollup(by_source),
         "readiness_jurisdictions": _jurisdiction_rollup(
@@ -226,16 +240,16 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
         ),
         "sources": [
             {
-                "source_id": source.id,
-                "source_key": source.key,
-                "configured_active": source.is_active,
-                "configured_jurisdiction": source.jurisdiction,
-                "stored_records": sum(row["stored_records"] for row in by_source.get(source.id, [])),
-                "readiness_status": _source_readiness(source, by_source.get(source.id, []))[0],
-                "readiness_reasons": _source_readiness(source, by_source.get(source.id, []))[1],
-                "observed_states": by_source.get(source.id, []),
+                "source_id": item["source"].id,
+                "source_key": item["source"].key,
+                "configured_active": item["source"].is_active,
+                "configured_jurisdiction": item["source"].jurisdiction,
+                "stored_records": item["stored_records"],
+                "readiness_status": item["status"],
+                "readiness_reasons": item["reasons"],
+                "observed_states": item["observed_states"],
             }
-            for source in sources
+            for item in page_payloads
         ],
         "warnings": ["Last seen is collection evidence, not source publication freshness.",
                      "Coordinate extents bound observed points only; they do not imply complete coverage inside the bounds.",
