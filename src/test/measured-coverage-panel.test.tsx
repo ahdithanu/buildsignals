@@ -190,6 +190,10 @@ describe('MeasuredCoveragePanel', () => {
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'parcel', freshness_hours: 72, limit: 25, offset: 25 }));
     fireEvent.change(screen.getByLabelText('Freshness window'), { target: { value: '24' } });
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'parcel', freshness_hours: 24, limit: 25, offset: 0 }));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=parcel&freshness_hours=24');
+    fireEvent.change(screen.getByLabelText('Freshness window'), { target: { value: '72' } });
+    await waitFor(() => expect(screen.getByLabelText('Freshness window')).toHaveValue('72'));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=parcel');
     expect(screen.getByRole('button', { name: 'Previous source page' })).toBeDisabled();
   });
 
@@ -244,13 +248,14 @@ describe('MeasuredCoveragePanel', () => {
   });
 
   it('hydrates the source status filter from the URL and preserves it across record type changes', async () => {
-    setup('/source-health?record_type=parcel&readiness_status=stale_collection');
+    setup('/source-health?record_type=parcel&readiness_status=stale_collection&freshness_hours=168');
     await screen.findByRole('article', { name: 'county_public_records' });
     expect(screen.getByLabelText('Records')).toHaveValue('parcel');
     expect(screen.getByLabelText('Source status')).toHaveValue('stale_collection');
+    expect(screen.getByLabelText('Freshness window')).toHaveValue('168');
     expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
       record_type: 'parcel',
-      freshness_hours: 72,
+      freshness_hours: 168,
       limit: 25,
       offset: 0,
       readiness_status: 'stale_collection',
@@ -259,20 +264,20 @@ describe('MeasuredCoveragePanel', () => {
     fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'planning' } });
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
       record_type: 'planning',
-      freshness_hours: 72,
+      freshness_hours: 168,
       limit: 25,
       offset: 0,
       readiness_status: 'stale_collection',
     }));
-    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=planning&readiness_status=stale_collection');
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=planning&readiness_status=stale_collection&freshness_hours=168');
   });
 
   it('copies the current measured inventory URL for reviewer handoff', async () => {
-    setup('/source-health?record_type=parcel&readiness_status=empty');
+    setup('/source-health?record_type=parcel&readiness_status=empty&freshness_hours=24');
     await screen.findByRole('article', { name: 'county_public_records' });
     fireEvent.click(screen.getByRole('button', { name: 'Copy measured view' }));
     await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      'http://localhost:3000/source-health?record_type=parcel&readiness_status=empty',
+      'http://localhost:3000/source-health?record_type=parcel&readiness_status=empty&freshness_hours=24',
     ));
   });
 

@@ -546,7 +546,8 @@ application, production diagnostics, and release coverage measurement.
   response and render as clickable audit buckets, so reviewers can jump directly
   to empty, stale, disabled, or unknown-date source lists without inferring from
   raw source rows. The panel now includes a `Copy measured view` action that
-  preserves the selected record type and readiness status for reviewer handoff.
+  preserves the selected record type, readiness status, and freshness window for
+  reviewer handoff.
 - [ ] Verify these diagnostics against the authenticated production workspace.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved

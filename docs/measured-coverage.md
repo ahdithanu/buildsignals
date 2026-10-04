@@ -24,7 +24,8 @@ Each returned source includes a `readiness_status` and short
 and unknown-date sources without inferring from raw counts. The response also
 includes all-source `readiness_status_counts` for the selected record type; the
 UI renders those counts as clickable, URL-backed audit buckets and provides a
-copy action for the current measured-inventory view.
+copy action for the current measured-inventory view. Record type, readiness
+status, and freshness window are preserved in copied links.
 
 ## API and Semantics
 

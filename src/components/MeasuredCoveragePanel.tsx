@@ -28,6 +28,11 @@ function querySourceStatus(value: string | null): '' | MeasuredReadinessStatus {
   return sourceStatuses.has(value as MeasuredReadinessStatus) ? value as MeasuredReadinessStatus : '';
 }
 
+function queryFreshnessHours(value: string | null): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 8760 ? parsed : 72;
+}
+
 function dateLabel(value: string | null) {
   if (!value) return 'Unknown';
   const date = new Date(value);
@@ -85,8 +90,9 @@ export function MeasuredCoveragePanel() {
   const { toast } = useToast();
   const recordTypeParam = searchParams.get('record_type');
   const statusParam = searchParams.get('readiness_status');
+  const freshnessParam = searchParams.get('freshness_hours');
   const [recordType, setRecordType] = useState<CoverageRecordType>(() => queryRecordType(searchParams.get('record_type')));
-  const [hours, setHours] = useState(72);
+  const [hours, setHours] = useState(() => queryFreshnessHours(searchParams.get('freshness_hours')));
   const [statusFilter, setStatusFilter] = useState<'' | MeasuredReadinessStatus>(() => querySourceStatus(searchParams.get('readiness_status')));
   const [offset, setOffset] = useState(0);
   const measuredParams: MeasuredCoverageParams = {
@@ -115,10 +121,12 @@ export function MeasuredCoveragePanel() {
   useEffect(() => {
     const nextRecordType = queryRecordType(recordTypeParam);
     const nextStatus = querySourceStatus(statusParam);
+    const nextHours = queryFreshnessHours(freshnessParam);
     setRecordType(current => current === nextRecordType ? current : nextRecordType);
     setStatusFilter(current => current === nextStatus ? current : nextStatus);
+    setHours(current => current === nextHours ? current : nextHours);
     setOffset(0);
-  }, [recordTypeParam, statusParam]);
+  }, [freshnessParam, recordTypeParam, statusParam]);
 
   function changeRecordType(value: CoverageRecordType) {
     setRecordType(value);
@@ -126,6 +134,15 @@ export function MeasuredCoveragePanel() {
     const next = new URLSearchParams(searchParams);
     if (value === 'permit') next.delete('record_type');
     else next.set('record_type', value);
+    setSearchParams(next, { replace: true });
+  }
+
+  function changeFreshnessHours(value: number) {
+    setHours(value);
+    setOffset(0);
+    const next = new URLSearchParams(searchParams);
+    if (value === 72) next.delete('freshness_hours');
+    else next.set('freshness_hours', String(value));
     setSearchParams(next, { replace: true });
   }
 
@@ -163,7 +180,7 @@ export function MeasuredCoveragePanel() {
             </select>
           </label>
           <label className="grid gap-1 text-xs">Freshness window
-            <select aria-label="Freshness window" className="h-9 rounded-md border bg-background px-2 text-xs" value={hours} onChange={event => { setHours(Number(event.target.value)); setOffset(0); }}>
+            <select aria-label="Freshness window" className="h-9 rounded-md border bg-background px-2 text-xs" value={hours} onChange={event => changeFreshnessHours(Number(event.target.value))}>
               <option value={24}>24 hours</option><option value={72}>72 hours</option><option value={168}>7 days</option><option value={720}>30 days</option>
             </select>
           </label>
