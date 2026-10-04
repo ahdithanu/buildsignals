@@ -28,9 +28,79 @@ function report(params: Partial<MeasuredCoverageParams> = {}): MeasuredCoverage 
       observed_state_count: 1,
       observed_jurisdiction_count: 2,
     },
+    readiness: {
+      total_source_count: 4,
+      active_source_count: 3,
+      disabled_source_count: 1,
+      sources_with_records: 2,
+      empty_source_count: 2,
+      sources_with_recent_collection: 1,
+      sources_with_recent_source_date: 1,
+      sources_with_unknown_source_dates: 1,
+      sources_with_future_source_dates: 1,
+      sources_with_geocoded_records: 1,
+      stale_collection_source_count: 1,
+      stale_source_date_source_count: 1,
+      stored_records: 150,
+      geocoded_records: 80,
+      recently_seen_records: 70,
+      recent_source_date_records: 12,
+      observed_state_count: 2,
+      observed_jurisdiction_count: 3,
+    },
+    readiness_status_counts: {
+      fresh: 1,
+      empty: 1,
+      disabled: 0,
+      stale_collection: 1,
+      stale_source_date: 0,
+      unknown_source_date: 1,
+    },
+    readiness_states: params.record_type === 'permit' && (params.offset ?? 0) === 0 ? [
+      {
+        state: 'TX',
+        source_count: 2,
+        stored_records: 125,
+        geocoded_records: 75,
+        recently_seen_records: 70,
+        recent_source_date_records: 12,
+        unknown_source_date_records: 40,
+      },
+      {
+        state: null,
+        source_count: 1,
+        stored_records: 25,
+        geocoded_records: 5,
+        recently_seen_records: 0,
+        recent_source_date_records: 0,
+        unknown_source_date_records: 25,
+      },
+    ] : [],
+    readiness_jurisdictions: params.record_type === 'permit' && (params.offset ?? 0) === 0 ? [
+      {
+        jurisdiction: 'Austin',
+        state: 'TX',
+        source_count: 2,
+        stored_records: 125,
+        geocoded_records: 75,
+        recently_seen_records: 70,
+        recent_source_date_records: 12,
+      },
+      {
+        jurisdiction: null,
+        state: null,
+        source_count: 1,
+        stored_records: 25,
+        geocoded_records: 5,
+        recently_seen_records: 0,
+        recent_source_date_records: 0,
+      },
+    ] : [],
     sources: [{
       source_id: 'source-a', source_key: 'county_public_records', configured_active: true,
       configured_jurisdiction: 'County, TX', stored_records: 100,
+      readiness_status: 'unknown_source_date',
+      readiness_reasons: ['some records have unknown source dates'],
       observed_states: [{
         state: 'TX', stored_records: 100, geocoded_records: 80, recently_seen_records: 70,
         recent_source_date_records: 12, unknown_source_date_records: 40, future_source_date_records: 1,
@@ -60,6 +130,10 @@ function setup(initialEntry = '/source-health') {
 beforeEach(() => {
   auth.organizationId = 'org-a';
   auth.isAuthenticated = true;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: vi.fn().mockResolvedValue(undefined) },
+  });
   vi.mocked(ingestionApi.measuredCoverage).mockReset().mockImplementation(async params => report(params));
 });
 
@@ -72,7 +146,25 @@ describe('MeasuredCoveragePanel', () => {
     expect(within(source).getByText('Source updated (72h)').nextElementSibling).toHaveTextContent('12');
     expect(within(source).getByText('Unknown source date').nextElementSibling).toHaveTextContent('40');
     expect(within(source).getByText('Future source date').nextElementSibling).toHaveTextContent('1');
+    expect(within(source).getByText('Unknown source dates')).toBeInTheDocument();
+    expect(within(source).getByText('some records have unknown source dates')).toBeInTheDocument();
     expect(screen.getByText('Stored records on this page')).toBeInTheDocument();
+    const readiness = screen.getByRole('region', { name: 'Production ingestion readiness' });
+    expect(within(readiness).getByText('4 configured sources')).toBeInTheDocument();
+    expect(within(readiness).getByText('Sources with records').nextElementSibling).toHaveTextContent('2');
+    expect(within(readiness).getByText('Empty sources').nextElementSibling).toHaveTextContent('2');
+    expect(within(readiness).getByText('Stale collection').nextElementSibling).toHaveTextContent('1');
+    expect(within(readiness).getByText(/Stored records: 150/)).toBeInTheDocument();
+    expect(within(readiness).getByRole('button', { name: 'Fresh: 1' })).toBeInTheDocument();
+    expect(within(readiness).getByRole('button', { name: 'Empty: 1' })).toBeInTheDocument();
+    expect(within(readiness).getByRole('button', { name: 'Disabled: 0' })).toBeDisabled();
+    expect(within(readiness).getByRole('button', { name: 'Unknown source dates: 1' })).toBeInTheDocument();
+    expect(within(readiness).getByText(/Observed geography across measured permit inventory/)).toBeInTheDocument();
+    expect(within(readiness).getAllByText('TX').length).toBeGreaterThanOrEqual(1);
+    expect(within(readiness).getByText('Unknown state')).toBeInTheDocument();
+    expect(within(readiness).getByText('Top measured jurisdictions')).toBeInTheDocument();
+    expect(within(readiness).getByText('Austin')).toBeInTheDocument();
+    expect(within(readiness).getByText('Unknown jurisdiction')).toBeInTheDocument();
     expect(screen.getByText('Sources on this page').nextElementSibling).toHaveTextContent('1');
     expect(screen.getByText('Valid coordinates on this page').nextElementSibling).toHaveTextContent('80');
     expect(screen.getByText('Observed jurisdiction labels').nextElementSibling).toHaveTextContent('2');
@@ -98,7 +190,45 @@ describe('MeasuredCoveragePanel', () => {
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'parcel', freshness_hours: 72, limit: 25, offset: 25 }));
     fireEvent.change(screen.getByLabelText('Freshness window'), { target: { value: '24' } });
     await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'parcel', freshness_hours: 24, limit: 25, offset: 0 }));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=parcel&freshness_hours=24');
+    fireEvent.change(screen.getByLabelText('Freshness window'), { target: { value: '72' } });
+    await waitFor(() => expect(screen.getByLabelText('Freshness window')).toHaveValue('72'));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=parcel');
     expect(screen.getByRole('button', { name: 'Previous source page' })).toBeDisabled();
+  });
+
+  it('filters the source page by readiness status without changing the full readiness rollup copy', async () => {
+    setup();
+    await screen.findByRole('article', { name: 'county_public_records' });
+    fireEvent.click(screen.getByRole('button', { name: 'Next source page' }));
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'permit', freshness_hours: 72, limit: 25, offset: 25 }));
+
+    fireEvent.change(screen.getByLabelText('Source status'), { target: { value: 'empty' } });
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
+      record_type: 'permit',
+      freshness_hours: 72,
+      limit: 25,
+      offset: 0,
+      readiness_status: 'empty',
+    }));
+    expect(screen.getByRole('button', { name: 'Previous source page' })).toBeDisabled();
+    expect(screen.getByText(/Source list filtered to empty sources./)).toBeInTheDocument();
+    expect(screen.getByText('All measured permit sources for this organization, not just the current page.')).toBeInTheDocument();
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?readiness_status=empty');
+
+    fireEvent.change(screen.getByLabelText('Source status'), { target: { value: '' } });
+    await waitFor(() => expect(screen.getByLabelText('Source status')).toHaveValue(''));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stale collection: 1' }));
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
+      record_type: 'permit',
+      freshness_hours: 72,
+      limit: 25,
+      offset: 0,
+      readiness_status: 'stale_collection',
+    }));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?readiness_status=stale_collection');
   });
 
   it('honors record_type URL handoffs and keeps the URL shareable when the record type changes', async () => {
@@ -117,6 +247,40 @@ describe('MeasuredCoveragePanel', () => {
     expect(screen.getByTestId('location-search')).toHaveTextContent('');
   });
 
+  it('hydrates the source status filter from the URL and preserves it across record type changes', async () => {
+    setup('/source-health?record_type=parcel&readiness_status=stale_collection&freshness_hours=168');
+    await screen.findByRole('article', { name: 'county_public_records' });
+    expect(screen.getByLabelText('Records')).toHaveValue('parcel');
+    expect(screen.getByLabelText('Source status')).toHaveValue('stale_collection');
+    expect(screen.getByLabelText('Freshness window')).toHaveValue('168');
+    expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
+      record_type: 'parcel',
+      freshness_hours: 168,
+      limit: 25,
+      offset: 0,
+      readiness_status: 'stale_collection',
+    });
+
+    fireEvent.change(screen.getByLabelText('Records'), { target: { value: 'planning' } });
+    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({
+      record_type: 'planning',
+      freshness_hours: 168,
+      limit: 25,
+      offset: 0,
+      readiness_status: 'stale_collection',
+    }));
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?record_type=planning&readiness_status=stale_collection&freshness_hours=168');
+  });
+
+  it('copies the current measured inventory URL for reviewer handoff', async () => {
+    setup('/source-health?record_type=parcel&readiness_status=empty&freshness_hours=24');
+    await screen.findByRole('article', { name: 'county_public_records' });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy measured view' }));
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      'http://localhost:3000/source-health?record_type=parcel&readiness_status=empty&freshness_hours=24',
+    ));
+  });
+
   it('reacts when in-app navigation changes the measured inventory record type', async () => {
     setup('/source-health?record_type=parcel');
     await screen.findByRole('article', { name: 'county_public_records' });
@@ -131,12 +295,24 @@ describe('MeasuredCoveragePanel', () => {
   it('shows zero for a measured empty source, not inferred coverage from its configuration', async () => {
     const empty = report();
     empty.has_more = false;
-    empty.sources[0] = { ...empty.sources[0], stored_records: 0, observed_states: [], configured_active: false };
+    empty.readiness_states = [];
+    empty.readiness_jurisdictions = [];
+    empty.sources[0] = {
+      ...empty.sources[0],
+      stored_records: 0,
+      readiness_status: 'empty',
+      readiness_reasons: ['collection disabled', 'no stored records measured'],
+      observed_states: [],
+      configured_active: false,
+    };
     vi.mocked(ingestionApi.measuredCoverage).mockResolvedValue(empty);
     setup();
-    await screen.findByText('0 stored records');
-    expect(screen.getByText('No stored records measured.')).toBeInTheDocument();
-    expect(screen.getByText(/Collection disabled/)).toBeInTheDocument();
+    const source = await screen.findByRole('article', { name: 'county_public_records' });
+    expect(within(source).getByText('0 stored records')).toBeInTheDocument();
+    expect(within(source).getByText('No stored records measured.')).toBeInTheDocument();
+    expect(within(source).getByText('Empty')).toBeInTheDocument();
+    expect(within(source).getByText('no stored records measured')).toBeInTheDocument();
+    expect(within(source).getByText(/Collection disabled/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next source page' })).toBeDisabled();
     expect(screen.queryByText('TX', { exact: true })).not.toBeInTheDocument();
   });

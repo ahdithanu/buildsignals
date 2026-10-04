@@ -1,10 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-test('demo entry is hidden when the server disables it', async ({ page }) => {
-  await page.route('**/v1/auth/demo', route => route.fulfill({ json: { enabled: false } }));
+test('demo entry is available from the login screen', async ({ page }) => {
   await page.goto('/login');
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Enter demo mode' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Enter demo mode' })).toBeVisible();
 });
 
 for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {

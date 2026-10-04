@@ -537,7 +537,23 @@ application, production diagnostics, and release coverage measurement.
   or planning source health without another manual filter step. The availability
   hook now uses server-provided measured page totals rather than client-side
   source-row aggregation.
+  The measured source-health API and UI now support source readiness status
+  drilldowns for fresh, empty, disabled, stale-collection, stale-source-date, and
+  unknown-source-date sources. The filter narrows the audited source list and
+  page totals while preserving the full readiness rollup as the measured claim
+  boundary. The filter is URL-backed for shareable ops/reviewer handoffs.
+  Readiness status counts are server-provided in the same no-store measured
+  response and render as clickable audit buckets, so reviewers can jump directly
+  to empty, stale, disabled, or unknown-date source lists without inferring from
+  raw source rows. The panel now includes a `Copy measured view` action that
+  preserves the selected record type, readiness status, and freshness window for
+  reviewer handoff.
 - [ ] Verify these diagnostics against the authenticated production workspace.
+  Authenticated post-deploy smoke now exercises the measured inventory endpoint
+  for permit, parcel, and planning record types and verifies the no-fabrication
+  response shape (`page_totals`, `readiness`, `readiness_status_counts`, and
+  source arrays). It still allows empty results; real inventory counts remain a
+  separate production measurement receipt.
 - [x] Replace schematic acquisition grid with Leaflet geographic maps and an
   independent geocoded permit/planning layer. Parcel ranking still requires saved
   searches. Verified desktop/mobile with synthetic test data, not live inventory.

@@ -69,15 +69,82 @@ const server = http.createServer((request, response) => {
               unknown_source_date_records: 40, future_source_date_records: 1,
               recent_source_date_records: 12, observed_state_count: 1, observed_jurisdiction_count: 2,
             },
+            readiness: {
+              total_source_count: 1, active_source_count: 1, disabled_source_count: 0,
+              sources_with_records: 1, empty_source_count: 0, sources_with_recent_collection: 1,
+              sources_with_recent_source_date: 1, sources_with_unknown_source_dates: 1,
+              sources_with_future_source_dates: 1, sources_with_geocoded_records: 1,
+              stale_collection_source_count: 0, stale_source_date_source_count: 0,
+              stored_records: 100, geocoded_records: 80, recently_seen_records: 70,
+              recent_source_date_records: 12, observed_state_count: 1, observed_jurisdiction_count: 2,
+            },
+            readiness_status_counts: {
+              fresh: 0, empty: 0, disabled: 0, stale_collection: 0, stale_source_date: 0, unknown_source_date: 1,
+            },
+            readiness_states: [{
+              state: 'TX', source_count: 1, stored_records: 100, geocoded_records: 80,
+              recently_seen_records: 70, recent_source_date_records: 12, unknown_source_date_records: 40,
+            }],
+            readiness_jurisdictions: [{
+              jurisdiction: 'Synthetic county', state: 'TX', source_count: 1, stored_records: 100,
+              geocoded_records: 80, recently_seen_records: 70, recent_source_date_records: 12,
+            }],
             sources: offset ? [] : [{
               source_id: 'synthetic-source', source_key: 'synthetic_county_planning_and_permit_submissions',
               configured_active: true, configured_jurisdiction: 'Synthetic county, TX', stored_records: 100,
+              readiness_status: 'unknown_source_date',
+              readiness_reasons: ['some records have unknown source dates'],
               observed_states: [{ state: 'TX', stored_records: 100, geocoded_records: 80,
                 recently_seen_records: 70, recent_source_date_records: 12, unknown_source_date_records: 40,
                 future_source_date_records: 1, newest_seen_at: '2026-09-09T11:00:00Z',
                 newest_source_date: '2026-09-10T11:00:00Z', observed_jurisdiction_count: 2,
                 min_latitude: 30, max_latitude: 31, min_longitude: -98, max_longitude: -97 }],
             }],
+          };
+        } else if (inventoryMode && signedIn && url.pathname.endsWith('/ingestion/health')) {
+          status = 200;
+          body = [];
+        } else if (inventoryMode && signedIn && url.pathname.endsWith('/ingestion/candidates')) {
+          status = 200;
+          body = [];
+        } else if (inventoryMode && signedIn && url.pathname.endsWith('/ingestion/coverage')) {
+          status = 200;
+          body = {
+            live_source_count: 0, candidate_count: 0, jurisdiction_count: 0,
+            retailer_opening_source_count: 0, retailer_opening_sources: [],
+            approved_only_sources: [], pre_approval_source_count: 0,
+            approved_only_source_count: 0, live_signal_stage_counts: {},
+            live_signal_sources_by_stage: {}, candidate_status_counts: {},
+            top_jurisdictions: [], state_buckets: [], activation_queue: [],
+            candidate_only_state_count: 0, candidate_only_states: [],
+            researched_state_count: 0, unresearched_state_count: 0,
+            researched_states: [], unresearched_states: [], covered_state_count: 0,
+            missing_state_count: 0, covered_states: [], missing_states: [],
+          };
+        } else if (inventoryMode && signedIn && url.pathname.endsWith('/ingestion/reliability-summary')) {
+          status = 200;
+          body = {
+            healthy_sources: 0, attention_sources: 0, critical_sources: 0,
+            stale_runs: 0, stalled_cursors: 0, failed_retry_canaries: 0,
+            watchlist_sources: [],
+          };
+        } else if (inventoryMode && signedIn && url.pathname.endsWith('/ingestion/schedule-plan')) {
+          status = 200;
+          body = {
+            as_of: '2026-09-09T12:00:00Z', shard_count: 1, shard_index: 0,
+            total_source_count: 0, catalog_source_count: 0, unsynced_source_count: 0,
+            unsynced_source_keys: [], catalog_synced: true, shard_source_count: 0,
+            automatic_source_count: 0, due_source_count: 0, active_source_count: 0,
+            items: [],
+          };
+        } else if (inventoryMode && signedIn && url.pathname.endsWith('/ingestion/host-policy')) {
+          status = 200;
+          body = {
+            ready: true, coverage_ready: true, policy_digest: 'synthetic',
+            executor_name: 'synthetic', executor_verified: true, source_count: 0,
+            required_host_count: 0, configured_host_count: 0, required_hosts: [],
+            configured_hosts: [], missing_hosts: [], unused_hosts: [],
+            unsafe_sources: [], requirements: [],
           };
         } else if (inventoryMode && signedIn) {
           status = 503;
@@ -116,7 +183,7 @@ const server = http.createServer((request, response) => {
       await page.getByRole('button', { name: /^sign in$/i }).click();
       await page.waitForURL(origin + '/source-health');
       const panel = page.getByRole('region', { name: 'Measured ingestion inventory' });
-      await panel.getByText('100 stored records', { exact: true }).waitFor();
+      await panel.getByText('Stored records on this page').waitFor();
       await panel.scrollIntoViewIfNeeded();
       assert.equal(await panel.evaluate(element => element.scrollWidth <= element.clientWidth), true);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -136,7 +203,7 @@ const server = http.createServer((request, response) => {
       assert.equal(await panel.getByLabel('Current page measurements').count(), 0);
       measurementFails = false;
       await panel.getByRole('button', { name: 'Retry measurement' }).click();
-      await panel.getByText('100 stored records', { exact: true }).waitFor();
+      await panel.getByText('Stored records on this page').waitFor();
       assert.deepEqual(await page.evaluate(() => window.policyViolations), []);
       await context.close();
     }
