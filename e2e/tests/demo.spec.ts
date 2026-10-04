@@ -4,7 +4,7 @@ test('demo entry is hidden when the server disables it', async ({ page }) => {
   await page.route('**/v1/auth/demo', route => route.fulfill({ json: { enabled: false } }));
   await page.goto('/login');
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'View live demo' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Enter demo mode' })).toHaveCount(0);
 });
 
 for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
@@ -13,7 +13,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.goto('/login');
     await expect(page.getByText('Development, ownership and permit intelligence.')).toBeVisible();
     const loginResponse = page.waitForResponse(response => response.url().endsWith('/v1/auth/demo') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: 'View live demo' }).click();
+    await page.getByRole('button', { name: 'Enter demo mode' }).click();
     const session = await (await loginResponse).json();
     await expect(page).toHaveURL(/\/demo$/);
     await expect(page.getByText("You're viewing a read-only demo with historical Columbus data.")).toBeVisible();
@@ -83,7 +83,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.screenshot({ path: test.info().outputPath(`demo-${viewport.width}.png`), fullPage: true });
     await page.getByRole('link', { name: 'Back to sign in' }).click();
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('button', { name: 'View live demo' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enter demo mode' })).toBeVisible();
   });
 }
 
@@ -98,7 +98,7 @@ test('map layers and evidence selection work on mobile with synthetic geometry',
     limit_per_layer: 100,
   } }));
   await page.goto('/login');
-  await page.getByRole('button', { name: 'View live demo' }).click();
+  await page.getByRole('button', { name: 'Enter demo mode' }).click();
   await page.getByRole('navigation', { name: 'Demo views' }).getByRole('button', { name: 'Map' }).click();
   await expect(page.getByLabel('Geographic signal map')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Located filings' })).toBeVisible();
