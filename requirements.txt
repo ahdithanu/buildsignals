@@ -25,7 +25,7 @@ bcrypt==5.0.0
 PyJWT==2.15.0
 # Authenticated encryption for separately managed MFA secrets.
 cryptography==50.0.1
-sentry-sdk[fastapi]==2.18.0
+sentry-sdk[fastapi]==2.71.0
 pyotp==2.10.0
 prometheus-client==0.26.0
 resend>=2.47.0
