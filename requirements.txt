@@ -22,9 +22,9 @@ bcrypt==5.0.0
 # transitive pyasn1<0.5.0 pin held CVE-2026-30922 open. We only use
 # HS256 (HMAC), so PyJWT needs no cryptography backend at all — this
 # removes the legacy ecdsa/rsa/pyasn1 JWT dependency chain.
-PyJWT==2.15.0
+PyJWT==2.15.1
 # Authenticated encryption for separately managed MFA secrets.
-cryptography==50.0.1
+cryptography==50.0.2
 sentry-sdk[fastapi]==2.18.0
 pyotp==2.10.0
 prometheus-client==0.26.0
