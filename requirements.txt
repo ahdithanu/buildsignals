@@ -31,4 +31,4 @@ prometheus-client==0.26.0
 resend>=2.47.0
 redis==5.0.7
 # Pure-Python PDF text extraction for public planning agendas and minutes.
-pypdf>=6.6,<7
+pypdf>=6.19.0,<7
