@@ -98,11 +98,18 @@ function RadarRow({
             <span className={cn('rounded-md border px-2 py-0.5 text-[11px] font-medium capitalize', statusStyles[item.review_status])}>
               {item.review_status}
             </span>
-            {availabilityEvidence && (
-              <span
-                className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800"
+            {availabilityEvidence?.url && /^https?:\/\//i.test(availabilityEvidence.url) ? (
+              <a
+                href={availabilityEvidence.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 hover:underline"
                 title={availabilityLabel}
               >
+                Verified availability source
+              </a>
+            ) : availabilityEvidence && (
+              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800" title={availabilityLabel}>
                 Verified availability
               </span>
             )}

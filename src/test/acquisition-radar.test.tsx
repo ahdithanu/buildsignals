@@ -179,7 +179,14 @@ describe('<AcquisitionRadar>', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Follow-up' }));
     expect(screen.getByLabelText('Follow-up')).toHaveValue('due');
     expect(screen.getByLabelText('Signals')).toHaveValue('');
-    expect(screen.getByTitle('Verified availability evidence: broker')).toHaveTextContent('Verified availability');
+    expect(screen.getByRole('link', { name: 'Verified availability source' })).toHaveAttribute(
+      'href',
+      'https://broker.example/listing/P-100',
+    );
+    expect(screen.getByRole('link', { name: 'Verified availability source' })).toHaveAttribute(
+      'title',
+      'Verified availability evidence: broker',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Filter acquisition radar by Review' }));
     expect(screen.getByLabelText('Case status')).toHaveValue('shortlisted');
     expect(screen.getByLabelText('Follow-up')).toHaveValue('');
