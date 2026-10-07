@@ -22,7 +22,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from app.config import ALLOW_ANONYMOUS, is_public_path
+from app.config import ALLOW_ANONYMOUS, is_demo_auth_path, is_public_path
 from app.services.demo_access import (
     demo_path_allowed,
     demo_read_only,
@@ -97,6 +97,6 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 reset_current_context(token_obj)
             if demo_context is not None:
                 demo_read_only.reset(demo_context)
-        if demo_context is not None or "/auth/demo" in request.url.path:
+        if demo_context is not None or is_demo_auth_path(request.url.path):
             response.headers["Cache-Control"] = "no-store"
         return response

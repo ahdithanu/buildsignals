@@ -14,7 +14,9 @@ export default function Login() {
     let active = true;
     authApi.demoAvailability().then(result => {
       if (active) setDemoEnabled(result.enabled);
-    }).catch(() => { /* Fail closed when availability cannot be checked. */ });
+    }).catch(() => {
+      if (active) setDemoEnabled(false);
+    });
     return () => { active = false; };
   }, []);
   const [email, setEmail] = useState('');
@@ -23,6 +25,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [openingDemo, setOpeningDemo] = useState(false);
+  const showDemoLogin = demoEnabled === true;
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
 
@@ -70,7 +73,7 @@ export default function Login() {
           <h1 className="mt-3 text-2xl font-semibold">Sign in</h1>
           <p className="mt-1 text-xs text-muted-foreground">Development, ownership and permit intelligence.</p>
 
-          {demoEnabled !== false && <button
+          {showDemoLogin && <button
             type="button"
             disabled={openingDemo || submitting}
             onClick={handleDemoLogin}
@@ -80,7 +83,7 @@ export default function Login() {
             <ArrowRight className="h-4 w-4" />
           </button>}
 
-          {demoEnabled !== false && <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+          {showDemoLogin && <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
             <span className="h-px flex-1 bg-border" />
             <span>or use enterprise access</span>
             <span className="h-px flex-1 bg-border" />
