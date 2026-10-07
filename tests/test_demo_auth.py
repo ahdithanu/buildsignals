@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from app.config import REFRESH_COOKIE_NAME
-from app.routes import auth as auth_routes
 from app.middleware import auth_context
+from app.routes import auth as auth_routes
 
 DEMO_USER = {
     "email": "demo@buildsignals.ai",
