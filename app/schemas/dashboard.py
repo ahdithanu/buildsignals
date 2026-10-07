@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class KPIResponse(BaseModel):
@@ -43,3 +43,6 @@ class AIInsight(BaseModel):
     description: str
     deal_id: Optional[str] = None
     priority: str = "medium"
+    generated_at: Optional[datetime] = None
+    time_window: Optional[dict[str, Any]] = None
+    source_records: list[dict[str, Any]] = Field(default_factory=list)

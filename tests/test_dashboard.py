@@ -44,3 +44,8 @@ class TestDashboard:
         self._seed_deal(client)
         r = client.get("/dashboard/ai-insights")
         assert r.status_code == 200
+        body = r.json()
+        assert body
+        assert all(item["generated_at"] for item in body)
+        assert all(item["source_records"] for item in body)
+        assert all(item["time_window"] for item in body)

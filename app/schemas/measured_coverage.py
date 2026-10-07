@@ -29,6 +29,7 @@ class MeasuredSourceCoverage(BaseModel):
     stored_records: int
     readiness_status: str
     readiness_reasons: list[str]
+    completion_evidence: dict
     observed_states: list[ObservedStateCoverage]
 
 
