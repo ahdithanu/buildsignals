@@ -17,6 +17,10 @@ permit intelligence pipeline.
 - [Acquisition Radar](./acquisition_radar.md)
 - [Source onboarding decisions](./source_onboarding_decisions.md)
 - [Parcel source onboarding decisions](./parcel_source_onboarding_decisions.md)
+- Source access request packets:
+  [Mississippi MDEQ](./source_access_requests/mississippi_mdeq_permit_activity.md),
+  [D'Iberville](./source_access_requests/diberville_ms_council_planning_agendas.md),
+  [Biloxi](./source_access_requests/biloxi_ms_development_review_agendas.md)
 - [Schema reconciliation release gates and maintenance runbook](./runbooks/schema-reconciliation-release.md)
 
 ## Institutional Intelligence

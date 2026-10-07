@@ -3189,6 +3189,10 @@ Evidence URLs:
   rights, with full workflow exports, durable IDs, timestamps, status/document
   history, deletion semantics, control totals, evidence URLs, and raw-document
   resale limits. Personal party data must be minimized downstream.
+- Prepared access-request packets now exist for the highest-value unlocks:
+  [MDEQ statewide activity](./source_access_requests/mississippi_mdeq_permit_activity.md),
+  [D'Iberville council/planning agendas](./source_access_requests/diberville_ms_council_planning_agendas.md),
+  and [Biloxi development-review agendas](./source_access_requests/biloxi_ms_development_review_agendas.md).
 
 ### Wyoming Permit Sources
 
