@@ -17,9 +17,9 @@ jobs:
       # NON-superuser role. This matters: a superuser bypasses row-level
       # security even under FORCE RLS, so RLS assertions only mean something
       # as a non-superuser — exactly how the app connects in production.
-      TEST_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
-      TEST_EVAL_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
-      TEST_SCHEMA_RECONCILIATION_POSTGRES_URL: "postgresql://appuser:app@localhost:5432/dealsignal_test"
+      TEST_POSTGRES_URL: "postgresql+psycopg2://appuser:app@localhost:5432/dealsignal_test"
+      TEST_EVAL_POSTGRES_URL: "postgresql+psycopg2://appuser:app@localhost:5432/dealsignal_test"
+      TEST_SCHEMA_RECONCILIATION_POSTGRES_URL: "postgresql+psycopg2://appuser:app@localhost:5432/dealsignal_test"
     services:
       postgres:
         # Nearby-parcel migrations require PostGIS (geography centroid + GIST index).

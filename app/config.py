@@ -15,9 +15,11 @@ DATABASE_URL = os.environ.get(
     f"sqlite:///{BASE_DIR / 'dealsignal.db'}",
 )
 
-# Fix Render/Heroku postgres:// → postgresql:// prefix
+# Fix Render/Heroku postgres:// → SQLAlchemy's explicit psycopg2 driver URL.
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 # JWT settings (used by auth layer).
 #
