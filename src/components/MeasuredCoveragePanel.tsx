@@ -43,6 +43,48 @@ function Metric({ label, value }: { label: string; value: number }) {
   return <div className="min-w-0"><dt className="text-[11px] text-muted-foreground">{label}</dt><dd className="text-sm font-semibold tabular-nums">{number.format(value)}</dd></div>;
 }
 
+const emptyTotals = {
+  source_count: 0,
+  stored_records: 0,
+  geocoded_records: 0,
+  recently_seen_records: 0,
+  unknown_source_date_records: 0,
+  future_source_date_records: 0,
+  recent_source_date_records: 0,
+  observed_state_count: 0,
+  observed_jurisdiction_count: 0,
+};
+
+const emptyReadiness = {
+  total_source_count: 0,
+  active_source_count: 0,
+  disabled_source_count: 0,
+  sources_with_records: 0,
+  empty_source_count: 0,
+  sources_with_recent_collection: 0,
+  sources_with_recent_source_date: 0,
+  sources_with_unknown_source_dates: 0,
+  sources_with_future_source_dates: 0,
+  sources_with_geocoded_records: 0,
+  stale_collection_source_count: 0,
+  stale_source_date_source_count: 0,
+  stored_records: 0,
+  geocoded_records: 0,
+  recently_seen_records: 0,
+  recent_source_date_records: 0,
+  observed_state_count: 0,
+  observed_jurisdiction_count: 0,
+};
+
+const emptyReadinessStatusCounts: Record<MeasuredReadinessStatus, number> = {
+  fresh: 0,
+  empty: 0,
+  disabled: 0,
+  stale_collection: 0,
+  stale_source_date: 0,
+  unknown_source_date: 0,
+};
+
 const sourceStatusLabels: Record<string, string> = {
   fresh: 'Fresh',
   empty: 'Empty',
@@ -100,7 +142,18 @@ export function MeasuredCoveragePanel() {
     ...(statusFilter ? { readiness_status: statusFilter } : {}),
   };
   const { data, isPending, isFetching, error, refetch } = useMeasuredCoverage(measuredParams);
-  const states = data?.sources.flatMap(source => source.observed_states) ?? [];
+  const measuredSources = (data?.sources ?? []).map(source => ({
+    ...source,
+    observed_states: source.observed_states ?? [],
+    readiness_reasons: source.readiness_reasons ?? [],
+  }));
+  const pageTotals = data?.page_totals ?? emptyTotals;
+  const readiness = data?.readiness ?? emptyReadiness;
+  const readinessStatusCounts = data?.readiness_status_counts ?? emptyReadinessStatusCounts;
+  const readinessStates = data?.readiness_states ?? [];
+  const readinessJurisdictions = data?.readiness_jurisdictions ?? [];
+  const warnings = data?.warnings ?? [];
+  const states = measuredSources.flatMap(source => source.observed_states);
   const stateRollup = Array.from(states.reduce((map, state) => {
     const key = state.state ?? 'Unknown';
     const current = map.get(key) ?? {
@@ -206,28 +259,28 @@ export function MeasuredCoveragePanel() {
                   <p className="mt-1 text-[11px] text-muted-foreground">All measured {recordType} sources for this organization, not just the current page.</p>
                 </div>
                 <span className="text-[11px] text-muted-foreground">
-                  {number.format(data.readiness.total_source_count)} configured source{data.readiness.total_source_count === 1 ? '' : 's'}
+                  {number.format(readiness.total_source_count)} configured source{readiness.total_source_count === 1 ? '' : 's'}
                 </span>
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <Metric label="Sources with records" value={data.readiness.sources_with_records} />
-                <Metric label="Empty sources" value={data.readiness.empty_source_count} />
-                <Metric label={`Collected (${hours}h)`} value={data.readiness.sources_with_recent_collection} />
-                <Metric label={`Source dated (${hours}h)`} value={data.readiness.sources_with_recent_source_date} />
-                <Metric label="Geocoded sources" value={data.readiness.sources_with_geocoded_records} />
-                <Metric label="Stale collection" value={data.readiness.stale_collection_source_count} />
-                <Metric label="Unknown source dates" value={data.readiness.sources_with_unknown_source_dates} />
-                <Metric label="Disabled sources" value={data.readiness.disabled_source_count} />
+                <Metric label="Sources with records" value={readiness.sources_with_records} />
+                <Metric label="Empty sources" value={readiness.empty_source_count} />
+                <Metric label={`Collected (${hours}h)`} value={readiness.sources_with_recent_collection} />
+                <Metric label={`Source dated (${hours}h)`} value={readiness.sources_with_recent_source_date} />
+                <Metric label="Geocoded sources" value={readiness.sources_with_geocoded_records} />
+                <Metric label="Stale collection" value={readiness.stale_collection_source_count} />
+                <Metric label="Unknown source dates" value={readiness.sources_with_unknown_source_dates} />
+                <Metric label="Disabled sources" value={readiness.disabled_source_count} />
               </dl>
               <p className="mt-2 text-[11px] text-muted-foreground">
-                Stored records: {number.format(data.readiness.stored_records)} | Valid coordinates: {number.format(data.readiness.geocoded_records)} | Observed state/DC codes: {number.format(data.readiness.observed_state_count)}
+                Stored records: {number.format(readiness.stored_records)} | Valid coordinates: {number.format(readiness.geocoded_records)} | Observed state/DC codes: {number.format(readiness.observed_state_count)}
               </p>
               <div className="mt-3">
                 <p className="text-[11px] font-medium text-foreground">Source readiness status</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {sourceStatusOptions.filter(option => option.value).map(option => {
                     const value = option.value as MeasuredReadinessStatus;
-                    const count = data.readiness_status_counts[value] ?? 0;
+                    const count = readinessStatusCounts[value] ?? 0;
                     return (
                       <Button
                         key={value}
@@ -244,10 +297,10 @@ export function MeasuredCoveragePanel() {
                   })}
                 </div>
               </div>
-              {data.readiness_states.length > 0 && <div className="mt-3">
+              {readinessStates.length > 0 && <div className="mt-3">
                 <p className="text-[11px] font-medium text-foreground">Observed geography across measured {recordType} inventory</p>
                 <div className="mt-2 grid gap-2 md:grid-cols-3">
-                  {data.readiness_states.slice(0, 6).map(item => <article key={item.state ?? 'unknown'} className="border p-3 text-xs">
+                  {readinessStates.slice(0, 6).map(item => <article key={item.state ?? 'unknown'} className="border p-3 text-xs">
                     <div className="flex items-baseline justify-between gap-2">
                       <h5 className="font-semibold">{item.state ?? 'Unknown state'}</h5>
                       <span className="tabular-nums">{number.format(item.source_count)} source{item.source_count === 1 ? '' : 's'}</span>
@@ -261,7 +314,7 @@ export function MeasuredCoveragePanel() {
                   </article>)}
                 </div>
               </div>}
-              {data.readiness_jurisdictions.length > 0 && <div className="mt-4">
+              {readinessJurisdictions.length > 0 && <div className="mt-4">
                 <p className="text-[11px] font-medium text-foreground">Top measured jurisdictions</p>
                 <div className="mt-2 overflow-x-auto">
                   <table className="w-full min-w-[560px] text-left text-xs">
@@ -276,7 +329,7 @@ export function MeasuredCoveragePanel() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.readiness_jurisdictions.slice(0, 10).map((item, index) => <tr key={`${item.state ?? 'unknown'}-${item.jurisdiction ?? 'unknown'}-${index}`} className="border-b last:border-0">
+                      {readinessJurisdictions.slice(0, 10).map((item, index) => <tr key={`${item.state ?? 'unknown'}-${item.jurisdiction ?? 'unknown'}-${index}`} className="border-b last:border-0">
                         <td className="py-2 pr-3 font-medium">{item.jurisdiction ?? 'Unknown jurisdiction'}</td>
                         <td className="py-2 pr-3">{item.state ?? 'Unknown'}</td>
                         <td className="py-2 pr-3 tabular-nums">{number.format(item.source_count)}</td>
@@ -290,14 +343,14 @@ export function MeasuredCoveragePanel() {
               </div>}
             </section>
             <dl aria-label="Current page measurements" className="mt-5 grid grid-cols-2 gap-4 border-y py-3 sm:grid-cols-4">
-              <Metric label="Sources on this page" value={data.page_totals.source_count} />
-              <Metric label="Stored records on this page" value={data.page_totals.stored_records} />
-              <Metric label="Valid coordinates on this page" value={data.page_totals.geocoded_records} />
-              <Metric label="Unknown source dates on this page" value={data.page_totals.unknown_source_date_records} />
-              <Metric label={`Collected (${hours}h)`} value={data.page_totals.recently_seen_records} />
-              <Metric label={`Source updated (${hours}h)`} value={data.page_totals.recent_source_date_records} />
-              <Metric label="Observed state/DC codes" value={data.page_totals.observed_state_count} />
-              <Metric label="Observed jurisdiction labels" value={data.page_totals.observed_jurisdiction_count} />
+              <Metric label="Sources on this page" value={pageTotals.source_count} />
+              <Metric label="Stored records on this page" value={pageTotals.stored_records} />
+              <Metric label="Valid coordinates on this page" value={pageTotals.geocoded_records} />
+              <Metric label="Unknown source dates on this page" value={pageTotals.unknown_source_date_records} />
+              <Metric label={`Collected (${hours}h)`} value={pageTotals.recently_seen_records} />
+              <Metric label={`Source updated (${hours}h)`} value={pageTotals.recent_source_date_records} />
+              <Metric label="Observed state/DC codes" value={pageTotals.observed_state_count} />
+              <Metric label="Observed jurisdiction labels" value={pageTotals.observed_jurisdiction_count} />
             </dl>
             <p className="mt-2 text-[11px] text-muted-foreground">
               Measured {dateLabel(data.measured_at)} | Source-local counts; overlaps are not deduplicated.
@@ -323,7 +376,7 @@ export function MeasuredCoveragePanel() {
               </div>
             </section>}
             <div className="mt-3">
-              {data.sources.length === 0 ? <p className="py-4 text-sm text-muted-foreground">No {recordType} sources on this page.</p> : data.sources.map(source => (
+              {measuredSources.length === 0 ? <p className="py-4 text-sm text-muted-foreground">No {recordType} sources on this page.</p> : measuredSources.map(source => (
                 <article key={source.source_id} className="min-w-0 border-b py-4" aria-label={source.source_key}>
                   <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                     <div className="min-w-0 flex-1">
@@ -342,7 +395,7 @@ export function MeasuredCoveragePanel() {
             </div>
             <details className="mt-4 text-xs text-muted-foreground"><summary className="cursor-pointer font-medium text-foreground">Measurement scope</summary>
               <p className="mt-2">{data.scope}</p><p className="mt-1">{data.count_semantics}</p>
-              <ul className="mt-2 list-disc space-y-1 pl-4">{data.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
+              <ul className="mt-2 list-disc space-y-1 pl-4">{warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
             </details>
           </> : null}
       <div className="mt-4 flex items-center justify-between gap-3">

@@ -329,6 +329,23 @@ describe('MeasuredCoveragePanel', () => {
     await screen.findByText('No planning sources on this page.');
   });
 
+  it('renders older measured coverage responses without readiness rollups', async () => {
+    const legacy = report();
+    delete (legacy as Partial<MeasuredCoverage>).readiness;
+    delete (legacy as Partial<MeasuredCoverage>).readiness_status_counts;
+    delete (legacy as Partial<MeasuredCoverage>).readiness_states;
+    delete (legacy as Partial<MeasuredCoverage>).readiness_jurisdictions;
+    vi.mocked(ingestionApi.measuredCoverage).mockResolvedValue(legacy);
+
+    setup();
+
+    await screen.findByRole('article', { name: 'county_public_records' });
+    const readiness = screen.getByRole('region', { name: 'Production ingestion readiness' });
+    expect(within(readiness).getByText('0 configured sources')).toBeInTheDocument();
+    expect(screen.getByText('Sources on this page').nextElementSibling).toHaveTextContent('1');
+    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
+  });
+
   it('shows no totals while loading or on an error, even after a successful measurement', async () => {
     const { client } = setup();
     expect(screen.queryByLabelText('Current page measurements')).not.toBeInTheDocument();
