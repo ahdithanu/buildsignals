@@ -698,6 +698,10 @@ and TypeScript pass.
 Regression coverage now separately protects the planning market-context path:
 when no planning-anchored nearby search exists, the map labels same-city/state
 parcels as market context, not direct source-linked candidates.
+Acquisition Radar now opens source-backed availability evidence directly from
+the verified-availability badge when a listing, broker, owner, or auction URL is
+present. The badge remains non-clickable for excerpt-only evidence. Focused
+radar tests and TypeScript pass.
 
 ## Initial acquisition screening
 
