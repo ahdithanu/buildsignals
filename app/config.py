@@ -231,12 +231,27 @@ PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
 )
 
 
+def _normalize_request_path(path: str) -> str:
+    normalized = path if path.startswith("/") else f"/{path}"
+    if normalized != "/":
+        normalized = normalized.rstrip("/")
+    return normalized
+
+
+def is_demo_auth_path(path: str) -> bool:
+    """Return True for the public demo-session endpoints."""
+    return _normalize_request_path(path) in {"/auth/demo", "/v1/auth/demo"}
+
+
 def is_public_path(path: str) -> bool:
     """Return True when `path` is an unauthenticated public endpoint."""
+    path = _normalize_request_path(path)
     # Root "/" is public (landing ping for health indicators, etc.).
     if path == "/":
         return True
-    return any(path == p or path.startswith(p + "/") or path == p for p in PUBLIC_PATH_PREFIXES)
+    return is_demo_auth_path(path) or any(
+        path == p or path.startswith(p + "/") for p in PUBLIC_PATH_PREFIXES
+    )
 
 
 # ── Observability (Sentry) ──────────────────────────────────────────────────

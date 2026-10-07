@@ -9,6 +9,7 @@ import { signalStageFor } from '@/lib/signalStage';
 
 const login = vi.fn();
 const demoLogin = vi.fn();
+const demoAvailability = vi.hoisted(() => vi.fn());
 const register = vi.fn();
 const exportSearch = { mutate: vi.fn(), isPending: false };
 
@@ -88,9 +89,16 @@ vi.mock('@/contexts/AuthContext', () => ({
   }),
 }));
 
+vi.mock('@/api/auth', () => ({
+  authApi: {
+    demoAvailability,
+  },
+}));
+
 describe('Build Signals wireframe screens', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    demoAvailability.mockResolvedValue({ enabled: false });
   });
 
   it('renders live radar parcels without inferring listing or owner intent', async () => {
@@ -132,10 +140,11 @@ describe('Build Signals wireframe screens', () => {
   });
 
   it('opens demo mode from the login screen', async () => {
+    demoAvailability.mockResolvedValueOnce({ enabled: true });
     demoLogin.mockResolvedValueOnce(undefined);
     render(<MemoryRouter initialEntries={['/login']}><Login /></MemoryRouter>);
 
-    fireEvent.click(screen.getByRole('button', { name: /enter demo mode/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /enter demo mode/i }));
 
     await waitFor(() => expect(demoLogin).toHaveBeenCalledTimes(1));
     expect(login).not.toHaveBeenCalled();

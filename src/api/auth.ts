@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { ApiError, apiClient, resolveApiBaseUrl } from './client';
 import type {
   LoginRequest,
   Member,
@@ -10,7 +10,16 @@ import type {
 } from '@/types/auth';
 
 export const authApi = {
-  demoAvailability: () => apiClient.get<{ enabled: boolean }>('/auth/demo'),
+  demoAvailability: async () => {
+    const response = await fetch(`${resolveApiBaseUrl()}/v1/auth/demo`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new ApiError('Demo mode is not available on this deployment.', response.status);
+    }
+    return response.json() as Promise<{ enabled: boolean }>;
+  },
   demo: () => apiClient.post<TokenResponse>('/auth/demo'),
   register: (data: RegisterRequest) =>
     apiClient.post<TokenResponse>('/auth/register', data),
