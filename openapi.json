@@ -18,6 +18,18 @@
             "title": "Description",
             "type": "string"
           },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
           "insight_type": {
             "title": "Insight Type",
             "type": "string"
@@ -26,6 +38,26 @@
             "default": "medium",
             "title": "Priority",
             "type": "string"
+          },
+          "source_records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Source Records",
+            "type": "array"
+          },
+          "time_window": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Window"
           },
           "title": {
             "title": "Title",
@@ -9208,6 +9240,11 @@
       },
       "MeasuredSourceCoverage": {
         "properties": {
+          "completion_evidence": {
+            "additionalProperties": true,
+            "title": "Completion Evidence",
+            "type": "object"
+          },
           "configured_active": {
             "title": "Configured Active",
             "type": "boolean"
@@ -9262,6 +9299,7 @@
           "stored_records",
           "readiness_status",
           "readiness_reasons",
+          "completion_evidence",
           "observed_states"
         ],
         "title": "MeasuredSourceCoverage",
