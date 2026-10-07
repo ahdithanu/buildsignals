@@ -35,6 +35,36 @@ def test_valid_production_config_imports_clean():
     assert r.returncode == 0, r.stderr
 
 
+def test_plain_postgresql_url_uses_installed_psycopg2_driver():
+    r = subprocess.run(
+        [sys.executable, "-c", "import app.config; print(app.config.DATABASE_URL)"],
+        env={
+            "PATH": __import__("os").environ.get("PATH", ""),
+            "DATABASE_URL": "postgresql://u:p@host:5432/db",
+        },
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == "postgresql+psycopg2://u:p@host:5432/db"
+
+
+def test_render_postgres_url_uses_installed_psycopg2_driver():
+    r = subprocess.run(
+        [sys.executable, "-c", "import app.config; print(app.config.DATABASE_URL)"],
+        env={
+            "PATH": __import__("os").environ.get("PATH", ""),
+            "DATABASE_URL": "postgres://u:p@host:5432/db",
+        },
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == "postgresql+psycopg2://u:p@host:5432/db"
+
+
 def test_samesite_none_without_secure_raises_runtimeerror():
     # Regression: REFRESH_COOKIE_SECURE was USED in this guard before it was
     # DEFINED, so this path raised NameError instead of the intended error.
