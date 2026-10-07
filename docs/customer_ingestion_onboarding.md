@@ -52,9 +52,14 @@ Mississippi now has two prioritized early-warning candidates:
 - the statewide MDEQ Permit Activity Search for application and decision events
 - D'Iberville council/planning agendas for development agreements, land-use
   cases, business openings, and infrastructure commitments
+- Biloxi development-review agendas for proposed stores, restaurants, site
+  work, sign-offs, addresses, parcels, applicants, and development decisions
 
 Both remain legal holds until commercial storage and derived-display rights and
-supported reconciliation contracts are confirmed.
+supported reconciliation contracts are confirmed. Prepared request packets:
+[MDEQ](./source_access_requests/mississippi_mdeq_permit_activity.md),
+[D'Iberville](./source_access_requests/diberville_ms_council_planning_agendas.md),
+and [Biloxi](./source_access_requests/biloxi_ms_development_review_agendas.md).
 
 ## Boundaries And Tradeoffs
 
