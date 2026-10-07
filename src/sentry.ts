@@ -18,8 +18,7 @@ import * as Sentry from "@sentry/react";
 
 // Query params that must never reach Sentry. The password-reset token lives
 // in `?token=` and browserTracingIntegration records navigation URLs — so
-// without this it would be sent to Sentry (sendDefaultPii:false does NOT
-// scrub query strings). `Referrer-Policy: no-referrer` covers the Referer
+// without this it could be sent to Sentry. `Referrer-Policy: no-referrer` covers the Referer
 // leak; this covers the Sentry-capture leak.
 const SENSITIVE_QS = ["token", "code", "access_token", "refresh_token", "reset"];
 
@@ -53,7 +52,14 @@ export function initSentry(): void {
     ),
     // Never send PII — matches the backend's send_default_pii=False.
     // Auth tokens, cookies, and email addresses are the concrete risks here.
-    sendDefaultPii: false,
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      stackFrameVariables: false,
+    },
     integrations: [
       Sentry.browserTracingIntegration(),
     ],
