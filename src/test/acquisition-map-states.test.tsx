@@ -282,4 +282,70 @@ describe('<AcquisitionMap> states', () => {
     expect(screen.getByText(/ZIP3 787 · 2 ranked parcels · 1 shown/)).toBeInTheDocument();
     expect(screen.getAllByText('125 Congress Ave').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('labels planning-selected parcels as market context when no direct planning search exists', () => {
+    radarState = {
+      data: {
+        items: [{
+          parcel: {
+            id: 'parcel-market',
+            external_parcel_id: 'P-MARKET',
+            state: 'TX',
+            city: 'Austin',
+            county: 'Travis',
+            address: '200 Market St',
+            postal_code: '78702',
+            latitude: 30.26,
+            longitude: -97.72,
+            zoning_code: 'CS',
+            last_verified_at: '2026-09-27T00:00:00Z',
+          },
+          candidate_id: 'candidate-market',
+          acquisition_case_id: 'case-market',
+          radar_score: 70,
+          best_candidate_score: 70,
+          score_confidence: 0.75,
+          appearance_count: 1,
+          opportunity_count: 1,
+          personas: ['developer'],
+          review_status: 'candidate',
+          latest_signal_at: '2026-09-27T00:00:00Z',
+          reasons: ['Same market as a planning signal'],
+          cautions: [],
+          facts: [],
+          signals: [{
+            candidate_id: 'candidate-market',
+            search_id: 'search-market',
+            deal_id: 'deal-market',
+            deal_name: 'Market fallback signal',
+            anchor_permit_id: 'permit-market',
+            persona: 'developer',
+            approval_stage: 'pre_approval',
+            signal_confidence: 0.74,
+            distance_miles: 1.2,
+            candidate_score: 70,
+            created_at: '2026-09-27T00:00:00Z',
+          }],
+        }],
+        total: 1,
+        limit: 100,
+        offset: 0,
+        summary: { total_parcels: 1, shortlisted_parcels: 0, multi_opportunity_parcels: 0, assigned_parcels: 0, promoted_parcels: 0, contacted_parcels: 0, follow_up_parcels: 0, due_follow_up_parcels: 0, state_count: 1 },
+      },
+      isLoading: false,
+      error: null,
+      refetch,
+      exportSearch: { mutate: vi.fn(), isPending: false },
+    };
+
+    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select planning source' }));
+
+    expect(screen.getByText(/Planning market filter:/)).toBeInTheDocument();
+    expect(screen.getByText(/not a direct planning-to-parcel search/i)).toBeInTheDocument();
+    expect(screen.getByText('Planning market context only')).toBeInTheDocument();
+    expect(screen.getByText(/1 parcel candidate matches the selected planning record's market/)).toBeInTheDocument();
+    expect(screen.getByText('Market')).toBeInTheDocument();
+  });
 });
