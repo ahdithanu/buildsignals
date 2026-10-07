@@ -684,6 +684,17 @@ older/newer paging over permit and planning layers. A single combined map surfac
 is partially closed: selecting a permit or planning record plots that source
 anchor on the acquisition map beside ZIP3 heat and ranked parcels, while the
 independent source browser remains available above it.
+Selecting a geocoded source record now also renders an explicit signal-to-parcel
+workflow panel. It distinguishes direct permit/planning-anchored nearby parcel
+searches from market-only planning context, shows direct and filtered candidate
+counts, and links to the source evidence plus the filtered parcel queue. Focused
+map tests and TypeScript pass. This improves analyst/demo navigation; it still
+does not create parcel inventory or treat market-context candidates as verified
+source-linked parcels.
+Brand Expansion parcel-map handoffs now carry the leading market state into the
+map URL, so a national retailer or builder row opens the relevant state-filtered
+signal and parcel view instead of a generic national map. Focused brand/map tests
+and TypeScript pass.
 
 ## Initial acquisition screening
 
