@@ -8,7 +8,7 @@ import { ImportedDataEmptyState } from '@/components/ImportedDataEmptyState';
 import { Button } from '@/components/ui/button';
 import { useBrandExpansion } from '@/hooks/usePermitBrandMatches';
 import { cn } from '@/lib/utils';
-import type { BrandSignalCohort } from '@/types/brand';
+import type { BrandExpansionSummary, BrandSignalCohort } from '@/types/brand';
 
 const windows = [90, 180, 365] as const;
 const cohorts = {
@@ -45,6 +45,11 @@ const cohorts = {
 
 function marketLabel(city?: string | null, state?: string | null) {
   return [city, state].filter(Boolean).join(', ') || 'Location pending';
+}
+
+function parcelMapHref(row: BrandExpansionSummary) {
+  const state = row.markets.find((market) => /^[A-Z]{2}$/.test((market.state || '').toUpperCase()))?.state?.toUpperCase();
+  return state ? `/map?state=${encodeURIComponent(state)}` : '/map';
 }
 
 export default function BrandExpansion() {
@@ -192,7 +197,7 @@ export default function BrandExpansion() {
                     <Link to={`/permit-review?status=all&cohort=${cohort}&brand_id=${row.brand.id}`} className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 border border-foreground px-2 text-[10px] font-semibold hover:bg-secondary">
                       <Radar className="h-3.5 w-3.5" /> Signals <ArrowRight className="h-3 w-3" />
                     </Link>
-                    <Link to="/map" className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 bg-foreground px-2 text-[10px] font-semibold text-background">
+                    <Link to={parcelMapHref(row)} className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 bg-foreground px-2 text-[10px] font-semibold text-background">
                       <Map className="h-3.5 w-3.5" /> Parcel map
                     </Link>
                   </div>

@@ -79,7 +79,7 @@ describe('<BrandExpansion>', () => {
     expect(screen.getByRole('link', { name: /^signals$/i })).toHaveAttribute(
       'href', '/permit-review?status=all&cohort=national_retail&brand_id=brand-1',
     );
-    expect(screen.getByRole('link', { name: /parcel map/i })).toHaveAttribute('href', '/map');
+    expect(screen.getByRole('link', { name: /parcel map/i })).toHaveAttribute('href', '/map?state=TX');
     expect(useImportedRecordAvailabilityMock).not.toHaveBeenCalled();
   });
 

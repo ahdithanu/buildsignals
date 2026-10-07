@@ -48,6 +48,47 @@ function formatDate(value: string | null | undefined) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 }
 
+function sourceWorkflowCopy({
+  source,
+  directCount,
+  visibleCount,
+}: {
+  source: MapSignal | null;
+  directCount: number;
+  visibleCount: number;
+}) {
+  if (!source) return null;
+  const directNoun = `ranked nearby parcel${directCount === 1 ? '' : 's'}`;
+  const directVerb = directCount === 1 ? 'is' : 'are';
+  const visibleNoun = `parcel candidate${visibleCount === 1 ? '' : 's'}`;
+  const visibleVerb = visibleCount === 1 ? 'matches' : 'match';
+  if (source.kind === 'permit') {
+    return directCount > 0
+      ? {
+        title: 'Permit-to-parcel workflow ready',
+        description: `${directCount} ${directNoun} ${directVerb} directly linked to this geocoded filing.`,
+        action: 'Review source evidence, parcel facts, and save qualified candidates from this map or Acquisition Radar.',
+      }
+      : {
+        title: 'Permit has no saved nearby-parcel search yet',
+        description: 'This filing is geocoded, but no ranked parcel candidates are tied to it yet.',
+        action: 'Open permit review, run the bounded nearby-parcel workflow, then return here to evaluate candidates.',
+      };
+  }
+  if (directCount > 0) {
+    return {
+      title: 'Planning-to-parcel workflow ready',
+      description: `${directCount} ${directNoun} ${directVerb} tied to this planning record.`,
+      action: 'Use these candidates as investigation leads while preserving the planning evidence trail.',
+    };
+  }
+  return {
+    title: 'Planning market context only',
+    description: `${visibleCount} ${visibleNoun} ${visibleVerb} the selected planning record's market, but no direct planning-anchored search exists yet.`,
+    action: 'Create a planning-anchored nearby search before treating these as source-linked candidates.',
+  };
+}
+
 export default function AcquisitionMap() {
   const { role } = useAuth();
   const { toast } = useToast();
@@ -103,6 +144,16 @@ export default function AcquisitionMap() {
     : activeSignalId
     ? items.filter((item) => item.signals.some((signal) => signal.deal_id === activeSignalId))
     : items;
+  const directSourceItemCount = selectedSourcePermitId
+    ? connectedItems.length
+    : selectedSourcePlanningId
+      ? exactPlanningItems.length
+      : 0;
+  const sourceWorkflow = sourceWorkflowCopy({
+    source: selectedSourceRecord,
+    directCount: directSourceItemCount,
+    visibleCount: connectedItems.length,
+  });
   const heatItems = heatmap?.items ?? [];
   const topHeatScore = Math.max(...heatItems.map((item) => item.score), 1);
   const visibleItems = connectedItems.filter((item) => {
@@ -387,6 +438,41 @@ export default function AcquisitionMap() {
                     <span className="ml-1 text-muted-foreground">Matched by city/state; not a direct planning-to-parcel search.</span>
                   )}
                   <button type="button" className="ml-2 font-semibold underline" onClick={() => setSelectedSourceRecord(null)}>Clear source</button>
+                </div>
+              )}
+              {sourceWorkflow && (
+                <div className="grid gap-3 border-2 border-foreground bg-card p-3 text-xs md:grid-cols-[1fr_auto]">
+                  <div>
+                    <p className="section-label">Selected signal workflow</p>
+                    <h2 className="mt-1 text-sm font-semibold">{sourceWorkflow.title}</h2>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{sourceWorkflow.description}</p>
+                    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{sourceWorkflow.action}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center md:w-64">
+                    <div className="border border-border p-2">
+                      <p className="text-base font-semibold">{directSourceItemCount}</p>
+                      <p className="mt-1 text-[9px] text-muted-foreground">direct candidates</p>
+                    </div>
+                    <div className="border border-border p-2">
+                      <p className="text-base font-semibold">{visibleItems.length}</p>
+                      <p className="mt-1 text-[9px] text-muted-foreground">shown after filters</p>
+                    </div>
+                    <div className="border border-border p-2">
+                      <p className="text-base font-semibold">{selectedSourceRecord.kind === 'planning' && !directSourceItemCount ? 'Market' : 'Direct'}</p>
+                      <p className="mt-1 text-[9px] text-muted-foreground">link type</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 md:col-span-2">
+                    <Link
+                      to={selectedSourceRecord.kind === 'permit' ? `/permits/${selectedSourceRecord.id.replace(/^permit:/, '')}` : `/planning?record_id=${encodeURIComponent(selectedSourceRecord.id.replace(/^planning:/, ''))}`}
+                      className="inline-flex h-8 items-center gap-1.5 bg-foreground px-3 text-[10px] font-semibold text-background"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Review source evidence
+                    </Link>
+                    <Link to={acquisitionWorkspaceHref} className="inline-flex h-8 items-center border border-foreground px-3 text-[10px] font-semibold">
+                      Open filtered parcel queue
+                    </Link>
+                  </div>
                 </div>
               )}
               <button
