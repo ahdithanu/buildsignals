@@ -695,6 +695,9 @@ Brand Expansion parcel-map handoffs now carry the leading market state into the
 map URL, so a national retailer or builder row opens the relevant state-filtered
 signal and parcel view instead of a generic national map. Focused brand/map tests
 and TypeScript pass.
+Regression coverage now separately protects the planning market-context path:
+when no planning-anchored nearby search exists, the map labels same-city/state
+parcels as market context, not direct source-linked candidates.
 
 ## Initial acquisition screening
 
