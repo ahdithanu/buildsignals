@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, case, func
 
-from app.models.ingestion import IngestionSource, PermitRecord, RawSourceRecord
+from app.models.ingestion import IngestionRun, IngestionSource, PermitRecord, RawSourceRecord
 from app.models.parcel import ParcelRecord
 from app.models.planning import PlanningRecord
 from app.services.ingestion.catalog import US_STATE_CODES
@@ -179,6 +179,67 @@ def _source_readiness(source: IngestionSource, rows: list[dict]) -> tuple[str, l
     return "fresh", reasons
 
 
+def _source_completion_evidence(db, source: IngestionSource) -> dict:
+    settings = source.settings or {}
+    latest_run = scope_query(db.query(IngestionRun), IngestionRun).filter(
+        IngestionRun.source_id == source.id,
+        IngestionRun.trigger != "canary",
+    ).order_by(IngestionRun.started_at.desc()).first()
+    latest_success = scope_query(db.query(IngestionRun), IngestionRun).filter(
+        IngestionRun.source_id == source.id,
+        IngestionRun.trigger != "canary",
+        IngestionRun.status.in_(("completed", "partial")),
+        IngestionRun.records_failed == 0,
+    ).order_by(IngestionRun.started_at.desc()).first()
+    reconciliation_mode = str(settings.get("reconciliation_mode") or "")
+    full_snapshot_source = "full" in reconciliation_mode
+    completed_without_cursor = (
+        latest_success is not None
+        and latest_success.status == "completed"
+        and latest_success.checkpoint is None
+    )
+    full_source_completed = bool(full_snapshot_source and completed_without_cursor)
+    completion_kind = (
+        "full_source_snapshot_completed" if full_source_completed
+        else "incremental_window_completed" if completed_without_cursor
+        else "partial_or_cursor_pending" if latest_success
+        else "no_successful_run"
+    )
+    blockers = []
+    if not full_snapshot_source:
+        blockers.append("source is not configured for full-source snapshot reconciliation")
+    if latest_run is None:
+        blockers.append("no operational ingestion run recorded")
+    elif latest_run.status in {"failed", "partial_with_errors"}:
+        blockers.append("latest operational run failed or rejected records")
+    if latest_success is None:
+        blockers.append("no successful operational run with zero failed records")
+    elif latest_success.checkpoint is not None:
+        blockers.append("latest successful run left a checkpoint, so extraction is incomplete")
+    return {
+        "reconciliation_mode": reconciliation_mode or None,
+        "full_snapshot_source": full_snapshot_source,
+        "latest_run_status": latest_run.status if latest_run else None,
+        "latest_run_completed_at": latest_run.completed_at if latest_run else None,
+        "latest_run_checkpoint": latest_run.checkpoint if latest_run else None,
+        "latest_run_records_seen": latest_run.records_seen if latest_run else None,
+        "latest_run_records_inserted": latest_run.records_inserted if latest_run else None,
+        "latest_run_records_updated": latest_run.records_updated if latest_run else None,
+        "latest_run_records_failed": latest_run.records_failed if latest_run else None,
+        "latest_success_status": latest_success.status if latest_success else None,
+        "latest_success_completed_at": latest_success.completed_at if latest_success else None,
+        "latest_success_checkpoint": latest_success.checkpoint if latest_success else None,
+        "latest_success_records_seen": latest_success.records_seen if latest_success else None,
+        "full_source_completed": full_source_completed,
+        "completion_kind": completion_kind,
+        "completion_blockers": blockers,
+        "deduplication_invariant": (
+            "Stored parcel identity is unique by source_id + external_parcel_id; "
+            "raw versions are unique by source_id + external_record_id + content_hash."
+        ),
+    }
+
+
 def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
                       freshness_hours: int = 72, now: datetime | None = None,
                       readiness_status: str | None = None) -> dict:
@@ -264,6 +325,7 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
                 "stored_records": item["stored_records"],
                 "readiness_status": item["status"],
                 "readiness_reasons": item["reasons"],
+                "completion_evidence": _source_completion_evidence(db, item["source"]),
                 "observed_states": item["observed_states"],
             }
             for item in page_payloads

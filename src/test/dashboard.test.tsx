@@ -83,7 +83,13 @@ describe("<Dashboard>", () => {
       data: [{ id: "signal-1", type: "permit", property: "100 Main St", summary: "Retail filing" }],
     });
     (useAiInsights as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: ["Retail chain activity is building in Austin."],
+      data: [{
+        title: "Austin activity",
+        description: "Retail chain activity is building in Austin.",
+        generatedAt: "2026-10-05T00:00:00Z",
+        timeWindow: { as_of: "2026-10-05T00:00:00Z" },
+        sourceRecords: [{ record_type: "deal", count: 3, sample_records: [{ record_type: "deal", id: "deal-1" }] }],
+      }],
     });
     (useIngestionHealth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
@@ -135,6 +141,7 @@ describe("<Dashboard>", () => {
     expect(screen.getByText("Pipeline Snapshot")).toBeInTheDocument();
     expect(screen.getByText("Recent Signals")).toBeInTheDocument();
     expect(screen.getByText("AI Insights")).toBeInTheDocument();
+    expect(screen.getByText(/1 evidence set/i)).toBeInTheDocument();
     expect(screen.getByText("GraphCoverageCard")).toBeInTheDocument();
     expect(screen.getByText("Test Deal")).toBeInTheDocument();
   });

@@ -22,6 +22,15 @@ const signalTypeIcon: Record<string, string> = {
   zoning: '🏗️', permit: '📋', listing: '🏠', ownership: '🔄', competitor: '⚡', demographic: '📊',
 };
 
+function insightWindowLabel(value: Record<string, unknown> | null | undefined, generatedAt?: string | null) {
+  const asOf = value?.as_of || generatedAt;
+  const end = value?.end;
+  const raw = typeof asOf === 'string' ? asOf : typeof end === 'string' ? end : '';
+  if (!raw) return null;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? raw : date.toLocaleDateString();
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: kpis, isLoading: kpisLoading, error: kpisError, refetch: refetchKpis } = useDashboardKpis();
@@ -199,7 +208,15 @@ export default function Dashboard() {
                 {(insights ?? []).map((insight, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
                     <div className="mt-0.5 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
-                    <p className="text-sm text-muted-foreground leading-relaxed">{insight}</p>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-sm text-muted-foreground leading-relaxed">{insight.description}</p>
+                      {(insight.generatedAt || insight.sourceRecords.length > 0) && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {insightWindowLabel(insight.timeWindow, insight.generatedAt) ? `As of ${insightWindowLabel(insight.timeWindow, insight.generatedAt)} · ` : ''}
+                          {insight.sourceRecords.length ? `${insight.sourceRecords.length} evidence ${insight.sourceRecords.length === 1 ? 'set' : 'sets'}` : 'Evidence timestamped'}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
