@@ -245,6 +245,19 @@ def enqueue_webhook_event(
     for subscription in subscriptions:
         if normalized_event_type not in subscription.event_types:
             continue
+        existing = (
+            db.query(WebhookDelivery)
+            .filter(
+                WebhookDelivery.organization_id == organization_id,
+                WebhookDelivery.subscription_id == subscription.id,
+                WebhookDelivery.event_type == normalized_event_type,
+                WebhookDelivery.event_id == delivery_event_id,
+            )
+            .first()
+        )
+        if existing is not None:
+            deliveries.append(existing)
+            continue
         delivery = WebhookDelivery(
             organization_id=organization_id,
             subscription_id=subscription.id,

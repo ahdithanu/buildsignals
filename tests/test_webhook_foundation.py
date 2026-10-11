@@ -679,6 +679,47 @@ def test_enqueue_webhook_event_matches_active_subscriptions_only(db):
     assert db.query(WebhookDelivery).count() == 1
 
 
+def test_enqueue_webhook_event_is_idempotent_per_subscription_event(db):
+    first = WebhookSubscription(
+        organization_id="org-webhook-idempotent",
+        name="First",
+        target_url="https://example.test/first",
+        event_types=["deal.created"],
+        status="active",
+    )
+    second = WebhookSubscription(
+        organization_id="org-webhook-idempotent",
+        name="Second",
+        target_url="https://example.test/second",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add_all([first, second])
+    db.commit()
+
+    first_enqueue = enqueue_webhook_event(
+        db,
+        organization_id="org-webhook-idempotent",
+        event_type="deal.created",
+        event_id="deal-1",
+        payload={"deal_id": "deal-1", "version": 1},
+    )
+    db.commit()
+    second_enqueue = enqueue_webhook_event(
+        db,
+        organization_id="org-webhook-idempotent",
+        event_type="deal.created",
+        event_id="deal-1",
+        payload={"deal_id": "deal-1", "version": 2},
+    )
+    db.commit()
+
+    assert {delivery.id for delivery in second_enqueue} == {delivery.id for delivery in first_enqueue}
+    assert db.query(WebhookDelivery).count() == 2
+    assert {delivery.subscription_id for delivery in second_enqueue} == {first.id, second.id}
+    assert {delivery.payload["version"] for delivery in second_enqueue} == {1}
+
+
 def test_webhook_signature_uses_timestamp_and_canonical_body(db, monkeypatch):
     monkeypatch.setenv("BUILD_SIGNALS_WEBHOOK_SECRET", "super-secret")
     subscription = WebhookSubscription(
