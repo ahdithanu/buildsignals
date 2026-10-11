@@ -38,6 +38,7 @@ class RateLimitDecision:
     allowed: bool
     remaining: int
     retry_after: int  # seconds until the next allowed call; 0 when allowed
+    reset_after: int = 0  # seconds until the fixed window resets
 
 
 class InMemoryRateLimiter:
@@ -55,7 +56,7 @@ class InMemoryRateLimiter:
         """Record a hit against `key`. Returns whether it should proceed."""
         if limit <= 0 or window_seconds <= 0:
             # Misconfiguration — fail open rather than DoS ourselves.
-            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0)
+            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0, reset_after=0)
 
         now = time.monotonic()
         with self._lock:
@@ -68,11 +69,17 @@ class InMemoryRateLimiter:
 
             if count > limit:
                 retry = max(1, int(window_seconds - (now - window_start)))
-                return RateLimitDecision(allowed=False, remaining=0, retry_after=retry)
+                return RateLimitDecision(
+                    allowed=False,
+                    remaining=0,
+                    retry_after=retry,
+                    reset_after=retry,
+                )
             return RateLimitDecision(
                 allowed=True,
                 remaining=max(0, limit - count),
                 retry_after=0,
+                reset_after=max(1, int(window_seconds - (now - window_start))),
             )
 
     def reset(self, key: str) -> None:
@@ -119,7 +126,7 @@ class RedisRateLimiter:
 
     def check(self, *, key: str, limit: int, window_seconds: int) -> RateLimitDecision:
         if limit <= 0 or window_seconds <= 0:
-            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0)
+            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0, reset_after=0)
 
         try:
             pipe = self._client.pipeline()
@@ -135,16 +142,20 @@ class RedisRateLimiter:
             # Fail open. Log once per class of error so a Redis outage
             # doesn't drown the app logs.
             log.warning("rate_limiter: redis error, failing open: %s", exc)
-            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0)
+            return RateLimitDecision(allowed=True, remaining=limit, retry_after=0, reset_after=0)
 
         if count > limit:
             return RateLimitDecision(
-                allowed=False, remaining=0, retry_after=max(1, int(ttl))
+                allowed=False,
+                remaining=0,
+                retry_after=max(1, int(ttl)),
+                reset_after=max(1, int(ttl)),
             )
         return RateLimitDecision(
             allowed=True,
             remaining=max(0, limit - int(count)),
             retry_after=0,
+            reset_after=max(1, int(ttl)),
         )
 
     def reset(self, key: str) -> None:

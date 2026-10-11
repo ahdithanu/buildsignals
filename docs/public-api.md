@@ -70,6 +70,7 @@ Public API keys have a per-key rate limit. Responses include:
 
 - `X-API-Key-RateLimit-Limit`
 - `X-API-Key-RateLimit-Remaining`
+- `X-API-Key-RateLimit-Reset`, the approximate seconds until the current fixed window resets
 - `Retry-After` on `429` responses
 
 Successful calls are recorded with endpoint, status, item count, latency, and timestamp. Build Signals also
