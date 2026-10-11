@@ -10357,6 +10357,9 @@
           "ingestion": {
             "$ref": "#/components/schemas/IngestionCounts"
           },
+          "webhooks": {
+            "$ref": "#/components/schemas/WebhookCounts"
+          },
           "window_end": {
             "format": "date-time",
             "title": "Window End",
@@ -10375,6 +10378,7 @@
           "days",
           "evaluations",
           "ingestion",
+          "webhooks",
           "deployment",
           "attention"
         ],
@@ -16874,6 +16878,69 @@
           "activated_at"
         ],
         "title": "VersionRead",
+        "type": "object"
+      },
+      "WebhookCounts": {
+        "properties": {
+          "active_leases": {
+            "title": "Active Leases",
+            "type": "integer"
+          },
+          "delivered": {
+            "title": "Delivered",
+            "type": "integer"
+          },
+          "deliveries": {
+            "title": "Deliveries",
+            "type": "integer"
+          },
+          "due_now": {
+            "title": "Due Now",
+            "type": "integer"
+          },
+          "exhausted": {
+            "title": "Exhausted",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "failure_rate": {
+            "title": "Failure Rate",
+            "type": "number"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "scheduled": {
+            "title": "Scheduled",
+            "type": "integer"
+          },
+          "subscriptions_active": {
+            "title": "Subscriptions Active",
+            "type": "integer"
+          },
+          "subscriptions_disabled": {
+            "title": "Subscriptions Disabled",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deliveries",
+          "pending",
+          "delivered",
+          "failed",
+          "due_now",
+          "scheduled",
+          "exhausted",
+          "active_leases",
+          "subscriptions_active",
+          "subscriptions_disabled",
+          "failure_rate"
+        ],
+        "title": "WebhookCounts",
         "type": "object"
       },
       "WebhookDeadLetterAcknowledgeRequest": {
