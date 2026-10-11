@@ -70,4 +70,5 @@ from app.models.evaluation import EvalCase, EvalDataset, EvalMetric, EvalResult,
 from app.models.prompt_registry import PromptTemplate, PromptVersion  # noqa: F401
 from app.models.api_key import OrganizationApiKey  # noqa: F401
 from app.models.api_usage import OrganizationApiKeyUsageDailyRollup, OrganizationApiKeyUsageEvent  # noqa: F401
+from app.models.ai_usage import AiWorkflowUsageDailyRollup  # noqa: F401
 from app.models.webhook import WebhookDelivery, WebhookSubscription  # noqa: F401

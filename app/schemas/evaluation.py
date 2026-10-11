@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
@@ -182,3 +182,45 @@ class RunComparison(BaseModel):
     regressed_case_ids: list[str]
     candidate_gate_passed: bool
     baseline_gate_passed: bool
+
+
+class AiUsageTotals(BaseModel):
+    total_runs: int
+    total_results: int
+    total_tokens_input: int | None
+    total_tokens_output: int | None
+    total_cost_usd: float | None
+    total_latency_ms: float | None
+    known_cost_results: int
+    known_token_results: int
+    known_latency_results: int
+
+
+class AiUsageDailyRollup(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    usage_date: date
+    workflow: Workflow
+    model: str
+    prompt_version: str
+    total_runs: int
+    total_results: int
+    known_cost_results: int
+    known_token_results: int
+    known_latency_results: int
+    total_tokens_input: int | None
+    total_tokens_output: int | None
+    total_latency_ms: float | None
+    total_cost_usd: float | None
+    last_run_at: datetime | None
+    updated_at: datetime
+
+
+class AiUsageSummary(BaseModel):
+    totals: AiUsageTotals
+    daily: list[AiUsageDailyRollup]
+
+
+class AiUsageRebuildResult(AiUsageSummary):
+    rebuilt_results: int
