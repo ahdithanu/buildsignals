@@ -24,11 +24,26 @@ from app.schemas.graph import (
     GraphRelationshipResponse,
     OpportunityGraphContextResponse,
 )
-from app.schemas.public_api import PublicDealWorkflowHistoryResponse, PublicSignalWorkflowResponse
+from app.schemas.public_api import (
+    PublicApiKeySelfResponse,
+    PublicApiRateLimitResponse,
+    PublicApiSelfResponse,
+    PublicApiUsageDailyResponse,
+    PublicApiUsageEndpointResponse,
+    PublicApiUsageResponse,
+    PublicDealWorkflowHistoryResponse,
+    PublicSignalWorkflowResponse,
+)
 from app.schemas.signal import SignalResponse
 from app.services import evaluation_service
-from app.services.api_usage_service import record_api_key_usage, start_usage_timer
+from app.services.api_key_service import parse_scopes
+from app.services.api_usage_service import (
+    record_api_key_usage,
+    start_usage_timer,
+    summarize_api_key_usage,
+)
 from app.services.graph_service import CONTEXT_BUCKETS
+from app.services.rate_limiter import PUBLIC_API_KEY_LIMIT, PUBLIC_API_KEY_WINDOW
 from app.utils.api_key_deps import require_api_key_scope
 from app.utils.org_scope import active_query, scope_query
 
@@ -205,6 +220,72 @@ def _public_workflow_history(
         deal_id=deal_id,
         generated_at=datetime.now(timezone.utc),
         signals=signal_items,
+    )
+
+
+def _public_api_usage_response(db: Session, api_key: OrganizationApiKey) -> PublicApiUsageResponse:
+    usage = summarize_api_key_usage(
+        db,
+        organization_id=api_key.organization_id,
+        api_key_id=api_key.id,
+    )
+    return PublicApiUsageResponse(
+        total_calls=usage.total_calls,
+        total_items=usage.total_items,
+        last_called_at=usage.last_called_at,
+        endpoints=[
+            PublicApiUsageEndpointResponse(
+                path=endpoint.path,
+                method=endpoint.method,
+                total_calls=endpoint.total_calls,
+                total_items=endpoint.total_items,
+                last_called_at=endpoint.last_called_at,
+            )
+            for endpoint in usage.endpoints
+        ],
+        daily=[
+            PublicApiUsageDailyResponse(
+                usage_date=item.usage_date.isoformat(),
+                total_calls=item.total_calls,
+                total_items=item.total_items,
+                average_latency_ms=item.average_latency_ms,
+            )
+            for item in usage.daily
+        ],
+    )
+
+
+@router.get("/me", response_model=PublicApiSelfResponse)
+def get_public_api_key_self(
+    api_key: OrganizationApiKey = Depends(read_api_key),
+    db: Session = Depends(get_db),
+):
+    started_at = start_usage_timer()
+    record_api_key_usage(
+        db,
+        api_key=api_key,
+        method="GET",
+        path="/public/me",
+        status_code=200,
+        started_at=started_at,
+        response_items=1,
+    )
+    db.refresh(api_key)
+    return PublicApiSelfResponse(
+        api_key=PublicApiKeySelfResponse(
+            id=api_key.id,
+            name=api_key.name,
+            key_prefix=api_key.key_prefix,
+            scopes=parse_scopes(api_key.scopes),
+            expires_at=api_key.expires_at,
+            created_at=api_key.created_at,
+            last_used_at=api_key.last_used_at,
+        ),
+        rate_limit=PublicApiRateLimitResponse(
+            limit=PUBLIC_API_KEY_LIMIT,
+            window_seconds=PUBLIC_API_KEY_WINDOW,
+        ),
+        usage=_public_api_usage_response(db, api_key),
     )
 
 

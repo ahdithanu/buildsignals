@@ -11,6 +11,7 @@ X-API-Key: bs_live_...
 
 ## Endpoints
 
+- `GET /v1/public/me`
 - `GET /v1/public/deals`
 - `GET /v1/public/deals/{deal_id}`
 - `GET /v1/public/deals/{deal_id}/graph-context`
@@ -24,6 +25,10 @@ X-API-Key: bs_live_...
 
 All public responses are scoped to the API key's organization. A key with `write` or `admin` scope can read;
 keys without read-compatible scope receive `403`.
+
+`/me` is the integration health check for the current key. It returns non-secret key metadata, granted scopes,
+expiration, rate-limit policy, and usage rollups for the authenticated key only. It never returns the raw key
+secret or stored hash, so implementation teams can safely use it in deployment checks and runbooks.
 
 `/deals/{deal_id}/graph-context` returns connected developers, parcels, owners, contractors, architects,
 engineers, permits, cities, lenders, brokers, and relationship evidence for one deal. It is read-only and never
@@ -76,6 +81,13 @@ exposing key secrets.
 Admins can rebuild a key's daily rollups from raw usage events with:
 
 - `POST /organizations/{org_id}/api-keys/{key_id}/usage/rebuild-rollups`
+
+Integration owners can inspect the currently authenticated key without admin access:
+
+```bash
+curl -sS "https://buildsignals.ai/v1/public/me" \
+  -H "Authorization: Bearer $BUILD_SIGNALS_API_KEY"
+```
 
 ## Rotation
 

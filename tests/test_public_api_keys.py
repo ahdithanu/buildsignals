@@ -614,6 +614,39 @@ def test_public_api_key_rate_limit_headers_and_enforcement(client, db, monkeypat
     assert limited.headers["Retry-After"]
 
 
+def test_public_api_key_can_inspect_own_usage_without_secret_leak(client, db):
+    identity = _register(client, email="public-self-usage@example.com", org_name="Public Self Usage")
+    _seed_deal(db, org_id=identity["organization_id"], name="Self-serve API warehouse")
+    api_key, secret = _issue_key(
+        db,
+        org_id=identity["organization_id"],
+        user_id=identity["user_id"],
+        scopes=["read"],
+    )
+    headers = {"Authorization": f"Bearer {secret}"}
+    seed_call = client.get("/public/deals", headers=headers)
+    assert seed_call.status_code == 200, seed_call.text
+
+    response = client.get("/public/me", headers=headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["api_key"]["id"] == api_key.id
+    assert body["api_key"]["name"] == "Warehouse export"
+    assert body["api_key"]["key_prefix"] == api_key.key_prefix
+    assert body["api_key"]["scopes"] == ["read"]
+    assert body["api_key"]["expires_at"]
+    assert body["rate_limit"]["limit"] > 0
+    assert body["rate_limit"]["window_seconds"] > 0
+    assert body["usage"]["total_calls"] == 2
+    assert body["usage"]["total_items"] == 2
+    assert {endpoint["path"] for endpoint in body["usage"]["endpoints"]} == {
+        "/public/deals",
+        "/public/me",
+    }
+    assert secret not in response.text
+    assert api_key.key_hash not in response.text
+
+
 def test_admin_can_view_api_key_usage_summary(client, db):
     identity = _register(client, email="public-usage@example.com", org_name="Public Usage")
     _seed_deal(db, org_id=identity["organization_id"], name="Usage warehouse")
