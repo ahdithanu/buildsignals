@@ -72,6 +72,25 @@ operators can verify a specific customer endpoint after sending a test event or 
 delivery row exposes an expandable debug view with the delivery id, next retry timestamp, canonical payload, and
 response excerpt when available.
 
+### Queue Triage Runbook
+
+Use the Settings queue snapshot as the first-line diagnostic before replaying deliveries or changing customer
+subscriptions:
+
+- `Due now > 0` and `In flight = 0`: deliveries are eligible but no worker has claimed them. Check whether the
+  scheduler or worker process is running for the organization, then run `scripts/process_webhooks.py` for that tenant.
+- `Due now > 0` and `In flight > 0`: workers have claimed deliveries. Wait for the current lease window or inspect
+  recent delivery attempts before replaying, so support does not double-send customer notifications.
+- `Scheduled retry > 0`: failures are backing off normally. Use the next retry timestamp to decide whether to wait or
+  manually attempt a fixed receiver.
+- `Exhausted > 0`: deliveries reached the attempt ceiling. Review response excerpts, confirm the customer endpoint is
+  healthy, then replay only the deliveries that should be retried.
+- `Dead letters > 0`: triage is complete enough to acknowledge evidence, but acknowledgement is not recovery. Replay
+  remains the recovery action after the receiving system is fixed.
+
+Escalate to engineering when due deliveries remain unclaimed after a worker run, active leases do not clear after the
+configured lease window, or response excerpts indicate signing, payload shape, or tenant-scoping errors.
+
 ## Delivery Attempts
 
 The delivery service posts a canonical JSON body containing `event_id`, `event_type`, `delivery_id`,
