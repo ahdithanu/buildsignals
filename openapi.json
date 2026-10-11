@@ -16940,6 +16940,29 @@
             ],
             "title": "Last Attempted At"
           },
+          "lease_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lease Expires At"
+          },
+          "lease_owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lease Owner"
+          },
           "next_attempt_at": {
             "anyOf": [
               {
@@ -17013,6 +17036,8 @@
           "attempt_count",
           "next_attempt_at",
           "last_attempted_at",
+          "lease_owner",
+          "lease_expires_at",
           "response_status_code",
           "response_body_excerpt",
           "error_message",
@@ -17115,6 +17140,10 @@
       },
       "WebhookQueueSnapshotResponse": {
         "properties": {
+          "active_leases": {
+            "title": "Active Leases",
+            "type": "integer"
+          },
           "due_now": {
             "title": "Due Now",
             "type": "integer"
@@ -17170,6 +17199,7 @@
           "due_now",
           "scheduled",
           "exhausted",
+          "active_leases",
           "max_attempts",
           "next_due_at",
           "oldest_due_at"
