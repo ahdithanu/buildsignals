@@ -133,5 +133,8 @@ describe('Settings API keys', () => {
     }));
     expect(await screen.findByText('One-time secret')).toBeInTheDocument();
     expect(screen.getByText('one-time-test-secret')).toBeInTheDocument();
+    expect(screen.getByText('Verify integration health')).toBeInTheDocument();
+    expect(screen.getByText(/curl -sS "http:\/\/localhost:3000\/v1\/public\/me"/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy health check' })).toBeInTheDocument();
   });
 });
