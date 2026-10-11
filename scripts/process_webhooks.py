@@ -26,8 +26,10 @@ def _bounded_int(name: str, *, minimum: int, maximum: int):
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--organization-id", required=True, help="Organization UUID to process")
+    parser.add_argument("--worker-id", default="webhook-worker", help="Stable worker identity used for delivery leases")
     parser.add_argument("--limit", type=_bounded_int("limit", minimum=1, maximum=250), default=25)
     parser.add_argument("--max-attempts", type=_bounded_int("max attempts", minimum=1, maximum=25), default=8)
+    parser.add_argument("--lease-seconds", type=_bounded_int("lease seconds", minimum=30, maximum=3600), default=300)
     parser.add_argument("--timeout-seconds", type=_bounded_int("timeout seconds", minimum=1, maximum=60), default=10)
     args = parser.parse_args(argv)
 
@@ -37,8 +39,10 @@ def main(argv: list[str] | None = None) -> int:
         result = process_due_webhook_deliveries(
             db,
             organization_id=args.organization_id,
+            worker_id=args.worker_id,
             limit=args.limit,
             max_attempts=args.max_attempts,
+            lease_seconds=args.lease_seconds,
             timeout_seconds=args.timeout_seconds,
         )
     finally:

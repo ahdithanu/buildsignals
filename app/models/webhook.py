@@ -51,6 +51,7 @@ class WebhookDelivery(Base):
         Index("ix_webhook_deliveries_org_created", "organization_id", "created_at"),
         Index("ix_webhook_deliveries_subscription_status", "subscription_id", "status"),
         Index("ix_webhook_deliveries_event", "organization_id", "event_type", "event_id"),
+        Index("ix_webhook_deliveries_lease", "organization_id", "status", "lease_expires_at"),
         Index(
             "uq_webhook_delivery_idempotency_key",
             "organization_id",
@@ -81,6 +82,8 @@ class WebhookDelivery(Base):
     attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_owner: Mapped[str | None] = mapped_column(String(120))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     response_status_code: Mapped[int | None] = mapped_column(Integer)
     response_body_excerpt: Mapped[str | None] = mapped_column(Text)
     error_message: Mapped[str | None] = mapped_column(Text)
