@@ -639,6 +639,7 @@ def test_public_api_key_can_inspect_own_usage_without_secret_leak(client, db):
     assert body["rate_limit"]["window_seconds"] > 0
     assert body["usage"]["total_calls"] == 2
     assert body["usage"]["total_items"] == 2
+    assert body["usage"]["daily"][0]["last_status_code"] == 200
     assert {endpoint["path"] for endpoint in body["usage"]["endpoints"]} == {
         "/public/deals",
         "/public/me",
@@ -679,6 +680,7 @@ def test_admin_can_view_api_key_usage_summary(client, db):
     assert body["daily"][0]["total_calls"] == 2
     assert body["daily"][0]["total_items"] == 2
     assert body["daily"][0]["average_latency_ms"] >= 0
+    assert body["daily"][0]["last_status_code"] == 200
     assert body["endpoints"][0]["path"] == "/public/deals"
 
     rebuild = client.post(

@@ -172,12 +172,33 @@ def summarize_api_key_usage(
         .order_by(OrganizationApiKeyUsageDailyRollup.usage_date.desc())
         .all()
     )
+    latest_status_by_date: dict[date, int] = {}
+    latest_rollups = (
+        db.query(
+            OrganizationApiKeyUsageDailyRollup.usage_date,
+            OrganizationApiKeyUsageDailyRollup.last_status_code,
+        )
+        .filter(
+            OrganizationApiKeyUsageDailyRollup.organization_id == organization_id,
+            OrganizationApiKeyUsageDailyRollup.api_key_id == api_key_id,
+            OrganizationApiKeyUsageDailyRollup.last_status_code.isnot(None),
+        )
+        .order_by(
+            OrganizationApiKeyUsageDailyRollup.usage_date.desc(),
+            OrganizationApiKeyUsageDailyRollup.last_called_at.desc(),
+        )
+        .all()
+    )
+    for usage_date, status_code in latest_rollups:
+        latest_status_by_date.setdefault(usage_date, int(status_code))
+
     daily = [
         ApiKeyUsageDailySummary(
             usage_date=usage_date,
             total_calls=int(total_calls or 0),
             total_items=int(total_items or 0),
             average_latency_ms=int((total_latency_ms or 0) / total_calls) if total_calls else 0,
+            last_status_code=latest_status_by_date.get(usage_date),
         )
         for usage_date, total_calls, total_items, total_latency_ms in daily_rows
     ]

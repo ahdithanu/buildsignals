@@ -249,6 +249,7 @@ def _public_api_usage_response(db: Session, api_key: OrganizationApiKey) -> Publ
                 total_calls=item.total_calls,
                 total_items=item.total_items,
                 average_latency_ms=item.average_latency_ms,
+                last_status_code=item.last_status_code,
             )
             for item in usage.daily
         ],

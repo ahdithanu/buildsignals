@@ -1408,6 +1408,17 @@
             "title": "Average Latency Ms",
             "type": "integer"
           },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
+          },
           "total_calls": {
             "title": "Total Calls",
             "type": "integer"
@@ -14347,6 +14358,17 @@
           "average_latency_ms": {
             "title": "Average Latency Ms",
             "type": "integer"
+          },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
           },
           "total_calls": {
             "title": "Total Calls",

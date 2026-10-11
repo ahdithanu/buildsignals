@@ -67,6 +67,7 @@ const usage: ApiKeyUsageSummary = {
       total_calls: 12,
       total_items: 18,
       average_latency_ms: 42,
+      last_status_code: 200,
     },
   ],
 };
@@ -121,6 +122,7 @@ describe('Settings API keys', () => {
     expect(await screen.findByText('Daily usage rollups')).toBeInTheDocument();
     expect(await screen.findByText('12 calls')).toBeInTheDocument();
     expect(screen.getByText(/18 items/)).toBeInTheDocument();
+    expect(screen.getByText('Last status 200')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Key name'), { target: { value: 'Partner export' } });
     fireEvent.click(screen.getByRole('button', { name: 'write' }));

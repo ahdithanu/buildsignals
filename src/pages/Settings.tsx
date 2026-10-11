@@ -1281,6 +1281,11 @@ export default function Settings() {
                                   <p className="text-xs text-muted-foreground">
                                     {bucket.total_items.toLocaleString()} items · {bucket.average_latency_ms}ms avg
                                   </p>
+                                  {bucket.last_status_code !== null && (
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Last status {bucket.last_status_code}
+                                    </p>
+                                  )}
                                 </div>
                               ))}
                               {usageSummary.data.daily.length === 0 && (
