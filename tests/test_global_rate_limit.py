@@ -38,6 +38,7 @@ def test_returns_429_after_limit(tiny_limit_app):
         assert r.status_code == 429
         assert r.json()["detail"] == "Too many requests"
         assert int(r.headers["Retry-After"]) >= 1
+        assert int(r.headers["X-RateLimit-Reset"]) >= 1
 
 
 def test_health_is_exempt(tiny_limit_app):
@@ -53,6 +54,8 @@ def test_remaining_header_decrements(tiny_limit_app):
         assert int(r1.headers["X-RateLimit-Remaining"]) > int(
             r2.headers["X-RateLimit-Remaining"]
         )
+        assert int(r1.headers["X-RateLimit-Reset"]) >= 1
+        assert int(r2.headers["X-RateLimit-Reset"]) >= 1
 
 
 def test_x_forwarded_for_isolates_buckets(tiny_limit_app):
