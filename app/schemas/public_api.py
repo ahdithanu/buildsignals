@@ -33,3 +33,47 @@ class PublicDealWorkflowHistoryResponse(BaseModel):
             + len(item.publication_events)
             for item in self.signals
         )
+
+
+class PublicApiKeySelfResponse(BaseModel):
+    id: str
+    name: str
+    key_prefix: str
+    scopes: list[str]
+    expires_at: datetime | None
+    created_at: datetime
+    last_used_at: datetime | None
+
+
+class PublicApiRateLimitResponse(BaseModel):
+    limit: int
+    window_seconds: int
+
+
+class PublicApiUsageEndpointResponse(BaseModel):
+    path: str
+    method: str
+    total_calls: int
+    total_items: int
+    last_called_at: datetime | None
+
+
+class PublicApiUsageDailyResponse(BaseModel):
+    usage_date: str
+    total_calls: int
+    total_items: int
+    average_latency_ms: int
+
+
+class PublicApiUsageResponse(BaseModel):
+    total_calls: int
+    total_items: int
+    last_called_at: datetime | None
+    endpoints: list[PublicApiUsageEndpointResponse]
+    daily: list[PublicApiUsageDailyResponse]
+
+
+class PublicApiSelfResponse(BaseModel):
+    api_key: PublicApiKeySelfResponse
+    rate_limit: PublicApiRateLimitResponse
+    usage: PublicApiUsageResponse
