@@ -116,12 +116,13 @@ context into internal tooling:
 Both examples use the same tenant-scoped API key model as the curl examples, avoid storing secrets in code, and
 show the common production path:
 
-1. List accessible deals.
-2. Fetch one deal detail.
-3. Fetch its graph context with relationship evidence.
-4. Fetch deal-level source signals.
-5. Export recent evaluation runs for AI governance.
-6. Export workflow history for downstream audit, warehouse, or CRM sync.
+1. Verify the active API key, scopes, expiration, rate-limit policy, and usage with `/public/me`.
+2. List accessible deals.
+3. Fetch one deal detail.
+4. Fetch its graph context with relationship evidence.
+5. Fetch deal-level source signals.
+6. Export recent evaluation runs for AI governance.
+7. Export workflow history for downstream audit, warehouse, or CRM sync.
 
 Use these snippets as integration scaffolding rather than a generated SDK. When the public API surface stabilizes,
 Build Signals can generate versioned packages from `openapi.json`.
