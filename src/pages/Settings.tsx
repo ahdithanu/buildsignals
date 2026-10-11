@@ -967,7 +967,7 @@ export default function Settings() {
                       {webhookQueue.data.due_now.toLocaleString()} due now
                     </span>
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-4">
+                  <div className="mt-3 grid gap-3 md:grid-cols-5">
                     <button
                       type="button"
                       onClick={() => focusWebhookDeliveries("all")}
@@ -979,6 +979,13 @@ export default function Settings() {
                       </p>
                       <p className="mt-1 text-xs font-medium text-primary">View pending deliveries</p>
                     </button>
+                    <div className="rounded-lg border bg-secondary/30 p-3">
+                      <p className="text-xs text-muted-foreground">In flight</p>
+                      <p className="mt-1 text-2xl font-semibold text-foreground">
+                        {webhookQueue.data.active_leases.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Claimed by workers</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => focusWebhookDeliveries("scheduled")}
