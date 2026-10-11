@@ -111,6 +111,7 @@ class ApiKeyUsageDailySummary(BaseModel):
     total_calls: int
     total_items: int
     average_latency_ms: int
+    last_status_code: int | None = None
 
 
 class ApiKeyUsageSummary(BaseModel):

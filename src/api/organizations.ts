@@ -63,6 +63,7 @@ export interface ApiKeyUsageDailySummary {
   total_calls: number;
   total_items: number;
   average_latency_ms: number;
+  last_status_code: number | null;
 }
 
 export interface ApiKeyUsageSummary {

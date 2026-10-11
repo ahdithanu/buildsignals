@@ -74,9 +74,9 @@ Public API keys have a per-key rate limit. Responses include:
 
 Successful calls are recorded with endpoint, status, item count, latency, and timestamp. Build Signals also
 maintains daily usage rollups per key, method, and endpoint so admins can inspect integration volume without
-scanning every raw request event. Admins can see total calls, recent daily buckets, and last-used information in
-Settings, which gives customer success and implementation teams a quick way to debug integrations without
-exposing key secrets.
+scanning every raw request event. Admins can see total calls, recent daily buckets, last-used information, and
+the latest status code in Settings, which gives customer success and implementation teams a quick way to debug
+integrations without exposing key secrets.
 
 Admins can rebuild a key's daily rollups from raw usage events with:
 
