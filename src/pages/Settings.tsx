@@ -11,6 +11,7 @@ import { BarChart3, Bell, CheckCircle2, Copy, Database, FileText, KeyRound, Plug
 
 const fadeIn = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
 const API_KEY_SCOPES: ApiKeyScope[] = ["read", "write", "admin"];
+const PUBLIC_API_HEALTH_PATH = "/v1/public/me";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "Never";
@@ -387,6 +388,15 @@ export default function Settings() {
     if (!createdKey?.secret) return;
     await navigator.clipboard.writeText(createdKey.secret);
     toast({ title: "Secret copied" });
+  };
+
+  const copyHealthCheck = async () => {
+    if (!createdKey?.secret) return;
+    const baseUrl = typeof window === "undefined" ? "https://buildsignals.ai" : window.location.origin;
+    await navigator.clipboard.writeText(
+      `curl -sS "${baseUrl}${PUBLIC_API_HEALTH_PATH}" \\\n  -H "Authorization: Bearer ${createdKey.secret}"`,
+    );
+    toast({ title: "Health check copied" });
   };
 
   return (
@@ -1105,6 +1115,30 @@ export default function Settings() {
                     <Copy className="h-3.5 w-3.5" />
                     Copy
                   </button>
+                </div>
+                <div className="mt-4 rounded-lg border bg-background p-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Verify integration health
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Call {PUBLIC_API_HEALTH_PATH} before connecting exports to confirm scopes, expiration,
+                        rate limits, and usage telemetry for this key.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void copyHealthCheck()}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy health check
+                    </button>
+                  </div>
+                  <code className="mt-3 block overflow-x-auto whitespace-pre rounded-md bg-secondary px-3 py-2 text-xs text-muted-foreground">
+                    {`curl -sS "${typeof window === "undefined" ? "https://buildsignals.ai" : window.location.origin}${PUBLIC_API_HEALTH_PATH}" \\\n  -H "Authorization: Bearer ${createdKey.secret}"`}
+                  </code>
                 </div>
               </div>
             )}
