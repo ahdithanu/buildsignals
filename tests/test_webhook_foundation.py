@@ -13,6 +13,7 @@ from app.services.webhook_service import (
     attempt_webhook_delivery,
     build_delivery_headers,
     canonical_webhook_body,
+    claim_due_webhook_deliveries,
     enqueue_webhook_event,
     process_due_webhook_deliveries,
     summarize_webhook_queue,
@@ -906,6 +907,100 @@ def test_process_due_webhook_deliveries_attempts_ready_rows_only(db):
     assert db.get(WebhookDelivery, other_org.id).attempt_count == 0
 
 
+def test_claim_due_webhook_deliveries_sets_worker_lease_and_skips_active_leases(db):
+    subscription = WebhookSubscription(
+        organization_id="org-worker-lease",
+        name="Worker lease",
+        target_url="https://example.test/webhook",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    now = datetime.now(timezone.utc)
+    due = WebhookDelivery(
+        organization_id="org-worker-lease",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="due",
+        payload={},
+        created_at=now - timedelta(minutes=10),
+    )
+    active_lease = WebhookDelivery(
+        organization_id="org-worker-lease",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="active-lease",
+        payload={},
+        created_at=now - timedelta(minutes=9),
+        lease_owner="worker-a",
+        lease_expires_at=now + timedelta(minutes=5),
+    )
+    stale_lease = WebhookDelivery(
+        organization_id="org-worker-lease",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="stale-lease",
+        payload={},
+        created_at=now - timedelta(minutes=8),
+        lease_owner="worker-a",
+        lease_expires_at=now - timedelta(minutes=1),
+    )
+    db.add_all([due, active_lease, stale_lease])
+    db.commit()
+
+    claimed = claim_due_webhook_deliveries(
+        db,
+        organization_id="org-worker-lease",
+        worker_id="worker-b",
+        limit=10,
+        lease_seconds=120,
+    )
+
+    assert [delivery.event_id for delivery in claimed] == ["due", "stale-lease"]
+    assert all(delivery.lease_owner == "worker-b" for delivery in claimed)
+    assert all(delivery.lease_expires_at.replace(tzinfo=timezone.utc) > now for delivery in claimed)
+    assert db.get(WebhookDelivery, active_lease.id).lease_owner == "worker-a"
+
+
+def test_process_due_webhook_deliveries_releases_worker_lease_after_attempt(db):
+    subscription = WebhookSubscription(
+        organization_id="org-worker-release",
+        name="Worker release",
+        target_url="https://example.test/webhook",
+        event_types=["deal.created"],
+        status="active",
+    )
+    db.add(subscription)
+    db.flush()
+    delivery = WebhookDelivery(
+        organization_id="org-worker-release",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="release",
+        payload={"deal_id": "release"},
+    )
+    db.add(delivery)
+    db.commit()
+
+    def transport(*_args, **_kwargs):
+        return WebhookTransportResponse(status_code=204, body="")
+
+    result = process_due_webhook_deliveries(
+        db,
+        organization_id="org-worker-release",
+        worker_id="worker-release",
+        lease_seconds=30,
+        transport=transport,
+    )
+
+    refreshed = db.get(WebhookDelivery, delivery.id)
+    assert result.delivered == 1
+    assert refreshed.status == "delivered"
+    assert refreshed.lease_owner is None
+    assert refreshed.lease_expires_at is None
+
+
 def test_summarize_webhook_queue_counts_due_scheduled_and_exhausted(db):
     subscription = WebhookSubscription(
         organization_id="org-queue",
@@ -941,6 +1036,15 @@ def test_summarize_webhook_queue_counts_due_scheduled_and_exhausted(db):
         payload={},
         attempt_count=8,
     )
+    leased = WebhookDelivery(
+        organization_id="org-queue",
+        subscription_id=subscription.id,
+        event_type="deal.created",
+        event_id="leased",
+        payload={},
+        lease_owner="worker-a",
+        lease_expires_at=now + timedelta(minutes=5),
+    )
     delivered = WebhookDelivery(
         organization_id="org-queue",
         subscription_id=subscription.id,
@@ -956,16 +1060,17 @@ def test_summarize_webhook_queue_counts_due_scheduled_and_exhausted(db):
         event_id="other",
         payload={},
     )
-    db.add_all([due, scheduled, exhausted, delivered, other_org])
+    db.add_all([due, scheduled, exhausted, leased, delivered, other_org])
     db.commit()
 
     snapshot = summarize_webhook_queue(db, organization_id="org-queue")
 
     assert snapshot.organization_id == "org-queue"
-    assert snapshot.pending == 3
+    assert snapshot.pending == 4
     assert snapshot.due_now == 1
     assert snapshot.scheduled == 1
     assert snapshot.exhausted == 1
+    assert snapshot.active_leases == 1
     assert snapshot.next_due_at == scheduled.next_attempt_at.replace(tzinfo=timezone.utc)
     assert snapshot.oldest_due_at == due.created_at.replace(tzinfo=timezone.utc)
 
@@ -1001,6 +1106,7 @@ def test_admin_can_view_webhook_queue_snapshot(client, db):
     assert body["due_now"] == 1
     assert body["scheduled"] == 0
     assert body["exhausted"] == 0
+    assert body["active_leases"] == 0
     assert invalid.status_code == 422
 
 
@@ -1046,6 +1152,16 @@ def test_admin_can_filter_webhook_deliveries_by_worker_queue_bucket(client, db):
             payload={},
             status="pending",
             attempt_count=8,
+        ),
+        WebhookDelivery(
+            organization_id=org_id,
+            subscription_id=subscription.id,
+            event_type="deal.created",
+            event_id="leased-due",
+            payload={},
+            status="pending",
+            lease_owner="worker-a",
+            lease_expires_at=now + timedelta(minutes=5),
         ),
         WebhookDelivery(
             organization_id=org_id,
@@ -1190,3 +1306,9 @@ def test_process_due_webhook_deliveries_validates_operational_bounds(db):
         assert str(exc) == "limit must be between 1 and 250"
     else:
         raise AssertionError("Expected invalid limit to fail")
+    try:
+        claim_due_webhook_deliveries(db, organization_id="org-worker", worker_id="", lease_seconds=10)
+    except ValueError as exc:
+        assert str(exc) == "worker_id is required"
+    else:
+        raise AssertionError("Expected invalid worker id to fail")

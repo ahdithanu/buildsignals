@@ -5,7 +5,7 @@ import hmac
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from uuid import uuid4
@@ -60,6 +60,7 @@ class WebhookQueueSnapshot:
     due_now: int
     scheduled: int
     exhausted: int
+    active_leases: int
     max_attempts: int
     next_due_at: datetime | None
     oldest_due_at: datetime | None
@@ -295,6 +296,8 @@ def mark_delivery_attempt(
         delivery.next_attempt_at = datetime.fromtimestamp(now.timestamp() + delay_seconds, tz=timezone.utc)
     else:
         delivery.next_attempt_at = None
+    delivery.lease_owner = None
+    delivery.lease_expires_at = None
 
 
 def attempt_webhook_delivery(
@@ -374,12 +377,63 @@ def _as_aware_utc(value: datetime | None) -> datetime | None:
     return value.astimezone(timezone.utc)
 
 
+def _lease_is_available(delivery: WebhookDelivery, now: datetime) -> bool:
+    lease_expires_at = _as_aware_utc(delivery.lease_expires_at)
+    return lease_expires_at is None or lease_expires_at <= now
+
+
+def claim_due_webhook_deliveries(
+    db: Session,
+    *,
+    organization_id: str,
+    worker_id: str,
+    limit: int = 25,
+    max_attempts: int = 8,
+    lease_seconds: int = 300,
+) -> list[WebhookDelivery]:
+    if not worker_id.strip():
+        raise ValueError("worker_id is required")
+    if limit < 1 or limit > 250:
+        raise ValueError("limit must be between 1 and 250")
+    if max_attempts < 1 or max_attempts > 25:
+        raise ValueError("max_attempts must be between 1 and 25")
+    if lease_seconds < 30 or lease_seconds > 3600:
+        raise ValueError("lease_seconds must be between 30 and 3600")
+
+    now = datetime.now(timezone.utc)
+    rows = (
+        db.query(WebhookDelivery)
+        .filter(
+            WebhookDelivery.organization_id == organization_id,
+            WebhookDelivery.status == "pending",
+            WebhookDelivery.attempt_count < max_attempts,
+            or_(WebhookDelivery.next_attempt_at.is_(None), WebhookDelivery.next_attempt_at <= now),
+            or_(WebhookDelivery.lease_expires_at.is_(None), WebhookDelivery.lease_expires_at <= now),
+        )
+        .order_by(WebhookDelivery.created_at.asc(), WebhookDelivery.id.asc())
+        .with_for_update(skip_locked=True)
+        .limit(limit)
+        .all()
+    )
+    lease_expires_at = now + timedelta(seconds=lease_seconds)
+    for row in rows:
+        row.lease_owner = worker_id.strip()[:120]
+        row.lease_expires_at = lease_expires_at
+        row.updated_at = now
+    db.commit()
+    for row in rows:
+        db.refresh(row)
+    return rows
+
+
 def process_due_webhook_deliveries(
     db: Session,
     *,
     organization_id: str,
+    worker_id: str = "webhook-worker",
     limit: int = 25,
     max_attempts: int = 8,
+    lease_seconds: int = 300,
     timeout_seconds: int = 10,
     transport=None,
 ) -> WebhookBatchResult:
@@ -390,18 +444,13 @@ def process_due_webhook_deliveries(
     if timeout_seconds < 1 or timeout_seconds > 60:
         raise ValueError("timeout_seconds must be between 1 and 60")
 
-    now = datetime.now(timezone.utc)
-    deliveries = (
-        db.query(WebhookDelivery)
-        .filter(
-            WebhookDelivery.organization_id == organization_id,
-            WebhookDelivery.status == "pending",
-            WebhookDelivery.attempt_count < max_attempts,
-            or_(WebhookDelivery.next_attempt_at.is_(None), WebhookDelivery.next_attempt_at <= now),
-        )
-        .order_by(WebhookDelivery.created_at.asc())
-        .limit(limit)
-        .all()
+    deliveries = claim_due_webhook_deliveries(
+        db,
+        organization_id=organization_id,
+        worker_id=worker_id,
+        limit=limit,
+        max_attempts=max_attempts,
+        lease_seconds=lease_seconds,
     )
 
     statuses: list[str] = []
@@ -491,11 +540,13 @@ def summarize_webhook_queue(
     due_deliveries = [
         delivery for delivery in pending_deliveries
         if delivery.attempt_count < max_attempts
+        and _lease_is_available(delivery, now)
         and (_as_aware_utc(delivery.next_attempt_at) is None or _as_aware_utc(delivery.next_attempt_at) <= now)
     ]
     scheduled_deliveries = [
         delivery for delivery in pending_deliveries
         if delivery.attempt_count < max_attempts
+        and _lease_is_available(delivery, now)
         and _as_aware_utc(delivery.next_attempt_at) is not None
         and _as_aware_utc(delivery.next_attempt_at) > now
     ]
@@ -503,12 +554,17 @@ def summarize_webhook_queue(
         delivery for delivery in pending_deliveries
         if delivery.attempt_count >= max_attempts
     ]
+    active_lease_count = sum(
+        1 for delivery in pending_deliveries
+        if not _lease_is_available(delivery, now)
+    )
     return WebhookQueueSnapshot(
         organization_id=organization_id,
         pending=len(pending_deliveries),
         due_now=len(due_deliveries),
         scheduled=len(scheduled_deliveries),
         exhausted=len(exhausted_deliveries),
+        active_leases=active_lease_count,
         max_attempts=max_attempts,
         next_due_at=min((_as_aware_utc(delivery.next_attempt_at) for delivery in scheduled_deliveries), default=None),
         oldest_due_at=min((_as_aware_utc(delivery.created_at) for delivery in due_deliveries), default=None),

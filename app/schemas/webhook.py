@@ -99,6 +99,8 @@ class WebhookDeliveryResponse(BaseModel):
     attempt_count: int
     next_attempt_at: datetime | None
     last_attempted_at: datetime | None
+    lease_owner: str | None
+    lease_expires_at: datetime | None
     response_status_code: int | None
     response_body_excerpt: str | None
     error_message: str | None
@@ -127,6 +129,7 @@ class WebhookQueueSnapshotResponse(BaseModel):
     due_now: int
     scheduled: int
     exhausted: int
+    active_leases: int
     max_attempts: int
     next_due_at: datetime | None
     oldest_due_at: datetime | None

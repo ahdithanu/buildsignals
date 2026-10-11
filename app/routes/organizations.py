@@ -498,12 +498,14 @@ def list_webhook_deliveries(
                 WebhookDelivery.status == "pending",
                 WebhookDelivery.attempt_count < max_attempts,
                 or_(WebhookDelivery.next_attempt_at.is_(None), WebhookDelivery.next_attempt_at <= now),
+                or_(WebhookDelivery.lease_expires_at.is_(None), WebhookDelivery.lease_expires_at <= now),
             )
         elif queue_status == "scheduled":
             query = query.filter(
                 WebhookDelivery.status == "pending",
                 WebhookDelivery.attempt_count < max_attempts,
                 WebhookDelivery.next_attempt_at > now,
+                or_(WebhookDelivery.lease_expires_at.is_(None), WebhookDelivery.lease_expires_at <= now),
             )
         elif queue_status == "exhausted":
             query = query.filter(

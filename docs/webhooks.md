@@ -55,6 +55,7 @@ row and preserves the original payload evidence. Each row includes:
 - Event type and event id.
 - Delivery payload.
 - Pending, delivered, or failed status.
+- Optional worker lease owner and lease expiration for safe concurrent processing.
 - Attempt count and next retry time.
 - Last response code, response excerpt, and error message.
 
@@ -65,7 +66,7 @@ bounded retries, and records success or failure without blocking the originating
 delivered, failed, and dead-lettered deliveries, active/disabled subscription counts, failure rate, latest timestamps,
 and the most recent error message. Use it as the dashboard source before drilling into individual delivery rows.
 `GET /v1/organizations/{org_id}/webhook-queue` provides a read-only worker queue snapshot with pending, due-now,
-scheduled, and exhausted retry counts plus the next scheduled retry and oldest due delivery timestamp.
+scheduled, exhausted retry, and active lease counts plus the next scheduled retry and oldest due delivery timestamp.
 The Settings console can also filter recent deliveries by subscription, status, event type, and event id so
 operators can verify a specific customer endpoint after sending a test event or troubleshooting a failure. Each
 delivery row exposes an expandable debug view with the delivery id, next retry timestamp, canonical payload, and
@@ -121,7 +122,7 @@ the recovery action when the customer receiver is ready for another attempt.
 Run due deliveries for one organization with:
 
 ```bash
-python scripts/process_webhooks.py --organization-id <org-id> --limit 25 --max-attempts 8 --timeout-seconds 10
+python scripts/process_webhooks.py --organization-id <org-id> --worker-id webhook-worker-a --limit 25 --max-attempts 8 --timeout-seconds 10
 ```
 
 The runner prints a JSON summary:
@@ -134,9 +135,15 @@ The worker is intentionally organization-scoped because production Postgres row-
 Schedulers should run it per enrolled customer workspace. Admins can inspect the read-only worker queue snapshot in
 Settings before running the worker; the snapshot does not send customer traffic. Safe defaults:
 
+- `--worker-id` should be stable per runner instance and is stored on short-lived leases.
 - `--limit` accepts 1 to 250 deliveries per run.
 - `--max-attempts` accepts 1 to 25 attempts before a still-pending delivery is marked failed.
+- `--lease-seconds` accepts 30 to 3600 seconds before another worker can reclaim abandoned work.
 - `--timeout-seconds` accepts 1 to 60 seconds per target request.
+
+Before posting outbound HTTP, the runner leases due rows using `lease_owner` and `lease_expires_at`. Active leases
+prevent another worker from selecting the same delivery, while expired leases are reclaimed automatically. Each
+attempt clears the lease whether the delivery succeeds, fails permanently, or schedules a retry.
 
 For Vercel Cron or another scheduler, store signing material in deployment secrets, point subscription
 `secret_reference` values at those names, and invoke the runner on the desired cadence.
@@ -144,5 +151,5 @@ For Vercel Cron or another scheduler, store signing material in deployment secre
 ## Scaling Path
 
 For 1 million opportunities, webhook delivery should move from the tenant-scoped runner to a dedicated worker pool
-backed by leased queue reads, dead-letter retention, and per-customer concurrency limits. The current idempotency key
-and queue table shape already support those additions without changing customer-facing subscription APIs.
+backed by leased queue reads, dead-letter retention, and per-customer concurrency limits. The current idempotency key,
+lease columns, and queue table shape already support those additions without changing customer-facing subscription APIs.
