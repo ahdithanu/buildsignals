@@ -14241,6 +14241,223 @@
         "title": "PreviewResponse",
         "type": "object"
       },
+      "PublicApiKeySelfResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key_prefix": {
+            "title": "Key Prefix",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "key_prefix",
+          "scopes",
+          "expires_at",
+          "created_at",
+          "last_used_at"
+        ],
+        "title": "PublicApiKeySelfResponse",
+        "type": "object"
+      },
+      "PublicApiRateLimitResponse": {
+        "properties": {
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "window_seconds": {
+            "title": "Window Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "limit",
+          "window_seconds"
+        ],
+        "title": "PublicApiRateLimitResponse",
+        "type": "object"
+      },
+      "PublicApiSelfResponse": {
+        "properties": {
+          "api_key": {
+            "$ref": "#/components/schemas/PublicApiKeySelfResponse"
+          },
+          "rate_limit": {
+            "$ref": "#/components/schemas/PublicApiRateLimitResponse"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/PublicApiUsageResponse"
+          }
+        },
+        "required": [
+          "api_key",
+          "rate_limit",
+          "usage"
+        ],
+        "title": "PublicApiSelfResponse",
+        "type": "object"
+      },
+      "PublicApiUsageDailyResponse": {
+        "properties": {
+          "average_latency_ms": {
+            "title": "Average Latency Ms",
+            "type": "integer"
+          },
+          "total_calls": {
+            "title": "Total Calls",
+            "type": "integer"
+          },
+          "total_items": {
+            "title": "Total Items",
+            "type": "integer"
+          },
+          "usage_date": {
+            "title": "Usage Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "usage_date",
+          "total_calls",
+          "total_items",
+          "average_latency_ms"
+        ],
+        "title": "PublicApiUsageDailyResponse",
+        "type": "object"
+      },
+      "PublicApiUsageEndpointResponse": {
+        "properties": {
+          "last_called_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Called At"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "total_calls": {
+            "title": "Total Calls",
+            "type": "integer"
+          },
+          "total_items": {
+            "title": "Total Items",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "method",
+          "total_calls",
+          "total_items",
+          "last_called_at"
+        ],
+        "title": "PublicApiUsageEndpointResponse",
+        "type": "object"
+      },
+      "PublicApiUsageResponse": {
+        "properties": {
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/PublicApiUsageDailyResponse"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/PublicApiUsageEndpointResponse"
+            },
+            "title": "Endpoints",
+            "type": "array"
+          },
+          "last_called_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Called At"
+          },
+          "total_calls": {
+            "title": "Total Calls",
+            "type": "integer"
+          },
+          "total_items": {
+            "title": "Total Items",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_calls",
+          "total_items",
+          "last_called_at",
+          "endpoints",
+          "daily"
+        ],
+        "title": "PublicApiUsageResponse",
+        "type": "object"
+      },
       "PublicDealWorkflowHistoryResponse": {
         "properties": {
           "deal_id": {
@@ -30217,6 +30434,71 @@
           }
         },
         "summary": "Get Public Eval Run",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/v1/public/me": {
+      "get": {
+        "operationId": "get_public_api_key_self_v1_public_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiSelfResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Public Api Key Self",
         "tags": [
           "public-api"
         ]
