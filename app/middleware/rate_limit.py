@@ -60,10 +60,12 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
                     "Retry-After": str(decision.retry_after),
                     "X-RateLimit-Limit": str(GLOBAL_LIMIT),
                     "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Reset": str(decision.reset_after),
                 },
             )
 
         response = await call_next(request)
         response.headers["X-RateLimit-Limit"] = str(GLOBAL_LIMIT)
         response.headers["X-RateLimit-Remaining"] = str(decision.remaining)
+        response.headers["X-RateLimit-Reset"] = str(decision.reset_after)
         return response
