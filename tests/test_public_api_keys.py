@@ -608,10 +608,12 @@ def test_public_api_key_rate_limit_headers_and_enforcement(client, db, monkeypat
     assert first.status_code == 200, first.text
     assert first.headers["X-API-Key-RateLimit-Limit"] == "1"
     assert first.headers["X-API-Key-RateLimit-Remaining"] == "0"
+    assert first.headers["X-API-Key-RateLimit-Reset"]
 
     limited = client.get("/public/deals", headers={"Authorization": f"Bearer {secret}"})
     assert limited.status_code == 429
     assert limited.headers["Retry-After"]
+    assert limited.headers["X-API-Key-RateLimit-Reset"]
 
 
 def test_public_api_key_can_inspect_own_usage_without_secret_leak(client, db):

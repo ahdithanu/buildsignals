@@ -62,6 +62,7 @@ def require_api_key_scope(required_scope: str):
         )
         response.headers["X-API-Key-RateLimit-Limit"] = str(PUBLIC_API_KEY_LIMIT)
         response.headers["X-API-Key-RateLimit-Remaining"] = str(decision.remaining)
+        response.headers["X-API-Key-RateLimit-Reset"] = str(decision.reset_after)
         if not decision.allowed:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -70,6 +71,7 @@ def require_api_key_scope(required_scope: str):
                     "Retry-After": str(decision.retry_after),
                     "X-API-Key-RateLimit-Limit": str(PUBLIC_API_KEY_LIMIT),
                     "X-API-Key-RateLimit-Remaining": "0",
+                    "X-API-Key-RateLimit-Reset": str(decision.reset_after),
                 },
             )
         return api_key
