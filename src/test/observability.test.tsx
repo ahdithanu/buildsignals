@@ -19,6 +19,11 @@ const overview: ObservabilityOverview = {
     input_tokens_reported_results: 0, input_tokens_unknown_results: 5, output_tokens_reported_results: 0, output_tokens_unknown_results: 5,
     by_workflow: [{ workflow: 'copilot_answer', runs: 4, gate_passed: 2, failed: 1 }], daily: [{ date: '2026-09-23', runs: 4, case_errors: 1 }] },
   ingestion: { runs: 4, completed: 1, partial: 1, partial_with_errors: 1, failed: 1, running: 1, records_seen: 100, records_failed: 2, stalled_runs: 1 },
+  webhooks: {
+    deliveries: 9, pending: 3, delivered: 5, failed: 1,
+    due_now: 2, scheduled: 1, exhausted: 1, active_leases: 1,
+    subscriptions_active: 2, subscriptions_disabled: 1, failure_rate: 0.1667,
+  },
   deployment: {
     environment: 'production',
     database_provider: 'postgres',
@@ -60,6 +65,9 @@ describe('Observability', () => {
     expect(screen.getAllByText('Unknown')).toHaveLength(4);
     expect(screen.getByText(/Unknown usage is not zero/)).toBeInTheDocument();
     expect(screen.getByText('Stalled ingestion')).toBeInTheDocument();
+    expect(screen.getByText('Webhook delivery health')).toBeInTheDocument();
+    expect(screen.getByText('Due now')).toBeInTheDocument();
+    expect(screen.getByText(/1 disabled endpoints/)).toBeInTheDocument();
     expect(screen.getByText('2026-09-23')).toBeInTheDocument();
     expect(screen.getByText('Deployment readiness')).toBeInTheDocument();
     expect(screen.getByText('Demo workspace')).toBeInTheDocument();

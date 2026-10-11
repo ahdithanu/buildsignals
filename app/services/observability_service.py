@@ -17,6 +17,7 @@ from app.config import (
 )
 from app.models.evaluation import EvalDataset, EvalResult, EvalRun
 from app.models.ingestion import IngestionRun
+from app.models.webhook import WebhookDelivery, WebhookSubscription
 from app.schemas.observability import (
     AttentionItem,
     DailyCounts,
@@ -25,8 +26,10 @@ from app.schemas.observability import (
     EvaluationCounts,
     IngestionCounts,
     ObservabilityOverview,
+    WebhookCounts,
     WorkflowCounts,
 )
+from app.services.webhook_service import summarize_webhook_queue
 
 
 def _count_when(condition):
@@ -210,6 +213,37 @@ def get_overview(db: Session, org_id: str, days: int, now: datetime | None = Non
         ("runs", "completed", "failed", "partial", "partial_with_errors", "running", "records_seen", "records_failed", "stalled_runs"),
         (int(value or 0) for value in ingest_row),
     )))
+    webhook_filter = and_(
+        WebhookDelivery.organization_id == org_id,
+        WebhookDelivery.created_at >= start,
+        WebhookDelivery.created_at < now,
+    )
+    webhook_row = db.execute(select(
+        func.count(WebhookDelivery.id),
+        _count_when(WebhookDelivery.status == "pending"),
+        _count_when(WebhookDelivery.status == "delivered"),
+        _count_when(WebhookDelivery.status == "failed"),
+    ).where(webhook_filter)).one()
+    delivery_count, webhook_pending, webhook_delivered, webhook_failed = (int(value or 0) for value in webhook_row)
+    subscription_row = db.execute(select(
+        _count_when(WebhookSubscription.status == "active"),
+        _count_when(WebhookSubscription.status == "disabled"),
+    ).where(WebhookSubscription.organization_id == org_id)).one()
+    queue = summarize_webhook_queue(db, organization_id=org_id)
+    webhook_attempted = webhook_delivered + webhook_failed
+    webhooks = WebhookCounts(
+        deliveries=delivery_count,
+        pending=webhook_pending,
+        delivered=webhook_delivered,
+        failed=webhook_failed,
+        due_now=queue.due_now,
+        scheduled=queue.scheduled,
+        exhausted=queue.exhausted,
+        active_leases=queue.active_leases,
+        subscriptions_active=int(subscription_row[0] or 0),
+        subscriptions_disabled=int(subscription_row[1] or 0),
+        failure_rate=round(webhook_failed / webhook_attempted, 4) if webhook_attempted else 0.0,
+    )
     attention = []
     for code, count, summary, href in (
         ("stalled_ingestion", ingestion.stalled_runs, "Ingestion runs have not reported a heartbeat in 15 minutes", "/source-health"),
@@ -217,6 +251,9 @@ def get_overview(db: Session, org_id: str, days: int, now: datetime | None = Non
         ("partial_ingestion_errors", ingestion.partial_with_errors, "Partial ingestion runs had record errors", "/source-health"),
         ("failed_evaluations", failed, "Evaluation runs failed", "/admin/evals"),
         ("evaluation_case_errors", case_errors, "Evaluation cases returned errors", "/admin/evals"),
+        ("failed_webhooks", webhooks.failed, "Webhook deliveries failed", "/settings"),
+        ("webhook_retry_exhausted", webhooks.exhausted, "Webhook deliveries exhausted retry attempts", "/settings"),
+        ("webhook_active_leases", webhooks.active_leases, "Webhook deliveries are currently leased by workers", "/settings"),
     ):
         if count:
             attention.append(AttentionItem(code=code, level="warning", summary=summary, count=count, href=href))
@@ -239,5 +276,5 @@ def get_overview(db: Session, org_id: str, days: int, now: datetime | None = Non
             latency_reported_results=latency_reported, latency_unknown_results=results - latency_reported,
             by_workflow=[WorkflowCounts(workflow=w, runs=int(n), gate_passed=int(g or 0), failed=int(f or 0))
                          for w, n, g, f in workflows], daily=daily,
-        ), ingestion=ingestion, deployment=get_deployment_readiness(), attention=attention,
+        ), ingestion=ingestion, webhooks=webhooks, deployment=get_deployment_readiness(), attention=attention,
     )
