@@ -819,6 +819,264 @@
         "title": "ActivityWindow",
         "type": "object"
       },
+      "AiUsageDailyRollup": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "known_cost_results": {
+            "title": "Known Cost Results",
+            "type": "integer"
+          },
+          "known_latency_results": {
+            "title": "Known Latency Results",
+            "type": "integer"
+          },
+          "known_token_results": {
+            "title": "Known Token Results",
+            "type": "integer"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "total_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost Usd"
+          },
+          "total_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Latency Ms"
+          },
+          "total_results": {
+            "title": "Total Results",
+            "type": "integer"
+          },
+          "total_runs": {
+            "title": "Total Runs",
+            "type": "integer"
+          },
+          "total_tokens_input": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens Input"
+          },
+          "total_tokens_output": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens Output"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "usage_date": {
+            "format": "date",
+            "title": "Usage Date",
+            "type": "string"
+          },
+          "workflow": {
+            "enum": [
+              "copilot_answer",
+              "opportunity_memo",
+              "multi_agent_research",
+              "score_explanation"
+            ],
+            "title": "Workflow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "usage_date",
+          "workflow",
+          "model",
+          "prompt_version",
+          "total_runs",
+          "total_results",
+          "known_cost_results",
+          "known_token_results",
+          "known_latency_results",
+          "total_tokens_input",
+          "total_tokens_output",
+          "total_latency_ms",
+          "total_cost_usd",
+          "last_run_at",
+          "updated_at"
+        ],
+        "title": "AiUsageDailyRollup",
+        "type": "object"
+      },
+      "AiUsageRebuildResult": {
+        "properties": {
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/AiUsageDailyRollup"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "rebuilt_results": {
+            "title": "Rebuilt Results",
+            "type": "integer"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AiUsageTotals"
+          }
+        },
+        "required": [
+          "totals",
+          "daily",
+          "rebuilt_results"
+        ],
+        "title": "AiUsageRebuildResult",
+        "type": "object"
+      },
+      "AiUsageSummary": {
+        "properties": {
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/AiUsageDailyRollup"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AiUsageTotals"
+          }
+        },
+        "required": [
+          "totals",
+          "daily"
+        ],
+        "title": "AiUsageSummary",
+        "type": "object"
+      },
+      "AiUsageTotals": {
+        "properties": {
+          "known_cost_results": {
+            "title": "Known Cost Results",
+            "type": "integer"
+          },
+          "known_latency_results": {
+            "title": "Known Latency Results",
+            "type": "integer"
+          },
+          "known_token_results": {
+            "title": "Known Token Results",
+            "type": "integer"
+          },
+          "total_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost Usd"
+          },
+          "total_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Latency Ms"
+          },
+          "total_results": {
+            "title": "Total Results",
+            "type": "integer"
+          },
+          "total_runs": {
+            "title": "Total Runs",
+            "type": "integer"
+          },
+          "total_tokens_input": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens Input"
+          },
+          "total_tokens_output": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens Output"
+          }
+        },
+        "required": [
+          "total_runs",
+          "total_results",
+          "total_tokens_input",
+          "total_tokens_output",
+          "total_cost_usd",
+          "total_latency_ms",
+          "known_cost_results",
+          "known_token_results",
+          "known_latency_results"
+        ],
+        "title": "AiUsageTotals",
+        "type": "object"
+      },
       "ApiKeyCreateRequest": {
         "properties": {
           "expires_at": {
@@ -23351,6 +23609,104 @@
           }
         },
         "summary": "Gate",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/v1/evals/usage/daily": {
+      "get": {
+        "operationId": "usage_daily_v1_evals_usage_daily_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiUsageSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Usage Daily",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/v1/evals/usage/daily/rebuild": {
+      "post": {
+        "operationId": "rebuild_usage_daily_v1_evals_usage_daily_rebuild_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiUsageRebuildResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rebuild Usage Daily",
         "tags": [
           "evaluations"
         ]

@@ -9,6 +9,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select, text
 
+from app.models.ai_usage import AiWorkflowUsageDailyRollup
 from app.models.audit_log import AuditLog
 from app.models.contact import Contact
 from app.models.deal import Deal, RiskLevel
@@ -269,6 +270,54 @@ def test_known_replay_usage_is_summed_without_substituting_unknowns(client, admi
     summary = _run(client, admin, dataset, payload)["summary"]
     assert (summary["tokens_input"], summary["tokens_output"], summary["latency_ms"]) == (20, 8, 6)
     assert summary["cost_usd"] == pytest.approx(0.01)
+
+
+def test_admin_can_rebuild_ai_usage_rollups_without_substituting_unknowns(client, db, admin):
+    dataset = _create(client, admin, cases=[_case("Known usage"), _case("Unknown usage")])
+    payload = _replay(dataset)
+    known_id = dataset["cases"][0]["id"]
+    payload["outputs"][known_id].update(tokens_input=30, tokens_output=7, cost_usd=0.017, latency_ms=80)
+    run = _run(client, admin, dataset, payload)
+
+    response = client.post(f"{_ROOT}/usage/daily/rebuild", headers=_headers(admin))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["rebuilt_results"] == 2
+    assert body["totals"]["total_runs"] == 1
+    assert body["totals"]["total_results"] == 2
+    assert body["totals"]["total_tokens_input"] == 30
+    assert body["totals"]["total_tokens_output"] == 7
+    assert body["totals"]["total_cost_usd"] == pytest.approx(0.017)
+    assert body["totals"]["total_latency_ms"] == 80
+    assert body["totals"]["known_cost_results"] == 1
+    assert body["totals"]["known_token_results"] == 1
+    assert body["totals"]["known_latency_results"] == 1
+    assert len(body["daily"]) == 1
+    rollup = body["daily"][0]
+    assert rollup["workflow"] == "copilot_answer"
+    assert rollup["model"] == "captured-model-v1"
+    assert rollup["prompt_version"] == "prompt-v1"
+    assert rollup["total_runs"] == 1
+    assert rollup["total_results"] == 2
+    assert rollup["last_run_at"] == run["started_at"]
+    assert db.query(AiWorkflowUsageDailyRollup).filter_by(organization_id=admin["organization_id"]).count() == 1
+
+    listed = _get(client, admin, "/usage/daily")
+    assert listed == {key: body[key] for key in ("totals", "daily")}
+
+
+def test_ai_usage_rollups_are_tenant_scoped(client, admin):
+    dataset = _create(client, admin)
+    _run(client, admin, dataset)
+    assert client.post(f"{_ROOT}/usage/daily/rebuild", headers=_headers(admin)).status_code == 200
+
+    other = _register(client, "usage-other")
+    response = client.get(f"{_ROOT}/usage/daily", headers=_headers(other))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["daily"] == []
+    assert body["totals"]["total_runs"] == body["totals"]["total_results"] == 0
+    assert body["totals"]["total_cost_usd"] is None
 
 
 def test_case_edits_do_not_rewrite_historical_snapshots(client, db, admin):

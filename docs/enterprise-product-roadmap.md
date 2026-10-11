@@ -70,7 +70,17 @@ and data warehouse sync without allowing external systems to mutate approvals.
 
 **Target:** Usage-based billing for AI enrichment, memo generation, seat count.
 
-**Stub path:** Emit usage events and daily aggregate rollups for API keys; add nightly aggregate job for AI workflow usage;
+**Implemented foundation:** Public API usage events and daily API-key rollups are
+tracked per organization. Evaluation/model outputs now have a tenant-scoped
+AI workflow daily rollup that aggregates known runs, results, tokens, latency,
+and cost by workflow, model, and prompt version without substituting unknown
+usage as zero.
+
+**Remaining path:**
+1. Extend the AI usage event source beyond evaluation results to all production
+   copilot, memo, research, and scoring model calls.
+2. Schedule a nightly rollup rebuild and billing export.
+3. Add seat-count metering and contract-plan overrides before invoice generation.
 
 ---
 

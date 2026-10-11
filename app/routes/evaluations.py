@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.organization_membership import MemberRole
 from app.schemas.evaluation import (
+    AiUsageRebuildResult,
+    AiUsageSummary,
     DatasetCreate,
     DatasetDetail,
     DatasetRead,
@@ -14,6 +16,7 @@ from app.schemas.evaluation import (
     RunDetail,
     RunRead,
 )
+from app.services import ai_usage_service
 from app.services import evaluation_service as service
 from app.services.eval_scoring import SCORER_VERSION
 from app.services.eval_workflows import LIVE_WORKFLOWS
@@ -86,6 +89,26 @@ def runs(
     dataset_id: str | None = None, principal: dict = Depends(admin), db: Session = Depends(get_db)
 ):
     return service.list_runs(db, principal["org_id"], dataset_id)
+
+
+@router.get("/usage/daily", response_model=AiUsageSummary)
+def usage_daily(principal: dict = Depends(admin), db: Session = Depends(get_db)):
+    summary = ai_usage_service.summarize_ai_usage(db, organization_id=principal["org_id"])
+    if not summary["daily"] and ai_usage_service.count_eval_results_without_rollup(
+        db, organization_id=principal["org_id"]
+    ):
+        ai_usage_service.rebuild_ai_usage_rollups(db, organization_id=principal["org_id"])
+        summary = ai_usage_service.summarize_ai_usage(db, organization_id=principal["org_id"])
+    return summary
+
+
+@router.post("/usage/daily/rebuild", response_model=AiUsageRebuildResult)
+def rebuild_usage_daily(principal: dict = Depends(admin), db: Session = Depends(get_db)):
+    rebuilt_results = ai_usage_service.rebuild_ai_usage_rollups(
+        db, organization_id=principal["org_id"]
+    )
+    summary = ai_usage_service.summarize_ai_usage(db, organization_id=principal["org_id"])
+    return {"rebuilt_results": rebuilt_results, **summary}
 
 
 @router.get("/runs/{run_id}", response_model=RunDetail)
