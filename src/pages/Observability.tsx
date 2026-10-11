@@ -52,6 +52,7 @@ function Overview({ scope }: { scope: string }) {
 function OverviewContent({ data }: { data: ObservabilityOverview }) {
   const e = data.evaluations;
   const i = data.ingestion;
+  const w = data.webhooks;
   const maxRuns = Math.max(1, ...e.daily.map(day => day.runs));
   return <>
     <p className="text-xs text-muted-foreground">{data.days}-day window · {new Date(data.window_start).toLocaleString()} to {new Date(data.window_end).toLocaleString()} · Updated {new Date(data.generated_at).toLocaleString()}</p>
@@ -81,7 +82,7 @@ function OverviewContent({ data }: { data: ObservabilityOverview }) {
       <Metric label="Evaluation runs" value={count(e.runs)} note={`${count(e.completed)} completed · ${count(e.running)} running`} />
       <Metric label="Gates passed" value={count(e.gates_passed)} note={`${count(e.failed)} failed runs · ${count(e.case_errors)} case errors`} />
       <Metric label="Ingestion records" value={count(i.records_seen)} note={`${count(i.records_failed)} failed records`} />
-      <Metric label="Runs needing attention" value={count(i.failed + i.partial_with_errors + i.stalled_runs)} note={`${count(i.failed)} failed · ${count(i.partial_with_errors)} partial with errors · ${count(i.stalled_runs)} stalled`} />
+      <Metric label="Webhook queue" value={count(w.due_now)} note={`${count(w.pending)} pending · ${count(w.active_leases)} active leases`} />
     </div>
     <div className="grid gap-4 lg:grid-cols-2">
       <Section title="Evaluation trend">
@@ -102,6 +103,22 @@ function OverviewContent({ data }: { data: ObservabilityOverview }) {
       </Section>
       <Section title="Ingestion operations">
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">{[['Runs', i.runs], ['Completed', i.completed], ['Partial', i.partial], ['Partial with errors', i.partial_with_errors], ['Failed', i.failed], ['Running', i.running], ['Records failed', i.records_failed], ['Stalled', i.stalled_runs]].map(([label, value]) => <div key={label} className="border-b pb-2"><p className="text-xs text-muted-foreground">{label}</p><p className="font-display text-xl tabular-nums">{count(value as number)}</p></div>)}</div>
+      </Section>
+      <Section title="Webhook delivery health">
+        <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+          {[
+            ['Deliveries', w.deliveries],
+            ['Delivered', w.delivered],
+            ['Pending', w.pending],
+            ['Failed', w.failed],
+            ['Due now', w.due_now],
+            ['Scheduled', w.scheduled],
+            ['Exhausted', w.exhausted],
+            ['Active leases', w.active_leases],
+            ['Active endpoints', w.subscriptions_active],
+          ].map(([label, value]) => <div key={label} className="border-b pb-2"><p className="text-xs text-muted-foreground">{label}</p><p className="font-display text-xl tabular-nums">{count(value as number)}</p></div>)}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">{count(w.subscriptions_disabled)} disabled endpoints · {(w.failure_rate * 100).toFixed(1)}% delivery failure rate for attempted webhooks in this window.</p>
       </Section>
     </div>
     <Section title="Attention">

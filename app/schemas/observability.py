@@ -58,6 +58,20 @@ class IngestionCounts(BaseModel):
     stalled_runs: int
 
 
+class WebhookCounts(BaseModel):
+    deliveries: int
+    pending: int
+    delivered: int
+    failed: int
+    due_now: int
+    scheduled: int
+    exhausted: int
+    active_leases: int
+    subscriptions_active: int
+    subscriptions_disabled: int
+    failure_rate: float
+
+
 class AttentionItem(BaseModel):
     code: str
     level: str
@@ -88,5 +102,6 @@ class ObservabilityOverview(BaseModel):
     days: int
     evaluations: EvaluationCounts
     ingestion: IngestionCounts
+    webhooks: WebhookCounts
     deployment: DeploymentReadiness
     attention: list[AttentionItem]

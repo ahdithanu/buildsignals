@@ -2,7 +2,7 @@
 
 The admin-only `/admin/observability` page reads `GET /v1/observability/overview?days=1|7|30`.
 It summarizes persisted evaluation runs/results and ingestion runs for the authenticated
-organization. It does not consume process-local Prometheus counters, which cannot be
+organization, plus webhook delivery health for customer integrations. It does not consume process-local Prometheus counters, which cannot be
 reliably scoped to a customer workspace or aggregated across instances.
 
 ## Semantics
@@ -19,6 +19,10 @@ reliably scoped to a customer workspace or aggregated across instances.
   receive a separate attention count. Token input and output coverage are shown
   independently when only one side was reported. Attention cards are counts only;
   source errors, model output, retrieved context, and customer data are not returned.
+- Webhook delivery totals count rows created inside the selected window. Queue health
+  fields (`due_now`, `scheduled`, `exhausted`, and `active_leases`) describe the
+  current worker backlog, including older pending rows that still need attention.
+  Failed webhook payloads and response excerpts are not returned.
 
 Strict workspace-admin authorization applies even when anonymous demo mode is enabled.
 All aggregate queries constrain organization IDs, including joined evaluation results
@@ -29,11 +33,12 @@ and datasets. The endpoint is read-only and creates no new tables or migrations.
 This is an operational summary, not a replacement for Prometheus/Sentry. Existing
 `/metrics` and tracing remain the source for fleet-wide HTTP latency and errors.
 The API uses SQL aggregates over time-bounded run tables rather than loading records.
-The evaluation run table has an `(organization_id, started_at)` index. If ingestion
-history grows, add `(organization_id, started_at)` and consider hourly rollups or
-materialized summaries. At a million opportunities, this query still scales with run
-history, not opportunity count. Do not add raw log or evidence payloads to the response;
-link to appropriately authorized detail pages instead.
+The evaluation run table has an `(organization_id, started_at)` index, and webhook
+deliveries have organization/status/created and lease indexes. If ingestion or webhook
+history grows, add hourly rollups or materialized summaries. At a million opportunities,
+this query still scales with operational run and delivery history, not opportunity count.
+Do not add raw log, webhook payload, or evidence payloads to the response; link to
+appropriately authorized detail pages instead.
 
 ## Deployment readiness
 

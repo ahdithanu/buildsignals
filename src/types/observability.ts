@@ -22,6 +22,11 @@ export interface ObservabilityOverview {
     runs: number; completed: number; partial: number; partial_with_errors: number; failed: number; running: number;
     records_seen: number; records_failed: number; stalled_runs: number;
   };
+  webhooks: {
+    deliveries: number; pending: number; delivered: number; failed: number;
+    due_now: number; scheduled: number; exhausted: number; active_leases: number;
+    subscriptions_active: number; subscriptions_disabled: number; failure_rate: number;
+  };
   deployment: {
     environment: string;
     database_provider: string;

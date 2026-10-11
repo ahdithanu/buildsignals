@@ -8,6 +8,7 @@ import pytest
 from app.models.evaluation import EvalCase, EvalDataset, EvalResult, EvalRun
 from app.models.ingestion import IngestionRun, IngestionSource
 from app.models.organization_membership import MemberRole, OrganizationMembership
+from app.models.webhook import WebhookDelivery, WebhookSubscription
 from app.services.observability_service import get_overview
 from app.services.rate_limiter import limiter
 
@@ -52,6 +53,75 @@ def _seed(db, org_id, now, *, old=False):
     db.commit()
 
 
+def _seed_webhooks(db, org_id, now, *, old=False):
+    created = now - timedelta(days=45 if old else 1)
+    active = WebhookSubscription(
+        id=_id(),
+        organization_id=org_id,
+        name=f"endpoint-{_id()}",
+        target_url="https://warehouse.example.test/build-signals",
+        event_types=["deal.created"],
+        status="active",
+    )
+    disabled = WebhookSubscription(
+        id=_id(),
+        organization_id=org_id,
+        name=f"disabled-{_id()}",
+        target_url="https://disabled.example.test/build-signals",
+        event_types=["deal.created"],
+        status="disabled",
+    )
+    db.add_all([active, disabled])
+    db.flush()
+    db.add_all([
+        WebhookDelivery(
+            id=_id(),
+            organization_id=org_id,
+            subscription_id=active.id,
+            event_type="deal.created",
+            event_id=f"delivered-{_id()}",
+            payload={},
+            status="delivered",
+            attempt_count=1,
+            created_at=created,
+        ),
+        WebhookDelivery(
+            id=_id(),
+            organization_id=org_id,
+            subscription_id=active.id,
+            event_type="deal.created",
+            event_id=f"failed-{_id()}",
+            payload={},
+            status="failed",
+            attempt_count=2,
+            created_at=created,
+        ),
+        WebhookDelivery(
+            id=_id(),
+            organization_id=org_id,
+            subscription_id=active.id,
+            event_type="deal.created",
+            event_id=f"due-{_id()}",
+            payload={},
+            status="pending",
+            created_at=created,
+        ),
+        WebhookDelivery(
+            id=_id(),
+            organization_id=org_id,
+            subscription_id=active.id,
+            event_type="deal.created",
+            event_id=f"leased-{_id()}",
+            payload={},
+            status="pending",
+            created_at=created,
+            lease_owner="worker-a",
+            lease_expires_at=now + timedelta(minutes=5),
+        ),
+    ])
+    db.commit()
+
+
 @pytest.fixture(autouse=True)
 def _strict_auth(monkeypatch):
     monkeypatch.setattr("app.middleware.auth_context.ALLOW_ANONYMOUS", False)
@@ -88,7 +158,10 @@ def test_overview_is_tenant_scoped_and_unknown_is_not_zero(client, db):
     now = datetime.now(timezone.utc)
     _seed(db, first["organization_id"], now)
     _seed(db, first["organization_id"], now, old=True)
+    _seed_webhooks(db, first["organization_id"], now)
+    _seed_webhooks(db, first["organization_id"], now, old=True)
     _seed(db, second["organization_id"], now)
+    _seed_webhooks(db, second["organization_id"], now)
 
     response = client.get("/v1/observability/overview?days=7", headers=_headers(first))
     assert response.status_code == 200, response.text
@@ -101,6 +174,17 @@ def test_overview_is_tenant_scoped_and_unknown_is_not_zero(client, db):
     assert data["evaluations"]["tokens_unknown_results"] == 1
     assert data["ingestion"]["runs"] == 1
     assert data["ingestion"]["stalled_runs"] == 1
+    assert data["webhooks"]["deliveries"] == 4
+    assert data["webhooks"]["delivered"] == 1
+    assert data["webhooks"]["failed"] == 1
+    assert data["webhooks"]["pending"] == 2
+    assert data["webhooks"]["due_now"] == 2
+    assert data["webhooks"]["active_leases"] == 2
+    assert data["webhooks"]["subscriptions_active"] == 2
+    assert data["webhooks"]["subscriptions_disabled"] == 2
+    assert data["webhooks"]["failure_rate"] == 0.5
+    assert any(item["code"] == "failed_webhooks" for item in data["attention"])
+    assert any(item["code"] == "webhook_active_leases" for item in data["attention"])
     assert "private source detail" not in response.text
     assert sum(day["runs"] for day in data["evaluations"]["daily"]) == 1
 
