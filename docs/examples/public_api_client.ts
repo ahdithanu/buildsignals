@@ -44,6 +44,10 @@ export class BuildSignalsClient {
     return (await response.json()) as T;
   }
 
+  getSelf(): Promise<JsonRecord> {
+    return this.request<JsonRecord>("/public/me");
+  }
+
   listDeals(params: { city?: string; limit?: number; skip?: number } = {}): Promise<JsonRecord[]> {
     return this.request<JsonRecord[]>("/public/deals", {
       city: params.city,
@@ -112,6 +116,7 @@ async function main() {
   }
 
   const client = new BuildSignalsClient({ apiKey });
+  const selfCheck = await client.getSelf();
   const deals = await client.listDeals({ limit: 10 });
   if (deals.length === 0) {
     console.log("No deals returned for this tenant.");
@@ -139,6 +144,15 @@ async function main() {
   console.log(
     JSON.stringify(
       {
+        apiKeyPrefix:
+          typeof selfCheck.api_key === "object" && selfCheck.api_key !== null
+            ? (selfCheck.api_key as JsonRecord).key_prefix
+            : undefined,
+        apiKeyScopes:
+          typeof selfCheck.api_key === "object" && selfCheck.api_key !== null
+            ? (selfCheck.api_key as JsonRecord).scopes
+            : [],
+        rateLimit: selfCheck.rate_limit,
         deal: deal.name,
         city: deal.city,
         rootEntityCount: Array.isArray(graph.root_entities) ? graph.root_entities.length : 0,

@@ -34,6 +34,9 @@ class BuildSignalsClient:
             body = response.read().decode("utf-8")
             return json.loads(body) if body else None
 
+    def get_self(self) -> dict[str, Any]:
+        return self._request("/public/me")
+
     def list_deals(
         self,
         *,
@@ -104,6 +107,7 @@ class BuildSignalsClient:
 def main() -> None:
     api_key = os.environ["BUILD_SIGNALS_API_KEY"]
     client = BuildSignalsClient(api_key=api_key)
+    self_check = client.get_self()
     deals = client.list_deals(limit=10)
     if not deals:
         print("No deals returned for this tenant.")
@@ -130,6 +134,9 @@ def main() -> None:
     print(
         json.dumps(
             {
+                "api_key_prefix": self_check.get("api_key", {}).get("key_prefix"),
+                "api_key_scopes": self_check.get("api_key", {}).get("scopes", []),
+                "rate_limit": self_check.get("rate_limit"),
                 "deal": deal.get("name"),
                 "city": deal.get("city"),
                 "root_entity_count": len(graph.get("root_entities", [])),
