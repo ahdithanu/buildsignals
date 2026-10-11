@@ -24,6 +24,38 @@ function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
+function getWebhookQueueTriage(snapshot: {
+  active_leases: number;
+  due_now: number;
+  pending: number;
+}): { tone: "healthy" | "warning" | "idle"; message: string } {
+  if (snapshot.active_leases > 0) {
+    return {
+      tone: "healthy",
+      message: "Workers are actively processing claimed deliveries.",
+    };
+  }
+
+  if (snapshot.due_now > 0) {
+    return {
+      tone: "warning",
+      message: "Due deliveries are waiting without an active worker lease.",
+    };
+  }
+
+  if (snapshot.pending > 0) {
+    return {
+      tone: "idle",
+      message: "Pending deliveries are scheduled for a future retry window.",
+    };
+  }
+
+  return {
+    tone: "healthy",
+    message: "Webhook queue is clear.",
+  };
+}
+
 function defaultExpirationDate(): string {
   const date = new Date();
   date.setDate(date.getDate() + 90);
@@ -950,6 +982,20 @@ export default function Settings() {
               )}
               {webhookQueue.data && (
                 <div className="mt-4 rounded-lg border bg-background p-3">
+                  {(() => {
+                    const queueTriage = getWebhookQueueTriage(webhookQueue.data);
+                    return (
+                      <p className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
+                        queueTriage.tone === "warning"
+                          ? "border-amber-200 bg-amber-50 text-amber-800"
+                          : queueTriage.tone === "idle"
+                            ? "border-slate-200 bg-slate-50 text-slate-700"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      }`}>
+                        {queueTriage.message}
+                      </p>
+                    );
+                  })()}
                   <div className="flex flex-col gap-1 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">

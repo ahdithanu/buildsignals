@@ -143,6 +143,7 @@ describe('Settings API keys', () => {
     mount();
     expect(await screen.findByText('Organization API keys')).toBeInTheDocument();
     expect(await screen.findByText('test-key-prefix')).toBeInTheDocument();
+    expect(screen.getByText('Workers are actively processing claimed deliveries.')).toBeInTheDocument();
     expect(await screen.findByText('In flight')).toBeInTheDocument();
     expect(screen.getByText('Claimed by workers')).toBeInTheDocument();
     expect(await screen.findByText(/Usage: 12 calls/)).toBeInTheDocument();
