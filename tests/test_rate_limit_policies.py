@@ -37,3 +37,8 @@ def test_defaults_are_production_safe():
     assert rl.LOGIN_LIMIT == 10
     assert rl.REGISTER_LIMIT == 5
     assert rl.AI_LIMIT == 30
+
+
+def test_in_memory_backend_reports_process_local_name():
+    assert rl.InMemoryRateLimiter().backend_name() == "memory"
+    assert rl.limiter.backend_name() in {"memory", "redis"}
