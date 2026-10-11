@@ -121,13 +121,24 @@ def get_recent_signals(db: Session, limit: int = 10) -> list[dict[str, Any]]:
 def get_ai_insights(db: Session) -> list[dict[str, Any]]:
     """Deterministic insights based on current data."""
     insights: list[dict[str, Any]] = []
+    now = datetime.now(timezone.utc)
+
+    def _sample_records(query, *, record_type: str, limit: int = 25) -> list[dict[str, Any]]:
+        return [{"record_type": record_type, "id": row.id} for row in query.limit(limit).all()]
+
+    def _evidence(record_type: str, *, count: int, filter_: str, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [{
+            "record_type": record_type,
+            "count": count,
+            "filter": filter_,
+            "sample_records": records,
+        }]
+
+    generated = now
 
     # 1. Deals needing scoring
-    unscored = (
-        active_query(db.query(func.count(Deal.id)), Deal)
-        .filter(Deal.score.is_(None))
-        .scalar()
-    ) or 0
+    unscored_query = active_query(db.query(Deal), Deal).filter(Deal.score.is_(None))
+    unscored = unscored_query.with_entities(func.count(Deal.id)).scalar() or 0
     if unscored > 0:
         insights.append({
             "insight_type": "needs_scoring",
@@ -135,17 +146,24 @@ def get_ai_insights(db: Session) -> list[dict[str, Any]]:
             "description": f"{unscored} deal{'s' if unscored != 1 else ''} need scoring",
             "deal_id": None,
             "priority": "high" if unscored > 5 else "medium",
+            "generated_at": generated,
+            "time_window": {"as_of": generated.isoformat()},
+            "source_records": _evidence(
+                "deal",
+                count=unscored,
+                filter_="active deals where score is null",
+                records=_sample_records(unscored_query.order_by(Deal.created_at.desc(), Deal.id), record_type="deal"),
+            ),
         })
 
     # 2. Deals with no contacts
     deals_with_contacts_subq = (
         db.query(Contact.deal_id).distinct().subquery()
     )
-    no_contacts = (
-        active_query(db.query(func.count(Deal.id)), Deal)
-        .filter(Deal.id.notin_(db.query(deals_with_contacts_subq.c.deal_id)))
-        .scalar()
-    ) or 0
+    no_contacts_query = active_query(db.query(Deal), Deal).filter(
+        Deal.id.notin_(db.query(deals_with_contacts_subq.c.deal_id))
+    )
+    no_contacts = no_contacts_query.with_entities(func.count(Deal.id)).scalar() or 0
     if no_contacts > 0:
         insights.append({
             "insight_type": "no_contacts",
@@ -153,18 +171,22 @@ def get_ai_insights(db: Session) -> list[dict[str, Any]]:
             "description": f"{no_contacts} deal{'s' if no_contacts != 1 else ''} have no contacts",
             "deal_id": None,
             "priority": "medium",
+            "generated_at": generated,
+            "time_window": {"as_of": generated.isoformat()},
+            "source_records": _evidence(
+                "deal",
+                count=no_contacts,
+                filter_="active deals without linked contacts",
+                records=_sample_records(no_contacts_query.order_by(Deal.created_at.desc(), Deal.id), record_type="deal"),
+            ),
         })
 
     # 3. Overdue follow-ups
-    now = datetime.now(timezone.utc)
-    overdue = (
-        scope_query(db.query(func.count(OutreachActivity.id)), OutreachActivity)
-        .filter(
-            OutreachActivity.follow_up_date < now,
-            OutreachActivity.completed == False,  # noqa: E712
-        )
-        .scalar()
-    ) or 0
+    overdue_query = scope_query(db.query(OutreachActivity), OutreachActivity).filter(
+        OutreachActivity.follow_up_date < now,
+        OutreachActivity.completed == False,  # noqa: E712
+    )
+    overdue = overdue_query.with_entities(func.count(OutreachActivity.id)).scalar() or 0
     if overdue > 0:
         insights.append({
             "insight_type": "overdue_followups",
@@ -172,6 +194,14 @@ def get_ai_insights(db: Session) -> list[dict[str, Any]]:
             "description": f"{overdue} follow-up{'s' if overdue != 1 else ''} overdue",
             "deal_id": None,
             "priority": "high",
+            "generated_at": generated,
+            "time_window": {"end": generated.isoformat()},
+            "source_records": _evidence(
+                "outreach_activity",
+                count=overdue,
+                filter_="incomplete outreach activities with follow_up_date before generated_at",
+                records=_sample_records(overdue_query.order_by(OutreachActivity.follow_up_date, OutreachActivity.id), record_type="outreach_activity"),
+            ),
         })
 
     # 4. Top risk deal
@@ -188,6 +218,9 @@ def get_ai_insights(db: Session) -> list[dict[str, Any]]:
             "description": f"Top risk: {top_risk.name}",
             "deal_id": top_risk.id,
             "priority": "high",
+            "generated_at": generated,
+            "time_window": {"as_of": generated.isoformat()},
+            "source_records": [{"record_type": "deal", "id": top_risk.id, "filter": "active high-risk scored deal with lowest score"}],
         })
 
     # 5. Pipeline bottleneck
@@ -200,12 +233,21 @@ def get_ai_insights(db: Session) -> list[dict[str, Any]]:
     if bottleneck_row:
         stage = bottleneck_row[0]
         stage_str = stage.value if hasattr(stage, "value") else str(stage)
+        bottleneck_query = active_query(db.query(Deal), Deal).filter(Deal.status == stage)
         insights.append({
             "insight_type": "pipeline_bottleneck",
             "title": "Pipeline Bottleneck",
             "description": f"Pipeline bottleneck: {stage_str}",
             "deal_id": None,
             "priority": "low",
+            "generated_at": generated,
+            "time_window": {"as_of": generated.isoformat()},
+            "source_records": _evidence(
+                "deal",
+                count=bottleneck_row[1],
+                filter_=f"active deals in status {stage_str}",
+                records=_sample_records(bottleneck_query.order_by(Deal.created_at.desc(), Deal.id), record_type="deal"),
+            ),
         })
 
     return insights

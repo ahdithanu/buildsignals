@@ -33,7 +33,16 @@ def seed(db, org, key, *, count=0, source_date=None, now=None):
 
 def test_counts_are_measured_scoped_and_do_not_confuse_collection_with_freshness(db):
     now = datetime.now(timezone.utc)
-    seed(db, "org-a", "populated", count=2, source_date=now - timedelta(days=365), now=now)
+    populated_source = seed(db, "org-a", "populated", count=2, source_date=now - timedelta(days=365), now=now)
+    populated_source.settings = {"reconciliation_mode": "full_snapshot"}
+    db.query(IngestionRun).filter(IngestionRun.source_id == populated_source.id).update({
+        "status": "completed",
+        "completed_at": now,
+        "checkpoint": None,
+        "records_seen": 2,
+        "records_failed": 0,
+    })
+    db.commit()
     seed(db, "org-a", "empty", now=now)
     seed(db, "org-b", "private", count=3, now=now)
     token = set_current_context(RequestContext("org-a", "test"))
@@ -82,6 +91,11 @@ def test_counts_are_measured_scoped_and_do_not_confuse_collection_with_freshness
     assert "no stored records measured" in report["sources"][0]["readiness_reasons"]
     assert report["sources"][1]["readiness_status"] == "stale_source_date"
     assert "no recent source-date evidence" in report["sources"][1]["readiness_reasons"]
+    completion = report["sources"][1]["completion_evidence"]
+    assert completion["full_source_completed"] is True
+    assert completion["completion_kind"] == "full_source_snapshot_completed"
+    assert completion["latest_success_records_seen"] == 2
+    assert "deduplication_invariant" in completion
     states = report["sources"][1]["observed_states"]
     assert {s["state"] for s in states} == {None, "FL"}
     assert sum(s["geocoded_records"] for s in states) == 1

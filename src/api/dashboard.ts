@@ -43,8 +43,21 @@ function mapPipelineSnapshot(raw: any): PipelineSnapshot {
 }
 
 function mapAiInsight(raw: any): AiInsight {
-  if (typeof raw === 'string') return raw;
-  return raw.description || raw.title || '';
+  if (typeof raw === 'string') return {
+    title: 'Insight',
+    description: raw,
+    generatedAt: null,
+    timeWindow: null,
+    sourceRecords: [],
+  };
+  return {
+    title: raw.title || 'Insight',
+    description: raw.description || raw.title || '',
+    priority: raw.priority || 'medium',
+    generatedAt: raw.generated_at || null,
+    timeWindow: raw.time_window || null,
+    sourceRecords: Array.isArray(raw.source_records) ? raw.source_records : [],
+  };
 }
 
 /* eslint-enable @typescript-eslint/no-explicit-any */

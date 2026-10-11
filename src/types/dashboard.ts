@@ -30,4 +30,19 @@ export interface TopOpportunity {
   nearbyParcelSearches?: number;
 }
 
-export type AiInsight = string;
+export interface AiInsightEvidence {
+  record_type?: string;
+  id?: string;
+  count?: number;
+  filter?: string;
+  sample_records?: Array<{ record_type?: string; id?: string }>;
+}
+
+export interface AiInsight {
+  title: string;
+  description: string;
+  priority?: string;
+  generatedAt?: string | null;
+  timeWindow?: Record<string, unknown> | null;
+  sourceRecords: AiInsightEvidence[];
+}
