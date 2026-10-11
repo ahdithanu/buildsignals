@@ -60,3 +60,9 @@ demo CTA is visible but `/v1/auth/demo` returns `404`, the demo workspace check
 stays in warning state until `BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS`,
 `BUILD_SIGNALS_DEMO_EMAIL`, and `BUILD_SIGNALS_DEMO_PASSWORD` are set on the API
 service and the API is redeployed.
+
+The shared rate-limit check uses the active limiter backend, not only the
+presence of `REDIS_URL`. If Redis is configured but the process falls back to
+the in-memory limiter because the client package is unavailable or initialization
+fails, readiness remains a warning so operators do not mistake process-local
+rate limiting for a shared production control.

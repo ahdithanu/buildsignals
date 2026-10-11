@@ -29,6 +29,7 @@ from app.schemas.observability import (
     WebhookCounts,
     WorkflowCounts,
 )
+from app.services.rate_limiter import limiter
 from app.services.webhook_service import summarize_webhook_queue
 
 
@@ -59,8 +60,8 @@ def _readiness_check(
 def get_deployment_readiness() -> DeploymentReadiness:
     app_base_url = os.environ.get("APP_BASE_URL", "").strip()
     metrics_token = os.environ.get("METRICS_TOKEN", "").strip()
-    redis_url = os.environ.get("REDIS_URL", "").strip()
     sentry_dsn = os.environ.get("SENTRY_DSN", "").strip()
+    rate_limiter_backend = limiter.backend_name()
     database_provider = "postgres" if DATABASE_URL.startswith(("postgresql://", "postgres://")) else "sqlite"
     checks = [
         _readiness_check(
@@ -103,10 +104,10 @@ def get_deployment_readiness() -> DeploymentReadiness:
         _readiness_check(
             "shared_rate_limit",
             "Shared rate limiter",
-            bool(redis_url),
+            rate_limiter_backend == "redis",
             "Redis/Valkey is configured for shared rate limits.",
-            "Rate limiting may be process-local because REDIS_URL is missing.",
-            action="Link the Render key-value service or set REDIS_URL before serious prospect traffic.",
+            f"Rate limiting is process-local because the active backend is {rate_limiter_backend}.",
+            action="Link the Render key-value service, set REDIS_URL, confirm the redis package is installed, and redeploy.",
             warn=True,
         ),
         _readiness_check(

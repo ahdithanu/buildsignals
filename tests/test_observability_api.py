@@ -219,3 +219,24 @@ def test_deployment_readiness_reports_demo_without_exposing_secret(db, monkeypat
     demo = next(check for check in summary.deployment.checks if check.code == "demo_workspace")
     assert demo.status == "pass"
     assert "super-secret-demo-password" not in summary.model_dump_json()
+
+
+def test_deployment_readiness_uses_active_rate_limiter_backend(db, monkeypatch):
+    class FakeLimiter:
+        def __init__(self, backend: str) -> None:
+            self.backend = backend
+
+        def backend_name(self) -> str:
+            return self.backend
+
+    monkeypatch.setenv("REDIS_URL", "redis://configured-but-not-active")
+    monkeypatch.setattr("app.services.observability_service.limiter", FakeLimiter("memory"))
+    memory_summary = get_overview(db, _id(), 7)
+    memory_check = next(check for check in memory_summary.deployment.checks if check.code == "shared_rate_limit")
+    assert memory_check.status == "warning"
+    assert "active backend is memory" in memory_check.summary
+
+    monkeypatch.setattr("app.services.observability_service.limiter", FakeLimiter("redis"))
+    redis_summary = get_overview(db, _id(), 7)
+    redis_check = next(check for check in redis_summary.deployment.checks if check.code == "shared_rate_limit")
+    assert redis_check.status == "pass"

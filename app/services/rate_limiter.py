@@ -48,6 +48,9 @@ class InMemoryRateLimiter:
         self._buckets: Dict[str, Tuple[float, int]] = {}
         self._lock = threading.Lock()
 
+    def backend_name(self) -> str:
+        return "memory"
+
     def check(self, *, key: str, limit: int, window_seconds: int) -> RateLimitDecision:
         """Record a hit against `key`. Returns whether it should proceed."""
         if limit <= 0 or window_seconds <= 0:
@@ -110,6 +113,9 @@ class RedisRateLimiter:
             decode_responses=False,
         )
         self._redis_err = redis.RedisError
+
+    def backend_name(self) -> str:
+        return "redis"
 
     def check(self, *, key: str, limit: int, window_seconds: int) -> RateLimitDecision:
         if limit <= 0 or window_seconds <= 0:
