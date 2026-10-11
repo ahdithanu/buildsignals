@@ -51,6 +51,14 @@ class WebhookDelivery(Base):
         Index("ix_webhook_deliveries_org_created", "organization_id", "created_at"),
         Index("ix_webhook_deliveries_subscription_status", "subscription_id", "status"),
         Index("ix_webhook_deliveries_event", "organization_id", "event_type", "event_id"),
+        Index(
+            "uq_webhook_delivery_idempotency_key",
+            "organization_id",
+            "subscription_id",
+            "event_type",
+            "event_id",
+            unique=True,
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))

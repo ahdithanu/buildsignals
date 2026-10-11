@@ -47,7 +47,10 @@ isolate one customer integration incident without exporting the full tenant hist
 
 ## Delivery Queue
 
-`webhook_deliveries` stores one queued row per matching active subscription. Each row includes:
+`webhook_deliveries` stores one queued row per matching active subscription and event id. The idempotency key is
+`organization_id + subscription_id + event_type + event_id`, so producers can safely retry enqueue calls without
+duplicating customer notifications. When a matching delivery already exists, the enqueue service returns the existing
+row and preserves the original payload evidence. Each row includes:
 
 - Event type and event id.
 - Delivery payload.
@@ -141,5 +144,5 @@ For Vercel Cron or another scheduler, store signing material in deployment secre
 ## Scaling Path
 
 For 1 million opportunities, webhook delivery should move from the tenant-scoped runner to a dedicated worker pool
-backed by leased queue reads, idempotency keys, dead-letter retention, and per-customer concurrency limits. The
-current table shape already supports those additions without changing customer-facing subscription APIs.
+backed by leased queue reads, dead-letter retention, and per-customer concurrency limits. The current idempotency key
+and queue table shape already support those additions without changing customer-facing subscription APIs.
