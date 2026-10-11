@@ -95,6 +95,34 @@ beforeEach(() => {
     api_key_id: 'key-1',
     rebuilt_events: 12,
   });
+  vi.spyOn(organizationsApi, 'listWebhookSubscriptions').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'getWebhookDeliverySummary').mockResolvedValue({
+    organization_id: 'org-a',
+    total: 4,
+    pending: 2,
+    delivered: 2,
+    failed: 0,
+    dead_lettered: 0,
+    subscriptions_active: 1,
+    subscriptions_disabled: 0,
+    failure_rate: 0,
+    latest_attempted_at: null,
+    latest_created_at: '2026-09-28T10:05:00Z',
+    last_error_message: null,
+  });
+  vi.spyOn(organizationsApi, 'getWebhookQueueSnapshot').mockResolvedValue({
+    organization_id: 'org-a',
+    pending: 2,
+    due_now: 1,
+    scheduled: 1,
+    exhausted: 0,
+    active_leases: 1,
+    max_attempts: 6,
+    next_due_at: '2026-09-28T10:10:00Z',
+    oldest_due_at: '2026-09-28T10:00:00Z',
+  });
+  vi.spyOn(organizationsApi, 'listWebhookDeadLetters').mockResolvedValue([]);
+  vi.spyOn(organizationsApi, 'listWebhookDeliveries').mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -115,6 +143,8 @@ describe('Settings API keys', () => {
     mount();
     expect(await screen.findByText('Organization API keys')).toBeInTheDocument();
     expect(await screen.findByText('test-key-prefix')).toBeInTheDocument();
+    expect(await screen.findByText('In flight')).toBeInTheDocument();
+    expect(screen.getByText('Claimed by workers')).toBeInTheDocument();
     expect(await screen.findByText(/Usage: 12 calls/)).toBeInTheDocument();
     expect(screen.getByText(/Limit 120\/60s/)).toBeInTheDocument();
 

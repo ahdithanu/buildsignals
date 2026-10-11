@@ -154,6 +154,7 @@ export interface WebhookQueueSnapshotResponse {
   due_now: number;
   scheduled: number;
   exhausted: number;
+  active_leases: number;
   max_attempts: number;
   next_due_at: string | null;
   oldest_due_at: string | null;
