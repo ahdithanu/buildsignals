@@ -20,7 +20,7 @@ from app.services import ai_usage_service
 from app.services import evaluation_service as service
 from app.services.eval_scoring import SCORER_VERSION
 from app.services.eval_workflows import LIVE_WORKFLOWS
-from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter
+from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter, rate_limit_headers
 from app.utils.auth_deps import require_role_strict
 
 router = APIRouter(prefix="/evals", tags=["evaluations"])
@@ -78,14 +78,16 @@ def execute(
         raise HTTPException(
             429,
             "Evaluation rate limit exceeded",
-            headers={
-                "Retry-After": str(decision.retry_after),
-                "X-AI-RateLimit-Reset": str(decision.reset_after),
-            },
+            headers=rate_limit_headers(
+                prefix="X-AI-RateLimit",
+                limit=AI_LIMIT,
+                decision=decision,
+                include_retry_after=True,
+            ),
         )
-    response.headers["X-AI-RateLimit-Limit"] = str(AI_LIMIT)
-    response.headers["X-AI-RateLimit-Remaining"] = str(decision.remaining)
-    response.headers["X-AI-RateLimit-Reset"] = str(decision.reset_after)
+    response.headers.update(
+        rate_limit_headers(prefix="X-AI-RateLimit", limit=AI_LIMIT, decision=decision)
+    )
     return service.run_evaluation(
         db, principal["org_id"], principal["user_id"], dataset_id, payload
     )

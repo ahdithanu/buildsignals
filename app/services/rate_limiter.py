@@ -41,6 +41,24 @@ class RateLimitDecision:
     reset_after: int = 0  # seconds until the fixed window resets
 
 
+def rate_limit_headers(
+    *,
+    prefix: str,
+    limit: int,
+    decision: RateLimitDecision,
+    include_retry_after: bool = False,
+) -> dict[str, str]:
+    """Build consistent HTTP headers for a rate-limit decision."""
+    headers = {
+        f"{prefix}-Limit": str(limit),
+        f"{prefix}-Remaining": str(decision.remaining),
+        f"{prefix}-Reset": str(decision.reset_after),
+    }
+    if include_retry_after:
+        headers["Retry-After"] = str(decision.retry_after)
+    return headers
+
+
 class InMemoryRateLimiter:
     """Fixed-window counter, process-local. Default when REDIS_URL is unset."""
 
