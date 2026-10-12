@@ -145,6 +145,7 @@ def test_overview_requires_admin_and_valid_window(client):
         + data["deployment"]["warning_count"]
         + data["deployment"]["fail_count"]
     ) == len(data["deployment"]["checks"])
+    assert any(item["code"] == "deployment_readiness" for item in data["attention"])
     assert any(check["code"] == "demo_workspace" for check in data["deployment"]["checks"])
 
 
@@ -190,6 +191,7 @@ def test_overview_is_tenant_scoped_and_unknown_is_not_zero(client, db):
     assert data["webhooks"]["failure_rate"] == 0.5
     assert any(item["code"] == "failed_webhooks" for item in data["attention"])
     assert any(item["code"] == "webhook_active_leases" for item in data["attention"])
+    assert any(item["code"] == "deployment_readiness" for item in data["attention"])
     assert "private source detail" not in response.text
     assert sum(day["runs"] for day in data["evaluations"]["daily"]) == 1
 
@@ -227,6 +229,15 @@ def test_deployment_readiness_reports_demo_without_exposing_secret(db, monkeypat
     assert summary.deployment.warning_count == len([check for check in summary.deployment.checks if check.status == "warning"])
     assert summary.deployment.fail_count == len([check for check in summary.deployment.checks if check.status == "fail"])
     assert "super-secret-demo-password" not in summary.model_dump_json()
+
+
+def test_deployment_readiness_attention_uses_highest_severity(db, monkeypatch):
+    monkeypatch.setattr("app.services.observability_service.IS_PRODUCTION", True)
+    monkeypatch.setattr("app.services.observability_service.DATABASE_URL", "sqlite:///local.db")
+    summary = get_overview(db, _id(), 7)
+    item = next(item for item in summary.attention if item.code == "deployment_readiness")
+    assert item.level == "critical"
+    assert item.count == summary.deployment.fail_count + summary.deployment.warning_count
 
 
 def test_deployment_readiness_uses_active_rate_limiter_backend(db, monkeypatch):

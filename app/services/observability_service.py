@@ -249,7 +249,18 @@ def get_overview(db: Session, org_id: str, days: int, now: datetime | None = Non
         subscriptions_disabled=int(subscription_row[1] or 0),
         failure_rate=round(webhook_failed / webhook_attempted, 4) if webhook_attempted else 0.0,
     )
+    deployment = get_deployment_readiness()
     attention = []
+    deployment_issues = deployment.fail_count + deployment.warning_count
+    if deployment_issues:
+        level = "critical" if deployment.fail_count else "warning"
+        attention.append(AttentionItem(
+            code="deployment_readiness",
+            level=level,
+            summary="Deployment readiness checks need attention",
+            count=deployment_issues,
+            href="/admin/observability",
+        ))
     for code, count, summary, href in (
         ("stalled_ingestion", ingestion.stalled_runs, "Ingestion runs have not reported a heartbeat in 15 minutes", "/source-health"),
         ("failed_ingestion", ingestion.failed, "Ingestion runs failed", "/source-health"),
@@ -281,5 +292,5 @@ def get_overview(db: Session, org_id: str, days: int, now: datetime | None = Non
             latency_reported_results=latency_reported, latency_unknown_results=results - latency_reported,
             by_workflow=[WorkflowCounts(workflow=w, runs=int(n), gate_passed=int(g or 0), failed=int(f or 0))
                          for w, n, g, f in workflows], daily=daily,
-        ), ingestion=ingestion, webhooks=webhooks, deployment=get_deployment_readiness(), attention=attention,
+        ), ingestion=ingestion, webhooks=webhooks, deployment=deployment, attention=attention,
     )
