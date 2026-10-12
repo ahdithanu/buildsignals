@@ -44,7 +44,9 @@ appropriately authorized detail pages instead.
 
 The overview response also includes a non-secret deployment readiness block for
 admin operators. It reports environment, database provider, and pass/warning/fail
-checks for production-critical switches:
+checks for production-critical switches. The API also returns `pass_count`,
+`warning_count`, and `fail_count` so every client can present the same
+at-a-glance readiness summary without recalculating the check list:
 
 - Postgres-backed production data
 - CORS frontend allowlist

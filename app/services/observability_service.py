@@ -131,10 +131,14 @@ def get_deployment_readiness() -> DeploymentReadiness:
     ]
     severity = {"pass": 0, "warning": 1, "fail": 2}
     overall = max((check.status for check in checks), key=lambda status: severity[status])
+    status_counts = {status: sum(1 for check in checks if check.status == status) for status in severity}
     return DeploymentReadiness(
         environment=ENVIRONMENT,
         database_provider=database_provider,
         overall_status=overall,
+        pass_count=status_counts["pass"],
+        warning_count=status_counts["warning"],
+        fail_count=status_counts["fail"],
         checks=checks,
     )
 

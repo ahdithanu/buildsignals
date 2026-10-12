@@ -92,6 +92,9 @@ class DeploymentReadiness(BaseModel):
     environment: str
     database_provider: str
     overall_status: str
+    pass_count: int
+    warning_count: int
+    fail_count: int
     checks: list[DeploymentReadinessCheck]
 
 

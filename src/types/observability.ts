@@ -31,6 +31,9 @@ export interface ObservabilityOverview {
     environment: string;
     database_provider: string;
     overall_status: 'pass' | 'warning' | 'fail';
+    pass_count: number;
+    warning_count: number;
+    fail_count: number;
     checks: {
       code: string;
       label: string;

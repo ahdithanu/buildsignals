@@ -28,6 +28,9 @@ const overview: ObservabilityOverview = {
     environment: 'production',
     database_provider: 'postgres',
     overall_status: 'warning',
+    pass_count: 1,
+    warning_count: 2,
+    fail_count: 0,
     checks: [
       { code: 'database_provider', label: 'Production database', status: 'pass', summary: 'Postgres is configured for deployed data.', action: null },
       { code: 'demo_workspace', label: 'Demo workspace', status: 'warning', summary: 'Demo login is disabled or missing seeded backend credentials.', action: 'Set BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS=true, BUILD_SIGNALS_DEMO_EMAIL, and BUILD_SIGNALS_DEMO_PASSWORD on the API service, then redeploy.' },

@@ -140,6 +140,11 @@ def test_overview_requires_admin_and_valid_window(client):
     assert data["evaluations"]["cost_usd_known"] is None
     assert data["evaluations"]["runs"] == 0
     assert data["deployment"]["environment"]
+    assert (
+        data["deployment"]["pass_count"]
+        + data["deployment"]["warning_count"]
+        + data["deployment"]["fail_count"]
+    ) == len(data["deployment"]["checks"])
     assert any(check["code"] == "demo_workspace" for check in data["deployment"]["checks"])
 
 
@@ -218,6 +223,9 @@ def test_deployment_readiness_reports_demo_without_exposing_secret(db, monkeypat
     summary = get_overview(db, _id(), 7)
     demo = next(check for check in summary.deployment.checks if check.code == "demo_workspace")
     assert demo.status == "pass"
+    assert summary.deployment.pass_count == len([check for check in summary.deployment.checks if check.status == "pass"])
+    assert summary.deployment.warning_count == len([check for check in summary.deployment.checks if check.status == "warning"])
+    assert summary.deployment.fail_count == len([check for check in summary.deployment.checks if check.status == "fail"])
     assert "super-secret-demo-password" not in summary.model_dump_json()
 
 
