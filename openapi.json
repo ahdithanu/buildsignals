@@ -1962,6 +1962,10 @@
             "type": "string"
           },
           "level": {
+            "enum": [
+              "critical",
+              "warning"
+            ],
             "title": "Level",
             "type": "string"
           },
