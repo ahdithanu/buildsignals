@@ -56,6 +56,10 @@ at-a-glance readiness summary without recalculating the check list:
 - metrics token protection
 - backend error tracking
 
+If any readiness check is warning or failing, the overview also includes a
+`deployment_readiness` attention item. The item is `critical` when at least one
+check fails, and `warning` when the remaining issues are warnings only.
+
 Readiness checks never return credential values. They only report whether a
 setting is configured and include the next action. For example, if the public
 demo CTA is visible but `/v1/auth/demo` returns `404`, the demo workspace check
