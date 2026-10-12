@@ -4966,15 +4966,30 @@
             "title": "Environment",
             "type": "string"
           },
+          "fail_count": {
+            "title": "Fail Count",
+            "type": "integer"
+          },
           "overall_status": {
             "title": "Overall Status",
             "type": "string"
+          },
+          "pass_count": {
+            "title": "Pass Count",
+            "type": "integer"
+          },
+          "warning_count": {
+            "title": "Warning Count",
+            "type": "integer"
           }
         },
         "required": [
           "environment",
           "database_provider",
           "overall_status",
+          "pass_count",
+          "warning_count",
+          "fail_count",
           "checks"
         ],
         "title": "DeploymentReadiness",
