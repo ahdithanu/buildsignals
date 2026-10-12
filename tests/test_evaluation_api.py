@@ -647,6 +647,7 @@ def test_run_rate_limit_is_per_tenant_and_does_not_create_rejected_run(client, d
     )
     assert response.status_code == 429, response.text
     assert int(response.headers["Retry-After"]) > 0
+    assert int(response.headers["X-AI-RateLimit-Reset"]) > 0
     assert db.query(EvalRun).count() == 1
     other = _register(client, "b")
     own_dataset = _create(client, other)

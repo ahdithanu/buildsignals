@@ -43,7 +43,10 @@ def enrich(deal_id: str, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=429,
             detail="AI rate limit exceeded. Try again shortly.",
-            headers={"Retry-After": str(decision.retry_after)},
+            headers={
+                "Retry-After": str(decision.retry_after),
+                "X-AI-RateLimit-Reset": str(decision.reset_after),
+            },
         )
     deal = _get_deal(deal_id, db)
     enriched = enrich_deal(db, deal)
@@ -62,7 +65,10 @@ def score(deal_id: str, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=429,
             detail="AI rate limit exceeded. Try again shortly.",
-            headers={"Retry-After": str(decision.retry_after)},
+            headers={
+                "Retry-After": str(decision.retry_after),
+                "X-AI-RateLimit-Reset": str(decision.reset_after),
+            },
         )
     deal = _get_deal(deal_id, db)
     result = score_deal(db, deal)
