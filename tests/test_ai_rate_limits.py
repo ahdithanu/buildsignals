@@ -112,6 +112,9 @@ class TestAIRateLimits:
         for i in range(AI_LIMIT):
             r = client.post(f"/deals/{deal.id}/score", headers=headers)
             assert r.status_code == 200, f"hit {i} unexpectedly failed: {r.status_code} {r.text}"
+            assert r.headers["X-AI-RateLimit-Limit"] == str(AI_LIMIT)
+            assert r.headers["X-AI-RateLimit-Remaining"] == str(AI_LIMIT - i - 1)
+            assert int(r.headers["X-AI-RateLimit-Reset"]) >= 1
 
         r = client.post(f"/deals/{deal.id}/score", headers=headers)
         assert r.status_code == 429

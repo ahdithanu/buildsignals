@@ -1,6 +1,6 @@
 """Authenticated, workspace-admin evaluation APIs."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -67,6 +67,7 @@ def dataset(dataset_id: str, principal: dict = Depends(admin), db: Session = Dep
 def execute(
     dataset_id: str,
     payload: RunCreate,
+    response: Response,
     principal: dict = Depends(admin),
     db: Session = Depends(get_db),
 ):
@@ -82,6 +83,9 @@ def execute(
                 "X-AI-RateLimit-Reset": str(decision.reset_after),
             },
         )
+    response.headers["X-AI-RateLimit-Limit"] = str(AI_LIMIT)
+    response.headers["X-AI-RateLimit-Remaining"] = str(decision.remaining)
+    response.headers["X-AI-RateLimit-Reset"] = str(decision.reset_after)
     return service.run_evaluation(
         db, principal["org_id"], principal["user_id"], dataset_id, payload
     )

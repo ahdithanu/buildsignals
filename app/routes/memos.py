@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -65,7 +65,9 @@ def get_memo(deal_id: str, db: Session = Depends(get_db)):
     status_code=201,
     dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
 )
-def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
+def generate_deal_memo(
+    deal_id: str, response: Response, db: Session = Depends(get_db)
+):
     """Generate (or regenerate) an investment memo from DB data."""
     decision = limiter.check(key=f"ai:{get_org_id()}", limit=AI_LIMIT, window_seconds=AI_WINDOW)
     if not decision.allowed:
@@ -77,6 +79,9 @@ def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
                 "X-AI-RateLimit-Reset": str(decision.reset_after),
             },
         )
+    response.headers["X-AI-RateLimit-Limit"] = str(AI_LIMIT)
+    response.headers["X-AI-RateLimit-Remaining"] = str(decision.remaining)
+    response.headers["X-AI-RateLimit-Reset"] = str(decision.reset_after)
     _ensure_deal_exists(db, deal_id)
     memo = generate_memo(db, deal_id)
     if memo is None:
