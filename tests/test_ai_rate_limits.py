@@ -129,9 +129,12 @@ class TestAIRateLimits:
         deal = _seed_deal(db, reg["organization_id"])
         headers = _auth(reg["access_token"])
 
-        for _ in range(AI_LIMIT):
+        for i in range(AI_LIMIT):
             r = client.post(f"/deals/{deal.id}/enrich", headers=headers)
             assert r.status_code == 200, r.text
+            assert r.headers["X-AI-RateLimit-Limit"] == str(AI_LIMIT)
+            assert r.headers["X-AI-RateLimit-Remaining"] == str(AI_LIMIT - i - 1)
+            assert int(r.headers["X-AI-RateLimit-Reset"]) >= 1
 
         r = client.post(f"/deals/{deal.id}/enrich", headers=headers)
         assert r.status_code == 429
@@ -143,9 +146,12 @@ class TestAIRateLimits:
         deal = _seed_deal(db, reg["organization_id"])
         headers = _auth(reg["access_token"])
 
-        for _ in range(AI_LIMIT):
+        for i in range(AI_LIMIT):
             r = client.post(f"/deals/{deal.id}/generate-memo", headers=headers)
             assert r.status_code == 201, r.text
+            assert r.headers["X-AI-RateLimit-Limit"] == str(AI_LIMIT)
+            assert r.headers["X-AI-RateLimit-Remaining"] == str(AI_LIMIT - i - 1)
+            assert int(r.headers["X-AI-RateLimit-Reset"]) >= 1
 
         r = client.post(f"/deals/{deal.id}/generate-memo", headers=headers)
         assert r.status_code == 429
