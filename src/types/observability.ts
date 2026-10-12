@@ -42,5 +42,5 @@ export interface ObservabilityOverview {
       action: string | null;
     }[];
   };
-  attention: { code: string; level: string; summary: string; count: number; href: string }[];
+  attention: { code: string; level: 'critical' | 'warning'; summary: string; count: number; href: string }[];
 }

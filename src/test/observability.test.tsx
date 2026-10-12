@@ -37,7 +37,10 @@ const overview: ObservabilityOverview = {
       { code: 'shared_rate_limit', label: 'Shared rate limiter', status: 'warning', summary: 'Rate limiting is process-local because the active backend is memory.', action: 'Link the Render key-value service, set REDIS_URL, confirm the redis package is installed, and redeploy.' },
     ],
   },
-  attention: [{ code: 'stalled', level: 'warning', summary: 'Stalled ingestion', count: 1, href: '/source-health' }],
+  attention: [
+    { code: 'deployment_readiness', level: 'critical', summary: 'Deployment readiness checks need attention', count: 2, href: '/admin/observability' },
+    { code: 'stalled', level: 'warning', summary: 'Stalled ingestion', count: 1, href: '/source-health' },
+  ],
 };
 let client: QueryClient;
 function mount() {
@@ -68,6 +71,8 @@ describe('Observability', () => {
     expect(await screen.findByText('copilot answer')).toBeInTheDocument();
     expect(screen.getAllByText('Unknown')).toHaveLength(4);
     expect(screen.getByText(/Unknown usage is not zero/)).toBeInTheDocument();
+    expect(screen.getByText('critical')).toHaveClass('text-destructive');
+    expect(screen.getByText('Deployment readiness checks need attention')).toBeInTheDocument();
     expect(screen.getByText('Stalled ingestion')).toBeInTheDocument();
     expect(screen.getByText('Webhook delivery health')).toBeInTheDocument();
     expect(screen.getByText('Due now')).toBeInTheDocument();
