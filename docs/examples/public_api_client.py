@@ -11,8 +11,37 @@ import json
 import os
 from dataclasses import dataclass
 from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+
+class BuildSignalsRateLimitError(RuntimeError):
+    """Raised when a public API key has exhausted its current rate-limit window."""
+
+    def __init__(self, *, retry_after: int | None, reset_after: int | None, body: str) -> None:
+        self.retry_after = retry_after
+        self.reset_after = reset_after
+        wait_seconds = retry_after if retry_after is not None else reset_after
+        message = "Build Signals API rate limit exceeded"
+        if wait_seconds is not None:
+            message = f"{message}; retry after {wait_seconds} seconds"
+        if body:
+            message = f"{message}: {body}"
+        super().__init__(message)
+
+
+class BuildSignalsAPIError(RuntimeError):
+    """Raised for non-successful public API responses."""
+
+
+def _parse_int_header(value: str | None) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
 
 
 @dataclass(frozen=True)
@@ -30,9 +59,21 @@ class BuildSignalsClient:
                 "Accept": "application/json",
             },
         )
-        with urlopen(request, timeout=self.timeout_seconds) as response:
-            body = response.read().decode("utf-8")
-            return json.loads(body) if body else None
+        try:
+            with urlopen(request, timeout=self.timeout_seconds) as response:
+                body = response.read().decode("utf-8")
+                return json.loads(body) if body else None
+        except HTTPError as error:
+            body = error.read().decode("utf-8")
+            if error.code == 429:
+                raise BuildSignalsRateLimitError(
+                    retry_after=_parse_int_header(error.headers.get("Retry-After")),
+                    reset_after=_parse_int_header(error.headers.get("X-API-Key-RateLimit-Reset")),
+                    body=body,
+                ) from error
+            raise BuildSignalsAPIError(
+                f"Build Signals API {error.code}: {body or error.reason}"
+            ) from error
 
     def get_self(self) -> dict[str, Any]:
         return self._request("/public/me")

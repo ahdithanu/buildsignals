@@ -12,6 +12,33 @@ declare const process: {
   env: Record<string, string | undefined>;
 };
 
+export class BuildSignalsRateLimitError extends Error {
+  readonly retryAfter: number | undefined;
+  readonly resetAfter: number | undefined;
+  readonly body: string;
+
+  constructor({ retryAfter, resetAfter, body }: { retryAfter?: number; resetAfter?: number; body: string }) {
+    const waitSeconds = retryAfter ?? resetAfter;
+    super(
+      `Build Signals API rate limit exceeded${
+        waitSeconds !== undefined ? `; retry after ${waitSeconds} seconds` : ""
+      }${body ? `: ${body}` : ""}`,
+    );
+    this.name = "BuildSignalsRateLimitError";
+    this.retryAfter = retryAfter;
+    this.resetAfter = resetAfter;
+    this.body = body;
+  }
+}
+
+function parseIntegerHeader(value: string | null): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export class BuildSignalsClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -38,6 +65,13 @@ export class BuildSignalsClient {
 
     if (!response.ok) {
       const body = await response.text();
+      if (response.status === 429) {
+        throw new BuildSignalsRateLimitError({
+          retryAfter: parseIntegerHeader(response.headers.get("Retry-After")),
+          resetAfter: parseIntegerHeader(response.headers.get("X-API-Key-RateLimit-Reset")),
+          body,
+        });
+      }
       throw new Error(`Build Signals API ${response.status}: ${body || response.statusText}`);
     }
 

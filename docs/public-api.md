@@ -115,7 +115,8 @@ context into internal tooling:
 - [TypeScript public API client](examples/public_api_client.ts)
 
 Both examples use the same tenant-scoped API key model as the curl examples, avoid storing secrets in code, and
-show the common production path:
+show typed handling for `429` rate-limit responses so integrations can back off using `Retry-After` or
+`X-API-Key-RateLimit-Reset`. They also show the common production path:
 
 1. Verify the active API key, scopes, expiration, rate-limit policy, and usage with `/public/me`.
 2. List accessible deals.
