@@ -1,6 +1,7 @@
 """Tenant-scoped operational summary contracts."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -74,7 +75,7 @@ class WebhookCounts(BaseModel):
 
 class AttentionItem(BaseModel):
     code: str
-    level: str
+    level: Literal["critical", "warning"]
     summary: str
     count: int
     href: str
