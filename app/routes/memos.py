@@ -12,7 +12,7 @@ from app.models.deal import Deal
 from app.models.memo import Memo
 from app.models.organization_membership import MemberRole
 from app.services.memo_service import generate_memo
-from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter
+from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter, rate_limit_headers
 from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query, get_org_id
 
@@ -74,14 +74,16 @@ def generate_deal_memo(
         raise HTTPException(
             status_code=429,
             detail="AI rate limit exceeded. Try again shortly.",
-            headers={
-                "Retry-After": str(decision.retry_after),
-                "X-AI-RateLimit-Reset": str(decision.reset_after),
-            },
+            headers=rate_limit_headers(
+                prefix="X-AI-RateLimit",
+                limit=AI_LIMIT,
+                decision=decision,
+                include_retry_after=True,
+            ),
         )
-    response.headers["X-AI-RateLimit-Limit"] = str(AI_LIMIT)
-    response.headers["X-AI-RateLimit-Remaining"] = str(decision.remaining)
-    response.headers["X-AI-RateLimit-Reset"] = str(decision.reset_after)
+    response.headers.update(
+        rate_limit_headers(prefix="X-AI-RateLimit", limit=AI_LIMIT, decision=decision)
+    )
     _ensure_deal_exists(db, deal_id)
     memo = generate_memo(db, deal_id)
     if memo is None:
