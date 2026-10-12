@@ -71,6 +71,7 @@ describe('Observability', () => {
     expect(screen.getByText(/1 disabled endpoints/)).toBeInTheDocument();
     expect(screen.getByText('2026-09-23')).toBeInTheDocument();
     expect(screen.getByText('Deployment readiness')).toBeInTheDocument();
+    expect(screen.getByText('0 fail · 2 warning · 1 pass')).toBeInTheDocument();
     expect(screen.getByText('Demo workspace')).toBeInTheDocument();
     expect(screen.getByText(/BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS=true/)).toBeInTheDocument();
     expect(screen.getByText('Shared rate limiter')).toBeInTheDocument();

@@ -54,6 +54,10 @@ function OverviewContent({ data }: { data: ObservabilityOverview }) {
   const i = data.ingestion;
   const w = data.webhooks;
   const maxRuns = Math.max(1, ...e.daily.map(day => day.runs));
+  const readinessSummary = data.deployment.checks.reduce(
+    (summary, check) => ({ ...summary, [check.status]: summary[check.status] + 1 }),
+    { pass: 0, warning: 0, fail: 0 },
+  );
   return <>
     <p className="text-xs text-muted-foreground">{data.days}-day window · {new Date(data.window_start).toLocaleString()} to {new Date(data.window_end).toLocaleString()} · Updated {new Date(data.generated_at).toLocaleString()}</p>
     <Section title="Deployment readiness">
@@ -61,9 +65,14 @@ function OverviewContent({ data }: { data: ObservabilityOverview }) {
         <p className="text-sm text-muted-foreground">
           Environment <strong className="text-foreground">{data.deployment.environment}</strong> · Database <strong className="text-foreground">{data.deployment.database_provider}</strong>
         </p>
-        <span className={`border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${statusTone[data.deployment.overall_status]}`}>
-          {data.deployment.overall_status}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            {count(readinessSummary.fail)} fail · {count(readinessSummary.warning)} warning · {count(readinessSummary.pass)} pass
+          </p>
+          <span className={`border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${statusTone[data.deployment.overall_status]}`}>
+            {data.deployment.overall_status}
+          </span>
+        </div>
       </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         {data.deployment.checks.map(check => (
