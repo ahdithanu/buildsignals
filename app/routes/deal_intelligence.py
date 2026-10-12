@@ -1,6 +1,6 @@
 """Routes for deal enrichment and scoring."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -36,7 +36,7 @@ def _get_deal(deal_id: str, db: Session) -> Deal:
     response_model=DealResponse,
     dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
 )
-def enrich(deal_id: str, db: Session = Depends(get_db)):
+def enrich(deal_id: str, response: Response, db: Session = Depends(get_db)):
     """Run deterministic mock enrichment on a deal, filling missing fields."""
     decision = limiter.check(key=f"ai:{get_org_id()}", limit=AI_LIMIT, window_seconds=AI_WINDOW)
     if not decision.allowed:
@@ -48,6 +48,9 @@ def enrich(deal_id: str, db: Session = Depends(get_db)):
                 "X-AI-RateLimit-Reset": str(decision.reset_after),
             },
         )
+    response.headers["X-AI-RateLimit-Limit"] = str(AI_LIMIT)
+    response.headers["X-AI-RateLimit-Remaining"] = str(decision.remaining)
+    response.headers["X-AI-RateLimit-Reset"] = str(decision.reset_after)
     deal = _get_deal(deal_id, db)
     enriched = enrich_deal(db, deal)
     return enriched
@@ -58,7 +61,7 @@ def enrich(deal_id: str, db: Session = Depends(get_db)):
     response_model=ScoreResponse,
     dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
 )
-def score(deal_id: str, db: Session = Depends(get_db)):
+def score(deal_id: str, response: Response, db: Session = Depends(get_db)):
     """Score a deal 0-100 and assign a risk level."""
     decision = limiter.check(key=f"ai:{get_org_id()}", limit=AI_LIMIT, window_seconds=AI_WINDOW)
     if not decision.allowed:
@@ -70,6 +73,9 @@ def score(deal_id: str, db: Session = Depends(get_db)):
                 "X-AI-RateLimit-Reset": str(decision.reset_after),
             },
         )
+    response.headers["X-AI-RateLimit-Limit"] = str(AI_LIMIT)
+    response.headers["X-AI-RateLimit-Remaining"] = str(decision.remaining)
+    response.headers["X-AI-RateLimit-Reset"] = str(decision.reset_after)
     deal = _get_deal(deal_id, db)
     result = score_deal(db, deal)
     return result

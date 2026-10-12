@@ -98,9 +98,12 @@ snapshot access is admin-only. Do not place credentials in case inputs or
 captured output.
 
 Evaluation run creation shares the AI workflow rate-limit budget with other
-expensive AI-backed routes. A `429` response includes `Retry-After` and
-`X-AI-RateLimit-Reset` headers so CI, admin tooling, and workflow clients can
-back off until the current window resets instead of retrying blindly.
+expensive AI-backed routes. Successful run creation responses include
+`X-AI-RateLimit-Limit`, `X-AI-RateLimit-Remaining`, and
+`X-AI-RateLimit-Reset` headers so CI and admin tooling can pace requests before
+exhaustion. A `429` response includes `Retry-After` plus
+`X-AI-RateLimit-Reset` so workflow clients can back off until the current window
+resets instead of retrying blindly.
 
 Dataset and run list endpoints each return at most 100 records, newest first.
 There is currently no cursor/offset pagination, so older history is not fully

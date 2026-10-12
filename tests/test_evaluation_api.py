@@ -641,7 +641,15 @@ def test_live_workflows_scope_each_child_relationship_independently(client, db, 
 def test_run_rate_limit_is_per_tenant_and_does_not_create_rejected_run(client, db, admin, monkeypatch):
     monkeypatch.setattr("app.routes.evaluations.AI_LIMIT", 1)
     dataset = _create(client, admin)
-    _run(client, admin, dataset)
+    first_response = client.post(
+        f"{_ROOT}/datasets/{dataset['id']}/runs",
+        headers=_headers(admin),
+        json=_replay(dataset),
+    )
+    assert first_response.status_code == 201, first_response.text
+    assert first_response.headers["X-AI-RateLimit-Limit"] == "1"
+    assert first_response.headers["X-AI-RateLimit-Remaining"] == "0"
+    assert int(first_response.headers["X-AI-RateLimit-Reset"]) > 0
     response = client.post(
         f"{_ROOT}/datasets/{dataset['id']}/runs", headers=_headers(admin), json=_replay(dataset),
     )
