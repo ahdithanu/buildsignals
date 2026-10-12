@@ -31,6 +31,7 @@ const overview: ObservabilityOverview = {
     checks: [
       { code: 'database_provider', label: 'Production database', status: 'pass', summary: 'Postgres is configured for deployed data.', action: null },
       { code: 'demo_workspace', label: 'Demo workspace', status: 'warning', summary: 'Demo login is disabled or missing seeded backend credentials.', action: 'Set BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS=true, BUILD_SIGNALS_DEMO_EMAIL, and BUILD_SIGNALS_DEMO_PASSWORD on the API service, then redeploy.' },
+      { code: 'shared_rate_limit', label: 'Shared rate limiter', status: 'warning', summary: 'Rate limiting is process-local because the active backend is memory.', action: 'Link the Render key-value service, set REDIS_URL, confirm the redis package is installed, and redeploy.' },
     ],
   },
   attention: [{ code: 'stalled', level: 'warning', summary: 'Stalled ingestion', count: 1, href: '/source-health' }],
@@ -72,6 +73,9 @@ describe('Observability', () => {
     expect(screen.getByText('Deployment readiness')).toBeInTheDocument();
     expect(screen.getByText('Demo workspace')).toBeInTheDocument();
     expect(screen.getByText(/BUILD_SIGNALS_EXPOSE_DEMO_CREDENTIALS=true/)).toBeInTheDocument();
+    expect(screen.getByText('Shared rate limiter')).toBeInTheDocument();
+    expect(screen.getByText(/active backend is memory/)).toBeInTheDocument();
+    expect(screen.getByText(/Link the Render key-value service/)).toBeInTheDocument();
   });
   it('renders empty sections', async () => {
     vi.mocked(observabilityApi.overview).mockResolvedValue({ ...overview, evaluations: { ...overview.evaluations, daily: [], by_workflow: [] }, attention: [] });
