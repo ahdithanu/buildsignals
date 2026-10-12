@@ -4,11 +4,13 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from app.models.evaluation import EvalCase, EvalDataset, EvalResult, EvalRun
 from app.models.ingestion import IngestionRun, IngestionSource
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.webhook import WebhookDelivery, WebhookSubscription
+from app.schemas.observability import AttentionItem
 from app.services.observability_service import get_overview
 from app.services.rate_limiter import limiter
 
@@ -238,6 +240,11 @@ def test_deployment_readiness_attention_uses_highest_severity(db, monkeypatch):
     item = next(item for item in summary.attention if item.code == "deployment_readiness")
     assert item.level == "critical"
     assert item.count == summary.deployment.fail_count + summary.deployment.warning_count
+
+
+def test_attention_level_contract_rejects_unknown_severity():
+    with pytest.raises(ValidationError):
+        AttentionItem(code="unknown", level="info", summary="Not supported", count=1, href="/admin/observability")
 
 
 def test_deployment_readiness_uses_active_rate_limiter_backend(db, monkeypatch):
