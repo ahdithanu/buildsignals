@@ -77,7 +77,10 @@ def execute(
         raise HTTPException(
             429,
             "Evaluation rate limit exceeded",
-            headers={"Retry-After": str(decision.retry_after)},
+            headers={
+                "Retry-After": str(decision.retry_after),
+                "X-AI-RateLimit-Reset": str(decision.reset_after),
+            },
         )
     return service.run_evaluation(
         db, principal["org_id"], principal["user_id"], dataset_id, payload

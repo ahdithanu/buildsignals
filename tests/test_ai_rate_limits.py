@@ -116,8 +116,10 @@ class TestAIRateLimits:
         r = client.post(f"/deals/{deal.id}/score", headers=headers)
         assert r.status_code == 429
         assert "Retry-After" in r.headers
+        assert "X-AI-RateLimit-Reset" in r.headers
         # Header value should be a positive int (seconds).
         assert int(r.headers["Retry-After"]) >= 1
+        assert int(r.headers["X-AI-RateLimit-Reset"]) >= 1
 
     def test_enrich_429s_after_limit(self, client, db):
         reg = _register(client)
@@ -131,6 +133,7 @@ class TestAIRateLimits:
         r = client.post(f"/deals/{deal.id}/enrich", headers=headers)
         assert r.status_code == 429
         assert "Retry-After" in r.headers
+        assert "X-AI-RateLimit-Reset" in r.headers
 
     def test_generate_memo_429s_after_limit(self, client, db):
         reg = _register(client)
@@ -144,6 +147,7 @@ class TestAIRateLimits:
         r = client.post(f"/deals/{deal.id}/generate-memo", headers=headers)
         assert r.status_code == 429
         assert "Retry-After" in r.headers
+        assert "X-AI-RateLimit-Reset" in r.headers
 
     def test_bucket_is_per_org_not_global(self, client, db):
         """An org that's burned its budget must not block a separate org."""

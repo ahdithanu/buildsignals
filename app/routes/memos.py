@@ -72,7 +72,10 @@ def generate_deal_memo(deal_id: str, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=429,
             detail="AI rate limit exceeded. Try again shortly.",
-            headers={"Retry-After": str(decision.retry_after)},
+            headers={
+                "Retry-After": str(decision.retry_after),
+                "X-AI-RateLimit-Reset": str(decision.reset_after),
+            },
         )
     _ensure_deal_exists(db, deal_id)
     memo = generate_memo(db, deal_id)

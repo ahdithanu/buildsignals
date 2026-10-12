@@ -97,6 +97,11 @@ Stored case, output, and evidence snapshots can contain sensitive customer data;
 snapshot access is admin-only. Do not place credentials in case inputs or
 captured output.
 
+Evaluation run creation shares the AI workflow rate-limit budget with other
+expensive AI-backed routes. A `429` response includes `Retry-After` and
+`X-AI-RateLimit-Reset` headers so CI, admin tooling, and workflow clients can
+back off until the current window resets instead of retrying blindly.
+
 Dataset and run list endpoints each return at most 100 records, newest first.
 There is currently no cursor/offset pagination, so older history is not fully
 browsable through these lists. Persist IDs when creating datasets/runs; their
