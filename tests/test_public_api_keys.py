@@ -412,7 +412,7 @@ def test_public_api_returns_tenant_scoped_graph_context(client, db):
         deal=second_deal,
         developer_name="Other Org Developer",
     )
-    _api_key, secret = _issue_key(
+    api_key, secret = _issue_key(
         db,
         org_id=first["organization_id"],
         user_id=first["user_id"],
@@ -435,6 +435,16 @@ def test_public_api_returns_tenant_scoped_graph_context(client, db):
         headers={"Authorization": f"Bearer {secret}"},
     )
     assert cross_org.status_code == 404
+    usage_events = (
+        db.query(OrganizationApiKeyUsageEvent)
+        .filter_by(api_key_id=api_key.id)
+        .order_by(OrganizationApiKeyUsageEvent.created_at.asc())
+        .all()
+    )
+    assert [(event.path, event.status_code, event.response_items) for event in usage_events] == [
+        ("/public/deals/{deal_id}/graph-context", 200, 2),
+        ("/public/deals/{deal_id}/graph-context", 404, 0),
+    ]
 
 
 def test_public_api_returns_tenant_scoped_eval_runs(client, db):
@@ -552,7 +562,9 @@ def test_public_api_returns_tenant_scoped_workflow_history(client, db):
         ("GET", "/public/signals/{signal_id}/assessment-revisions", 1),
         ("GET", "/public/assessment-revisions/{revision_id}/reviews", 1),
         ("GET", "/public/assessment-revisions/{revision_id}/publication", 1),
+        ("GET", "/public/deals/{deal_id}/workflow-history", 0),
     ]
+    assert [event.status_code for event in usage_events] == [200, 200, 200, 200, 404]
 
 
 def test_public_api_rejects_missing_revoked_or_under_scoped_keys(client, db):
