@@ -131,7 +131,7 @@ function OverviewContent({ data }: { data: ObservabilityOverview }) {
       </Section>
     </div>
     <Section title="Attention">
-      {!data.attention.length ? <EmptyState title="No items need attention" description="No alerts were reported for this window." /> : <div className="space-y-2">{data.attention.map(item => <Link key={item.code} to={item.href} className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm hover:underline"><span><strong className={`mr-2 text-xs uppercase ${attentionTone[item.level]}`}>{item.level}</strong>{item.summary}</span><span className="tabular-nums">{count(item.count)} →</span></Link>)}</div>}
+      {!data.attention.length ? <EmptyState title="No items need attention" description="No alerts were reported for this window." /> : <div className="space-y-2">{data.attention.map(item => <Link key={item.code} to={item.href} aria-label={`${item.level} attention: ${item.summary}, ${count(item.count)} ${item.count === 1 ? 'item' : 'items'}`} className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm hover:underline"><span><strong className={`mr-2 text-xs uppercase ${attentionTone[item.level]}`}>{item.level}</strong>{item.summary}</span><span className="tabular-nums">{count(item.count)} →</span></Link>)}</div>}
     </Section>
   </>;
 }
