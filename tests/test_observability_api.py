@@ -11,7 +11,7 @@ from app.models.ingestion import IngestionRun, IngestionSource
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.webhook import WebhookDelivery, WebhookSubscription
 from app.schemas.observability import AttentionItem, DeploymentReadiness, DeploymentReadinessCheck
-from app.services.observability_service import get_overview
+from app.services.observability_service import _sort_attention, get_overview
 from app.services.rate_limiter import limiter
 
 
@@ -240,6 +240,19 @@ def test_deployment_readiness_attention_uses_highest_severity(db, monkeypatch):
     item = next(item for item in summary.attention if item.code == "deployment_readiness")
     assert item.level == "critical"
     assert item.count == summary.deployment.fail_count + summary.deployment.warning_count
+
+
+def test_attention_items_sort_critical_before_warning():
+    warning = AttentionItem(code="failed_webhooks", level="warning", summary="Webhook failures", count=2, href="/settings")
+    critical = AttentionItem(
+        code="deployment_readiness",
+        level="critical",
+        summary="Deployment readiness checks need attention",
+        count=1,
+        href="/admin/observability",
+    )
+
+    assert [item.code for item in _sort_attention([warning, critical])] == ["deployment_readiness", "failed_webhooks"]
 
 
 def test_attention_level_contract_rejects_unknown_severity():

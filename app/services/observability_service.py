@@ -32,9 +32,15 @@ from app.schemas.observability import (
 from app.services.rate_limiter import limiter
 from app.services.webhook_service import summarize_webhook_queue
 
+_ATTENTION_LEVEL_ORDER = {"critical": 0, "warning": 1}
+
 
 def _count_when(condition):
     return func.sum(case((condition, 1), else_=0))
+
+
+def _sort_attention(attention: list[AttentionItem]) -> list[AttentionItem]:
+    return sorted(attention, key=lambda item: _ATTENTION_LEVEL_ORDER[item.level])
 
 
 def _readiness_check(
@@ -292,5 +298,5 @@ def get_overview(db: Session, org_id: str, days: int, now: datetime | None = Non
             latency_reported_results=latency_reported, latency_unknown_results=results - latency_reported,
             by_workflow=[WorkflowCounts(workflow=w, runs=int(n), gate_passed=int(g or 0), failed=int(f or 0))
                          for w, n, g, f in workflows], daily=daily,
-        ), ingestion=ingestion, webhooks=webhooks, deployment=deployment, attention=attention,
+        ), ingestion=ingestion, webhooks=webhooks, deployment=deployment, attention=_sort_attention(attention),
     )
