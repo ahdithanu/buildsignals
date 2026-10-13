@@ -10,7 +10,7 @@ from app.models.evaluation import EvalCase, EvalDataset, EvalResult, EvalRun
 from app.models.ingestion import IngestionRun, IngestionSource
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.webhook import WebhookDelivery, WebhookSubscription
-from app.schemas.observability import AttentionItem
+from app.schemas.observability import AttentionItem, DeploymentReadinessCheck
 from app.services.observability_service import get_overview
 from app.services.rate_limiter import limiter
 
@@ -245,6 +245,11 @@ def test_deployment_readiness_attention_uses_highest_severity(db, monkeypatch):
 def test_attention_level_contract_rejects_unknown_severity():
     with pytest.raises(ValidationError):
         AttentionItem(code="unknown", level="info", summary="Not supported", count=1, href="/admin/observability")
+
+
+def test_deployment_readiness_status_contract_rejects_unknown_status():
+    with pytest.raises(ValidationError):
+        DeploymentReadinessCheck(code="unknown", label="Unknown", status="info", summary="Not supported")
 
 
 def test_deployment_readiness_uses_active_rate_limiter_backend(db, monkeypatch):

@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+ReadinessStatus = Literal["pass", "warning", "fail"]
+
 
 class WorkflowCounts(BaseModel):
     workflow: str
@@ -84,7 +86,7 @@ class AttentionItem(BaseModel):
 class DeploymentReadinessCheck(BaseModel):
     code: str
     label: str
-    status: str
+    status: ReadinessStatus
     summary: str
     action: str | None = None
 
@@ -92,7 +94,7 @@ class DeploymentReadinessCheck(BaseModel):
 class DeploymentReadiness(BaseModel):
     environment: str
     database_provider: str
-    overall_status: str
+    overall_status: ReadinessStatus
     pass_count: int
     warning_count: int
     fail_count: int
