@@ -391,7 +391,14 @@ def get_public_deal_graph_context(
         Deal.id == deal_id
     ).first()
     if not deal:
-        raise HTTPException(status_code=404, detail=f"Deal {deal_id} not found")
+        _raise_public_not_found(
+            db,
+            api_key=api_key,
+            method="GET",
+            path="/public/deals/{deal_id}/graph-context",
+            started_at=started_at,
+            detail=f"Deal {deal_id} not found",
+        )
     context = _public_opportunity_graph_context(
         db,
         organization_id=api_key.organization_id,
@@ -422,7 +429,14 @@ def get_public_deal_workflow_history(
         Deal.id == deal_id
     ).first()
     if not deal:
-        raise HTTPException(status_code=404, detail=f"Deal {deal_id} not found")
+        _raise_public_not_found(
+            db,
+            api_key=api_key,
+            method="GET",
+            path="/public/deals/{deal_id}/workflow-history",
+            started_at=started_at,
+            detail=f"Deal {deal_id} not found",
+        )
     history = _public_workflow_history(
         db,
         organization_id=api_key.organization_id,
