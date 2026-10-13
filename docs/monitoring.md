@@ -78,7 +78,7 @@ When `SENTRY_DSN` / `VITE_SENTRY_DSN` are set:
 
 | Alert | Condition | Action |
 |-------|-----------|--------|
-| New issue spike | >10 events in 5 min | Slack `#dealsignal-incidents` |
+| New issue spike | >10 events in 5 min | Slack `#build-signals-incidents` |
 | Regression | Issue reopens after resolve | Page on-call |
 | Release health | Error rate 2× baseline post-deploy | Rollback consideration |
 
@@ -114,7 +114,7 @@ In Render dashboard → service → Notifications:
 
 ## 6. Dashboard checklist
 
-Create a single "DealSignal Production" dashboard with:
+Create a single "Build Signals Production" dashboard with:
 
 - [ ] Uptime (external probe)
 - [ ] Request rate (2xx / 4xx / 5xx)
