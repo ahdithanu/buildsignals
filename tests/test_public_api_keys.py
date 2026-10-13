@@ -501,7 +501,11 @@ def test_public_api_returns_tenant_scoped_workflow_history(client, db):
     first_deal = _seed_deal(db, org_id=first["organization_id"], name="First workflow warehouse")
     second_deal = _seed_deal(db, org_id=second["organization_id"], name="Second workflow warehouse")
     signal, revision = _seed_workflow_history(db, org_id=first["organization_id"], deal=first_deal)
-    _, second_revision = _seed_workflow_history(db, org_id=second["organization_id"], deal=second_deal)
+    second_signal, second_revision = _seed_workflow_history(
+        db,
+        org_id=second["organization_id"],
+        deal=second_deal,
+    )
     api_key, secret = _issue_key(
         db,
         org_id=first["organization_id"],
@@ -549,7 +553,15 @@ def test_public_api_returns_tenant_scoped_workflow_history(client, db):
         headers={"Authorization": f"Bearer {secret}"},
     ).status_code == 404
     assert client.get(
+        f"/public/signals/{second_signal.id}/assessment-revisions",
+        headers={"Authorization": f"Bearer {secret}"},
+    ).status_code == 404
+    assert client.get(
         f"/public/assessment-revisions/{second_revision.id}/reviews",
+        headers={"Authorization": f"Bearer {secret}"},
+    ).status_code == 404
+    assert client.get(
+        f"/public/assessment-revisions/{second_revision.id}/publication",
         headers={"Authorization": f"Bearer {secret}"},
     ).status_code == 404
 
@@ -565,8 +577,11 @@ def test_public_api_returns_tenant_scoped_workflow_history(client, db):
         ("GET", "/public/assessment-revisions/{revision_id}/reviews", 1),
         ("GET", "/public/assessment-revisions/{revision_id}/publication", 1),
         ("GET", "/public/deals/{deal_id}/workflow-history", 0),
+        ("GET", "/public/signals/{signal_id}/assessment-revisions", 0),
+        ("GET", "/public/assessment-revisions/{revision_id}/reviews", 0),
+        ("GET", "/public/assessment-revisions/{revision_id}/publication", 0),
     ]
-    assert [event.status_code for event in usage_events] == [200, 200, 200, 200, 404]
+    assert [event.status_code for event in usage_events] == [200, 200, 200, 200, 404, 404, 404, 404]
 
 
 def test_public_api_rejects_missing_revoked_or_under_scoped_keys(client, db):

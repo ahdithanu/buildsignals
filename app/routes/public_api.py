@@ -512,7 +512,14 @@ def list_public_signal_assessment_revisions(
         Signal.id == signal_id
     ).first()
     if not signal:
-        raise HTTPException(status_code=404, detail=f"Signal {signal_id} not found")
+        _raise_public_not_found(
+            db,
+            api_key=api_key,
+            method="GET",
+            path="/public/signals/{signal_id}/assessment-revisions",
+            started_at=started_at,
+            detail=f"Signal {signal_id} not found",
+        )
     rows = (
         db.query(BuildSignalRevision)
         .filter(
@@ -554,7 +561,14 @@ def list_public_assessment_reviews(
         .first()
     )
     if not revision:
-        raise HTTPException(status_code=404, detail=f"Assessment revision {revision_id} not found")
+        _raise_public_not_found(
+            db,
+            api_key=api_key,
+            method="GET",
+            path="/public/assessment-revisions/{revision_id}/reviews",
+            started_at=started_at,
+            detail=f"Assessment revision {revision_id} not found",
+        )
     rows = (
         db.query(BuildSignalReview)
         .filter(
@@ -599,7 +613,14 @@ def list_public_assessment_publications(
         .first()
     )
     if not revision:
-        raise HTTPException(status_code=404, detail=f"Assessment revision {revision_id} not found")
+        _raise_public_not_found(
+            db,
+            api_key=api_key,
+            method="GET",
+            path="/public/assessment-revisions/{revision_id}/publication",
+            started_at=started_at,
+            detail=f"Assessment revision {revision_id} not found",
+        )
     rows = (
         db.query(BuildSignalPublication)
         .filter(
