@@ -1,4 +1,4 @@
-# First deploy — standing DealSignal up on Render
+# First deploy — standing Build Signals up on Render
 
 Zero-to-running provisioning. This is the **one-time** setup. Routine deploys
 after this are just merges to `main` — see [deploy.md](deploy.md).
@@ -145,8 +145,8 @@ curl -s -o /dev/null -w '%{http_code}\n' $BASE/metrics          # 401 (token req
 - [ ] Sentry receiving events (trigger a test error) if DSNs are set.
 - [ ] A metrics scraper is pointed at `/metrics` with the `METRICS_TOKEN`
       bearer, or the endpoint is restricted at the network layer.
-- [ ] Fill in the on-call / status-page TODOs in
-      [incident-response.md](incident-response.md).
+- [ ] Confirm the on-call rotation, incident Slack channel, and status page in
+      [incident-response.md](incident-response.md) match this deployment.
 - [ ] **Confirm the app connects to Postgres as a NON-superuser role.**
       Tenant isolation (row-level security, migration 003) is *silently
       bypassed* by Postgres superusers — even with FORCE RLS. Render's managed
