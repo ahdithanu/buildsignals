@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 ReadinessStatus = Literal["pass", "warning", "fail"]
 DatabaseProvider = Literal["postgres", "sqlite"]
+ObservabilityWindow = Literal[1, 7, 30]
 
 
 class WorkflowCounts(BaseModel):
@@ -106,7 +107,7 @@ class ObservabilityOverview(BaseModel):
     generated_at: datetime
     window_start: datetime
     window_end: datetime
-    days: int
+    days: ObservabilityWindow
     evaluations: EvaluationCounts
     ingestion: IngestionCounts
     webhooks: WebhookCounts

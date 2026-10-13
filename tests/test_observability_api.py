@@ -10,7 +10,12 @@ from app.models.evaluation import EvalCase, EvalDataset, EvalResult, EvalRun
 from app.models.ingestion import IngestionRun, IngestionSource
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.webhook import WebhookDelivery, WebhookSubscription
-from app.schemas.observability import AttentionItem, DeploymentReadiness, DeploymentReadinessCheck
+from app.schemas.observability import (
+    AttentionItem,
+    DeploymentReadiness,
+    DeploymentReadinessCheck,
+    ObservabilityOverview,
+)
 from app.services.observability_service import _sort_attention, get_overview
 from app.services.rate_limiter import limiter
 
@@ -276,6 +281,15 @@ def test_deployment_readiness_rejects_unknown_database_provider():
             fail_count=0,
             checks=[],
         )
+
+
+def test_observability_overview_rejects_unsupported_window(db):
+    summary = get_overview(db, _id(), 7)
+    payload = summary.model_dump()
+    payload["days"] = 14
+
+    with pytest.raises(ValidationError):
+        ObservabilityOverview(**payload)
 
 
 def test_deployment_readiness_uses_active_rate_limiter_backend(db, monkeypatch):
