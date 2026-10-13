@@ -10,7 +10,7 @@ from app.models.evaluation import EvalCase, EvalDataset, EvalResult, EvalRun
 from app.models.ingestion import IngestionRun, IngestionSource
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.webhook import WebhookDelivery, WebhookSubscription
-from app.schemas.observability import AttentionItem, DeploymentReadinessCheck
+from app.schemas.observability import AttentionItem, DeploymentReadiness, DeploymentReadinessCheck
 from app.services.observability_service import get_overview
 from app.services.rate_limiter import limiter
 
@@ -250,6 +250,19 @@ def test_attention_level_contract_rejects_unknown_severity():
 def test_deployment_readiness_status_contract_rejects_unknown_status():
     with pytest.raises(ValidationError):
         DeploymentReadinessCheck(code="unknown", label="Unknown", status="info", summary="Not supported")
+
+
+def test_deployment_readiness_rejects_unknown_database_provider():
+    with pytest.raises(ValidationError):
+        DeploymentReadiness(
+            environment="production",
+            database_provider="mysql",
+            overall_status="pass",
+            pass_count=0,
+            warning_count=0,
+            fail_count=0,
+            checks=[],
+        )
 
 
 def test_deployment_readiness_uses_active_rate_limiter_backend(db, monkeypatch):

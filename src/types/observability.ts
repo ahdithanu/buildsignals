@@ -29,7 +29,7 @@ export interface ObservabilityOverview {
   };
   deployment: {
     environment: string;
-    database_provider: string;
+    database_provider: 'postgres' | 'sqlite';
     overall_status: 'pass' | 'warning' | 'fail';
     pass_count: number;
     warning_count: number;

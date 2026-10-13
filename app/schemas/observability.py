@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 ReadinessStatus = Literal["pass", "warning", "fail"]
+DatabaseProvider = Literal["postgres", "sqlite"]
 
 
 class WorkflowCounts(BaseModel):
@@ -93,7 +94,7 @@ class DeploymentReadinessCheck(BaseModel):
 
 class DeploymentReadiness(BaseModel):
     environment: str
-    database_provider: str
+    database_provider: DatabaseProvider
     overall_status: ReadinessStatus
     pass_count: int
     warning_count: int
