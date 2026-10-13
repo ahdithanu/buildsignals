@@ -1,17 +1,17 @@
 # Accessibility statement
 
-DealSignal is committed to making our platform usable by people with
+Build Signals is committed to making our platform usable by people with
 disabilities. This statement describes our current conformance status and
 contact path for accessibility feedback.
 
 **Last updated:** 2026-07-29
-**Applies to:** DealSignal web application (app.dealsignal.com)
+**Applies to:** Build Signals web application (`buildsignals.ai`)
 
 ---
 
 ## Conformance status
 
-DealSignal targets **WCAG 2.1 Level AA** conformance. We are in active
+Build Signals targets **WCAG 2.1 Level AA** conformance. We are in active
 improvement toward that goal:
 
 | Area | Status |
@@ -40,12 +40,12 @@ documented in [VALIDATION.md](../VALIDATION.md) §2.
 
 If you encounter an accessibility barrier:
 
-1. Email **accessibility@dealsignal.com** [CONFIGURE: replace with real inbox]
+1. Email **accessibility@buildsignals.ai** or **support@buildsignals.ai**.
 2. Include the page URL, browser/assistive technology, and steps to reproduce.
 3. We aim to respond within **5 business days**.
 
 For urgent access issues affecting an active deal workflow, contact your
-DealSignal account manager or support channel.
+Build Signals account manager or support channel.
 
 ---
 
