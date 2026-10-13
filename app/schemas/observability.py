@@ -1,13 +1,19 @@
 """Tenant-scoped operational summary contracts."""
 
 from datetime import datetime
+from enum import IntEnum
 from typing import Literal
 
 from pydantic import BaseModel
 
 ReadinessStatus = Literal["pass", "warning", "fail"]
 DatabaseProvider = Literal["postgres", "sqlite"]
-ObservabilityWindow = Literal[1, 7, 30]
+
+
+class ObservabilityWindow(IntEnum):
+    day = 1
+    week = 7
+    month = 30
 
 
 class WorkflowCounts(BaseModel):
