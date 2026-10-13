@@ -672,7 +672,21 @@ def get_public_eval_run(
     db: Session = Depends(get_db),
 ):
     started_at = start_usage_timer()
-    detail = evaluation_service.run_detail(db, api_key.organization_id, run_id)
+    try:
+        detail = evaluation_service.run_detail(db, api_key.organization_id, run_id)
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        record_api_key_usage(
+            db,
+            api_key=api_key,
+            method="GET",
+            path="/public/eval-runs/{run_id}",
+            status_code=404,
+            started_at=started_at,
+            response_items=0,
+        )
+        raise
     record_api_key_usage(
         db,
         api_key=api_key,
