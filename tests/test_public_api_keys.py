@@ -490,7 +490,9 @@ def test_public_api_returns_tenant_scoped_eval_runs(client, db):
     assert [(event.method, event.path, event.response_items) for event in usage_events] == [
         ("GET", "/public/eval-runs", 1),
         ("GET", "/public/eval-runs/{run_id}", 2),
+        ("GET", "/public/eval-runs/{run_id}", 0),
     ]
+    assert [event.status_code for event in usage_events] == [200, 200, 404]
 
 
 def test_public_api_returns_tenant_scoped_workflow_history(client, db):
