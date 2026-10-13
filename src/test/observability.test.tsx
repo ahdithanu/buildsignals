@@ -73,7 +73,11 @@ describe('Observability', () => {
     expect(screen.getByText(/Unknown usage is not zero/)).toBeInTheDocument();
     expect(screen.getByText('critical')).toHaveClass('text-destructive');
     expect(screen.getByText('Deployment readiness checks need attention')).toBeInTheDocument();
+    expect(screen.getByRole('link', {
+      name: 'critical attention: Deployment readiness checks need attention, 2 items',
+    })).toHaveAttribute('href', '/admin/observability');
     expect(screen.getByText('Stalled ingestion')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'warning attention: Stalled ingestion, 1 item' })).toHaveAttribute('href', '/source-health');
     expect(screen.getByText('Webhook delivery health')).toBeInTheDocument();
     expect(screen.getByText('Due now')).toBeInTheDocument();
     expect(screen.getByText(/1 disabled endpoints/)).toBeInTheDocument();
