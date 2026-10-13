@@ -338,6 +338,9 @@ def test_public_api_key_reads_only_own_organization(client, db):
     assert detail.status_code == 200, detail.text
     assert detail.json()["name"] == "First org warehouse"
 
+    missing_detail = client.get("/public/deals/missing-public-deal", headers={"X-API-Key": secret})
+    assert missing_detail.status_code == 404
+
     signals = client.get("/public/signals", headers={"Authorization": f"Bearer {secret}"})
     assert signals.status_code == 200, signals.text
     assert len(signals.json()) == 1
@@ -354,8 +357,10 @@ def test_public_api_key_reads_only_own_organization(client, db):
     assert [(event.method, event.path, event.response_items) for event in usage_events] == [
         ("GET", "/public/deals", 1),
         ("GET", "/public/deals/{deal_id}", 1),
+        ("GET", "/public/deals/{deal_id}", 0),
         ("GET", "/public/signals", 1),
     ]
+    assert [event.status_code for event in usage_events] == [200, 200, 404, 200]
 
 
 def test_public_api_list_routes_include_pagination_headers(client, db):
