@@ -4975,6 +4975,11 @@
             "type": "integer"
           },
           "overall_status": {
+            "enum": [
+              "pass",
+              "warning",
+              "fail"
+            ],
             "title": "Overall Status",
             "type": "string"
           },
@@ -5021,6 +5026,11 @@
             "type": "string"
           },
           "status": {
+            "enum": [
+              "pass",
+              "warning",
+              "fail"
+            ],
             "title": "Status",
             "type": "string"
           },
