@@ -4,7 +4,7 @@ export interface ObservabilityOverview {
   generated_at: string;
   window_start: string;
   window_end: string;
-  days: number;
+  days: ObservabilityDays;
   evaluations: {
     runs: number; completed: number; failed: number; running: number;
     gates_passed: number; live_runs: number; replay_runs: number;
