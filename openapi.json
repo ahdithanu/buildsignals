@@ -10384,6 +10384,11 @@
             "type": "array"
           },
           "days": {
+            "enum": [
+              1,
+              7,
+              30
+            ],
             "title": "Days",
             "type": "integer"
           },
