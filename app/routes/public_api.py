@@ -81,6 +81,27 @@ def _set_pagination_headers(
     response.headers["X-Next-Skip"] = str(next_skip if next_skip < total_count else "")
 
 
+def _raise_public_not_found(
+    db: Session,
+    *,
+    api_key: OrganizationApiKey,
+    method: str,
+    path: str,
+    started_at: float,
+    detail: str,
+) -> None:
+    record_api_key_usage(
+        db,
+        api_key=api_key,
+        method=method,
+        path=path,
+        status_code=404,
+        started_at=started_at,
+        response_items=0,
+    )
+    raise HTTPException(status_code=404, detail=detail)
+
+
 def _graph_relationship_item(
     relationship: GraphRelationship,
     entity: GraphEntity,
@@ -338,7 +359,14 @@ def get_public_deal(
         Deal.id == deal_id
     ).first()
     if not deal:
-        raise HTTPException(status_code=404, detail=f"Deal {deal_id} not found")
+        _raise_public_not_found(
+            db,
+            api_key=api_key,
+            method="GET",
+            path="/public/deals/{deal_id}",
+            started_at=started_at,
+            detail=f"Deal {deal_id} not found",
+        )
     detail = _deal_to_detail(deal)
     record_api_key_usage(
         db,
