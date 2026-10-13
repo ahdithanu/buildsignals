@@ -33,13 +33,14 @@ See `docs/backups.md` for backup and restore procedures.
 ## On-call & paging
 
 Operational contacts live in [runbooks/incident-response.md](runbooks/incident-response.md#on-call).
-Fill in the `[CONFIGURE]` placeholders before production launch:
+Use these defaults for the hosted Build Signals deployment and override them per
+customer workspace when a private deployment has different contacts:
 
 | Item | Where to configure |
 |------|-------------------|
-| On-call rotation | PagerDuty / Opsgenie schedule |
-| Status page URL | Instatus / Statuspage / Better Uptime |
-| Incident Slack | `#dealsignal-incidents` |
+| On-call rotation | PagerDuty / Opsgenie schedule `Build Signals Primary` |
+| Status page URL | `https://status.buildsignals.ai` or the customer-private status page |
+| Incident Slack | `#build-signals-incidents` |
 | Monitoring dashboards | See [monitoring.md](monitoring.md) |
 
 ## Pre-commit (local)

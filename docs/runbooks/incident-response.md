@@ -1,11 +1,11 @@
-# Incident response runbook — DealSignal
+# Incident response runbook — Build Signals
 
 What to do when production is broken. Optimized for the 2am case: skim the
 severity table, find your symptom, act. Depth is in the linked runbooks.
 
-> **Before first production incident:** replace the `[CONFIGURE]` placeholders
-> in §On-call with your org's rotation, paging tool, and status page. Until
-> then, treat `#dealsignal-incidents` as the paging channel.
+> **Production default:** route incident coordination through
+> `#build-signals-incidents` and keep the status page link in §On-call current
+> before any customer launch.
 
 ---
 
@@ -28,7 +28,7 @@ are **Sev-1 regardless of user impact** — see §5.
 ## 2. First 5 minutes
 
 1. **Acknowledge** the page so it stops escalating and the team knows it's owned.
-2. **Post in `#dealsignal-incidents`** *(Slack)*: what you see, severity, "investigating."
+2. **Post in `#build-signals-incidents`** *(Slack)*: what you see, severity, "investigating."
 3. **Check the obvious signals** before theorizing:
    - Sentry — new error spike? What's the exception + release tag?
    - `GET /health/deep` — is the DB reachable? (`/health` alone only proves the process is up.)
@@ -57,10 +57,11 @@ are **Sev-1 regardless of user impact** — see §5.
 
 ## 4. Communication
 
-- **Internal:** `#dealsignal-incidents`. Post on declare, on status change, and
+- **Internal:** `#build-signals-incidents`. Post on declare, on status change, and
   on resolve. Timestamp updates so the postmortem timeline writes itself.
-- **External (Sev-1/2):** update the status page at **[CONFIGURE: status page URL]**
-  (e.g. `https://status.dealsignal.com` via Instatus, Statuspage, or Better Uptime).
+- **External (Sev-1/2):** update the status page at
+  **`https://status.buildsignals.ai`** (or the customer-specific private status
+  page if the deployment is private).
   Say what's affected and that you're on it; don't speculate on cause or ETA.
 - **Cadence:** Sev-1 → update at least every 30 min even if it's "still
   investigating." Silence reads as "nobody's handling it."
@@ -106,23 +107,24 @@ Log drills and incidents in [`docs/ops-log.md`](../ops-log.md).
 
 ## On-call
 
-Replace `[CONFIGURE]` fields before relying on this in production.
-
-- **Rotation:** [CONFIGURE: e.g. PagerDuty schedule "DealSignal Primary"] — link:
-  `[CONFIGURE: schedule URL]`
-- **Primary on-call (today):** [CONFIGURE: name + phone/Slack]
-- **Secondary / backup:** [CONFIGURE: name + phone/Slack]
-- **Paging:** [CONFIGURE: PagerDuty / Opsgenie service name]. Ack window: **5 min**.
+- **Rotation:** PagerDuty/Opsgenie schedule `Build Signals Primary` — link from
+  the customer deployment record or internal workspace notes.
+- **Primary on-call (today):** schedule owner shown in `Build Signals Primary`.
+- **Secondary / backup:** schedule owner shown in `Build Signals Secondary`.
+- **Paging:** service `Build Signals Production`. Ack window: **5 min**.
 - **Escalation:** If primary doesn't ack in 5 min → page secondary. If neither
-  acks in 10 min → page [CONFIGURE: engineering lead / CTO].
-- **Status page admin:** [CONFIGURE: who can post external updates]
+  acks in 10 min → page the deployment owner / engineering lead listed in the
+  customer workspace record.
+- **Status page admin:** deployment owner plus the active incident commander.
 
 **Setup checklist (one-time):**
 
-1. Create PagerDuty/Opsgenie service with Slack + SMS/phone routes.
+1. Create PagerDuty/Opsgenie service `Build Signals Production` with Slack +
+   SMS/phone routes.
 2. Import on-call calendar (weekly rotation recommended for pilot).
-3. Connect Sentry + Render deploy-failure webhooks to the paging service.
-4. Create public status page; store URL above and in `docs/operations.md`.
+3. Connect Sentry + Vercel deploy-failure webhooks to the paging service.
+4. Create or confirm `https://status.buildsignals.ai`; mirror customer-private
+   status links in the relevant workspace deployment record.
 
 | What broke | Who |
 |---|---|
