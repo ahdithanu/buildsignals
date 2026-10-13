@@ -10384,13 +10384,7 @@
             "type": "array"
           },
           "days": {
-            "enum": [
-              1,
-              7,
-              30
-            ],
-            "title": "Days",
-            "type": "integer"
+            "$ref": "#/components/schemas/ObservabilityWindow"
           },
           "deployment": {
             "$ref": "#/components/schemas/DeploymentReadiness"
@@ -10433,6 +10427,15 @@
         ],
         "title": "ObservabilityOverview",
         "type": "object"
+      },
+      "ObservabilityWindow": {
+        "enum": [
+          1,
+          7,
+          30
+        ],
+        "title": "ObservabilityWindow",
+        "type": "integer"
       },
       "ObservationResponse": {
         "properties": {
@@ -26464,9 +26467,8 @@
             "name": "days",
             "required": false,
             "schema": {
-              "default": 7,
-              "title": "Days",
-              "type": "integer"
+              "$ref": "#/components/schemas/ObservabilityWindow",
+              "default": 7
             }
           },
           {
