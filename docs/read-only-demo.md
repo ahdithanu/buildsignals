@@ -231,7 +231,8 @@ accessible in-app browser. Worker configuration, scheduler executions, current
 successful run counts, production database inventory and source freshness remain
 unverified. This demo does not switch on production ingestion. An authenticated
 Render session is required to finish that audit; do not send passwords in chat.
-# Recent Public Snapshots
+
+## Recent Public Snapshots
 
 The historical seed remains restricted to Q1 2024 by default. For a separately
 reviewed Columbus site-application snapshot captured with the existing bounded
@@ -249,4 +250,3 @@ customer records, activate scheduled ingestion, or establish parcel geometry.
 The frontend distinguishes filing, issuance, and capture dates; recent snapshots
 are not a promise of continuous freshness. Seed only against an explicitly
 authorized database. Existing snapshots are replayed idempotently.
-

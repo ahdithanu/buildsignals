@@ -1,0 +1,15 @@
+# Deploy the frontend build inputs only, never local DBs, keys, or worktrees.
+*
+!src/
+!src/**
+!public/
+!public/**
+!index.html
+!package.json
+!package-lock.json
+!vite.config.ts
+!tailwind.config.ts
+!postcss.config.js
+!tsconfig*.json
+!components.json
+!vercel.json
