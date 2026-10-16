@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -36,8 +37,11 @@ def exists_or_create(service, describe, create, **kwargs):
 
 
 def configure(organization_id: str, image: str):
-    if not organization_id or organization_id == DEMO_ORG_ID or "@sha256:" not in image:
+    reviewed_image = rf"{ACCOUNT}\.dkr\.ecr\.{REGION}\.amazonaws\.com/dealsignal-api@sha256:[a-f0-9]{{64}}"
+    if not organization_id or organization_id == DEMO_ORG_ID or not re.fullmatch(reviewed_image, image):
         raise ValueError("Explicit production tenant and immutable image digest required")
+    if aws("sts", "get-caller-identity")["Account"] != ACCOUNT:
+        raise ValueError("Refusing to provision in an unexpected AWS account")
     base = aws("ecs", "describe-task-definition", "--task-definition", "dealsignal-migrate:2")["taskDefinition"]
     code = Path(__file__).with_name("recurring_columbus.py").read_text()
     exists_or_create("scheduler", "get-schedule-group", "create-schedule-group",

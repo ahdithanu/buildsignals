@@ -10,6 +10,8 @@ def test_registration_pins_image_and_scheduler_permissions(monkeypatch):
 
     def aws(*args):
         calls.append(args)
+        if args[:2] == ("sts", "get-caller-identity"):
+            return {"Account": provision.ACCOUNT}
         if args[:2] == ("ecs", "describe-task-definition"):
             return {"taskDefinition": {
                 "executionRoleArn": "arn:aws:iam::159667575905:role/execution",
@@ -25,7 +27,7 @@ def test_registration_pins_image_and_scheduler_permissions(monkeypatch):
         return {}
 
     monkeypatch.setattr(provision, "aws", aws)
-    image = "repository@sha256:" + "a" * 64
+    image = f"{provision.ACCOUNT}.dkr.ecr.{provision.REGION}.amazonaws.com/dealsignal-api@sha256:" + "a" * 64
     provision.configure("customer", image)
     tasks = [json.loads(args[-1]) for args in calls if args[:2] == ("ecs", "register-task-definition")]
     assert len(tasks) == 2
@@ -44,8 +46,18 @@ def test_registration_pins_image_and_scheduler_permissions(monkeypatch):
     assert all(row["Target"]["EcsParameters"]["TaskCount"] == 1 for row in schedules)
 
 
-@pytest.mark.parametrize("org,image", [("", "repo@sha256:abc"), ("customer", "repo:latest"), (provision.DEMO_ORG_ID, "repo@sha256:abc")])
+@pytest.mark.parametrize("org,image", [("", "repo@sha256:abc"), ("customer", "repo:latest"), ("customer", "untrusted@sha256:" + "a" * 64), (provision.DEMO_ORG_ID, "repo@sha256:abc")])
 def test_provisioning_rejects_unsafe_inputs_before_cloud_calls(org, image, monkeypatch):
     monkeypatch.setattr(provision, "aws", lambda *args: pytest.fail("No cloud requests permitted"))
     with pytest.raises(ValueError):
         provision.configure(org, image)
+
+
+def test_wrong_aws_account_stops_before_resources_are_changed(monkeypatch):
+    def aws(*args):
+        assert args == ("sts", "get-caller-identity")
+        return {"Account": "different"}
+    monkeypatch.setattr(provision, "aws", aws)
+    image = f"{provision.ACCOUNT}.dkr.ecr.{provision.REGION}.amazonaws.com/dealsignal-api@sha256:" + "a" * 64
+    with pytest.raises(ValueError, match="unexpected AWS account"):
+        provision.configure("customer", image)
