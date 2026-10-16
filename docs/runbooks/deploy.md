@@ -1,6 +1,6 @@
-# Deploy runbook — DealSignal
+# Deploy runbook — Build Signals
 
-Playbook for shipping DealSignal to production. Assumes the Render
+Playbook for shipping Build Signals to production. Assumes the Render
 setup declared in `render.yaml`:
 
 - `dealsignal-api` — Python web service, Uvicorn/FastAPI
@@ -99,20 +99,20 @@ check state, then `alembic upgrade head` or a targeted `alembic upgrade
 After the API service goes green, run the automated script:
 
 ```bash
-BASE=https://api.dealsignal.com ./scripts/smoke-test.sh
+BASE=https://buildsignals.ai ./scripts/smoke-test.sh
 # With auth (requires a seeded smoke user in the vault):
-BASE=https://api.dealsignal.com \
+BASE=https://buildsignals.ai \
   REQUIRE_AUTH_SMOKE=true \
-  SMOKE_EMAIL=smoke@dealsignal.com \
+  SMOKE_EMAIL=smoke@buildsignals.ai \
   SMOKE_PASSWORD='<from vault>' \
-  FRONTEND=https://app.dealsignal.com \
+  FRONTEND=https://buildsignals.ai \
   ./scripts/smoke-test.sh
 ```
 
 Manual equivalent:
 
 ```bash
-BASE=https://api.dealsignal.com     # adjust per environment
+BASE=https://buildsignals.ai        # adjust per environment
 
 # Basic aliveness + version
 curl -sf $BASE/health | jq .        # shallow liveness — no DB check
@@ -123,7 +123,7 @@ curl -sf $BASE/openapi.json | jq '.info.version'
 # Login round-trip — proves DB, JWT, and cookie wiring are healthy
 curl -sf -X POST $BASE/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"smoke@dealsignal.com","password":"<from vault>"}' \
+  -d '{"email":"smoke@buildsignals.ai","password":"<from vault>"}' \
   -c /tmp/c.txt \
   | jq '.access_token | length'
 grep ds_refresh /tmp/c.txt   # refresh cookie present (path /v1/auth)
@@ -198,4 +198,4 @@ on-call/paging table, comms cadence, and the postmortem process. This runbook
 deliberately doesn't duplicate that; keeping one source of truth means the
 pager list can't drift between two files.
 
-Escalation channel: `#dealsignal-incidents` (Slack).
+Escalation channel: `#build-signals-incidents` (Slack).
