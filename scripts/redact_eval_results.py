@@ -9,7 +9,6 @@ if str(ROOT) not in sys.path:
 
 from eval.bench import redact_sensitive_text  # noqa: E402
 
-
 DEFAULT_PATHS = [ROOT / "eval" / "results.csv", ROOT / "eval" / "results.md"]
 
 

@@ -11,9 +11,9 @@ from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.schemas.deal import DealResponse
 from app.services.enrichment_service import enrich_deal
+from app.services.llm_client import is_openrouter_service_error
 from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter, rate_limit_headers
 from app.services.scoring_service import score_deal, score_deal_deterministic
-from app.services.llm_client import is_openrouter_service_error
 from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query, get_org_id
 

@@ -6,8 +6,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
 
-from app.models.deal import Deal, RiskLevel
 from app import config
+from app.models.deal import Deal, RiskLevel
 from app.services.llm_client import get_default_llm_client, is_openrouter_configured
 
 log = logging.getLogger(__name__)

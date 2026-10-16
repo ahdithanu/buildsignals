@@ -4,8 +4,6 @@ import json
 
 import pytest
 
-from eval.bench import _prompt
-
 from app.models.deal import RiskLevel
 from app.services import scoring_service
 from app.services.scoring_service import (
@@ -15,6 +13,7 @@ from app.services.scoring_service import (
     score_rubric_text,
     validate_score_payload,
 )
+from eval.bench import _prompt
 
 
 def test_score_rubric_text_lists_every_factor_and_threshold():
@@ -184,6 +183,7 @@ def test_pure_score_api_remains_available_to_current_evaluation_workflows(monkey
 
 def test_memo_context_keeps_property_fields_without_signals():
     from types import SimpleNamespace
+
     from app.services.memo_service import _deal_context
 
     deal = SimpleNamespace(

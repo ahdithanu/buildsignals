@@ -11,8 +11,8 @@ from app.db import get_db
 from app.models.deal import Deal
 from app.models.memo import Memo
 from app.models.organization_membership import MemberRole
-from app.services.memo_service import generate_memo
 from app.services.llm_client import is_openrouter_service_error, openrouter_retry_after_seconds
+from app.services.memo_service import generate_memo
 from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter, rate_limit_headers
 from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query, get_org_id
