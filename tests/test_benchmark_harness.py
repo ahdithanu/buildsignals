@@ -67,7 +67,7 @@ def test_api_error_text_is_redacted_before_results_are_written():
     class SensitiveProviderError(Exception):
         def __str__(self):
             return (
-                "user_id='user_3KeduS5tqTwM8Pfit3EmAIMfQdf' "
+                "user_id='user_SyntheticRedactionFixture123' "
                 "visit https://openrouter.ai/workspaces/default/keys/abc123"
             )
 
@@ -77,7 +77,7 @@ def test_api_error_text_is_redacted_before_results_are_written():
 
     result = bench._run_one(FailingClient(), "openai/gpt-4o-mini", example, 1)  # noqa: SLF001
 
-    assert "user_3KeduS5tqTwM8Pfit3EmAIMfQdf" not in result.error
+    assert "user_SyntheticRedactionFixture123" not in result.error
     assert "https://openrouter.ai/workspaces/default/keys/abc123" not in result.error
     assert "user_id=" in result.error
     assert "user_[REDACTED]" in result.error

@@ -127,7 +127,8 @@ def test_validate_score_payload_rejects_risk_level_mismatch():
         validate_score_payload(payload)
 
 
-def test_llm_score_falls_back_to_deterministic_when_llama_style_total_is_wrong(monkeypatch):
+@pytest.mark.parametrize("invalid_output", [None, "not JSON", '{"score": 900}'])
+def test_llm_score_falls_back_to_deterministic_when_llama_style_total_is_wrong(monkeypatch, invalid_output):
     class DummyDeal:
         id = "deal-1"
         name = "Parkview"
@@ -148,7 +149,7 @@ def test_llm_score_falls_back_to_deterministic_when_llama_style_total_is_wrong(m
 
     class FakeClient:
         def chat_completion(self, **_kwargs):
-            return type("Result", (), {"content": json.dumps(payload)})()
+            return type("Result", (), {"content": invalid_output or json.dumps(payload)})()
 
     monkeypatch.setattr(scoring_service.config, "SCORING_MODE", "llm")
     monkeypatch.setattr(scoring_service, "is_openrouter_configured", lambda: True)
@@ -160,4 +161,38 @@ def test_llm_score_falls_back_to_deterministic_when_llama_style_total_is_wrong(m
     assert risk is RiskLevel.medium
     assert breakdown["price_per_unit_or_sqft"]["earned"] == 20
     assert method == "deterministic_fallback"
-    assert reason == "score must equal sum of earned factor points"
+    assert reason
+    if invalid_output is None:
+        assert reason == "score must equal sum of earned factor points"
+
+
+def test_pure_score_api_remains_available_to_current_evaluation_workflows(monkeypatch):
+    from types import SimpleNamespace
+
+    deal = SimpleNamespace(
+        id="eval-deal", asking_price=1_000_000, units=10, sq_ft=None,
+        contacts=[], assumptions=None, outputs=None, year_built=2000,
+    )
+    monkeypatch.setattr(scoring_service.config, "SCORING_MODE", "llm")
+    monkeypatch.setattr(scoring_service, "get_default_llm_client", lambda: pytest.fail("must remain offline"))
+    assert scoring_service.evaluate_deal_score(deal) == {
+        "deal_id": "eval-deal", "score": 40, "risk_level": "medium",
+        "breakdown": deterministic_score_payload(vars(deal))["breakdown"],
+    }
+    assert not hasattr(deal, "score")
+
+
+def test_memo_context_keeps_property_fields_without_signals():
+    from types import SimpleNamespace
+    from app.services.memo_service import _deal_context
+
+    deal = SimpleNamespace(
+        name="Evidence property", address="123 Main", city="Columbus", state="OH",
+        zip_code="43215", property_type="retail", units=None, sq_ft=10000,
+        year_built=2000, asking_price=1_000_000, score=None, risk_level=None,
+        outputs=None, signals=[],
+    )
+    context = _deal_context(deal)
+    assert "name: Evidence property" in context
+    assert "asking_price: 1000000" in context
+    assert "signals: none recorded" in context

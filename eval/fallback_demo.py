@@ -18,7 +18,7 @@ def main() -> int:
 
     client = OpenRouterClient()
     response = client.chat_completion(
-        primary_model="anthropic/claude-3.5-haiku",
+        primary_model="buildsignals/simulated-invalid-model",
         fallback_models=["openai/gpt-4o-mini", "anthropic/claude-3.5-haiku"],
         messages=[
             {"role": "system", "content": "Return one short sentence."},
