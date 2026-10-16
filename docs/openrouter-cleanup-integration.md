@@ -41,7 +41,7 @@ This is a selective port of its final changes, not a merge of the old product tr
   25 OpenRouter tests; the subsequently expanded 30-test subset passed separately.
 - Final focused OpenRouter subset: **30 passed**, 0.08 seconds.
 - Evaluation API and AI-rate-limit regression run plus OpenRouter subset:
-  **84 passed**, 21.07 seconds (before the final added Retry-After/parse cases).
+  **84 passed**, 21.07 seconds (before the final synthetic redaction-fixture cleanup).
 - `npm test -- --reporter=dot`: **365 passed, 68 files** after excluding nested worktrees.
 - `npm run typecheck`: passed after installing the existing lockfile with `npm ci`.
 - `npm run build`: passed, with the existing large-chunk warning.
