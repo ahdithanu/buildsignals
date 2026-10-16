@@ -197,6 +197,47 @@ After deploy, enable daily ingestion — on AWS see
 [docs/runbooks/deploy.md](docs/runbooks/deploy.md) for routine ship, smoke test,
 and rollback.
 
+## Model routing
+
+Configured model calls use the OpenAI SDK at `https://openrouter.ai/api/v1`.
+Set `OPENROUTER_API_KEY`, `OPENROUTER_PRIMARY_MODEL`, and the ordered
+`OPENROUTER_FALLBACK_MODELS` list as documented in `.env.example`.
+`OPENROUTER_TIMEOUT_SECONDS` defaults to 30 and `OPENROUTER_MAX_RETRIES` to 2.
+Scoring defaults to `SCORING_MODE=deterministic`; `llm` enables model scoring.
+Without a key, enrichment and memos retain the existing local behavior.
+The pure `evaluate_deal_score` function remains deterministic for evaluation workflows.
+Score responses identify deterministic, llm, or deterministic_fallback execution.
+
+Run `make bench` (or `python eval/bench.py`) to benchmark the editable models
+in `eval/models.json` against `eval/golden.jsonl`. This spends API credits.
+The deterministic score arm makes no API call. Checks use JSON fields and
+literal substrings, with no LLM judge. Memo numeric grounding is diagnostic,
+not a correctness guarantee. The 15-example sample is small and directional.
+
+Generated `eval/results.csv`, `eval/results_full.jsonl`, and `eval/results.md`
+are ignored until a fresh run is reviewed. No post-fix benchmark numbers are
+published here. `make fallback-demo` demonstrates a simulated invalid-model
+failure and also spends credits. Fallback improves availability, not correctness.
+
+| Task | Primary | Fallback | Accuracy | API error rate | p50 / p95 | Cost / 1k |
+|---|---|---|---|---|---|---|
+| score | Pending rerun | Pending rerun | Pending | Pending | Pending | Pending |
+| enrich | Pending rerun | Pending rerun | Pending | Pending | Pending | Pending |
+| memo | Pending rerun | Pending rerun | Pending | Pending | Pending | Pending |
+
+Choose each task's primary from measured accuracy, latency, and cost after the
+rerun; no model recommendation is supported yet.
+
+Offline verification (no provider calls):
+
+```bash
+OPENROUTER_API_KEY= python -m pytest -q
+OPENROUTER_API_KEY= python -m pytest -m "not requires_db" -q
+OPENROUTER_API_KEY= python -m pytest tests/test_llm_client.py tests/test_benchmark_harness.py tests/test_scoring_rubric.py tests/test_openrouter_route_failures.py -q
+npm run typecheck
+npm test
+```
+
 ## License
 
 See [LICENSE](LICENSE).
