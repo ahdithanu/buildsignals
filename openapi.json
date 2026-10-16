@@ -15569,6 +15569,17 @@
             "title": "Deal Id",
             "type": "string"
           },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
           "risk_level": {
             "title": "Risk Level",
             "type": "string"
@@ -15576,13 +15587,18 @@
           "score": {
             "title": "Score",
             "type": "number"
+          },
+          "scoring_method": {
+            "title": "Scoring Method",
+            "type": "string"
           }
         },
         "required": [
           "deal_id",
           "score",
           "risk_level",
-          "breakdown"
+          "breakdown",
+          "scoring_method"
         ],
         "title": "ScoreResponse",
         "type": "object"
