@@ -12,6 +12,7 @@ from app.models.deal import Deal
 from app.models.memo import Memo
 from app.models.organization_membership import MemberRole
 from app.services.memo_service import generate_memo
+from app.services.llm_client import is_openrouter_service_error, openrouter_retry_after_seconds
 from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter, rate_limit_headers
 from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query, get_org_id
@@ -85,7 +86,19 @@ def generate_deal_memo(
         rate_limit_headers(prefix="X-AI-RateLimit", limit=AI_LIMIT, decision=decision)
     )
     _ensure_deal_exists(db, deal_id)
-    memo = generate_memo(db, deal_id)
+    try:
+        memo = generate_memo(db, deal_id)
+    except Exception as exc:
+        if not is_openrouter_service_error(exc):
+            raise
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "memo_generation_unavailable",
+                "message": "Memo generation is temporarily unavailable. Try again shortly.",
+            },
+            headers={"Retry-After": str(openrouter_retry_after_seconds(exc) or 30)},
+        ) from None
     if memo is None:
         raise HTTPException(status_code=404, detail="Deal not found")
     return memo

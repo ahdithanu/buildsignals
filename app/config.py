@@ -262,3 +262,18 @@ SENTRY_TRACES_SAMPLE_RATE = float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0
 SENTRY_PROFILES_SAMPLE_RATE = float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.0"))
 # Release tag for grouping deploys in Sentry — Render/Heroku set this automatically.
 SENTRY_RELEASE = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or None
+
+# Optional OpenRouter routing; local scoring remains deterministic by default.
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
+OPENROUTER_PRIMARY_MODEL = os.environ.get("OPENROUTER_PRIMARY_MODEL", "openai/gpt-4o-mini").strip()
+OPENROUTER_FALLBACK_MODELS = [
+    item.strip() for item in os.environ.get(
+        "OPENROUTER_FALLBACK_MODELS",
+        "anthropic/claude-haiku-5.5,google/gemini-2.5-flash-lite",
+    ).split(",") if item.strip()
+]
+OPENROUTER_TIMEOUT_SECONDS = float(os.environ.get("OPENROUTER_TIMEOUT_SECONDS", "30"))
+OPENROUTER_MAX_RETRIES = _require_int("OPENROUTER_MAX_RETRIES", "2")
+SCORING_MODE = os.environ.get("SCORING_MODE", "deterministic").strip().lower()
+if SCORING_MODE not in {"deterministic", "llm"}:
+    raise RuntimeError("SCORING_MODE must be 'deterministic' or 'llm'")

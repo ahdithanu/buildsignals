@@ -1,5 +1,7 @@
 """Routes for deal enrichment and scoring."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -10,11 +12,13 @@ from app.models.organization_membership import MemberRole
 from app.schemas.deal import DealResponse
 from app.services.enrichment_service import enrich_deal
 from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter, rate_limit_headers
-from app.services.scoring_service import score_deal
+from app.services.scoring_service import score_deal, score_deal_deterministic
+from app.services.llm_client import is_openrouter_service_error
 from app.utils.auth_deps import require_role
 from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(tags=["deal-intelligence"])
+log = logging.getLogger(__name__)
 
 
 class ScoreResponse(BaseModel):
@@ -22,6 +26,8 @@ class ScoreResponse(BaseModel):
     score: float
     risk_level: str
     breakdown: dict
+    scoring_method: str
+    fallback_reason: str | None = None
 
 
 def _get_deal(deal_id: str, db: Session) -> Deal:
@@ -81,5 +87,14 @@ def score(deal_id: str, response: Response, db: Session = Depends(get_db)):
         rate_limit_headers(prefix="X-AI-RateLimit", limit=AI_LIMIT, decision=decision)
     )
     deal = _get_deal(deal_id, db)
-    result = score_deal(db, deal)
+    try:
+        result = score_deal(db, deal)
+        result.setdefault("scoring_method", "deterministic")
+    except Exception as exc:
+        if not is_openrouter_service_error(exc):
+            raise
+        reason = f"OpenRouter returned HTTP {exc.status_code}"
+        log.warning("score_openrouter_unavailable_falling_back", extra={"reason": reason})
+        result = score_deal_deterministic(db, deal)
+        result.update(scoring_method="deterministic_fallback", fallback_reason=reason)
     return result

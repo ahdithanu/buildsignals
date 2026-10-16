@@ -1,7 +1,7 @@
-"""Deterministic mock enrichment service for deals.
+"""Deal enrichment service.
 
-Uses a hash of the deal name as a seed so that enrichment is repeatable
-and does not depend on any external API.
+Uses OpenRouter when configured and preserves the deterministic local
+enrichment path as a no-key fallback for tests and development.
 """
 
 from __future__ import annotations
@@ -9,10 +9,12 @@ from __future__ import annotations
 import hashlib
 from typing import Union
 
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.models.deal import Deal
 from app.models.deal_assumptions import DealAssumptions
+from app.services.llm_client import get_default_llm_client, is_openrouter_configured
 from app.services.normalization_service import normalize_property_type
 
 # ── Property-type ranges ────────────────────────────────────────────────────
@@ -65,9 +67,22 @@ def _pick(seed: int, low: Union[int, float], high: Union[int, float], as_int: bo
     return int(value) if as_int else round(value, 2)
 
 
-def enrich_deal(db: Session, deal: Deal) -> Deal:
-    """Fill missing fields on *deal* with plausible mock data and create
-    default assumptions if none exist.  Returns the updated deal."""
+class DealEnrichmentLLMOutput(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    property_type: str | None = None
+    units: int | None = None
+    sq_ft: int | None = None
+    year_built: int | None = None
+    asking_price: float | None = None
+    address: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip_code: str | None = None
+
+
+def _apply_default_enrichment(deal: Deal) -> None:
+    """Fill missing fields with deterministic local values."""
 
     seed = _seed_from_name(deal.name)
     ptype = (deal.property_type or "").lower()
@@ -107,7 +122,71 @@ def enrich_deal(db: Session, deal: Deal) -> Deal:
 
     deal.property_type = normalize_property_type(deal.property_type)
 
-    # Ensure default assumptions exist -------------------------------------------
+
+def _deal_context(deal: Deal) -> str:
+    return "\n".join(
+        [
+            f"name: {deal.name}",
+            f"address: {deal.address or 'unknown'}",
+            f"city: {deal.city or 'unknown'}",
+            f"state: {deal.state or 'unknown'}",
+            f"zip_code: {deal.zip_code or 'unknown'}",
+            f"property_type: {deal.property_type or 'unknown'}",
+            f"units: {deal.units if deal.units is not None else 'unknown'}",
+            f"sq_ft: {deal.sq_ft if deal.sq_ft is not None else 'unknown'}",
+            f"year_built: {deal.year_built if deal.year_built is not None else 'unknown'}",
+            f"asking_price: {deal.asking_price if deal.asking_price is not None else 'unknown'}",
+            f"source: {deal.source or 'unknown'}",
+            f"notes: {deal.notes or 'none'}",
+        ]
+    )
+
+
+def _apply_llm_enrichment(deal: Deal) -> None:
+    if not is_openrouter_configured():
+        _apply_default_enrichment(deal)
+        return
+
+    result = get_default_llm_client().chat_completion(
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You enrich commercial real-estate deal records. Return only JSON with "
+                    "these optional fields: property_type, units, sq_ft, year_built, "
+                    "asking_price, address, city, state, zip_code. Use null when evidence "
+                    "is missing. Do not invent a precise value when the context does not support it."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"Enrich missing fields for this deal:\n{_deal_context(deal)}",
+            },
+        ],
+        temperature=0.1,
+        max_tokens=700,
+        response_format={"type": "json_object"},
+    )
+    enriched = DealEnrichmentLLMOutput.model_validate_json(result.content)
+
+    for field in (
+        "property_type",
+        "units",
+        "sq_ft",
+        "year_built",
+        "asking_price",
+        "address",
+        "city",
+        "state",
+        "zip_code",
+    ):
+        if getattr(deal, field) is None and getattr(enriched, field) is not None:
+            setattr(deal, field, getattr(enriched, field))
+
+    deal.property_type = normalize_property_type(deal.property_type)
+
+
+def _ensure_default_assumptions(db: Session, deal: Deal) -> None:
     if deal.assumptions is None:
         price = deal.asking_price or 5_000_000
         assumptions = DealAssumptions(
@@ -128,6 +207,17 @@ def enrich_deal(db: Session, deal: Deal) -> Deal:
         )
         assumptions.organization_id = deal.organization_id
         db.add(assumptions)
+
+
+def enrich_deal(db: Session, deal: Deal) -> Deal:
+    """Fill missing fields on *deal* and create default assumptions if none exist."""
+
+    _apply_llm_enrichment(deal)
+    # Keep the deterministic baseline as a completeness backstop. The LLM is
+    # asked not to invent unsupported precision; old API consumers still expect
+    # this endpoint to return a usable enriched record.
+    _apply_default_enrichment(deal)
+    _ensure_default_assumptions(db, deal)
 
     db.add(deal)
     db.commit()
