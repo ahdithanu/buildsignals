@@ -5,6 +5,51 @@ inspect Git and reverify production before acting. No credentials belong here.
 
 ## Current Task
 
+Recurring production and independent demo ingestion are now ENABLED and verified
+on 2026-10-16, superseding the manual-only status below. User explicitly approved
+recurring collection, separate demo refresh, and verification of a scheduled run.
+
+- AWS EventBridge Scheduler group `buildsignals-ingestion`: production daily
+  starts 21:49:18 UTC; demo daily starts 21:51:19 UTC, both `rate(1 day)` ENABLED.
+  These are current 14:49/14:51 Pacific; rate schedules repeat every 24 hours.
+- Task definitions `buildsignals-columbus-production:2` and
+  `buildsignals-columbus-demo:2` pin the existing API image digest and embed the
+  tested worker command. Worker SHA256:
+  `15a1a999ea751e917f6a3aab88fa691b34197641ab4eca5d840b32a4b5300212`.
+  Existing managed DB/SECRET_KEY references are reused; no plaintext keys copied.
+  Scheduler IAM trust is account/group scoped, RunTask restricted to these two
+  task revisions/cluster, PassRole only to the existing ECS execution role.
+- Actual scheduler-started production task `a14d06edc643479c90629e9505b23935`
+  exited 0: run `8ae765ce-098c-4613-8e06-f4e3592c0b49`, completed, 48 seen,
+  27 inserted, 21 updated, zero failed, no checkpoint, provider before/after 48.
+  Independent read-only DB audit confirmed 48 stored production records and
+  the completed scheduled receipt. This was not a manually launched worker.
+- Actual scheduler-started demo task `b556b41b4db046449931175434aba590`
+  exited 0: run `ede7f860-7327-4654-bfb8-6dc90348e13c`, completed, 48 seen,
+  27 inserted, zero failed, provider before/after 48. Existing source identity
+  adopted in each tenant, avoiding duplication of the previous 21-row snapshot.
+- Worker `scripts/recurring_columbus.py` uses a rolling 31-day filing window,
+  existing normalization/evidence/graph code, max four 250-record pages, bounded
+  retries/timeouts, and PostgreSQL advisory locks. It never retires records merely
+  aging out of the window. Demo fetches independently from the reviewed public
+  feed, never from customer tables; only maps2.columbus.gov is allowed outbound.
+- `scripts/configure_recurring_columbus.py` reproduces the versioned tasks and
+  schedules. It requires explicit production confirmation, tenant and reviewed
+  ECR image digest, and checks the AWS account before changing resources.
+- Focused worker/provisioning/demo/historical tests: 82 passed; Ruff and
+  diff checks passed. No API image deployment, migrations or paid model calls.
+- Final independent read-only audit task `42d1bae867a64c9c98882c1d8d488db9`
+  confirmed 48 source records in each tenant, completed scheduled runs, and
+  demo source inactive. Public API smoke confirmed 2,097 total demo records,
+  5,008 graph entities, 8,321 relationships and 1,082 parcel references. All
+  read routes passed; restricted reads and POST/PUT/PATCH/DELETE still return
+  403. Qualified parcel records and mapped coordinates remain zero.
+- Runbook: `docs/runbooks/recurring-columbus-ingestion.md`. Logs:
+  `/ecs/buildsignals-ingestion` (30-day retention); ingestion run receipts in DB.
+  Automatic runtime-failure paging is not configured. Updates to filings older
+  than 31 days require separate reconciliation. Only this reviewed Columbus
+  site-application feed is enabled; this is not national or parcel coverage.
+
 Recent-filings activation completed after user approved the existing signed-in
 workspace plus a separate sanitized public-demo subset. Branch:
 `codex/recent-columbus-filings` (local commits; not pushed/merged).

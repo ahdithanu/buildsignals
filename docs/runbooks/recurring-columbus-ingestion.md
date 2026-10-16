@@ -74,3 +74,24 @@ Disable either schedule without changing data:
 
 Do not delete records or alter other tenants to recover a failed refresh. Review
 the specific source run, request budget and official source availability first.
+
+## Scheduled Verification Receipt: October 16, 2026
+
+Both actual Scheduler invocations completed with container exit 0:
+
+| Mode | ECS task | Seen | Inserted | Updated | Failed | Provider Before/After |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Production | a14d06edc643479c90629e9505b23935 | 48 | 27 | 21 | 0 | 48 / 48 |
+| Demo | b556b41b4db046449931175434aba590 | 48 | 27 | 0 | 0 | 48 / 48 |
+
+ECS `startedBy` identifies `chronos-schedule/columbus-production` and
+`chronos-schedule/columbus-demo-daily`; these workers were not launched manually.
+Both runs completed without a continuation checkpoint. Production source inventory
+was independently measured at 48 records, newest filing October 13, 2026.
+Future successful refreshes must be verified from later receipts, not inferred
+from this first run. Application histories and parcel availability are not proven
+by these counts.
+
+API fields and rate-schedule semantics were checked against the official
+[ECS target parameters](https://docs.aws.amazon.com/scheduler/latest/APIReference/API_EcsParameters.html)
+and [schedule types](https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html).
