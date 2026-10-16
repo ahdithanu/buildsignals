@@ -1,0 +1,117 @@
+{
+  "scope": "Bounded live technical canaries; not deployed inventory or unique projects",
+  "sources": [
+    {
+      "source_key": "fort_worth_tx_civic_commercial_permits",
+      "provider_count": 383,
+      "sample_valid": 10,
+      "sample_failed": 0,
+      "event_kind": "application",
+      "status": "verified"
+    },
+    {
+      "source_key": "arlington_tx_commercial_permit_applications",
+      "provider_count": 84,
+      "sample_valid": 40,
+      "sample_failed": 0,
+      "event_kind": "application",
+      "status": "verified"
+    },
+    {
+      "source_key": "arlington_tx_commercial_issued_permits",
+      "provider_count": 281,
+      "sample_valid": 20,
+      "sample_failed": 0,
+      "event_kind": "issuance",
+      "status": "verified"
+    },
+    {
+      "source_key": "florida_dep_erp_applications_commercial_context",
+      "provider_count": 32,
+      "sample_valid": 10,
+      "sample_failed": 0,
+      "event_kind": "environmental_application",
+      "status": "verified"
+    },
+    {
+      "source_key": "miami_dade_fl_wasd_unincorporated_permits_narrow",
+      "provider_count": 295,
+      "sample_valid": 10,
+      "sample_failed": 0,
+      "event_kind": "permit_process",
+      "status": "verified"
+    },
+    {
+      "source_key": "orlando_fl_permit_applications",
+      "provider_count": 295,
+      "sample_valid": 20,
+      "sample_failed": 0,
+      "event_kind": "application_processed",
+      "status": "verified"
+    },
+    {
+      "source_key": "mesa_az_commercial_permit_submittals",
+      "provider_count": 196,
+      "sample_valid": 20,
+      "sample_failed": 0,
+      "event_kind": "submittal_or_resubmittal",
+      "status": "verified"
+    },
+    {
+      "source_key": "tempe_az_building_permits_commercial_context",
+      "provider_count": 94,
+      "sample_valid": 20,
+      "sample_failed": 0,
+      "event_kind": "status_change",
+      "status": "verified"
+    },
+    {
+      "source_key": "savannah_ga_commercial_building_permits",
+      "provider_count": 25,
+      "sample_valid": 40,
+      "sample_failed": 0,
+      "event_kind": "issuance_only",
+      "status": "verified"
+    },
+    {
+      "source_key": "texas_comptroller_sales_tax_locations",
+      "provider_count": 57,
+      "sample_valid": 10,
+      "sample_failed": 0,
+      "event_kind": "sales_tax_registration",
+      "status": "verified"
+    },
+    {
+      "source_key": "dallas_tx_legistar_planning_agendas",
+      "provider_count": null,
+      "sample_valid": 10,
+      "sample_failed": 0,
+      "event_kind": "planning_meeting",
+      "status": "verified"
+    },
+    {
+      "source_key": "san_marcos_tx_planning_application_notices",
+      "provider_count": null,
+      "sample_valid": 10,
+      "sample_failed": 0,
+      "event_kind": "planning_notice",
+      "status": "verified"
+    },
+    {
+      "source_key": "taylor_tx_development_notices",
+      "provider_count": null,
+      "sample_valid": 1,
+      "sample_failed": 0,
+      "event_kind": "development_notice",
+      "status": "verified"
+    },
+    {
+      "source_key": "austin_tx_site_plan_cases",
+      "provider_count": 43,
+      "sample_valid": 15,
+      "sample_failed": 0,
+      "event_kind": "site_plan_application",
+      "status": "verified"
+    }
+  ]
+}

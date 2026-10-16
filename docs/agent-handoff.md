@@ -5,6 +5,60 @@ inspect Git and reverify production before acting. No credentials belong here.
 
 ## Current Task
 
+Regional recurring ingestion expanded on 2026-10-16 under explicit user approval
+for Florida, Texas, Georgia, Arizona and Mississippi, with only reviewed sources
+passing verification enabled. This supersedes the Columbus-only scope below.
+
+- Fourteen regional daily schedules are ENABLED in `buildsignals-ingestion`,
+  alongside the unchanged production/demo Columbus schedules. Actual scheduled
+  runs completed successfully for all fourteen; see
+  `docs/releases/2026-10-16-regional-production-runs.json` for task/run receipts.
+- Stored source-record totals from completed runs: FL 622 across three feeds,
+  TX 1,001 across eight feeds, AZ 290 across two feeds, GA 25 from Savannah.
+  These 1,938 regional records are not unique projects, complete statewide
+  coverage, or exclusively permit submissions. Tax, environmental, status,
+  issuance and planning events remain explicitly distinguished.
+- Independent read-only audit task `9be345ecfb0e4f61938c6d6c070373fc`
+  exited 0 and confirmed all fourteen regional sources active/latest runs
+  completed/zero failures. Including Columbus, the customer workspace has
+  1,904 permit-table records plus 82 planning records, 980 with coordinates.
+  1,420 permit records lack normalized source-update dates; recent collection
+  must not be represented as proof of recent filing or correction dates.
+- First runs exposed real data bounds: Dallas agenda titles >1,000 characters,
+  Orlando compound parcel references >255, and a San Marcos graph label >255.
+  Originals remain in immutable raw evidence/unmapped fields; oversized parcel
+  references become unresolved rather than truncated identities. Stable hash
+  suffixes bound graph labels. Full-cohort local replay and scheduled rechecks
+  passed. Austin's completed keyset cursor is no longer treated as incomplete.
+- Dedicated worker-only image:
+  `159667575905.dkr.ecr.us-east-1.amazonaws.com/dealsignal-api@sha256:de6dcaad61014d4702b62c532a638a1fba060fa949ea561cdb7f00c961ba8854`.
+  It derives from the existing API image with only normalization/service fixes.
+  API image, ECR `latest`, frontend and production schema were not changed.
+  Regional task revisions: original thirteen `:3`, Austin Site Plan Cases `:2`.
+- Regional IAM is separate from Columbus, exact task revisions/cluster and
+  execution-role scoped; outbound hosts are per source. Existing managed secret
+  references are reused. Tenant/source advisory locks and bounded windows/caps
+  apply. No customer records are copied into the public demo.
+- Schedule updates advance expired start dates to the next daily occurrence,
+  preserving cadence; AWS rejected old start dates during verification.
+- Final targeted suite: 287 passed in 16.23s; Ruff and diff checks passed.
+  Offline Python 3.11 worker-image smoke passed. No paid LLM calls. Full suite
+  and customer-authenticated browser workflows were not rerun in this task.
+- Public anonymous demo API smoke passed: read routes 200, restricted reads and
+  all four write methods 403. Demo remains Columbus-only (2,097 records); mapped
+  locations and qualified parcel geometry remain zero in that demo.
+- Mississippi MDEQ, D'Iberville and Biloxi remain legal/technical holds: a
+  supported reusable export/API or written source-use permission is required.
+  Other catalog holds, including Atlanta and Phoenix, were not bypassed.
+  Austin Site Plan Cases alone was separately admitted using verified official
+  PUBLIC_DOMAIN metadata and its existing field/suppression scope.
+- Runtime failure paging remains unconfigured. Measured source-update-date
+  completeness is weaker than collection freshness; do not advertise all
+  collected records as newly filed. Parcel feeds need bounded geographic
+  qualification and were not bulk-imported. No for-sale claim is established.
+- Runbook: `docs/runbooks/regional-ingestion.md`. Code and receipts are local
+  commits on `codex/recent-columbus-filings`; not pushed or merged.
+
 Recurring production and independent demo ingestion are now ENABLED and verified
 on 2026-10-16, superseding the manual-only status below. User explicitly approved
 recurring collection, separate demo refresh, and verification of a scheduled run.
