@@ -32,4 +32,4 @@ resend>=2.47.0
 redis==5.0.7
 openai==1.55.3
 # Pure-Python PDF text extraction for public planning agendas and minutes.
-pypdf>=6.19.0,<7
+pypdf>=6.20.1,<7
