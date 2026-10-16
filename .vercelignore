@@ -1,8 +1,8 @@
 # Deploy the frontend build inputs only, never local DBs, keys, or worktrees.
 *
-!src/
+!src
 !src/**
-!public/
+!public
 !public/**
 !index.html
 !package.json
@@ -13,3 +13,4 @@
 !tsconfig*.json
 !components.json
 !vercel.json
+!eslint.config.js
