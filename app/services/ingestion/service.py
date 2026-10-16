@@ -2089,6 +2089,16 @@ def _expire_parcel_relationships(
         relationship.valid_to = now
 
 
+def _graph_label(value: str) -> str:
+    if len(value) <= 255 and len(normalize_name(value)) <= 255:
+        return value
+    suffix = " " + hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+    prefix = value[:255 - len(suffix)]
+    while len(normalize_name(prefix + suffix)) > 255:
+        prefix = prefix[:-1]
+    return prefix + suffix
+
+
 def _project_permit_to_graph(
     db: Session,
     source: IngestionSource,
@@ -2129,12 +2139,12 @@ def _project_permit_to_graph(
         return
     property_entity, _ = resolve_entity(db, GraphEntityCreate(
         entity_type=GraphEntityType.property,
-        display_name=permit.project_name or permit.address or stable_id,
+        display_name=_graph_label(permit.project_name or permit.address or stable_id),
         address=permit.address,
         city=permit.city,
         state=permit.state,
         zip_code=permit.postal_code,
-        attributes={"jurisdiction": permit.jurisdiction},
+        attributes={"jurisdiction": permit.jurisdiction, "source_project_name": permit.project_name},
     ))
     _relate(db, source, permit, raw, permit_entity.id, property_entity.id, GraphRelationshipType.permit_for, "property")
 
@@ -2161,7 +2171,7 @@ def _project_permit_to_graph(
             continue
         entity, _ = resolve_entity(db, GraphEntityCreate(
             entity_type=entity_type,
-            display_name=name,
+            display_name=_graph_label(name),
             attributes=attributes,
         ))
         _relate(db, source, permit, raw, property_entity.id, entity.id, relationship_type, role)

@@ -41,3 +41,16 @@ def test_empty_and_oversize_scopes_fail_before_canary(monkeypatch, count):
     monkeypatch.setattr(worker, "validate_source_canary", lambda *a, **k: pytest.fail("No fetch expected"))
     with pytest.raises(ValueError, match="budget"):
         worker.verify(worker.regional_entry(next(iter(worker.SOURCES))))
+
+
+def test_completed_keyset_cursor_is_not_mistaken_for_partial_ingestion():
+    from types import SimpleNamespace
+
+    run = SimpleNamespace(status="completed", records_failed=0, records_seen=43,
+                          checkpoint={"keyset": {"folderrsn": "123"}})
+    assert worker.run_reconciled(run, 43, 43)
+    assert not worker.run_reconciled(run, 43, 44)
+    run.status = "partial"
+    assert not worker.run_reconciled(run, 43, 43)
+    run.status, run.records_failed = "completed", 1
+    assert not worker.run_reconciled(run, 43, 43)

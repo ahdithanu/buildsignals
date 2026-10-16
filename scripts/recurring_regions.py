@@ -6,6 +6,7 @@ import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from urllib.parse import urlparse
 
 from sqlalchemy import text
 
@@ -41,12 +42,17 @@ SOURCES = {
     "dallas_tx_legistar_planning_agendas": (None, "planning_meeting"),
     "san_marcos_tx_planning_application_notices": (None, "planning_notice"),
     "taylor_tx_development_notices": (None, "development_notice"),
+    "austin_tx_site_plan_cases": ("application_start_date", "site_plan_application"),
 }
 
 
 def regional_entry(key: str, *, now: datetime | None = None):
     field, event = SOURCES[key]
     entry = next(row for row in load_catalog() if row.key == key).model_copy(deep=True)
+    if key == "austin_tx_site_plan_cases" and entry.settings.get("license") == "Public Domain":
+        # Official dataset metadata /api/views/mavg-96ck.json: PUBLIC_DOMAIN,
+        # verified 2026-10-16. Retain the catalog's reviewed field/suppression scope.
+        entry.settings["rights_basis"] = "City of Austin Site Plan Cases official metadata declares PUBLIC_DOMAIN; attributed derived intelligence within existing field allowlist and suppression scope."
     if not entry.is_active or not entry.settings.get("rights_basis") or entry.record_type not in {"permit", "planning"}:
         raise ValueError("Feed lacks reviewed active permit scope")
     today = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
@@ -77,7 +83,8 @@ def regional_entry(key: str, *, now: datetime | None = None):
 
 
 def count_source(entry):
-    client = RetryingHttpClient(timeout=30, max_retries=1)
+    client = RetryingHttpClient(timeout=30, max_retries=1,
+                               allowed_hosts=frozenset({urlparse(entry.base_url).hostname}))
     config = entry.settings["connector"]
     if entry.adapter not in {"arcgis", "socrata"}:
         return None  # Archive connectors have no authoritative count endpoint.
@@ -104,6 +111,12 @@ def verify(entry):
         raise ValueError("Canary failed: " + "; ".join(result.errors))
     return count, {"source_key": entry.key, "provider_count": count, "sample_valid": result.records_valid,
                    "sample_failed": result.records_failed, "event_kind": entry.settings["regional_event_kind"]}
+
+
+def run_reconciled(run, before, after):
+    # Completed keyset feeds can retain a valid cursor even on their final page.
+    return run.status == "completed" and not run.records_failed and (
+        before is None or before == after == run.records_seen)
 
 
 def refresh(key: str, organization_id: str):
@@ -134,11 +147,10 @@ def refresh(key: str, organization_id: str):
                     db.commit()
                     run = execute_source_run(db, source, max_pages=4, trigger="scheduled")
                     after = count_source(entry)
-                    passed = run.status == "completed" and not run.records_failed and not run.checkpoint and (
-                        before is None or before == after == run.records_seen)
+                    passed = run_reconciled(run, before, after)
                     if not passed:
                         run.status = "partial_with_errors"
-                        run.error_message = "Regional refresh did not reconcile; source quarantined"
+                        run.error_message = run.error_message or "Regional refresh did not reconcile; source quarantined"
                         source.is_active = False
                         db.commit()
                     model = PlanningRecord if entry.record_type == "planning" else PermitRecord

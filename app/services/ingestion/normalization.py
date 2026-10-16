@@ -224,6 +224,11 @@ def normalize_permit(
         raise ValueError(f"Unknown approval stage: {approval_stage!r}")
 
     unmapped = {key: value for key, value in record.items() if key not in mapped_source_fields}
+    parcel_reference = values.get("parcel_id")
+    if isinstance(parcel_reference, str) and len(parcel_reference) > 255:
+        # Never turn a compound/oversized source reference into a false parcel ID.
+        unmapped["unresolved_canonical_fields"] = {"parcel_id": parcel_reference}
+        values["parcel_id"] = None
     return NormalizedPermit(
         source_record_id=source_id,
         values=values,
@@ -343,6 +348,9 @@ def normalize_planning_record(
         raise ValueError("Planning record coordinates are invalid")
 
     unmapped = {key: value for key, value in record.items() if key not in mapped_source_fields}
+    if len(values["title"]) > 1000:
+        unmapped["original_title"] = values["title"]
+        values["title"] = values["title"][:1000]
     return NormalizedPlanningRecord(
         source_record_id=source_id,
         values=values,
