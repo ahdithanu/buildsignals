@@ -70,7 +70,7 @@ def _is_retryable(exc: BaseException) -> bool:
     status_code = getattr(exc, "status_code", None)
     if status_code == 429 or (isinstance(status_code, int) and 500 <= status_code <= 599):
         return True
-    return exc.__class__.__name__ in {"RateLimitError", "APITimeoutError", "TimeoutException"}
+    return exc.__class__.__name__ in {"RateLimitError", "APITimeoutError", "APIConnectionError", "TimeoutException"}
 
 
 def openrouter_status_code(exc: BaseException) -> int | None:
@@ -80,7 +80,11 @@ def openrouter_status_code(exc: BaseException) -> int | None:
 
 def is_openrouter_service_error(exc: BaseException) -> bool:
     status_code = openrouter_status_code(exc)
-    return status_code in {402, 429} or (status_code is not None and 500 <= status_code <= 599)
+    return (
+        status_code in {402, 429}
+        or (status_code is not None and 500 <= status_code <= 599)
+        or exc.__class__.__name__ in {"APITimeoutError", "APIConnectionError", "TimeoutException"}
+    )
 
 
 def _retry_after_seconds(exc: BaseException) -> int | None:

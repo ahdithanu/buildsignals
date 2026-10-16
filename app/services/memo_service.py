@@ -148,6 +148,8 @@ def generate_memo_content(deal: Deal) -> str:
 def _deal_context(deal: Deal) -> str:
     outputs = deal.outputs
     signals = deal.signals or []
+    contacts = getattr(deal, "contacts", None) or []
+    activities = getattr(deal, "activities", None) or []
     return "\n".join(
         [
             f"name: {deal.name}",
@@ -165,6 +167,19 @@ def _deal_context(deal: Deal) -> str:
             f"noi: {outputs.noi if outputs and outputs.noi is not None else 'unknown'}",
             f"cap_rate: {outputs.cap_rate if outputs and outputs.cap_rate is not None else 'unknown'}",
             f"dscr: {outputs.dscr if outputs and outputs.dscr is not None else 'unknown'}",
+            *[
+                f"{field}: {getattr(outputs, field, None) if outputs else 'unknown'}"
+                for field in (
+                    "total_project_cost", "cash_on_cash", "irr", "equity_multiple",
+                    "net_cash_flow", "exit_value", "profit",
+                )
+            ],
+            f"source: {getattr(deal, 'source', None) or 'unknown'}",
+            f"status: {deal.status.value if getattr(deal, 'status', None) else 'unknown'}",
+            f"contacts_count: {len(contacts)}",
+            f"contact_status_counts: {dict(Counter(c.status.value for c in contacts))}",
+            f"activities_count: {len(activities)}",
+            f"activity_type_counts: {dict(Counter(a.activity_type.value for a in activities))}",
             "signals: " + ("; ".join(
                 f"{signal.signal_type}: {signal.description or 'No description'}"
                 for signal in signals[:10]

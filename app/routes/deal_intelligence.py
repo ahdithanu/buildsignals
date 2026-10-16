@@ -93,7 +93,8 @@ def score(deal_id: str, response: Response, db: Session = Depends(get_db)):
     except Exception as exc:
         if not is_openrouter_service_error(exc):
             raise
-        reason = f"OpenRouter returned HTTP {exc.status_code}"
+        status_code = getattr(exc, "status_code", None)
+        reason = f"OpenRouter returned HTTP {status_code}" if status_code else "OpenRouter request unavailable"
         log.warning("score_openrouter_unavailable_falling_back", extra={"reason": reason})
         result = score_deal_deterministic(db, deal)
         result.update(scoring_method="deterministic_fallback", fallback_reason=reason)

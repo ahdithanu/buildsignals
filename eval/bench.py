@@ -17,7 +17,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.services.llm_client import OpenRouterClient  # noqa: E402
-from app.services.scoring_service import deterministic_score_payload, score_rubric_text  # noqa: E402
+from app.services.scoring_service import (  # noqa: E402
+    ScorePayloadValidationError,
+    deterministic_score_payload,
+    score_rubric_text,
+    validate_score_payload,
+)
 
 HERE = Path(__file__).resolve().parent
 GOLDEN_PATH = HERE / "golden.jsonl"
@@ -123,9 +128,17 @@ def _score(example: dict[str, Any], content: str) -> bool:
     expected = example["expected"]
     task = example["task"]
     if task in {"score", "enrich"}:
-        actual = _parse_json(content)
+        try:
+            actual = _parse_json(content)
+        except (ValueError, TypeError):
+            return False
         if not isinstance(actual, dict):
             return False
+        if task == "score":
+            try:
+                validate_score_payload(actual)
+            except ScorePayloadValidationError:
+                return False
         for key, expected_value in expected.items():
             if key == "breakdown":
                 for factor, fields in expected_value.items():
