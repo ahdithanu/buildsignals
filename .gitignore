@@ -48,3 +48,11 @@ htmlcov/
 .vercel
 .env.local
 .env.*.local
+
+# Numbered macOS duplicate copies and local worktrees.
+* [0-9].*
+* [0-9]
+.worktrees/
+eval/results.csv
+eval/results.md
+eval/results_full.jsonl

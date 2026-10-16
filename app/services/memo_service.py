@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.deal import Deal
 from app.models.memo import Memo
+from app.services.llm_client import get_default_llm_client, is_openrouter_configured
 from app.utils.org_scope import active_query
 
 
@@ -144,6 +145,79 @@ def generate_memo_content(deal: Deal) -> str:
     return "\n".join(lines)
 
 
+def _deal_context(deal: Deal) -> str:
+    outputs = deal.outputs
+    signals = deal.signals or []
+    contacts = getattr(deal, "contacts", None) or []
+    activities = getattr(deal, "activities", None) or []
+    return "\n".join(
+        [
+            f"name: {deal.name}",
+            f"address: {deal.address or 'unknown'}",
+            f"city: {deal.city or 'unknown'}",
+            f"state: {deal.state or 'unknown'}",
+            f"zip_code: {deal.zip_code or 'unknown'}",
+            f"property_type: {deal.property_type or 'unknown'}",
+            f"units: {deal.units if deal.units is not None else 'unknown'}",
+            f"sq_ft: {deal.sq_ft if deal.sq_ft is not None else 'unknown'}",
+            f"year_built: {deal.year_built if deal.year_built is not None else 'unknown'}",
+            f"asking_price: {deal.asking_price if deal.asking_price is not None else 'unknown'}",
+            f"score: {deal.score if deal.score is not None else 'unknown'}",
+            f"risk_level: {deal.risk_level.value if deal.risk_level else 'unknown'}",
+            f"noi: {outputs.noi if outputs and outputs.noi is not None else 'unknown'}",
+            f"cap_rate: {outputs.cap_rate if outputs and outputs.cap_rate is not None else 'unknown'}",
+            f"dscr: {outputs.dscr if outputs and outputs.dscr is not None else 'unknown'}",
+            *[
+                f"{field}: {getattr(outputs, field, None) if outputs else 'unknown'}"
+                for field in (
+                    "total_project_cost", "cash_on_cash", "irr", "equity_multiple",
+                    "net_cash_flow", "exit_value", "profit",
+                )
+            ],
+            f"source: {getattr(deal, 'source', None) or 'unknown'}",
+            f"status: {deal.status.value if getattr(deal, 'status', None) else 'unknown'}",
+            f"contacts_count: {len(contacts)}",
+            f"contact_status_counts: {dict(Counter(c.status.value for c in contacts))}",
+            f"activities_count: {len(activities)}",
+            f"activity_type_counts: {dict(Counter(a.activity_type.value for a in activities))}",
+            "signals: " + ("; ".join(
+                f"{signal.signal_type}: {signal.description or 'No description'}"
+                for signal in signals[:10]
+            )
+            if signals
+            else "none recorded"),
+        ]
+    )
+
+
+def generate_memo_content_with_llm(deal: Deal) -> str:
+    """Generate memo markdown through OpenRouter while preserving response shape."""
+    if not is_openrouter_configured():
+        return generate_memo_content(deal)
+
+    result = get_default_llm_client().chat_completion(
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are BuildSignals' real-estate investment memo analyst. "
+                    "Return only markdown. Use the same sections as the existing memo: "
+                    "Executive Summary, Property Overview, Financial Summary, Risk "
+                    "Assessment, Contact Summary, Activity Log Summary, Recommendation. "
+                    "Do not invent unavailable facts; write N/A or unknown when evidence is missing."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"Generate an investment memo from this deal context:\n{_deal_context(deal)}",
+            },
+        ],
+        temperature=0.2,
+        max_tokens=1_800,
+    )
+    return result.content.strip() or generate_memo_content(deal)
+
+
 def generate_memo(db: Session, deal_id: str) -> Memo:
     """Generate (or regenerate) an investment memo for a deal.
 
@@ -165,7 +239,7 @@ def generate_memo(db: Session, deal_id: str) -> Memo:
     if deal is None:
         return None  # type: ignore[return-value]
 
-    content = generate_memo_content(deal)
+    content = generate_memo_content_with_llm(deal)
     title = f"Investment Memo - {deal.name}"
 
     existing_memo = deal.memo

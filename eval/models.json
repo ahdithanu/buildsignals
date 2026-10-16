@@ -1,0 +1,10 @@
+{
+  "_comment": "Previously used ~anthropic/claude-haiku-latest; pinned for reproducible benchmark runs.",
+  "models": [
+    "openai/gpt-4o-mini",
+    "anthropic/claude-haiku-5.5",
+    "google/gemini-2.5-flash-lite",
+    "meta-llama/llama-3.3-70b-instruct",
+    "openai/gpt-4o"
+  ]
+}
