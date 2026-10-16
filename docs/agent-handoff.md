@@ -35,6 +35,12 @@ workspace plus a separate sanitized public-demo subset. Branch:
   upload rules. First allowlist attempt excluded directories and failed remote
   typecheck/lint before promotion; corrected rules included 302 frontend files
   and subsequent deployment succeeded. No checks were bypassed.
+- Follow-up `f730d4f` fixes browser-local date shifts by displaying UTC calendar
+  dates explicitly. Four frontend tests and typecheck pass. Final deployment
+  `dpl_AM68dHrfzDgPVQaAb7Qb2d3ToK86` is READY and aliased to www.buildsignals.ai.
+  Recent snapshot local replay twice retained 21 permits, 81 entities, 82 edges
+  with no count growth. Browser verified recent under-review applications on
+  the first filing page; signed-in customer browser workflow remains unverified.
 
 Next: configure scheduled, bounded current-source refresh using managed secret
 references (existing GitHub ingestion environment is unconfigured); add durable
