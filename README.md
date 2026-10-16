@@ -35,6 +35,22 @@ git clone <repo-url> && cd DealSignal
 cp .env.example .env          # then edit — see notes below
 ```
 
+### Working with coding agents
+
+`AGENTS.md` is the canonical project contract for Codex, Claude Code, Gemini,
+Antigravity-style IDE agents, Cursor, Windsurf, and GitHub Copilot. The small
+tool-specific entry-point files redirect back to it so rules do not drift.
+
+Before an agent starts or another agent takes over, run:
+
+```bash
+python scripts/agent_context.py
+```
+
+Then read [docs/agent-handoff.md](docs/agent-handoff.md). The handoff records
+the active branch, commit, changed files, verification results, next action, and
+open risks without storing secrets or customer data.
+
 ### Backend (API on :8000)
 
 ```bash
