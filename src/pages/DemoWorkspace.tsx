@@ -32,7 +32,7 @@ const sections: { id: Section; label: string }[] = [
   { id: 'overview', label: 'Overview' }, { id: 'permits', label: 'Filings' },
   { id: 'graph', label: 'Graph' }, { id: 'parcels', label: 'Parcels' }, { id: 'map', label: 'Map' },
 ];
-const date = (value?: string | null) => value ? new Date(value).toLocaleDateString() : 'Unknown';
+const date = (value?: string | null) => value ? new Date(value).toLocaleDateString(undefined, { timeZone: 'UTC' }) : 'Unknown';
 const statusClass = {
   ready: 'border-emerald-700 bg-emerald-50 text-emerald-950',
   partial: 'border-amber-700 bg-amber-50 text-amber-950',
@@ -143,7 +143,7 @@ export default function DemoWorkspace() {
     <div className="mx-auto max-w-7xl space-y-5 p-4 md:p-6">
       <header>
         <h1 className="text-xl font-semibold">Columbus development intelligence</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Columbus commercial issuance and site applications. Dated source snapshots, not a continuously updated feed or unique projects. Filing dates and issuance dates represent different events.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Columbus commercial issuance and site applications. Dated source snapshots, not a continuously updated feed or unique projects. Filing dates and issuance dates represent different events. Dates shown in UTC.</p>
       </header>
       <nav aria-label="Demo views" className="flex w-full gap-1 overflow-x-auto border-b pb-2">
         {sections.map(item => <button key={item.id} type="button" onClick={() => setSection(item.id)} aria-current={section === item.id ? 'page' : undefined}
