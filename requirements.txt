@@ -28,7 +28,7 @@ cryptography==50.0.2
 sentry-sdk[fastapi]==2.71.0
 pyotp==2.10.0
 prometheus-client==0.26.0
-resend>=2.47.0
+resend>=2.49.1
 redis==5.0.7
 openai==1.55.3
 # Pure-Python PDF text extraction for public planning agendas and minutes.
