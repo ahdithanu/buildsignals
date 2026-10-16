@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -19,6 +19,20 @@ from app.services.ingestion.service import create_source, replay_permit_snapshot
 from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
 
 SOURCE_KEYS = {"columbus_oh_commercial_building_permits", "columbus_oh_site_engineering_applications"}
+
+
+def validate_snapshot_scope(source_key: str, scope: dict, *, recent: bool = False) -> None:
+    if not recent:
+        if not ("2024-01-01" <= scope.get("start_inclusive", "") < scope.get("end_exclusive", "") <= "2024-04-01"):
+            raise ValueError("Only the reviewed Q1 2024 qualification scope is supported")
+        return
+    if source_key != "columbus_oh_site_engineering_applications":
+        raise ValueError("Recent demo snapshots support reviewed site applications only")
+    start = date.fromisoformat(scope.get("start_inclusive", ""))
+    end = date.fromisoformat(scope.get("end_exclusive", ""))
+    today = datetime.now(timezone.utc).date()
+    if not (1 <= (end - start).days <= 31 and end <= today and 0 <= (today - start).days <= 60):
+        raise ValueError("Recent snapshot requires a completed 1-31 day interval within 60 days")
 
 
 def seed_identity(db: Session) -> None:
@@ -51,7 +65,7 @@ def seed_identity(db: Session) -> None:
     db.flush()
 
 
-def replay_cohort(db: Session, path: Path) -> int:
+def replay_cohort(db: Session, path: Path, *, recent: bool = False) -> int:
     """Input is an existing qualification SQLite DB, opened in read-only mode."""
     path = path.resolve(strict=True)
     with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as source_db:
@@ -62,19 +76,26 @@ def replay_cohort(db: Session, path: Path) -> int:
         row = sources[0]
         settings = json.loads(row["settings"])
         scope = settings.get("historical_qualification", {})
-        if not ("2024-01-01" <= scope.get("start_inclusive", "") < scope.get("end_exclusive", "") <= "2024-04-01"):
-            raise ValueError("Only the reviewed Q1 2024 qualification scope is supported")
+        validate_snapshot_scope(row["key"], scope, recent=recent)
+        if recent:
+            from app.services.ingestion.catalog import load_catalog
+            reviewed = next(entry for entry in load_catalog() if entry.key == row["key"])
+            if set(settings.get("field_allowlist", [])) - set(reviewed.settings["field_allowlist"]):
+                raise ValueError("Recent snapshot fields exceed the reviewed public-data scope")
         mappings = []
         for mapping in source_db.execute("SELECT * FROM source_field_mappings WHERE source_id = ?", (row["id"],)):
             values = {key: mapping[key] for key in FieldMappingCreate.model_fields}
             for key in ("transform_options", "default_value"):
                 values[key] = json.loads(values[key]) if values[key] else None
             mappings.append(FieldMappingCreate(**values))
-        key = f"demo_{row['key']}_{scope['start_inclusive'].replace('-', '')}"
+        prefix = "demo_recent" if recent else "demo"
+        key = f"{prefix}_{row['key']}_{scope['start_inclusive'].replace('-', '')}"
+        if recent:
+            key += "_" + scope["end_exclusive"].replace("-", "")
         target = db.query(IngestionSource).filter_by(organization_id=DEMO_ORG_ID, key=key).first()
         if not target:
             target = create_source(db, IngestionSourceCreate(
-                key=key, name=f"Historical demo: {row['name']}", adapter=row["adapter"],
+                key=key, name=f"{'Recent snapshot' if recent else 'Historical demo'}: {row['name']}", adapter=row["adapter"],
                 jurisdiction=row["jurisdiction"], base_url=row["base_url"], is_active=False,
                 settings={**settings, "schedule_mode": "manual", "demo_snapshot": True},
                 field_mappings=mappings,
@@ -118,14 +139,14 @@ def replay_cohort(db: Session, path: Path) -> int:
         return len(records)
 
 
-def seed_demo(db: Session, paths: list[Path]) -> int:
+def seed_demo(db: Session, paths: list[Path], *, recent: bool = False) -> int:
     if db.in_transaction():
         raise ValueError("Demo seed requires a fresh session for tenant isolation")
     context = set_current_context(RequestContext(DEMO_ORG_ID, DEMO_USER_ID))
     try:
         with db.begin():
             seed_identity(db)
-            count = sum(replay_cohort(db, path) for path in paths)
+            count = sum(replay_cohort(db, path, recent=recent) for path in paths)
         return count
     finally:
         reset_current_context(context)
@@ -134,12 +155,13 @@ def seed_demo(db: Session, paths: list[Path]) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("snapshots", nargs="+", type=Path)
+    parser.add_argument("--recent", action="store_true", help="Import reviewed recent site-application snapshots instead of Q1 2024")
     parser.add_argument("--confirm-demo-seed", action="store_true", required=True,
                         help="Acknowledge writes to the configured DATABASE_URL demo tenant only")
     args = parser.parse_args()
     from app.db import SessionLocal
     with SessionLocal() as db:
-        count = seed_demo(db, args.snapshots)
+        count = seed_demo(db, args.snapshots, recent=args.recent)
     print(json.dumps({"demo_source_records": count, "unique_projects": "not measured", "production_sources_activated": 0}))
 
 
