@@ -1,0 +1,11 @@
+---
+description: Canonical Build Signals repository rules
+alwaysApply: true
+---
+
+Read `AGENTS.md` and `docs/agent-handoff.md` before making changes. Run
+`python scripts/agent_context.py` to inspect the current branch and working tree.
+Follow the existing FastAPI/SQLAlchemy/Alembic and React/Vite conventions. Keep
+tenant isolation, evidence provenance, auth, rate limits, and release gates
+intact. Never commit secrets or discard unrelated user changes.
+

@@ -1,0 +1,7 @@
+# Build Signals rules
+
+Read `AGENTS.md` and `docs/agent-handoff.md` first. Use
+`python scripts/agent_context.py` to orient yourself. Preserve existing tenant
+scoping, evidence provenance, auth, migrations, tests, and release gates. Never
+commit secrets or discard unrelated user changes.
+
