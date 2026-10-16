@@ -1,8 +1,16 @@
 import json
+from datetime import datetime, timezone
 
 import pytest
 
 from scripts import configure_regional_ingestion as config
+
+
+def test_past_daily_start_advances_without_changing_daily_cadence():
+    now = datetime(2026, 10, 16, 22, 40, tzinfo=timezone.utc)
+    result = config.next_daily_start("2026-10-14T15:13:30-07:00", now=now)
+    assert datetime.fromisoformat(result) == datetime(2026, 10, 17, 22, 13, 30, tzinfo=timezone.utc)
+    assert config.next_daily_start("2026-10-18T01:00:00Z", now=now) == "2026-10-18T01:00:00Z"
 
 
 def test_only_verified_sources_receive_tasks_and_schedules(tmp_path, monkeypatch):

@@ -23,6 +23,15 @@ from scripts.configure_recurring_columbus import (
 )
 from scripts.recurring_regions import SOURCES, regional_entry
 
+
+def next_daily_start(value: str, *, now: datetime | None = None) -> str:
+    now = now or datetime.now(timezone.utc)
+    start = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if start > now:
+        return value
+    days = (now - start) // timedelta(days=1) + 1
+    return (start + timedelta(days=days)).isoformat()
+
 ROLE = "buildsignals-regional-scheduler"
 
 
@@ -76,7 +85,7 @@ def configure(org, image, report_path):
             "RetryPolicy": {"MaximumEventAgeInSeconds": 900, "MaximumRetryAttempts": 2}}
         try:
             existing = aws("scheduler", "get-schedule", "--name", name, "--group-name", GROUP)
-            start = existing["StartDate"]
+            start = next_daily_start(existing["StartDate"])
             action = "update-schedule"
         except subprocess.CalledProcessError as exc:
             if "ResourceNotFoundException" not in exc.stderr:
