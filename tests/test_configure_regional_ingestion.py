@@ -36,6 +36,13 @@ def test_only_verified_sources_receive_tasks_and_schedules(tmp_path, monkeypatch
         return {}
 
     monkeypatch.setattr(config, "aws", aws)
+    # Pin "now" so an existing future StartDate is preserved rather than advanced by
+    # the ambient wall clock; the assertion below checks that un-advanced value.
+    _next_daily_start = config.next_daily_start
+    monkeypatch.setattr(
+        config, "next_daily_start",
+        lambda value, now=datetime(2026, 10, 16, tzinfo=timezone.utc): _next_daily_start(value, now=now),
+    )
     monkeypatch.setattr(config, "exists_or_create", lambda *args, **kwargs: {"Role": {"Arn": "scheduler-role"}})
     image = f"{config.ACCOUNT}.dkr.ecr.{config.REGION}.amazonaws.com/dealsignal-api@sha256:" + "a" * 64
     config.configure("customer", image, report)
