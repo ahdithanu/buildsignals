@@ -35,6 +35,25 @@ def next_daily_start(value: str, *, now: datetime | None = None) -> str:
 ROLE = "buildsignals-regional-scheduler"
 
 
+def existing_run_task_resources(policy_name):
+    """Return the ecs:RunTask resources already granted by the inline policy.
+
+    Empty when the policy does not exist yet (first provisioning run).
+    """
+    try:
+        current = aws("iam", "get-role-policy", "--role-name", ROLE, "--policy-name", policy_name)
+    except subprocess.CalledProcessError as exc:
+        if "NoSuchEntity" not in exc.stderr:
+            raise
+        return []
+    resources = []
+    for statement in current.get("PolicyDocument", {}).get("Statement", []):
+        if statement.get("Action") == "ecs:RunTask":
+            resource = statement.get("Resource")
+            resources.extend(resource if isinstance(resource, list) else [resource])
+    return resources
+
+
 def job_name(key):
     return "region-" + key[:43] + "-" + hashlib.sha256(key.encode()).hexdigest()[:8]
 
@@ -70,8 +89,12 @@ def configure(org, image, report_path):
         spec = {field: base[field] for field in ["executionRoleArn", "networkMode", "requiresCompatibilities", "cpu", "memory"]}
         spec.update(family="buildsignals-" + job_name(key), containerDefinitions=[container])
         tasks[key] = aws("ecs", "register-task-definition", "--cli-input-json", json.dumps(spec))["taskDefinition"]["taskDefinitionArn"]
+    # put-role-policy replaces the named inline policy, so a subset rerun must
+    # keep RunTask permission for schedules created on earlier runs; otherwise
+    # their still-enabled schedules lose ecs:RunTask and start failing.
+    run_task_resources = sorted(set(existing_run_task_resources("RunVerifiedRegionalTasks")) | set(tasks.values()))
     policy = {"Version": "2012-10-17", "Statement": [
-        {"Effect": "Allow", "Action": "ecs:RunTask", "Resource": list(tasks.values()), "Condition": {"ArnEquals": {"ecs:cluster": CLUSTER}}},
+        {"Effect": "Allow", "Action": "ecs:RunTask", "Resource": run_task_resources, "Condition": {"ArnEquals": {"ecs:cluster": CLUSTER}}},
         {"Effect": "Allow", "Action": "iam:PassRole", "Resource": base["executionRoleArn"], "Condition": {"StringEquals": {"iam:PassedToService": "ecs-tasks.amazonaws.com"}}},
     ]}
     aws("iam", "put-role-policy", "--role-name", ROLE, "--policy-name", "RunVerifiedRegionalTasks", "--policy-document", json.dumps(policy))

@@ -113,6 +113,19 @@ def verify(entry):
                    "sample_failed": result.records_failed, "event_kind": entry.settings["regional_event_kind"]}
 
 
+def ensure_reactivatable(source, entry):
+    """Guard an existing regional source before a scheduled rerun.
+
+    Identity must match, and a source quarantined by a prior failed reconciliation
+    (``is_active`` False) must not be silently re-enabled by the next scheduled
+    run; it requires an explicit recovery/verification decision first.
+    """
+    if source.base_url != entry.base_url or source.record_type != entry.record_type:
+        raise ValueError("Existing source identity differs")
+    if not source.is_active:
+        raise RuntimeError("Source is quarantined after a failed run; explicit recovery required")
+
+
 def run_reconciled(run, before, after):
     # Completed keyset feeds can retain a valid cursor even on their final page.
     return run.status == "completed" and not run.records_failed and (
@@ -139,9 +152,8 @@ def refresh(key: str, organization_id: str):
                 try:
                     source = db.query(IngestionSource).filter_by(organization_id=organization_id, key=key).one_or_none()
                     if source:
-                        if source.base_url != entry.base_url or source.record_type != entry.record_type:
-                            raise ValueError("Existing source identity differs")
-                        update_source(db, source, IngestionSourceUpdate(settings=entry.settings, field_mappings=entry.field_mappings, is_active=True))
+                        ensure_reactivatable(source, entry)
+                        update_source(db, source, IngestionSourceUpdate(settings=entry.settings, field_mappings=entry.field_mappings))
                     else:
                         source = create_source(db, entry)
                     db.commit()

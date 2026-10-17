@@ -1,9 +1,25 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
 from app.services.demo_access import DEMO_ORG_ID
 from scripts import recurring_regions as worker
+
+
+def test_quarantined_source_is_not_silently_reactivated():
+    entry = worker.regional_entry(
+        "orlando_fl_permit_applications", now=datetime(2026, 10, 16, tzinfo=timezone.utc)
+    )
+    active = SimpleNamespace(base_url=entry.base_url, record_type=entry.record_type, is_active=True)
+    quarantined = SimpleNamespace(base_url=entry.base_url, record_type=entry.record_type, is_active=False)
+    mismatched = SimpleNamespace(base_url="https://other.example/x", record_type=entry.record_type, is_active=True)
+
+    worker.ensure_reactivatable(active, entry)  # active source: no error
+    with pytest.raises(RuntimeError, match="quarantined"):
+        worker.ensure_reactivatable(quarantined, entry)
+    with pytest.raises(ValueError, match="identity differs"):
+        worker.ensure_reactivatable(mismatched, entry)
 
 
 @pytest.mark.parametrize("key", sorted(worker.SOURCES))

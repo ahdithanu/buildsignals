@@ -793,6 +793,53 @@ def test_health_flags_incomplete_source_update_dates_for_enforced_watermark(db):
     assert any("present on only" in reason for reason in health.reasons)
 
 
+def test_health_flags_incomplete_filing_event_dates_without_age_penalty(db):
+    source = _source(db)
+    now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)
+    source.settings = {
+        **(source.settings or {}),
+        "freshness_sla_hours": 24,
+        "freshness_semantics": "filing_event_at",
+    }
+    run = IngestionRun(
+        organization_id="default-org",
+        source_id=source.id,
+        status="completed",
+        trigger="scheduled",
+        started_at=now - timedelta(hours=1),
+        completed_at=now - timedelta(minutes=55),
+        records_seen=3,
+        records_failed=0,
+    )
+    db.add(run)
+    db.flush()
+    # An old filing date must not be treated as staleness, but two of three records
+    # arriving without any filing date should still surface as incomplete.
+    db.add(RawSourceRecord(
+        organization_id="default-org", source_id=source.id, run_id=run.id,
+        external_record_id="filed", record_type="permit", content_hash="f1",
+        payload={"id": "filed"}, source_updated_at=now - timedelta(days=120),
+        received_at=now - timedelta(minutes=55),
+    ))
+    for index in range(2):
+        db.add(RawSourceRecord(
+            organization_id="default-org", source_id=source.id, run_id=run.id,
+            external_record_id=f"nofiling-{index}", record_type="permit",
+            content_hash=f"nf-{index}", payload={"id": f"nofiling-{index}"},
+            source_updated_at=None, received_at=now - timedelta(minutes=55),
+        ))
+    db.flush()
+
+    health = evaluate_source_health(db, source, now=now)
+
+    assert health.source_watermark_enforced is False  # age is not SLA-enforced
+    assert health.source_update_date_completeness == 0.3333
+    assert health.source_update_dates_incomplete is True
+    assert health.status == "degraded"
+    assert any("present on only" in reason for reason in health.reasons)
+    assert not any("hours old" in reason for reason in health.reasons)
+
+
 def test_health_reports_update_completeness_without_penalizing_collection_only(db):
     source = _source(db)
     now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)

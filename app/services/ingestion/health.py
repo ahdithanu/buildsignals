@@ -257,6 +257,13 @@ def evaluate_source_health(
         "dataset_refreshed_at",
         "unclassified_source_timestamp",
     }
+    # Age-based freshness is enforced only for timestamps that track updates; a
+    # quiet filing feed is not stale. Carrying the filing/update date is a separate
+    # expectation: filing_event_at sources are expected to populate the date even
+    # though their age is not SLA-enforced, so completeness is judged for them too.
+    source_update_date_expected = (
+        source_watermark_enforced or freshness_semantics == "filing_event_at"
+    )
     collection_critical_hours = max(48.0, collection_sla_hours * 4 / 3)
     freshness_critical_hours = max(48.0, sla_hours * 4 / 3)
     reasons: list[str] = []
@@ -312,7 +319,7 @@ def evaluate_source_health(
     # date on a meaningful share of records cannot have its watermark presented as
     # cohort-wide filing freshness. Surface it rather than silently conflating.
     if (
-        source_watermark_enforced
+        source_update_date_expected
         and source_update_date_completeness is not None
         and source_update_date_completeness < 0.9
     ):
