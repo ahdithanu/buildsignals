@@ -134,6 +134,10 @@ class SourceHealthResponse(BaseModel):
     ] = "ingestion_observed_at"
     freshness_label: str = "Collection observed"
     source_watermark_enforced: bool = False
+    source_update_date_total: int = 0
+    source_update_date_present: int = 0
+    source_update_date_completeness: Optional[float] = None
+    source_update_dates_incomplete: bool = False
     terminal_runs: int
     unhealthy_runs: int
     run_failure_rate: Optional[float]
