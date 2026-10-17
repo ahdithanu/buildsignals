@@ -3,6 +3,82 @@
 Last updated: 2026-10-16 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
 
+## Session 2026-10-16: Mississippi production-readiness + reliability
+
+Branch `codex/recent-columbus-filings`. Four local commits on top of `181fea1`
+(not pushed, not merged):
+
+- `4cf27c1` Biloxi production-readiness. New `app/services/ingestion/text_decoding.py`
+  provides an opt-in tolerant decoder that reinterprets only bytes that are not
+  valid UTF-8 through Windows-1252 (Latin-1 fallback for cp1252's undefined slots);
+  clean UTF-8/cp1252 are unchanged, so strict decoding is NOT weakened elsewhere.
+  `text_encoding` and bounded `max_index_page_bytes` are threaded through the HTML
+  index + `planning_documents` connectors and the connector factory; the default
+  path keeps strict `get_text`. The reviewed Biloxi connector config now lives in
+  the candidate catalog as inert `probe_settings`/`probe_field_mappings`
+  (adapter `planning_documents`, record_type `planning`), still `legal_hold` with
+  `can_run_canary` false. `scripts/qualify_biloxi.py` loads that single source of
+  truth (no duplicated rules). Tests: `tests/test_text_decoding.py`,
+  `tests/test_biloxi_production_connector.py` (mixed-encoding index, stable
+  identity, idempotent reruns, changed-document hash, compound-vs-single parcel,
+  index/document byte limits, host isolation, factory wiring).
+- `5e7231b` MDEQ contract qualified by bounded read-only inspection (one public
+  GET, no query submission/pagination/bypass, not activated). enSearch is ASP.NET
+  WebForms: `report_epd` POSTs `uxActionType/uxStartDate/uxEndDate` with rotating
+  `__VIEWSTATE`/`__EVENTVALIDATION`; no pagination (0 `__doPostBack`, no pager),
+  no control total, no API/export; only id is `ai_info.aspx?ai=N` (entity id reused
+  across rows/dates, duplicates). Application-vs-decision IS derivable from
+  `uxActionType`; no update/withdrawal semantics. Concrete blocker: no reliable
+  recurring interface + unestablished commercial reuse. Recorded in the catalog
+  (stays `legal_hold`) and `docs/releases/2026-10-16-mdeq-contract-qualification.md`.
+  Tests lock all three MS gates (D'Iberville express written-permission restriction;
+  Biloxi legal_hold with the mixed-encoding opt-in recorded, not activated).
+- `0435734` Reliability: `evaluate_source_health` measures source-update-date
+  completeness (`source_update_date_total/present/completeness`,
+  `source_update_dates_incomplete`) across RawSourceRecords. When a source claims a
+  publisher/filing timestamp (watermark enforced) but the date is present on <90%
+  of records, it is surfaced as degraded so collection recency is not presented as
+  filing recency; collection-only sources report completeness without penalty.
+- `5b5ba97` Fixed 10 pre-existing full-suite failures (verified failing at base
+  `181fea1` before any of this session's work). Root cause for 9 of them: the
+  checked-in `production_rollout.json` had drifted from the candidate catalog since
+  `de553e7`, so `require_current_rollout_manifest` rejected enrollment (422) and the
+  rollout determinism/render-worker tests failed. Regenerated the manifest via
+  `python -m app.services.ingestion.cli catalog rollout-manifest --output ...` and
+  synced `render.yaml`'s three pinned `INGESTION_ROLLOUT_MANIFEST_DIGEST` values
+  (`c073515e`→`e5a6f6e7`); only `candidate_catalog_fingerprint` + derived
+  `manifest_digest` changed, `candidate_count` stays 0 (no activation). The 10th was
+  a time-bombed provisioning test asserting an un-advanced `StartDate` against the
+  ambient clock; pinned `now` in the test (production code unchanged).
+
+Commands/results (local, Python 3.12 `.venv`, `OPENROUTER_API_KEY=` empty, no DB
+or paid calls): focused ingestion/connector/catalog/health suites green throughout;
+`ruff check` and `git diff --check` clean on changed files; full suite
+`python -m pytest -q` => **1764 passed, 69 skipped, 0 failed** in ~347s. The
+PostgreSQL/PostGIS RLS and browser E2E suites that CI runs were NOT run locally.
+MDEQ live inspection is evidence, not a golden label; Biloxi/connector tests use
+synthetic documents.
+
+Remaining work / blockers:
+- No Mississippi feed is activated. Biloxi still needs a documented commercial-reuse
+  basis plus broader layout/privacy validation and revision/control-total scope
+  before activation. MDEQ needs a written data-use agreement and a supported export/
+  API with durable activity identity, totals and correction semantics. D'Iberville
+  stays blocked by its express written-permission restriction. Atlanta/Phoenix and
+  other catalog holds are untouched.
+- Branch is local only: not pushed/merged, no deploy. `render.yaml`/manifest edits
+  are in-repo source consistency, not a deployment or cloud change.
+
+Implemented locally vs tested vs production-ready vs live:
+- Implemented locally AND tested: the tolerant decoder + connector wiring, Biloxi
+  catalog integration, MDEQ qualification record, source-update-date completeness,
+  and the rollout-manifest/test fixes (full suite 0 failures).
+- Production-ready: the decoder/connector/reliability code is behind the existing
+  gates and could ship with the next API image, but activating any Mississippi
+  source is NOT production-ready (legal + contract blockers above remain).
+- Actually live: nothing from this session. No push, merge, image build, migration,
+  schedule, or source activation was performed.
+
 ## Current Task
 
 Mississippi follow-up (2026-10-16): owner authorized proceeding with review,
