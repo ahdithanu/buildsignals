@@ -1267,7 +1267,7 @@
     "official_landing_page": "https://www.mdeq.ms.gov/permits/environmental-permits-division/",
     "license": "Official public permit register; no affirmative commercial reuse or redistribution grant",
     "status": "legal_hold",
-    "blocker_summary": "The official statewide register exposes current application and decision events, but its ASP.NET query contract, pagination/control totals, durable activity identity, correction/deletion behavior, and commercial storage/display rights are not documented.",
+    "blocker_summary": "2026-10-16 read-only inspection qualified the public contract: epd-activity-search.aspx is an ASP.NET WebForms page whose report form (name=report_epd) POSTs uxActionType/uxStartDate/uxEndDate with rotating __VIEWSTATE/__EVENTVALIDATION tokens. The activity register has no pagination (zero __doPostBack, no pager), renders the whole date window in one response, exposes no record total/control count, and offers no JSON/REST/export endpoint. The only list identifier is the agency-interest id (ai_info.aspx?ai=N), an entity id rather than a per-activity id: the same ai recurs across different action/date rows and identical rows are duplicated, so no durable event identity exists without fetching each detail page. No update/withdrawal/tombstone signal is exposed. Application-versus-decision IS derivable from uxActionType. A reliable recurring interface cannot be established from this contract, and commercial-reuse rights remain unestablished; the source stays legal_hold and inactive.",
     "early_warning_value": "Applications for construction, air, water, stormwater, and other environmental permits reveal named companies, developers, subdivisions, industrial sites, data-center infrastructure, large energy projects, and site work before final approval.",
     "candidate_source_fields": [
       "county",
@@ -1282,9 +1282,9 @@
       "permit_number",
       "detail_url"
     ],
-    "last_checked_on": "2026-09-02",
-    "next_audit_on": "2026-09-16",
-    "notes": "Prioritize a written MDEQ data-use agreement and supported recurring export/API. A production connector must assign a durable event identity, preserve application-versus-grant lifecycle evidence, reconcile amended or withdrawn events, retain official detail URLs, and suppress personal applicant/contact details. The 2026-09-02 live register included application-stage construction signals for subdivisions, industrial parks, commercial projects, Amazon Data Services infrastructure, and major builders including D.R. Horton.",
+    "last_checked_on": "2026-10-16",
+    "next_audit_on": "2026-11-13",
+    "notes": "Prioritize a written MDEQ data-use agreement and a supported recurring export/API. 2026-10-16 bounded read-only qualification (single GET, no query submission, no pagination, no bypass) established the contract in blocker_summary; evidence in docs/releases/2026-10-16-mdeq-contract-qualification.md. Concrete technical blocker for production: (1) a viewstate POST with rotating __VIEWSTATE/__EVENTVALIDATION tokens requires a fragile fetch-then-post handshake; (2) no durable per-activity identity (ai is an entity id; duplicate and repeated-ai rows); (3) no pagination and no control total to reconcile a bounded window; (4) no update/withdrawal/deletion semantics; (5) no JSON/REST/export. Application-versus-decision semantics are derivable from the uxActionType categories (Receive Application/NOI vs Issue Coverage/Permit). The 2026-09-02 live register still included application-stage construction signals for subdivisions, industrial parks, commercial projects, Amazon Data Services infrastructure, and major builders including D.R. Horton. An authorized production connector must assign a durable event identity, preserve application-versus-grant lifecycle evidence, reconcile amended or withdrawn events, retain official detail URLs, and suppress personal applicant/contact details; none of that is satisfiable today and no feed is activated.",
     "can_run_canary": false
   },
   {
