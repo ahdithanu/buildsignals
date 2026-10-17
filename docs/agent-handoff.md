@@ -5,6 +5,26 @@ inspect Git and reverify production before acting. No credentials belong here.
 
 ## Current Task
 
+Mississippi follow-up (2026-10-16): owner authorized proceeding with review,
+not an agency license grant. See `docs/releases/2026-10-16-mississippi-review.md`.
+D'Iberville's live Terms of Service actually prohibit commercial use/copying
+without written permission; this is now recorded as an express restriction,
+not an inference from a copyright footer. No similar express ban was identified
+in the reviewed Biloxi privacy/public-meeting pages or MDEQ disclaimer; absence
+of one is not affirmative legal clearance.
+
+Biloxi local technical qualification is implemented in `scripts/qualify_biloxi.py`:
+three PDFs/four HTML pages max, no DB writes or activation, existing document
+parser, source-specific mixed-encoding handling, multiline contact suppression,
+source hashes/pages/case IDs. Live result: ten items, seven single-format parcel
+references, two compound unresolved references, one unknown. Fifteen targeted
+tests passed; expanded catalog/regional checks: 219 passed in 3.63s; Ruff/diff
+checks passed. Production integration, wider layout/privacy qualification and
+revision/control-total semantics remain engineering work, not a request for the
+owner to approve the same review again. D'Iberville needs written permission or
+a reviewed authorized alternate channel. MDEQ search contract remains unqualified.
+No Mississippi feed has been enabled; existing fourteen regional jobs unchanged.
+
 Regional recurring ingestion expanded on 2026-10-16 under explicit user approval
 for Florida, Texas, Georgia, Arizona and Mississippi, with only reviewed sources
 passing verification enabled. This supersedes the Columbus-only scope below.

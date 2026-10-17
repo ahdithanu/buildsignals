@@ -1295,9 +1295,9 @@
     "jurisdiction": "D'Iberville, MS",
     "base_url": "https://diberville.ms.us/council-committee-center/",
     "official_landing_page": "https://diberville.ms.us/departments/planning-zoning/",
-    "license": "Official public agendas and minutes; city site states all rights reserved and provides no affirmative commercial reuse grant",
+    "license": "City Terms of Service expressly restrict commercial use and copying without written permission; see https://diberville.ms.us/terms-of-service/",
     "status": "legal_hold",
-    "blocker_summary": "The city publishes a long-running dated agenda/minutes archive with linked documents, but commercial storage and derived-display rights, a supported archive API, authoritative document totals, revision/removal semantics, and stable case-document identity are not documented.",
+    "blocker_summary": "2026-10-16 review found an explicit commercial-use/copying restriction in the city's Terms of Service, not merely a copyright footer. Written permission or a reviewed alternate authorized channel is needed. Archive identity, totals and revision semantics also remain unqualified.",
     "early_warning_value": "Council and planning records expose business openings, tax-sharing and development agreements, subdivisions, rezonings, conditional uses, signs, infrastructure commitments, named applicants, project sites, and Planning Commission recommendations before construction is publicly announced or permitted.",
     "candidate_source_fields": [
       "meeting_date",
@@ -1318,7 +1318,7 @@
     ],
     "last_checked_on": "2026-09-02",
     "next_audit_on": "2026-09-16",
-    "notes": "Seed evidence includes the 2026 BJ's Wholesale Club tax-sharing/development agreement, commercial-corridor activity near I-10, and planning approvals for new businesses. Use the city archive and attached agenda/minute documents as primary evidence; retain news links only as discovery corroboration. A connector must version documents, distinguish proposed agenda items from final votes, preserve local case numbers, and suppress personal contact details.",
+    "notes": "Owner approved continued review on 2026-10-16; that is not city permission. Terms sections on intellectual property and commercial use expressly restrict copying and commercial use. Robots also requests a 20-second crawl delay. Do not activate under this site's current terms without resolving the express restriction. Authorized future ingestion must use city documents as primary evidence, preserve case/document identity and proposal-versus-decision semantics, and suppress personal contacts.",
     "can_run_canary": false
   },
   {
@@ -1348,7 +1348,7 @@
     ],
     "last_checked_on": "2026-08-11",
     "next_audit_on": "2026-08-25",
-    "notes": "Confirm rights and establish a stable official archive manifest before building a PDF adapter. Retain agenda evidence URLs and suppress personal representative details downstream."
+    "notes": "2026-10-16 owner-approved technical review used the existing planning_documents parser, not a new PDF adapter. scripts/qualify_biloxi.py verified 10 items from three official agendas: seven single-format parcel references, two compound unresolved references and one unknown. No database writes or source activation occurred. Archive mixes UTF-8 and Windows-1252 bytes; a qualification-only client handles this. Biloxi's reviewed privacy/public-meetings pages did not reveal an express commercial-use ban; this is not an affirmative license determination. Production admission still needs encoding support in the deployed connector, broader layout/privacy validation and revision/control-total scope. Do not label these agenda items permit submissions or approvals."
   },
   {
     "key": "bozeman_mt_active_planning_projects",
