@@ -56,6 +56,18 @@ beforeEach(() => {
   });
 });
 
+it('preserves source calendar dates independently of the viewer timezone', async () => {
+  const formatter = vi.spyOn(Date.prototype, 'toLocaleDateString');
+  try {
+    render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DemoWorkspace /></MemoryRouter></QueryClientProvider>);
+    await screen.findByText(/2,049 permit and site records/);
+    expect(formatter).toHaveBeenCalledWith(undefined, { timeZone: 'UTC' });
+    expect(screen.getByText(/Dates shown in UTC/)).toBeInTheDocument();
+  } finally {
+    formatter.mockRestore();
+  }
+});
+
 it('describes populated demo surfaces without claiming live parcel inventory', async () => {
   render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DemoWorkspace /></MemoryRouter></QueryClientProvider>);
   expect(await screen.findByText(/2,049 permit and site records/)).toBeInTheDocument();

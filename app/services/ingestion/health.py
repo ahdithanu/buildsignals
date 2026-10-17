@@ -81,6 +81,10 @@ class SourceHealthResult:
     freshness_semantics: str = "ingestion_observed_at"
     freshness_label: str = "Collection observed"
     source_watermark_enforced: bool = False
+    source_update_date_total: int = 0
+    source_update_date_present: int = 0
+    source_update_date_completeness: float | None = None
+    source_update_dates_incomplete: bool = False
 
 
 @dataclass(frozen=True)
@@ -182,6 +186,24 @@ def evaluate_source_health(
         RawSourceRecord.source_id == source.id
     ).scalar()
     source_lag = _hours_between(now, watermark) if watermark else None
+    # Completeness of the normalized source/filing date across collected records.
+    # A recent watermark drawn from a few rows must not be read as filing freshness
+    # for the whole cohort, so measure how many records actually carry the date.
+    update_total, update_present = active_query(
+        db.query(func.count(), func.count(RawSourceRecord.source_updated_at)),
+        RawSourceRecord,
+    ).filter(RawSourceRecord.source_id == source.id).one()
+    source_update_date_total = int(update_total or 0)
+    source_update_date_present = int(update_present or 0)
+    source_update_date_completeness = (
+        round(source_update_date_present / source_update_date_total, 4)
+        if source_update_date_total
+        else None
+    )
+    source_update_dates_incomplete = (
+        source_update_date_total > 0
+        and source_update_date_present < source_update_date_total
+    )
     cursor_run = healthy_query.filter(IngestionRun.checkpoint.is_not(None)).order_by(
         IngestionRun.started_at.desc()
     ).first()
@@ -235,6 +257,13 @@ def evaluate_source_health(
         "dataset_refreshed_at",
         "unclassified_source_timestamp",
     }
+    # Age-based freshness is enforced only for timestamps that track updates; a
+    # quiet filing feed is not stale. Carrying the filing/update date is a separate
+    # expectation: filing_event_at sources are expected to populate the date even
+    # though their age is not SLA-enforced, so completeness is judged for them too.
+    source_update_date_expected = (
+        source_watermark_enforced or freshness_semantics == "filing_event_at"
+    )
     collection_critical_hours = max(48.0, collection_sla_hours * 4 / 3)
     freshness_critical_hours = max(48.0, sla_hours * 4 / 3)
     reasons: list[str] = []
@@ -286,6 +315,21 @@ def evaluate_source_health(
     elif failure_rate is not None and failure_rate > 0.1 and status == "healthy":
         status = "degraded"
         reasons.append(f"Run failure rate is {failure_rate:.0%} in the health window")
+    # A source that claims a real publisher/filing timestamp but is missing that
+    # date on a meaningful share of records cannot have its watermark presented as
+    # cohort-wide filing freshness. Surface it rather than silently conflating.
+    if (
+        source_update_date_expected
+        and source_update_date_completeness is not None
+        and source_update_date_completeness < 0.9
+    ):
+        reasons.append(
+            f"{freshness_label} date is present on only "
+            f"{source_update_date_completeness:.0%} of "
+            f"{source_update_date_total} collected records"
+        )
+        if status == "healthy":
+            status = "degraded"
 
     return SourceHealthResult(
         source_id=source.id,
@@ -328,6 +372,10 @@ def evaluate_source_health(
         freshness_semantics=freshness_semantics,
         freshness_label=freshness_label,
         source_watermark_enforced=source_watermark_enforced,
+        source_update_date_total=source_update_date_total,
+        source_update_date_present=source_update_date_present,
+        source_update_date_completeness=source_update_date_completeness,
+        source_update_dates_incomplete=source_update_dates_incomplete,
     )
 
 

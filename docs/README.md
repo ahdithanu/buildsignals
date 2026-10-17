@@ -5,6 +5,9 @@ permit intelligence pipeline.
 
 ## Start Here
 
+- [Shared agent instructions](../AGENTS.md), [current handoff](./agent-handoff.md),
+  and [agent onboarding](./agent-onboarding.md)
+
 - [Knowledge graph schema and scaling notes](./knowledge_graph.md)
 - [Permit ingestion architecture and dataflow diagrams](./ingestion_architecture.md)
 - [Nationwide source coverage and state rollout map](./nationwide_source_coverage.md)

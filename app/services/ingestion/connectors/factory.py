@@ -143,6 +143,10 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             document_type_patterns=_string_mapping(
                 config.get("document_type_patterns"), "document_type_patterns"
             ),
+            text_encoding=_optional_str(config.get("text_encoding"), "text_encoding"),
+            max_index_page_bytes=_optional_int(
+                config.get("max_index_page_bytes"), "max_index_page_bytes"
+            ),
             max_records=int(config.get("max_records", 1000)),
             max_pages=int(config.get("max_pages", 1)),
             headers=_public_headers(config),
@@ -169,6 +173,10 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             governing_body=config.get("governing_body"),
             document_allowed_hosts=_string_set(
                 config.get("document_allowed_hosts"), "document_allowed_hosts"
+            ),
+            text_encoding=_optional_str(config.get("text_encoding"), "text_encoding"),
+            max_index_page_bytes=_optional_int(
+                config.get("max_index_page_bytes"), "max_index_page_bytes"
             ),
             max_documents=int(config.get("max_documents", 100)),
             max_index_pages=int(config.get("max_index_pages", 1)),
@@ -202,6 +210,22 @@ def _required(config: Mapping[str, Any], key: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"Connector configuration requires '{key}'")
     return value.strip()
+
+
+def _optional_str(value: Any, key: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Connector '{key}' must be a non-empty string when set")
+    return value.strip()
+
+
+def _optional_int(value: Any, key: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"Connector '{key}' must be a positive integer when set")
+    return value
 
 
 def _mapping(value: Any) -> Mapping[str, Any] | None:

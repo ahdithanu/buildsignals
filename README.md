@@ -26,6 +26,11 @@ React/Vite frontend, Postgres.
 
 ## Quickstart
 
+Switching coding agents? Start with [AGENTS.md](AGENTS.md) and the
+[current handoff](docs/agent-handoff.md). Run `make agent-status` for a read-only
+local checkpoint. [Agent onboarding](docs/agent-onboarding.md) covers Codex,
+Claude Code, Antigravity, Copilot, and a resume prompt for other tools.
+
 Prerequisites: **Python 3.11+**, **Node 18+**, and (optionally) a local Postgres.
 Without `DATABASE_URL` the backend uses a SQLite file, so you can run entirely
 locally with zero infra.
@@ -98,7 +103,7 @@ That turns a misconfiguration into a loud crash instead of a silent breach.
 ## Testing
 
 ```bash
-# Backend — 270 tests
+# Backend (test counts vary by checkout and PostgreSQL availability)
 pytest -q
 
 # Frontend unit (vitest)

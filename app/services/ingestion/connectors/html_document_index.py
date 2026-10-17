@@ -9,6 +9,8 @@ from html.parser import HTMLParser
 from typing import Mapping, Pattern
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
+from app.services.ingestion.text_decoding import resolve_hybrid_decoder
+
 from .base import (
     BaseConnector,
     Checkpoint,
@@ -18,6 +20,8 @@ from .base import (
     RetryingHttpClient,
     checkpoint_offset,
 )
+
+_DEFAULT_INDEX_PAGE_BYTES = 8 * 1024 * 1024
 
 _DATE_PATTERNS = (
     re.compile(
@@ -57,6 +61,8 @@ class HTMLDocumentIndexConnector(BaseConnector):
         index_page_pattern: str | None = None,
         allowed_hosts: frozenset[str] | None = None,
         document_type_patterns: Mapping[str, str] | None = None,
+        text_encoding: str | None = None,
+        max_index_page_bytes: int | None = None,
         page_size: int = 100,
         max_records: int = 1000,
         max_pages: int = 1,
@@ -71,6 +77,10 @@ class HTMLDocumentIndexConnector(BaseConnector):
             raise ValueError("max_records must be a positive integer")
         if isinstance(max_pages, bool) or max_pages < 1:
             raise ValueError("max_pages must be a positive integer")
+        if max_index_page_bytes is not None and (
+            isinstance(max_index_page_bytes, bool) or max_index_page_bytes < 1
+        ):
+            raise ValueError("max_index_page_bytes must be a positive integer")
 
         endpoint_host = urlsplit(self.endpoint).hostname
         configured_hosts = (
@@ -84,6 +94,11 @@ class HTMLDocumentIndexConnector(BaseConnector):
         self.text_pattern = _compile_pattern(text_pattern, "text_pattern")
         self.index_page_pattern = _compile_pattern(index_page_pattern, "index_page_pattern")
         self.document_type_patterns = _compile_document_types(document_type_patterns)
+        self.text_encoding = text_encoding
+        self._hybrid_decoder = resolve_hybrid_decoder(text_encoding)
+        self.max_index_page_bytes = (
+            _DEFAULT_INDEX_PAGE_BYTES if max_index_page_bytes is None else max_index_page_bytes
+        )
         self.max_records = max_records
         self.max_pages = max_pages
         self.headers = {"Accept": "text/html,application/xhtml+xml", **dict(headers or {})}
@@ -122,7 +137,7 @@ class HTMLDocumentIndexConnector(BaseConnector):
             if page_url in visited:
                 continue
             visited.add(page_url)
-            body = self.http_client.get_text(page_url, headers=self.headers)
+            body = self._fetch_index_text(page_url)
             parser = _AnchorParser()
             try:
                 parser.feed(body)
@@ -151,6 +166,25 @@ class HTMLDocumentIndexConnector(BaseConnector):
                     pending.append(resolved)
 
         return list(documents.values()), len(visited)
+
+    def _fetch_index_text(self, page_url: str) -> str:
+        """Fetch one index page, decoding per the configured ``text_encoding``.
+
+        The default path keeps the strict, charset-aware ``get_text`` behavior.
+        A tolerant hybrid encoding reads bounded bytes and reinterprets only the
+        bytes that are not valid UTF-8, so a single reviewed source with a mixed
+        archive never changes decoding for any other source.
+        """
+        if self._hybrid_decoder is not None:
+            body, _headers = self.http_client.get_bytes(
+                page_url, max_bytes=self.max_index_page_bytes, headers=self.headers
+            )
+            return self._hybrid_decoder(body)
+        if self.text_encoding is not None:
+            return self.http_client.get_text(
+                page_url, headers=self.headers, encoding=self.text_encoding
+            )
+        return self.http_client.get_text(page_url, headers=self.headers)
 
     def _matches_document(self, url: str, title: str) -> bool:
         return bool(

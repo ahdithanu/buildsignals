@@ -231,3 +231,22 @@ accessible in-app browser. Worker configuration, scheduler executions, current
 successful run counts, production database inventory and source freshness remain
 unverified. This demo does not switch on production ingestion. An authenticated
 Render session is required to finish that audit; do not send passwords in chat.
+
+## Recent Public Snapshots
+
+The historical seed remains restricted to Q1 2024 by default. For a separately
+reviewed Columbus site-application snapshot captured with the existing bounded
+intake pipeline, use:
+
+```sh
+python -m app.services.demo_seed --confirm-demo-seed --recent /path/to/snapshot.db
+```
+
+This opt-in accepts completed intervals of 1-31 days starting within the last
+60 days, only for the reviewed Columbus site-application source. It checks the
+public field allowlist, retains evidence and normalization, and writes only to
+the reserved demo tenant. Sources remain inactive/manual. It does not copy
+customer records, activate scheduled ingestion, or establish parcel geometry.
+The frontend distinguishes filing, issuance, and capture dates; recent snapshots
+are not a promise of continuous freshness. Seed only against an explicitly
+authorized database. Existing snapshots are replayed idempotently.

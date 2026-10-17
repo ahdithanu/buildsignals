@@ -402,8 +402,13 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert mississippi.record_type == "permit"
     assert mississippi.base_url.endswith("/epd-activity-search.aspx")
     assert "before final approval" in mississippi.early_warning_value
-    assert mississippi.last_checked_on.isoformat() == "2026-09-02"
+    assert mississippi.last_checked_on.isoformat() == "2026-10-16"
     assert mississippi.can_run_canary is False
+    # 2026-10-16 contract qualification: the concrete technical blocker and the
+    # one establishable semantic must stay recorded so the hold is evidence-backed.
+    assert "no pagination" in mississippi.blocker_summary
+    assert "no durable event identity" in mississippi.blocker_summary
+    assert "Application-versus-decision IS derivable" in mississippi.blocker_summary
 
     diberville = by_key["diberville_ms_council_planning_agendas"]
     assert diberville.status == "legal_hold"
@@ -412,6 +417,18 @@ def test_candidate_catalog_tracks_retry_and_hold_sources_without_production_over
     assert "business openings" in diberville.early_warning_value
     assert "primary evidence" in diberville.notes
     assert diberville.can_run_canary is False
+    # Express commercial-use/copying restriction must stay recorded; do not clear.
+    assert "written permission" in diberville.license
+
+    # Biloxi config is committed as inert probe_settings; the hold is preserved and
+    # the reviewed mixed-encoding opt-in is recorded, not activated.
+    biloxi = by_key["biloxi_ms_development_review_agendas"]
+    assert biloxi.status == "legal_hold"
+    assert biloxi.adapter == "planning_documents"
+    assert biloxi.record_type == "planning"
+    assert biloxi.can_run_canary is False
+    assert biloxi.probe_settings["connector"]["text_encoding"] == "utf-8-sig+cp1252"
+    assert "not permits" in biloxi.blocker_summary.lower()
 
     nationwide_holds = {
         "anchorage_ak_bsd_permit_lookup",
