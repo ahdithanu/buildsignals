@@ -59,6 +59,8 @@ class PlanningDocumentsConnector(BaseConnector):
         meeting_name: str | None = None,
         governing_body: str | None = None,
         document_allowed_hosts: frozenset[str] | None = None,
+        text_encoding: str | None = None,
+        max_index_page_bytes: int | None = None,
         page_size: int = 100,
         max_documents: int = 100,
         max_index_pages: int = 1,
@@ -107,6 +109,10 @@ class PlanningDocumentsConnector(BaseConnector):
             index_page_pattern=index_page_pattern,
             allowed_hosts=allowed_document_hosts,
             document_type_patterns=document_type_patterns,
+            text_encoding=text_encoding,
+            max_index_page_bytes=(
+                max_document_bytes if max_index_page_bytes is None else max_index_page_bytes
+            ),
             page_size=max_documents,
             max_records=max_documents,
             max_pages=max_index_pages,

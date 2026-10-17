@@ -1,60 +1,42 @@
 """Bounded, non-publishing qualification of official Biloxi DRC agenda items.
 
 This is technical evidence, not a license determination or source activation.
-Run with PYTHONPATH=. python scripts/qualify_biloxi.py --live.
+The reviewed connector configuration lives in the candidate catalog entry
+``biloxi_ms_development_review_agendas`` (inert ``probe_settings``); this script
+loads that single source of truth and runs it through the production
+``planning_documents`` connector, including the shared source-specific mixed
+UTF-8/Windows-1252 decoder. Run with ``PYTHONPATH=. python scripts/qualify_biloxi.py --live``.
 """
 from __future__ import annotations
 
 import argparse
 import json
 
-from app.services.ingestion.connectors.base import RetryingHttpClient
+from app.services.ingestion.catalog import load_candidate_catalog
 from app.services.ingestion.connectors.planning_documents import PlanningDocumentsConnector
+from app.services.ingestion.text_decoding import decode_mixed_utf8_cp1252
 
-ENDPOINT = "https://biloxi.ms.us/category/agendas-drc/"
+# Backwards-compatible alias: the mixed-encoding handling now lives in the shared
+# ingestion decoder so the deployed connector uses the exact same logic.
+decode_archive = decode_mixed_utf8_cp1252
 
-
-def decode_archive(body: bytes) -> str:
-    # Official archive mixes valid UTF-8 with legacy Windows smart-quote bytes.
-    text = body.decode("utf-8-sig", errors="surrogateescape")
-    return "".join(bytes([ord(char) - 0xDC00]).decode("cp1252")
-                   if 0xDC80 <= ord(char) <= 0xDCFF else char for char in text)
+_CANDIDATE_KEY = "biloxi_ms_development_review_agendas"
 
 
-class BiloxiQualificationClient(RetryingHttpClient):
-    def get_text(self, url, *, params=None, headers=None, encoding="utf-8-sig"):
-        body, _ = self.get_bytes(url, max_bytes=2_000_000, params=params, headers=headers)
-        return decode_archive(body)
+def _load_connector_settings() -> tuple[str, dict]:
+    entry = next(
+        candidate
+        for candidate in load_candidate_catalog()
+        if candidate.key == _CANDIDATE_KEY
+    )
+    connector = dict((entry.probe_settings or {}).get("connector") or {})
+    if not connector:
+        raise RuntimeError(f"{_CANDIDATE_KEY} is missing a reviewed connector configuration")
+    endpoint = connector.pop("endpoint")
+    return endpoint, connector
 
 
-SETTINGS = {
-    "href_pattern": r"/agendas/DRC/20\d{2}/[^/?]+\.pdf$",
-    "index_page_pattern": r"https://biloxi\.ms\.us/drc-agenda[^/?]*/$",
-    "item_pattern": r"^\s*(?P<item_number>\d+)\.\s+\d{1,2}:\d{2}\b",
-    "file_pattern": r"\b(?P<file_number>20\d{2}-\d{3})\b",
-    "value_patterns": {
-        "project_name": r"^(?:New|Resubmit)\s*\n(?P<value>[^\n]+)",
-        "address": r"^(?:New|Resubmit)\s*\n[^\n]+\n(?P<value>[^\n]+)",
-        "parcel_id": r"^(?P<value>\d{4}[A-Z]-\d{2}-\d{3}\.\d{3})\s*$",
-        "parcel_reference": r"^(?P<value>\d{4}[A-Z]-\d{2}-\d{3}\.\d{3}[^\n]*)$",
-        "review_type": r"^(?P<value>New|Resubmit)\s*$",
-    },
-    # In this table, the individual representative line immediately precedes ward.
-    "suppression_patterns": [r"^(?:(?!\d|New|Resubmit)[^\n]+\n){1,3}(?=\d+(?:&\d+)*\s*(?:\n|$))"],
-    "document_type_patterns": {"agenda": r"DRC"},
-    "meeting_name": "Development Review Committee",
-    "governing_body": "City of Biloxi",
-    "document_allowed_hosts": frozenset({"biloxi.ms.us"}),
-    "max_documents": 3,
-    "max_index_pages": 4,
-    "max_document_bytes": 2_000_000,
-    "max_items_per_document": 25,
-    "max_item_characters": 5_000,
-    "max_records": 75,
-    "page_size": 75,
-    "timeout": 25,
-    "max_retries": 1,
-}
+ENDPOINT, SETTINGS = _load_connector_settings()
 
 
 def qualification_receipt(records):
@@ -81,8 +63,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true", required=True)
     parser.parse_args()
-    client = BiloxiQualificationClient(timeout=25, max_retries=1, allowed_hosts=frozenset({"biloxi.ms.us"}))
-    records = list(PlanningDocumentsConnector(ENDPOINT, http_client=client, **SETTINGS).iter_records())
+    records = list(PlanningDocumentsConnector(ENDPOINT, **SETTINGS).iter_records())
     receipt = qualification_receipt(records)
     print(json.dumps(receipt, indent=2))
     raise SystemExit(0 if receipt["status"] == "verified" else 1)
