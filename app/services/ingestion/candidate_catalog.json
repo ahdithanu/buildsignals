@@ -1267,7 +1267,7 @@
     "official_landing_page": "https://www.mdeq.ms.gov/permits/environmental-permits-division/",
     "license": "Official public permit register; no affirmative commercial reuse or redistribution grant",
     "status": "legal_hold",
-    "blocker_summary": "The official statewide register exposes current application and decision events, but its ASP.NET query contract, pagination/control totals, durable activity identity, correction/deletion behavior, and commercial storage/display rights are not documented.",
+    "blocker_summary": "2026-10-16 read-only inspection qualified the public contract: epd-activity-search.aspx is an ASP.NET WebForms page whose report form (name=report_epd) POSTs uxActionType/uxStartDate/uxEndDate with rotating __VIEWSTATE/__EVENTVALIDATION tokens. The activity register has no pagination (zero __doPostBack, no pager), renders the whole date window in one response, exposes no record total/control count, and offers no JSON/REST/export endpoint. The only list identifier is the agency-interest id (ai_info.aspx?ai=N), an entity id rather than a per-activity id: the same ai recurs across different action/date rows and identical rows are duplicated, so no durable event identity exists without fetching each detail page. No update/withdrawal/tombstone signal is exposed. Application-versus-decision IS derivable from uxActionType. A reliable recurring interface cannot be established from this contract, and commercial-reuse rights remain unestablished; the source stays legal_hold and inactive.",
     "early_warning_value": "Applications for construction, air, water, stormwater, and other environmental permits reveal named companies, developers, subdivisions, industrial sites, data-center infrastructure, large energy projects, and site work before final approval.",
     "candidate_source_fields": [
       "county",
@@ -1282,9 +1282,9 @@
       "permit_number",
       "detail_url"
     ],
-    "last_checked_on": "2026-09-02",
-    "next_audit_on": "2026-09-16",
-    "notes": "Prioritize a written MDEQ data-use agreement and supported recurring export/API. A production connector must assign a durable event identity, preserve application-versus-grant lifecycle evidence, reconcile amended or withdrawn events, retain official detail URLs, and suppress personal applicant/contact details. The 2026-09-02 live register included application-stage construction signals for subdivisions, industrial parks, commercial projects, Amazon Data Services infrastructure, and major builders including D.R. Horton.",
+    "last_checked_on": "2026-10-16",
+    "next_audit_on": "2026-11-13",
+    "notes": "Prioritize a written MDEQ data-use agreement and a supported recurring export/API. 2026-10-16 bounded read-only qualification (single GET, no query submission, no pagination, no bypass) established the contract in blocker_summary; evidence in docs/releases/2026-10-16-mdeq-contract-qualification.md. Concrete technical blocker for production: (1) a viewstate POST with rotating __VIEWSTATE/__EVENTVALIDATION tokens requires a fragile fetch-then-post handshake; (2) no durable per-activity identity (ai is an entity id; duplicate and repeated-ai rows); (3) no pagination and no control total to reconcile a bounded window; (4) no update/withdrawal/deletion semantics; (5) no JSON/REST/export. Application-versus-decision semantics are derivable from the uxActionType categories (Receive Application/NOI vs Issue Coverage/Permit). The 2026-09-02 live register still included application-stage construction signals for subdivisions, industrial parks, commercial projects, Amazon Data Services infrastructure, and major builders including D.R. Horton. An authorized production connector must assign a durable event identity, preserve application-versus-grant lifecycle evidence, reconcile amended or withdrawn events, retain official detail URLs, and suppress personal applicant/contact details; none of that is satisfiable today and no feed is activated.",
     "can_run_canary": false
   },
   {
@@ -1295,9 +1295,9 @@
     "jurisdiction": "D'Iberville, MS",
     "base_url": "https://diberville.ms.us/council-committee-center/",
     "official_landing_page": "https://diberville.ms.us/departments/planning-zoning/",
-    "license": "Official public agendas and minutes; city site states all rights reserved and provides no affirmative commercial reuse grant",
+    "license": "City Terms of Service expressly restrict commercial use and copying without written permission; see https://diberville.ms.us/terms-of-service/",
     "status": "legal_hold",
-    "blocker_summary": "The city publishes a long-running dated agenda/minutes archive with linked documents, but commercial storage and derived-display rights, a supported archive API, authoritative document totals, revision/removal semantics, and stable case-document identity are not documented.",
+    "blocker_summary": "2026-10-16 review found an explicit commercial-use/copying restriction in the city's Terms of Service, not merely a copyright footer. Written permission or a reviewed alternate authorized channel is needed. Archive identity, totals and revision semantics also remain unqualified.",
     "early_warning_value": "Council and planning records expose business openings, tax-sharing and development agreements, subdivisions, rezonings, conditional uses, signs, infrastructure commitments, named applicants, project sites, and Planning Commission recommendations before construction is publicly announced or permitted.",
     "candidate_source_fields": [
       "meeting_date",
@@ -1318,20 +1318,20 @@
     ],
     "last_checked_on": "2026-09-02",
     "next_audit_on": "2026-09-16",
-    "notes": "Seed evidence includes the 2026 BJ's Wholesale Club tax-sharing/development agreement, commercial-corridor activity near I-10, and planning approvals for new businesses. Use the city archive and attached agenda/minute documents as primary evidence; retain news links only as discovery corroboration. A connector must version documents, distinguish proposed agenda items from final votes, preserve local case numbers, and suppress personal contact details.",
+    "notes": "Owner approved continued review on 2026-10-16; that is not city permission. Terms sections on intellectual property and commercial use expressly restrict copying and commercial use. Robots also requests a 20-second crawl delay. Do not activate under this site's current terms without resolving the express restriction. Authorized future ingestion must use city documents as primary evidence, preserve case/document identity and proposal-versus-decision semantics, and suppress personal contacts.",
     "can_run_canary": false
   },
   {
     "key": "biloxi_ms_development_review_agendas",
     "name": "Biloxi Development Review Committee Agendas",
-    "adapter": "pdf",
-    "record_type": "permit",
+    "adapter": "planning_documents",
+    "record_type": "planning",
     "jurisdiction": "Biloxi, MS",
     "base_url": "https://biloxi.ms.us/residents/public-meetings/",
     "official_landing_page": "https://biloxi.ms.us/departments/community-development/",
     "license": "Official public meeting records with no affirmative commercial reuse grant",
     "status": "legal_hold",
-    "blocker_summary": "Recurring agendas expose valuable proposed developments, but there is no feed or index API, layouts can drift, document parsing is not implemented, and commercial storage and redistribution rights are unresolved.",
+    "blocker_summary": "The planning_documents connector configuration is now qualified and committed as inert probe_settings, including shared source-specific mixed UTF-8/Windows-1252 decoding. Activation still requires a documented commercial-reuse/derived-display basis (none established) plus broader layout/privacy validation and revision/control-total semantics. No feed, index API or provider control total exists; agendas are proposed development-review items, not permits.",
     "early_warning_value": "New, resubmitted, and sign-off development-review agenda items reveal proposed stores, restaurants, site work, project addresses, parcels, and applicants before building permits.",
     "candidate_source_fields": [
       "meeting_date",
@@ -1346,9 +1346,113 @@
       "ward",
       "decision"
     ],
-    "last_checked_on": "2026-08-11",
-    "next_audit_on": "2026-08-25",
-    "notes": "Confirm rights and establish a stable official archive manifest before building a PDF adapter. Retain agenda evidence URLs and suppress personal representative details downstream."
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://biloxi.ms.us/category/agendas-drc/",
+        "href_pattern": "/agendas/DRC/20\\d{2}/[^/?]+\\.pdf$",
+        "index_page_pattern": "https://biloxi\\.ms\\.us/drc-agenda[^/?]*/$",
+        "item_pattern": "^\\s*(?P<item_number>\\d+)\\.\\s+\\d{1,2}:\\d{2}\\b",
+        "file_pattern": "\\b(?P<file_number>20\\d{2}-\\d{3})\\b",
+        "value_patterns": {
+          "project_name": "^(?:New|Resubmit)\\s*\\n(?P<value>[^\\n]+)",
+          "address": "^(?:New|Resubmit)\\s*\\n[^\\n]+\\n(?P<value>[^\\n]+)",
+          "parcel_id": "^(?P<value>\\d{4}[A-Z]-\\d{2}-\\d{3}\\.\\d{3})\\s*$",
+          "parcel_reference": "^(?P<value>\\d{4}[A-Z]-\\d{2}-\\d{3}\\.\\d{3}[^\\n]*)$",
+          "review_type": "^(?P<value>New|Resubmit)\\s*$"
+        },
+        "suppression_patterns": [
+          "^(?:(?!\\d|New|Resubmit)[^\\n]+\\n){1,3}(?=\\d+(?:&\\d+)*\\s*(?:\\n|$))"
+        ],
+        "document_type_patterns": {
+          "agenda": "DRC"
+        },
+        "meeting_name": "Development Review Committee",
+        "governing_body": "City of Biloxi",
+        "document_allowed_hosts": [
+          "biloxi.ms.us"
+        ],
+        "max_documents": 3,
+        "max_index_pages": 4,
+        "max_document_bytes": 2000000,
+        "max_items_per_document": 25,
+        "max_item_characters": 5000,
+        "max_records": 75,
+        "page_size": 75,
+        "timeout": 25,
+        "max_retries": 1,
+        "text_encoding": "utf-8-sig+cp1252",
+        "max_index_page_bytes": 2000000,
+        "headers": {
+          "User-Agent": "BuildSignals/1.0 (+https://buildsignals.ai; public-records-ingestion)"
+        }
+      },
+      "defaults": {
+        "jurisdiction": "Biloxi, MS",
+        "city": "Biloxi",
+        "state": "MS",
+        "confidence": 0.9
+      },
+      "signal_stage": "pre_approval",
+      "freshness_semantics": "ingestion_observed_at",
+      "freshness_sla_hours": 336,
+      "collection_interval_minutes": 1440,
+      "collection_sla_hours": 72
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "address",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
+    ],
+    "last_checked_on": "2026-10-16",
+    "next_audit_on": "2026-11-13",
+    "notes": "2026-10-16 owner-approved technical review used the existing planning_documents parser, not a new PDF adapter. scripts/qualify_biloxi.py loads this entry's probe_settings connector and verified 10 items from three official agendas: seven single-format parcel references, two compound unresolved references and one unknown. No database writes or source activation occurred. Mixed UTF-8/Windows-1252 archive bytes are handled by the shared app/services/ingestion/text_decoding decoder, selected only for this source via text_encoding; strict decoding is unchanged elsewhere. Biloxi's reviewed privacy/public-meetings pages did not reveal an express commercial-use ban; this is not an affirmative license determination. Production admission still needs a documented reuse basis, broader layout/privacy validation and revision/control-total scope. Do not label these agenda items permit submissions or approvals."
   },
   {
     "key": "bozeman_mt_active_planning_projects",

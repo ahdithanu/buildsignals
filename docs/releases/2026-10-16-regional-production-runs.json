@@ -1,0 +1,694 @@
+{
+  "observed_on": "2026-10-16",
+  "scope": "Actual scheduler-started production runs; stored source identities, not unique projects or complete state coverage",
+  "worker_image": "159667575905.dkr.ecr.us-east-1.amazonaws.com/dealsignal-api@sha256:de6dcaad61014d4702b62c532a638a1fba060fa949ea561cdb7f00c961ba8854",
+  "successful_runs": [
+    {
+      "source_key": "florida_dep_erp_applications_commercial_context",
+      "task": "3ff9182b55134d73ad90f369c75615ac",
+      "started_by": "chronos-schedule/region-florida_dep_",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "florida_dep_erp_applications_commercial_context",
+          "provider_count": 32,
+          "sample_valid": 10,
+          "sample_failed": 0,
+          "event_kind": "environmental_application",
+          "status": "completed",
+          "run_id": "d929c907-5b04-49a0-9c1d-9acb04688fa4",
+          "seen": 32,
+          "inserted": 32,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 32,
+          "stored": 32
+        }
+      ]
+    },
+    {
+      "source_key": "arlington_tx_commercial_permit_applications",
+      "task": "e58752a60a2c42b3b0e30fb850fb2404",
+      "started_by": "chronos-schedule/region-arlington_tx",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "arlington_tx_commercial_permit_applications",
+          "provider_count": 84,
+          "sample_valid": 40,
+          "sample_failed": 0,
+          "event_kind": "application",
+          "status": "completed",
+          "run_id": "7b659623-f7c6-4c2d-8b4f-5d5893efeaea",
+          "seen": 84,
+          "inserted": 84,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 84,
+          "stored": 84
+        }
+      ]
+    },
+    {
+      "source_key": "dallas_tx_legistar_planning_agendas",
+      "task": "53fa67fbc60e47db8a001be50931d18c",
+      "started_by": "chronos-schedule/recheck-dallas_tx_l",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "dallas_tx_legistar_planning_agendas",
+          "provider_count": null,
+          "sample_valid": 10,
+          "sample_failed": 0,
+          "event_kind": "planning_meeting",
+          "status": "completed",
+          "run_id": "d9b1711a-25f1-4c26-af04-4e571c89f9c7",
+          "seen": 82,
+          "inserted": 4,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": null,
+          "stored": 82
+        }
+      ]
+    },
+    {
+      "source_key": "arlington_tx_commercial_issued_permits",
+      "task": "61e33b0d5a5b43b6803e0539124f9ecd",
+      "started_by": "chronos-schedule/region-arlington_tx",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "arlington_tx_commercial_issued_permits",
+          "provider_count": 281,
+          "sample_valid": 20,
+          "sample_failed": 0,
+          "event_kind": "issuance",
+          "status": "completed",
+          "run_id": "27c50940-6708-48a0-aa4b-5ecdbecc3806",
+          "seen": 281,
+          "inserted": 251,
+          "updated": 30,
+          "failed": 0,
+          "provider_after": 281,
+          "stored": 251
+        }
+      ]
+    },
+    {
+      "source_key": "mesa_az_commercial_permit_submittals",
+      "task": "0892225332f84e08a2a2850fc5fb0229",
+      "started_by": "chronos-schedule/region-mesa_az_comm",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "mesa_az_commercial_permit_submittals",
+          "provider_count": 196,
+          "sample_valid": 20,
+          "sample_failed": 0,
+          "event_kind": "submittal_or_resubmittal",
+          "status": "completed",
+          "run_id": "e4504ca2-25ba-472f-b3a4-25478ef33ad8",
+          "seen": 196,
+          "inserted": 196,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 196,
+          "stored": 196
+        }
+      ]
+    },
+    {
+      "source_key": "savannah_ga_commercial_building_permits",
+      "task": "85b8b009be3d465eac86210af3651ba3",
+      "started_by": "chronos-schedule/region-savannah_ga_",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "savannah_ga_commercial_building_permits",
+          "provider_count": 25,
+          "sample_valid": 40,
+          "sample_failed": 0,
+          "event_kind": "issuance_only",
+          "status": "completed",
+          "run_id": "a41ece07-0023-49da-a609-1db2c31b186e",
+          "seen": 25,
+          "inserted": 25,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 25,
+          "stored": 25
+        }
+      ]
+    },
+    {
+      "source_key": "taylor_tx_development_notices",
+      "task": "e31bc9980d3d4994a0cbb7bbd83b0aca",
+      "started_by": "chronos-schedule/region-taylor_tx_de",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "taylor_tx_development_notices",
+          "provider_count": null,
+          "sample_valid": 1,
+          "sample_failed": 0,
+          "event_kind": "development_notice",
+          "status": "completed",
+          "run_id": "d9e48c8b-4477-432f-ad0b-2647f0157484",
+          "seen": 1,
+          "inserted": 1,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": null,
+          "stored": 1
+        }
+      ]
+    },
+    {
+      "source_key": "texas_comptroller_sales_tax_locations",
+      "task": "4e7e68e186d04f858941974453f84294",
+      "started_by": "chronos-schedule/region-texas_comptr",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "texas_comptroller_sales_tax_locations",
+          "provider_count": 57,
+          "sample_valid": 10,
+          "sample_failed": 0,
+          "event_kind": "sales_tax_registration",
+          "status": "completed",
+          "run_id": "ea9d9b13-2652-4068-b612-d62afaed25c1",
+          "seen": 57,
+          "inserted": 57,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 57,
+          "stored": 57
+        }
+      ]
+    },
+    {
+      "source_key": "miami_dade_fl_wasd_unincorporated_permits_narrow",
+      "task": "8f800337178a40d49c1c59f067c0f446",
+      "started_by": "chronos-schedule/region-miami_dade_f",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "miami_dade_fl_wasd_unincorporated_permits_narrow",
+          "provider_count": 295,
+          "sample_valid": 10,
+          "sample_failed": 0,
+          "event_kind": "permit_process",
+          "status": "completed",
+          "run_id": "349bfd33-4d77-464d-be9a-c84a30ea0d11",
+          "seen": 295,
+          "inserted": 295,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 295,
+          "stored": 295
+        }
+      ]
+    },
+    {
+      "source_key": "san_marcos_tx_planning_application_notices",
+      "task": "0f3fa3514346488bb14b03079e3e8ac3",
+      "started_by": "chronos-schedule/recheck-san_marcos_",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "san_marcos_tx_planning_application_notices",
+          "provider_count": null,
+          "sample_valid": 10,
+          "sample_failed": 0,
+          "event_kind": "planning_notice",
+          "status": "completed",
+          "run_id": "019fb0a2-d0b5-4f01-9d68-66450705b6b1",
+          "seen": 100,
+          "inserted": 1,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": null,
+          "stored": 100
+        }
+      ]
+    },
+    {
+      "source_key": "tempe_az_building_permits_commercial_context",
+      "task": "813ab677b9ab4fd18826f4453767951a",
+      "started_by": "chronos-schedule/region-tempe_az_bui",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "tempe_az_building_permits_commercial_context",
+          "provider_count": 94,
+          "sample_valid": 20,
+          "sample_failed": 0,
+          "event_kind": "status_change",
+          "status": "completed",
+          "run_id": "7cedab14-9525-43e7-a632-b1048b354e88",
+          "seen": 94,
+          "inserted": 94,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 94,
+          "stored": 94
+        }
+      ]
+    },
+    {
+      "source_key": "fort_worth_tx_civic_commercial_permits",
+      "task": "9ce8ffbe0cab4302b120cce519084f46",
+      "started_by": "chronos-schedule/region-fort_worth_t",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "fort_worth_tx_civic_commercial_permits",
+          "provider_count": 383,
+          "sample_valid": 10,
+          "sample_failed": 0,
+          "event_kind": "application",
+          "status": "completed",
+          "run_id": "dfcb1835-324f-4985-bb85-212f1fdb4197",
+          "seen": 383,
+          "inserted": 383,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 383,
+          "stored": 383
+        }
+      ]
+    },
+    {
+      "source_key": "orlando_fl_permit_applications",
+      "task": "765c00701a1a4b299db06e4235eab0bb",
+      "started_by": "chronos-schedule/recheck-orlando_fl_",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "orlando_fl_permit_applications",
+          "provider_count": 295,
+          "sample_valid": 20,
+          "sample_failed": 0,
+          "event_kind": "application_processed",
+          "status": "completed",
+          "run_id": "7dbaf9da-509e-4699-9b6e-748de85dd145",
+          "seen": 295,
+          "inserted": 55,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 295,
+          "stored": 295
+        }
+      ]
+    },
+    {
+      "source_key": "austin_tx_site_plan_cases",
+      "task": "44604a8dfc084249a4e70b16226e7069",
+      "started_by": "chronos-schedule/recheck-austin_tx_s",
+      "exit_code": 0,
+      "receipts": [
+        {
+          "source_key": "austin_tx_site_plan_cases",
+          "provider_count": 43,
+          "sample_valid": 15,
+          "sample_failed": 0,
+          "event_kind": "site_plan_application",
+          "status": "completed",
+          "run_id": "aa995152-bd76-41e4-be3d-12739e2f1ed6",
+          "seen": 43,
+          "inserted": 0,
+          "updated": 0,
+          "failed": 0,
+          "provider_after": 43,
+          "stored": 43
+        }
+      ]
+    }
+  ],
+  "earlier_failed_runs": [
+    {
+      "source_key": "dallas_tx_legistar_planning_agendas",
+      "task": "11edae1fc3134c23aa8e0a88e3f8fb32",
+      "started_by": "chronos-schedule/region-dallas_tx_le",
+      "exit_code": 1,
+      "receipts": [
+        {
+          "source_key": "dallas_tx_legistar_planning_agendas",
+          "provider_count": null,
+          "sample_valid": 10,
+          "sample_failed": 0,
+          "event_kind": "planning_meeting",
+          "status": "partial_with_errors",
+          "run_id": "82147746-605b-4c0c-8b8a-8ed51d655a4c",
+          "seen": 82,
+          "inserted": 78,
+          "updated": 0,
+          "failed": 4,
+          "provider_after": null,
+          "stored": 78
+        },
+        {
+          "source_key": "dallas_tx_legistar_planning_agendas",
+          "status": "failed",
+          "error_type": "RuntimeError",
+          "reason": "Inspect source run and worker logs"
+        }
+      ]
+    },
+    {
+      "source_key": "san_marcos_tx_planning_application_notices",
+      "task": "cf91b40733ac4a8596d71519c6870bd4",
+      "started_by": "chronos-schedule/region-san_marcos_t",
+      "exit_code": 1,
+      "receipts": [
+        {
+          "source_key": "san_marcos_tx_planning_application_notices",
+          "provider_count": null,
+          "sample_valid": 10,
+          "sample_failed": 0,
+          "event_kind": "planning_notice",
+          "status": "partial_with_errors",
+          "run_id": "09daed11-68e4-4923-99f9-0d5263bd5420",
+          "seen": 100,
+          "inserted": 99,
+          "updated": 0,
+          "failed": 1,
+          "provider_after": null,
+          "stored": 99
+        },
+        {
+          "source_key": "san_marcos_tx_planning_application_notices",
+          "status": "failed",
+          "error_type": "RuntimeError",
+          "reason": "Inspect source run and worker logs"
+        }
+      ]
+    },
+    {
+      "source_key": "orlando_fl_permit_applications",
+      "task": "89f1632e1da54ea58b1864f78077f7f8",
+      "started_by": "chronos-schedule/region-orlando_fl_p",
+      "exit_code": 1,
+      "receipts": [
+        {
+          "source_key": "orlando_fl_permit_applications",
+          "provider_count": 295,
+          "sample_valid": 20,
+          "sample_failed": 0,
+          "event_kind": "application_processed",
+          "status": "partial_with_errors",
+          "run_id": "34d3130d-8030-4969-be46-270bf77e7be4",
+          "seen": 250,
+          "inserted": 240,
+          "updated": 0,
+          "failed": 10,
+          "provider_after": 295,
+          "stored": 240
+        },
+        {
+          "source_key": "orlando_fl_permit_applications",
+          "status": "failed",
+          "error_type": "RuntimeError",
+          "reason": "Inspect source run and worker logs"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Archive feeds have no authoritative provider control total",
+    "Filing, issuance, status, environmental and tax events retain distinct meanings",
+    "Public demo remains Columbus-only; no customer rows copied",
+    "Mississippi sources remain legal/technical holds",
+    "Daily schedule launch retries are not runtime-failure paging"
+  ],
+  "independent_read_only_audit": {
+    "task": "9be345ecfb0e4f61938c6d6c070373fc",
+    "results": [
+      {
+        "sources": [
+          {
+            "source_key": "columbus_oh_site_engineering_applications",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Columbus, OH",
+            "stored": 48,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "8ae765ce-098c-4613-8e06-f4e3592c0b49"
+          },
+          {
+            "source_key": "arlington_tx_commercial_permit_applications",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Arlington, TX",
+            "stored": 84,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "7b659623-f7c6-4c2d-8b4f-5d5893efeaea"
+          },
+          {
+            "source_key": "arlington_tx_commercial_issued_permits",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Arlington, TX",
+            "stored": 251,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "27c50940-6708-48a0-aa4b-5ecdbecc3806"
+          },
+          {
+            "source_key": "florida_dep_erp_applications_commercial_context",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Florida",
+            "stored": 32,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "d929c907-5b04-49a0-9c1d-9acb04688fa4"
+          },
+          {
+            "source_key": "fort_worth_tx_civic_commercial_permits",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Fort Worth, TX",
+            "stored": 383,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "dfcb1835-324f-4985-bb85-212f1fdb4197"
+          },
+          {
+            "source_key": "mesa_az_commercial_permit_submittals",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Mesa, AZ",
+            "stored": 196,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "e4504ca2-25ba-472f-b3a4-25478ef33ad8"
+          },
+          {
+            "source_key": "miami_dade_fl_wasd_unincorporated_permits_narrow",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Miami-Dade County, FL",
+            "stored": 295,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "349bfd33-4d77-464d-be9a-c84a30ea0d11"
+          },
+          {
+            "source_key": "dallas_tx_legistar_planning_agendas",
+            "active": true,
+            "type": "planning",
+            "jurisdiction": "Dallas, TX",
+            "stored": 82,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "d9b1711a-25f1-4c26-af04-4e571c89f9c7"
+          },
+          {
+            "source_key": "savannah_ga_commercial_building_permits",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Savannah, GA",
+            "stored": 25,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "a41ece07-0023-49da-a609-1db2c31b186e"
+          },
+          {
+            "source_key": "taylor_tx_development_notices",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Taylor, TX",
+            "stored": 1,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "d9e48c8b-4477-432f-ad0b-2647f0157484"
+          },
+          {
+            "source_key": "texas_comptroller_sales_tax_locations",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Texas",
+            "stored": 57,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "ea9d9b13-2652-4068-b612-d62afaed25c1"
+          },
+          {
+            "source_key": "tempe_az_building_permits_commercial_context",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Tempe, AZ",
+            "stored": 94,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "7cedab14-9525-43e7-a632-b1048b354e88"
+          },
+          {
+            "source_key": "orlando_fl_permit_applications",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Orlando, FL",
+            "stored": 295,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "7dbaf9da-509e-4699-9b6e-748de85dd145"
+          },
+          {
+            "source_key": "san_marcos_tx_planning_application_notices",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "San Marcos, TX",
+            "stored": 100,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "019fb0a2-d0b5-4f01-9d68-66450705b6b1"
+          },
+          {
+            "source_key": "austin_tx_site_plan_cases",
+            "active": true,
+            "type": "permit",
+            "jurisdiction": "Austin, TX",
+            "stored": 43,
+            "last_status": "completed",
+            "failed": 0,
+            "run_id": "aa995152-bd76-41e4-be3d-12739e2f1ed6"
+          }
+        ]
+      },
+      {
+        "record_type": "permit",
+        "readiness": {
+          "source_count": 14,
+          "stored_records": 1904,
+          "geocoded_records": 980,
+          "recently_seen_records": 1904,
+          "unknown_source_date_records": 1420,
+          "future_source_date_records": 0,
+          "recent_source_date_records": 335,
+          "observed_state_count": 5,
+          "observed_jurisdiction_count": 14,
+          "total_source_count": 14,
+          "active_source_count": 14,
+          "disabled_source_count": 0,
+          "sources_with_records": 14,
+          "empty_source_count": 0,
+          "sources_with_recent_collection": 14,
+          "sources_with_recent_source_date": 2,
+          "sources_with_unknown_source_dates": 9,
+          "sources_with_future_source_dates": 0,
+          "sources_with_geocoded_records": 6,
+          "stale_collection_source_count": 0,
+          "stale_source_date_source_count": 12
+        },
+        "states": [
+          {
+            "state": "TX",
+            "source_count": 7,
+            "stored_records": 919,
+            "geocoded_records": 370,
+            "recently_seen_records": 919,
+            "recent_source_date_records": 335,
+            "unknown_source_date_records": 483
+          },
+          {
+            "state": "FL",
+            "source_count": 3,
+            "stored_records": 622,
+            "geocoded_records": 327,
+            "recently_seen_records": 622,
+            "recent_source_date_records": 0,
+            "unknown_source_date_records": 622
+          },
+          {
+            "state": "AZ",
+            "source_count": 2,
+            "stored_records": 290,
+            "geocoded_records": 283,
+            "recently_seen_records": 290,
+            "recent_source_date_records": 0,
+            "unknown_source_date_records": 290
+          },
+          {
+            "state": "OH",
+            "source_count": 1,
+            "stored_records": 48,
+            "geocoded_records": 0,
+            "recently_seen_records": 48,
+            "recent_source_date_records": 0,
+            "unknown_source_date_records": 0
+          },
+          {
+            "state": "GA",
+            "source_count": 1,
+            "stored_records": 25,
+            "geocoded_records": 0,
+            "recently_seen_records": 25,
+            "recent_source_date_records": 0,
+            "unknown_source_date_records": 25
+          }
+        ]
+      },
+      {
+        "record_type": "planning",
+        "readiness": {
+          "source_count": 1,
+          "stored_records": 82,
+          "geocoded_records": 0,
+          "recently_seen_records": 82,
+          "unknown_source_date_records": 0,
+          "future_source_date_records": 0,
+          "recent_source_date_records": 39,
+          "observed_state_count": 1,
+          "observed_jurisdiction_count": 1,
+          "total_source_count": 1,
+          "active_source_count": 1,
+          "disabled_source_count": 0,
+          "sources_with_records": 1,
+          "empty_source_count": 0,
+          "sources_with_recent_collection": 1,
+          "sources_with_recent_source_date": 1,
+          "sources_with_unknown_source_dates": 0,
+          "sources_with_future_source_dates": 0,
+          "sources_with_geocoded_records": 0,
+          "stale_collection_source_count": 0,
+          "stale_source_date_source_count": 0
+        },
+        "states": [
+          {
+            "state": "TX",
+            "source_count": 1,
+            "stored_records": 82,
+            "geocoded_records": 0,
+            "recently_seen_records": 82,
+            "recent_source_date_records": 39,
+            "unknown_source_date_records": 0
+          }
+        ]
+      }
+    ]
+  }
+}

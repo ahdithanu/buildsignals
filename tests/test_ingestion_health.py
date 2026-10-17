@@ -746,6 +746,94 @@ def test_health_marks_stale_source_watermark_degraded(db):
     assert any("Publisher record update" in reason for reason in health.reasons)
 
 
+def test_health_flags_incomplete_source_update_dates_for_enforced_watermark(db):
+    source = _source(db)
+    now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)
+    source.settings = {
+        **(source.settings or {}),
+        "freshness_sla_hours": 24,
+        "freshness_semantics": "record_updated_at",
+    }
+    run = IngestionRun(
+        organization_id="default-org",
+        source_id=source.id,
+        status="completed",
+        trigger="scheduled",
+        started_at=now - timedelta(hours=1),
+        completed_at=now - timedelta(minutes=55),
+        records_seen=3,
+        records_failed=0,
+    )
+    db.add(run)
+    db.flush()
+    # One record carries a recent publisher date (watermark within SLA); the other
+    # two were collected without a normalized source/filing date.
+    db.add(RawSourceRecord(
+        organization_id="default-org", source_id=source.id, run_id=run.id,
+        external_record_id="dated", record_type="permit", content_hash="h1",
+        payload={"id": "dated"}, source_updated_at=now - timedelta(hours=1),
+        received_at=now - timedelta(minutes=55),
+    ))
+    for index in range(2):
+        db.add(RawSourceRecord(
+            organization_id="default-org", source_id=source.id, run_id=run.id,
+            external_record_id=f"undated-{index}", record_type="permit",
+            content_hash=f"h-{index}", payload={"id": f"undated-{index}"},
+            source_updated_at=None, received_at=now - timedelta(minutes=55),
+        ))
+    db.flush()
+
+    health = evaluate_source_health(db, source, now=now)
+
+    assert health.source_update_date_total == 3
+    assert health.source_update_date_present == 1
+    assert health.source_update_date_completeness == 0.3333
+    assert health.source_update_dates_incomplete is True
+    assert health.status == "degraded"
+    assert any("present on only" in reason for reason in health.reasons)
+
+
+def test_health_reports_update_completeness_without_penalizing_collection_only(db):
+    source = _source(db)
+    now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)
+    source.settings = {
+        **(source.settings or {}),
+        "freshness_semantics": "ingestion_observed_at",
+    }
+    run = IngestionRun(
+        organization_id="default-org",
+        source_id=source.id,
+        status="completed",
+        trigger="scheduled",
+        started_at=now - timedelta(hours=1),
+        completed_at=now - timedelta(minutes=55),
+        records_seen=2,
+        records_failed=0,
+    )
+    db.add(run)
+    db.flush()
+    for index in range(2):
+        db.add(RawSourceRecord(
+            organization_id="default-org", source_id=source.id, run_id=run.id,
+            external_record_id=f"collected-{index}", record_type="permit",
+            content_hash=f"c-{index}", payload={"id": f"collected-{index}"},
+            source_updated_at=None, received_at=now - timedelta(minutes=55),
+        ))
+    db.flush()
+
+    health = evaluate_source_health(db, source, now=now)
+
+    # Collection-only semantics: completeness is reported, but missing filing dates
+    # never fabricate a freshness penalty or a publisher-timestamp claim.
+    assert health.source_update_date_total == 2
+    assert health.source_update_date_present == 0
+    assert health.source_update_date_completeness == 0.0
+    assert health.source_update_dates_incomplete is True
+    assert health.source_watermark_enforced is False
+    assert health.status == "healthy"
+    assert not any("present on only" in reason for reason in health.reasons)
+
+
 def test_health_uses_collection_sla_independently_from_publisher_freshness(db):
     source = _source(db)
     now = datetime(2026, 7, 16, 12, tzinfo=timezone.utc)
