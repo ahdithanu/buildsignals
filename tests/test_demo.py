@@ -241,6 +241,59 @@ def test_derived_geocode_is_scoped_attributed_and_invalidated(client, db, demo):
     db.rollback()
 
 
+def test_backfill_demo_geocode_is_bounded_scoped_and_idempotent(client, db, demo):
+    from scripts import backfill_demo_geocode as backfill
+
+    permit = db.query(PermitRecord).first()
+    permit.address = "55 E STATE ST"
+    permit.city = "Columbus"
+    permit.state = "OH"
+    permit.postal_code = "43215"
+    permit.latitude = None
+    permit.longitude = None
+    db.commit()
+
+    response = {"result": {"addressMatches": [{
+        "matchedAddress": "55 E STATE ST, COLUMBUS, OH, 43215",
+        "addressComponents": {"city": "COLUMBUS", "state": "OH", "zip": "43215"},
+        "coordinates": {"x": -82.9987, "y": 39.9603},
+    }]}}
+    calls = []
+
+    def fetch(url):
+        calls.append(url)
+        return response
+
+    from sqlalchemy.orm import sessionmaker
+    factory = sessionmaker(bind=db.get_bind())
+
+    first = backfill.run(limit=10, fetch=fetch, sleep=lambda *_: None, session_factory=factory)
+    assert first["addresses_matched"] == 1 and first["filings_located"] == 1
+    assert first["tenant"] == DEMO_ORG_ID and len(calls) == 1
+
+    # The derived point now shows on the read-only demo map.
+    auth = headers(client)
+    summary = client.get("/demo/summary", headers=auth).json()
+    assert summary["derived_geocoded_permits"] == 1
+    assert summary["mapped_filing_locations"] == 1
+    point = client.get("/demo/map", headers=auth).json()["permits"][0]
+    assert point["location_method"] == "census_address_range_estimate"
+
+    # Rerunning geocodes nothing new (already located, unchanged address hash).
+    second = backfill.run(limit=10, fetch=fetch, sleep=lambda *_: None, session_factory=factory)
+    assert second["addresses_attempted"] == 0 and second["filings_located"] == 0
+    assert len(calls) == 1
+
+
+def test_backfill_demo_geocode_rejects_out_of_bounds_limit():
+    from scripts import backfill_demo_geocode as backfill
+
+    with pytest.raises(ValueError, match="limit must be between"):
+        backfill.run(0, fetch=lambda url: {}, sleep=lambda *_: None)
+    with pytest.raises(ValueError, match="limit must be between"):
+        backfill.run(backfill.MAX_LIMIT + 1, fetch=lambda url: {}, sleep=lambda *_: None)
+
+
 def test_cross_tenant_reads_are_scoped(client, db, demo):
     auth = headers(client)
     row = db.query(GraphEntity).first()
