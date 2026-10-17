@@ -16169,6 +16169,32 @@
             "title": "Source Name",
             "type": "string"
           },
+          "source_update_date_completeness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Update Date Completeness"
+          },
+          "source_update_date_present": {
+            "default": 0,
+            "title": "Source Update Date Present",
+            "type": "integer"
+          },
+          "source_update_date_total": {
+            "default": 0,
+            "title": "Source Update Date Total",
+            "type": "integer"
+          },
+          "source_update_dates_incomplete": {
+            "default": false,
+            "title": "Source Update Dates Incomplete",
+            "type": "boolean"
+          },
           "source_watermark_at": {
             "anyOf": [
               {
