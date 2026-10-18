@@ -1,7 +1,57 @@
 # Current Agent Handoff
 
-Last updated: 2026-10-16 (America/Los_Angeles). This is a dated snapshot;
+Last updated: 2026-10-18 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
+
+## Session 2026-10-17/18: pilot demo map + 30-day build kickoff (multi-agent)
+
+Operating mode now in effect (see AGENTS.md "Operating Mode"): build with
+multiple agents; keep this harness current at all times.
+
+Merged to `main` since the last entry:
+- PR #249 (Biloxi/MDEQ + reliability: quarantine guard, IAM policy accumulation,
+  source-update-date completeness) and PR #250 (demo geocoding backfill + pilot
+  script). `main` tip ~`b18b080`.
+- PR #251 OPEN: AGENTS.md operating-mode section + `docs/30-day-ingestion-bridge-plan.md`.
+
+Verified-live state (2026-10-17/18):
+- API live (App Runner RUNNING); public demo enabled at www.buildsignals.ai.
+- 16 ENABLED daily ingestion schedules in AWS (`buildsignals-ingestion` group):
+  14 regional FL/TX/AZ/GA + Columbus production + demo. Real public permit/
+  planning events; not reverified per-run here.
+- **Demo map lit up**: a one-off Fargate task on `buildsignals-columbus-demo:2`
+  (deployed image, demo-tenant DB, command override — no new image/IAM) ran the
+  bounded geocoding backfill: 420 addresses matched → 938 filings located. Live
+  demo summary now `mapped_permits`/`derived_geocoded_permits` = 938,
+  `mapped_filing_locations` = 420 (were 0). `/v1/demo/map` renders 100 pts/layer.
+  Repeatable runner: `scripts/backfill_demo_geocode.py` (demo-tenant-only,
+  bounded, idempotent).
+
+Week-1 groundwork (three parallel agents, reports written, no catalog edits yet):
+- `docs/releases/2026-10-17-columbus-coverage-attestation.md`: demo cohort 2,104
+  permits (2,053 approved + 51 pre_approval, ~5-mo window), 938 geocoded (~45%),
+  1,088 parcel references but 0 qualified parcel records. Production/customer
+  coverage explicitly NOT attested (needs an authenticated measurement).
+- `docs/source-qualification/2026-10-17-wedge-market-sources.md`: READY =
+  Census Building Permits Survey (public domain; needs a single-header flatten
+  before `CSVConnector`) and Loudoun County LOLA (ArcGIS; candidate-grade, confirm
+  reuse with Loudoun OMAGI). BLOCKED = Prince William (rights conflict), Dallas
+  Socrata (stale since 2020), Denton (no license). No new rights-clean DFW endpoint.
+- `docs/source-qualification/2026-10-17-utility-interconnection-queues.md`:
+  ERCOT Monthly GIS Report = rights-clean + viable recurring (needs a new
+  `ercot_mis_xlsx` connector; durable INR identity, monthly XLSX). PJM = blocker
+  (no public queue feed; derived-data redistribution restricted; undocumented
+  key-gated endpoint).
+
+Deploy posture: the #249 reliability fixes are merged but NOT deployed to the
+regional workers (App Runner auto-deploy off); per user, hold and BATCH with the
+next deploy once Week-1 build increments are ready. No new source is activated;
+all legal_hold sources untouched; parcels remain unqualified/unplotted.
+
+Next build increment (serial catalog writes, one writer): add Census BPS (after
+header-flatten) and Loudoun LOLA as candidate entries + canaries (not activated);
+scope the `ercot_mis_xlsx` connector; pursue written rights for Prince William.
+Then build Development Velocity v0 + the replay/backtest scaffold over Columbus.
 
 ## Session 2026-10-16: Mississippi production-readiness + reliability
 
