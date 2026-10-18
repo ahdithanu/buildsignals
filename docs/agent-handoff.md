@@ -12,7 +12,13 @@ Merged to `main` since the last entry:
 - PR #249 (Biloxi/MDEQ + reliability: quarantine guard, IAM policy accumulation,
   source-update-date completeness) and PR #250 (demo geocoding backfill + pilot
   script). `main` tip ~`b18b080`.
-- PR #251 OPEN: AGENTS.md operating-mode section + `docs/30-day-ingestion-bridge-plan.md`.
+- PR #251 OPEN: AGENTS.md operating-mode section + `docs/30-day-ingestion-bridge-plan.md`
+  + refreshed handoff + Week-1 qualification reports.
+- PR #252 OPEN (stacked on #251): `ercot_mis_xlsx` connector — stdlib XLSX reader
+  + `ErcotMisXlsxConnector`, factory/__init__ wiring, and a NON-activated
+  `technical_hold` candidate `ercot_tx_interconnection_queue`. Regenerated
+  `production_rollout.json` + synced `render.yaml` manifest digest. Full suite
+  1783 passed. Held pending a live MIS canary + written commercial-reuse sign-off.
 
 Verified-live state (2026-10-17/18):
 - API live (App Runner RUNNING); public demo enabled at www.buildsignals.ai.
@@ -48,10 +54,13 @@ regional workers (App Runner auto-deploy off); per user, hold and BATCH with the
 next deploy once Week-1 build increments are ready. No new source is activated;
 all legal_hold sources untouched; parcels remain unqualified/unplotted.
 
-Next build increment (serial catalog writes, one writer): add Census BPS (after
-header-flatten) and Loudoun LOLA as candidate entries + canaries (not activated);
-scope the `ercot_mis_xlsx` connector; pursue written rights for Prince William.
-Then build Development Velocity v0 + the replay/backtest scaffold over Columbus.
+Next build increments (serial catalog writes, one writer): the `ercot_mis_xlsx`
+connector is built (PR #252, not activated). Remaining: add Census BPS (after a
+single-header flatten) and Loudoun LOLA as candidate entries + canaries; pursue
+written rights for Prince William; run a live ERCOT MIS canary to validate the
+connector before promotion. Then build Development Velocity v0 + the replay/
+backtest scaffold over Columbus. Deploy posture unchanged: batch the #249
+reliability deploy with the next deploy.
 
 ## Session 2026-10-16: Mississippi production-readiness + reliability
 
