@@ -16,9 +16,14 @@ Merged to `main` since the last entry:
   + refreshed handoff + Week-1 qualification reports.
 - PR #252 OPEN (stacked on #251): `ercot_mis_xlsx` connector — stdlib XLSX reader
   + `ErcotMisXlsxConnector`, factory/__init__ wiring, and a NON-activated
-  `technical_hold` candidate `ercot_tx_interconnection_queue`. Regenerated
-  `production_rollout.json` + synced `render.yaml` manifest digest. Full suite
-  1783 passed. Held pending a live MIS canary + written commercial-reuse sign-off.
+  `technical_hold` candidate `ercot_tx_interconnection_queue`. Held pending a
+  live MIS canary + written commercial-reuse sign-off.
+- PR #253 OPEN (stacked on #252): Census BPS + Loudoun LOLA as NON-activated
+  `technical_hold` candidates, plus a backward-compatible `CSVConnector`
+  `skip_leading_lines`/`fieldnames` option for the multi-header BPS file. Loudoun
+  live canary passed (3 records, keyset pagination, zero failures). Regenerated
+  manifest + render digest. Full suite 1787 passed. Loudoun held on OMAGI rights;
+  BPS is an aggregate baseline input (needs composed id / baseline-vs-signal call).
 
 Verified-live state (2026-10-17/18):
 - API live (App Runner RUNNING); public demo enabled at www.buildsignals.ai.
@@ -54,13 +59,13 @@ regional workers (App Runner auto-deploy off); per user, hold and BATCH with the
 next deploy once Week-1 build increments are ready. No new source is activated;
 all legal_hold sources untouched; parcels remain unqualified/unplotted.
 
-Next build increments (serial catalog writes, one writer): the `ercot_mis_xlsx`
-connector is built (PR #252, not activated). Remaining: add Census BPS (after a
-single-header flatten) and Loudoun LOLA as candidate entries + canaries; pursue
-written rights for Prince William; run a live ERCOT MIS canary to validate the
-connector before promotion. Then build Development Velocity v0 + the replay/
-backtest scaffold over Columbus. Deploy posture unchanged: batch the #249
-reliability deploy with the next deploy.
+Next build increments (serial catalog writes, one writer): ERCOT connector (PR
+#252) and Census BPS + Loudoun LOLA candidates (PR #253) are built, none
+activated. Remaining: run a live ERCOT MIS canary; pursue written rights for
+Loudoun (OMAGI) and Prince William; compose a durable BPS source_record_id and
+decide its baseline-vs-signal placement. Then build Development Velocity v0 +
+the replay/backtest scaffold over Columbus. Deploy posture unchanged: batch the
+#249 reliability deploy with the next deploy.
 
 ## Session 2026-10-16: Mississippi production-readiness + reliability
 
