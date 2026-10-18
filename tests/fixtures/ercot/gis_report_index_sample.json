@@ -1,0 +1,45 @@
+{
+  "_source": "ERCOT GetReports index for reportTypeId 15933 (GIS Report family)",
+  "_indexUrl": "https://www.ercot.com/misapp/GetReports.do?reportTypeId=15933",
+  "_capturedUtc": "2026-10-18T05:06Z",
+  "_responseContentType": "text/html;charset=ISO-8859-1",
+  "_notes": "Index is HTML (not XML). Each report row carries a filename (RPT.00015933.<16 zeros>.<YYYYMMDD postDate>.<HHMMSSmmm>.<Descriptive_Month_Year>.xlsx) and an Other-column <a href> download link. The reportTypeId 15933 listing mixes two families: 'GIS_Report_*' (the interconnection queue) and 'Co-located_Battery_Identification_Report_*'. Filter desc.startswith('GIS_Report') for the queue. Pick latest by postDate then doclookupId.",
+  "sampleRows": [
+    {
+      "postDate": "20261007",
+      "fileName": "RPT.00015933.0000000000000000.20261007.155524271.Co-located_Battery_Identification_Report_September_2026.xlsx",
+      "doclookupId": "1283680517",
+      "downloadPath": "/misdownload/servlets/mirDownload?mimic_duns=000000000&doclookupId=1283680517"
+    },
+    {
+      "postDate": "20261001",
+      "fileName": "RPT.00015933.0000000000000000.20261001.160829144.GIS_Report_September2026.xlsx",
+      "doclookupId": "1281327706",
+      "downloadPath": "/misdownload/servlets/mirDownload?mimic_duns=000000000&doclookupId=1281327706"
+    },
+    {
+      "postDate": "20260909",
+      "fileName": "RPT.00015933.0000000000000000.20260909.102333702.Co-located_Battery_Identification_Report_August_2026.xlsx",
+      "doclookupId": "1272470218",
+      "downloadPath": "/misdownload/servlets/mirDownload?mimic_duns=000000000&doclookupId=1272470218"
+    },
+    {
+      "postDate": "20260901",
+      "fileName": "RPT.00015933.0000000000000000.20260901.143805843.GIS_Report_August2026.xlsx",
+      "doclookupId": "1269363208",
+      "downloadPath": "/misdownload/servlets/mirDownload?mimic_duns=000000000&doclookupId=1269363208"
+    },
+    {
+      "postDate": "20260810",
+      "fileName": "RPT.00015933.0000000000000000.20260810.083703516.Co-located_Battery_Identification_Report_July_2026.xlsx",
+      "doclookupId": "1260624426",
+      "downloadPath": "/misdownload/servlets/mirDownload?mimic_duns=000000000&doclookupId=1260624426"
+    },
+    {
+      "postDate": "20260803",
+      "fileName": "RPT.00015933.0000000000000000.20260803.153950829.GIS_Report_July2026.xlsx",
+      "doclookupId": "1258020955",
+      "downloadPath": "/misdownload/servlets/mirDownload?mimic_duns=000000000&doclookupId=1258020955"
+    }
+  ]
+}
