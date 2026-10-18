@@ -220,6 +220,8 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             verify_snapshot=verify_snapshot,
             delimiter=config.get("delimiter"),
             encoding=str(config.get("encoding", "utf-8-sig")),
+            skip_leading_lines=int(config.get("skip_leading_lines", 0)),
+            fieldnames=_string_list(config.get("fieldnames"), "fieldnames"),
             headers=_secret_headers(config),
             **common,
         )
