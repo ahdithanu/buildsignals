@@ -2903,9 +2903,9 @@
     "jurisdiction": "ERCOT (Texas)",
     "base_url": "https://www.ercot.com/misapp/GetReports.do?reportTypeId=15933",
     "official_landing_page": "https://www.ercot.com/mp/data-products/data-product-details?id=PG7-200-ER",
-    "license": "ERCOT public MIS raw data may be used, reproduced, and redistributed in compilations, charts, and analyses (ERCOT marks excluded); re-confirm site terms before redistribution",
+    "license": "ERCOT public MIS raw-data terms require written commercial-reuse confirmation before activation or redistribution; ERCOT marks excluded",
     "status": "technical_hold",
-    "blocker_summary": "Rights-clean recurring public XLSX contract confirmed live 2026-10-18: GetReports HTML index (reportTypeId=15933) on www.ercot.com -> mirDownload servlet -> monthly XLSX (Large/Small Gen tabs, durable INR identity). Connector + stdlib XLSX reader implemented and unit-tested against a captured fixture; NOT activated. Held pending (1) a live production canary against the real MIS host and (2) re-confirmation of commercial-reuse terms. misapp.ercot.com is dead (NXDOMAIN) and mis.ercot.com is SSO-gated; only www.ercot.com is anonymous. Anaconda-bundled Python fails TLS to ERCOT; production uses a modern TLS stack.",
+    "blocker_summary": "Bounded ERCOT Monthly GIS XLSX connector implemented and tested offline through normalization and persistence, not activated. The public GetReports index (reportTypeId=15933) resolves monthly Large/Small Gen tabs with durable INR identities. technical_hold remains until authorized live MIS verification and written commercial-reuse confirmation. Only www.ercot.com is configured; alternate MIS hosts are not approved. Synthetic tests do not establish live workbook compatibility, source completeness, or reuse rights.",
     "early_warning_value": "Monthly statewide view of new large/small generation projects entering the ERCOT interconnection queue (county, fuel, MW) before construction or commercial operation, surfacing power-supply build-out in the Dallas-Fort Worth and data-center-adjacent load zones ahead of permits.",
     "candidate_source_fields": [
       "inr",
@@ -2915,7 +2915,15 @@
       "technology",
       "capacity_mw",
       "status",
+      "stage",
+      "approval_stage",
+      "event_type",
       "projected_cod",
+      "approved_synchronization",
+      "approved_energization",
+      "report_period",
+      "report_label",
+      "post_date",
       "tab"
     ],
     "probe_settings": {
@@ -2946,13 +2954,14 @@
         }
       },
       "defaults": {
-        "region": "ERCOT",
         "state": "TX",
         "jurisdiction": "ERCOT",
-        "source_system": "ERCOT MIS Monthly GIS (PG7-200-ER, reportTypeId=15933)"
+        "permit_type": "Generation interconnection request",
+        "permit_subtype": "ERCOT Monthly GIS queue"
       },
-      "signal_stage": "pre_approval",
-      "freshness_semantics": "report_period_month",
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_field": "post_date",
+      "freshness_semantics": "dataset_refreshed_at",
       "freshness_sla_hours": 1080
     },
     "probe_field_mappings": [
@@ -2971,29 +2980,13 @@
         "canonical_field": "project_name"
       },
       {
-        "source_field": "county",
-        "canonical_field": "county"
-      },
-      {
-        "source_field": "fuel",
-        "canonical_field": "project_type"
-      },
-      {
-        "source_field": "capacity_mw",
-        "canonical_field": "capacity_mw"
-      },
-      {
         "source_field": "status",
         "canonical_field": "status"
       },
       {
-        "source_field": "stage",
-        "canonical_field": "approval_stage"
-      },
-      {
-        "source_field": "projected_cod",
-        "canonical_field": "expected_completion_at",
-        "transform": "date"
+        "source_field": "approval_stage",
+        "canonical_field": "approval_stage",
+        "is_required": true
       },
       {
         "source_field": "source_url",
@@ -3004,6 +2997,6 @@
     "can_run_canary": false,
     "last_checked_on": "2026-10-18",
     "next_audit_on": "2026-11-17",
-    "notes": "Connector app/services/ingestion/connectors/ercot_mis.py + stdlib xlsx_reader.py; design in docs/source-qualification/2026-10-17-ercot-connector-design.md, live contract in 2026-10-17-ercot-contract-spec.md. STDLIB-ONLY XLSX parse via the shared RetryingHttpClient get_bytes bound. record_type 'permit' is a schema-nearest placeholder: an interconnection request is not a building permit; event_type/stage carry true application-vs-decision semantics (approved-for-synchronization/energization or decision markers => decision, else application). Do not promote until a live MIS canary and written commercial-reuse confirmation; column aliases are provisional until re-read against a future live file."
+    "notes": "Connector app/services/ingestion/connectors/ercot_mis.py and stdlib xlsx_reader.py; design and contract in docs/source-qualification/2026-10-17-ercot-connector-design.md and 2026-10-17-ercot-contract-spec.md. Existing permit storage is a compatibility container, not a building-permit assertion: permit_type explicitly identifies a generation interconnection request, INR maps to application_number, and permit_number is unset. stage/application-vs-decision and interconnection_queue event_type remain source-specific evidence in unmapped attributes and immutable raw payloads. County, fuel, technology, MW, projected COD, milestone dates, report period/label, publication date and tab remain evidence; projected COD is not an actual completion or approval date. Canonical approval_stage is pre_approval/approved, based only on explicit supported interconnection milestones. Study completion, generic approval and IA signature alone do not establish synchronization or energization approval. Reporting month comes from the descriptive report label, separately from publication date. Keep technical_hold and can_run_canary=false; remain excluded from production catalogs and schedules until authorized live verification and written commercial-reuse confirmation."
   }
 ]

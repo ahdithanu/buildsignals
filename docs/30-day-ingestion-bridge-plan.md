@@ -6,6 +6,34 @@ until a documented reuse basis exists; measured counts are never presented as
 market coverage or for-sale inventory; signals are research outputs until
 evaluated under a cutoff-safe harness.
 
+## Progress and remaining limits (2026-10-18)
+
+PR #252, stacked on open PR #251, implements `ercot_mis_xlsx`; no further new
+ERCOT adapter is needed to begin offline qualification. Review corrections and
+fixture-based normalization/persistence regression checks are implemented and
+verified on that existing branch. Current verification receipts belong in
+`docs/agent-handoff.md`, not in the original 1,783-test claim.
+
+ERCOT remains `technical_hold`, with ingestion and canaries disabled. Earlier
+manual public-index/workbook observations do not verify the current connector
+through its supported ingestion path. Written commercial-reuse confirmation,
+authorized live host/TLS/contract verification, and a bounded canary receipt
+remain promotion gates. No activation, merge or deployment is authorized by
+this plan or the review-correction task. An interconnection queue snapshot is
+power-infrastructure evidence, not an ordinary building-permit application.
+
+PR #251's remaining methodology findings are still outstanding. P0.8 corpus
+qualification is partial, and reconstructed historical observations must remain
+labeled retrospective; offline ERCOT tests do not establish cutoff-safe replay,
+Development Velocity validity, or first-seen availability of historical events.
+P0.8 also requires rights-cleared historical permit/planning, land,
+construction and infrastructure evidence with an accepted minimum usable
+history; the current Columbus corpus does not unlock scoring. Before tuning,
+predeclare outcomes, horizons, cohorts, minimum samples, holdouts and false
+positive tolerance. Without contemporaneous snapshots or prospective history,
+new captures support retrospective non-validating analysis only.
+The milestones below are targets, not completed work or standing permissions.
+
 ## Objective
 
 Close the two gaps that matter most from the institutional roadmap:
@@ -64,7 +92,7 @@ not ingest today. Qualify (do not assume rights):
 - **ISO/RTO interconnection queues** — PJM (NoVA), ERCOT (DFW): public queue data.
 - State utility-commission filings — VA SCC, PUCT (TX).
 Deliverable this month is a **qualified contract + bounded probe** for one of
-these (likely a small new connector or CSV/JSON intake), plus a concrete blocker
+these (ERCOT's connector is implemented in PR #252 but remains held), plus a concrete blocker
 if a reliable recurring interface can't be established — mirroring the MDEQ
 qualification pattern. Full utility adapters are P1, not this window.
 

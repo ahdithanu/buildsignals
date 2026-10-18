@@ -28,10 +28,33 @@ from .base import (
 )
 
 _EXCEL_EPOCH = date(1899, 12, 30)
-_DECISION_MARKERS = (
-    "approved", "synchroniz", "energiz", "in service", "in-service",
-    "commercial operation", "complete", "executed",
-)
+# Study completion/approval and an executed IA are still queue progression.
+# Only exact, realized operating statuses may substitute for an approval date;
+# substrings would also match pending/negated milestones and study phases.
+_DECISION_STATUSES = frozenset({
+    "synchronized", "energized", "in service", "in-service",
+    "commercial operation", "commercial operations",
+})
+_REPORT_MONTHS = {
+    "january": 1, "jan": 1, "february": 2, "feb": 2,
+    "march": 3, "mar": 3, "april": 4, "apr": 4, "may": 5,
+    "june": 6, "jun": 6, "july": 7, "jul": 7, "august": 8, "aug": 8,
+    "september": 9, "sept": 9, "sep": 9, "october": 10, "oct": 10,
+    "november": 11, "nov": 11, "december": 12, "dec": 12,
+}
+
+
+def _report_period(label: str) -> str:
+    """Use the described report month, independently of its publication date."""
+    match = re.fullmatch(
+        r"GIS_Report[_\s-]*(?P<month>[A-Za-z]+)[_\s-]*(?P<year>\d{4})"
+        r"(?:[_\s-]+[A-Za-z0-9_\s-]+)?",
+        label, re.IGNORECASE,
+    )
+    month = _REPORT_MONTHS.get(match["month"].casefold()) if match else None
+    if not match or month is None or int(match["year"]) == 0:
+        raise ConnectorResponseError("ERCOT GIS report label has no recognizable reporting period")
+    return f"{match['year']}-{month:02d}"
 
 _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "inr": ("INR",),
@@ -192,7 +215,7 @@ class ErcotMisXlsxConnector(BaseConnector):
             latest["download_url"], max_bytes=self.max_document_bytes, headers=self.headers,
         )
         workbook = self._as_workbook_bytes(body)
-        report_period = f"{latest['post_date'][:4]}-{latest['post_date'][4:6]}"
+        report_period = _report_period(latest["descriptive"])
         records: list[dict[str, Any]] = []
         tabs_read: list[str] = []
         unmapped_status = 0
@@ -222,6 +245,7 @@ class ErcotMisXlsxConnector(BaseConnector):
             "doc_id": latest["doc_id"],
             "report_period": report_period,
             "report_label": latest["descriptive"],
+            "post_date": date.fromisoformat(latest["post_date"]).isoformat(),
             "tabs_read": tabs_read,
             "unmapped_status": unmapped_status,
             "source_url": latest["download_url"],
@@ -293,8 +317,10 @@ class ErcotMisXlsxConnector(BaseConnector):
             if not inr or _norm(inr).startswith("change indicators"):
                 continue
             status = cell(row, "status")
-            decided = bool(cell(row, "approved_synchronization") or cell(row, "approved_energization"))
-            if decided or (status and any(m in _norm(status) for m in _DECISION_MARKERS)):
+            approved_synchronization = _milestone_date(cell(row, "approved_synchronization"))
+            approved_energization = _milestone_date(cell(row, "approved_energization"))
+            decided = bool(approved_synchronization or approved_energization)
+            if decided or _norm(status) in _DECISION_STATUSES:
                 stage, event_type = "decision", "interconnection_queue_decision"
             else:
                 stage, event_type = "application", "interconnection_queue_application"
@@ -304,6 +330,7 @@ class ErcotMisXlsxConnector(BaseConnector):
                 "source_record_id": f"ercot_mis:{inr}:{tab_slug}",
                 "event_type": event_type,
                 "stage": stage,
+                "approval_stage": "approved" if stage == "decision" else "pre_approval",
                 "inr": inr,
                 "project_name": cell(row, "project_name"),
                 "county": cell(row, "county"),
@@ -312,8 +339,11 @@ class ErcotMisXlsxConnector(BaseConnector):
                 "capacity_mw": cell(row, "capacity_mw"),
                 "status": status,
                 "projected_cod": _excel_date(cell(row, "projected_cod")),
+                "approved_synchronization": approved_synchronization,
+                "approved_energization": approved_energization,
                 "report_period": report_period,
                 "report_label": latest["descriptive"],
+                "post_date": date.fromisoformat(latest["post_date"]).isoformat(),
                 "tab": tab,
                 "source_url": latest["download_url"],
             })
@@ -326,8 +356,19 @@ def _excel_date(value: str | None) -> str | None:
         return None
     try:
         serial = int(float(value))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return value
     if serial <= 0 or serial > 400_000:
         return value
     return (_EXCEL_EPOCH + timedelta(days=serial)).isoformat()
+
+
+def _milestone_date(value: str | None) -> str | None:
+    """Require a real date; placeholders such as Yes/TBD are not decisions."""
+    decoded = _excel_date(value)
+    if decoded is None:
+        return None
+    try:
+        return date.fromisoformat(decoded).isoformat()
+    except ValueError:
+        return None

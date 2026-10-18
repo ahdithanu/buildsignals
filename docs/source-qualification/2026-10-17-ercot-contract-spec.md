@@ -1,6 +1,6 @@
 # ERCOT Monthly GIS Report — Contract Spec (interconnection queue)
 
-Date: 2026-10-17. Scope: live verification of the public ERCOT Monthly GIS
+Date: 2026-10-17; review annotation: 2026-10-18. Scope: historical manual verification of the public ERCOT Monthly GIS
 Report contract (the interconnection / generation-interconnection queue) so a
 connector can be built against a known shape. Read-only: the index was listed
 and **one** latest XLSX was downloaded (a read); nothing was written to ERCOT,
@@ -8,6 +8,13 @@ no credential was used, nothing was bypassed. Evidence is live probes on
 2026-10-18 UTC plus the parsed workbook. Fixtures captured from this run:
 `tests/fixtures/ercot/gis_report_index_sample.json` and
 `tests/fixtures/ercot/gis_report_tabs_sample.json`.
+
+**Current gate status:** the subsequently implemented PR #252 connector remains
+`technical_hold`, with canary and ingestion disabled. These historical manual
+observations do not establish a successful supported-connector canary or current
+host/TLS behavior. Written commercial-reuse confirmation and separately
+authorized live connector verification/canary remain outstanding. No new live
+request was made to update this document.
 
 - **EMIL / product:** `PG7-200-ER`, "GIS Report" (Generation Interconnection
   Status), ERCOT MIS **reportTypeId `15933`**. Monthly cadence.
@@ -76,6 +83,10 @@ e.g. `RPT.00015933.0000000000000000.20261001.160829144.GIS_Report_September2026.
   "latest". Instead pick the row with the greatest **`postDate`** (the
   `YYYYMMDD` segment), tie-broken by greatest `doclookupId`. Prefer a
   `_revised`/`_Corrected` row when it shares the latest postDate.
+- **Snapshot month:** parse the descriptive report label independently from
+  latest-document selection: `GIS_Report_September2026` means `2026-09`, even
+  when the publication date is October 1. Do not use either date as the
+  interconnection request's filing date.
 - Latest at capture: `GIS_Report_September2026`, postDate `20261001`,
   `doclookupId=1281327706` (673 KB XLSX). Monthly files are posted ~1st of the
   following month.
@@ -138,7 +149,10 @@ each of which is a **date** (when reached) or a word like `Yes` / `Not Required`
 - **Decision / approaching in-service:** `Approved for Energization` and
   `Approved for Synchronization` dates are the operator's go-ahead decisions;
   `Construction Start`/`Construction End` (Large Gen) and the permit columns
-  (`Air Permit`, `GHG Permit`, `Water Availability`) mark build readiness.
+  (`Air Permit`, `GHG Permit`, `Water Availability`) provide separate build
+  context, not independent proof of an operator energization decision. Generic
+  `approved`/`complete` substrings, signed IA, projected COD and nonempty but
+  negative/ambiguous milestone values must not classify a queue decision.
 - **Projected in-service:** `Projected COD` (commercial operation date, a
   future-dated serial). Treat `Projected COD` as the forecast in-service and the
   `Approved for Synchronization` date (once present) as the realized/near-term
@@ -150,9 +164,10 @@ each of which is a **date** (when reached) or a word like `Yes` / `Not Required`
 - **Update cadence:** monthly; a new `GIS_Report_<Month><Year>.xlsx` posts
   ~1st–3rd of the following month; occasional same-month `_revised`/`_Corrected`
   reposts.
-- **Rights:** ERCOT MIS public reports are freely downloadable, public-domain
-  reuse (no login, no redistribution gate on `www.ercot.com`). Keep ERCOT
-  attribution; re-check the site terms before redistribution.
+- **Rights:** anonymous download is not proof of public-domain status or
+  commercial redistribution rights. The earlier permissive-terms interpretation
+  is provisional; written commercial-reuse confirmation is still required.
+  Preserve source attribution and keep the candidate inactive pending clearance.
 - **Concrete blockers / cautions:**
   - **BLOCKER (host):** `misapp.ercot.com` is gone; `mis.ercot.com` is
     SiteMinder-gated (302 to `smgetcred.scc`). **Only `www.ercot.com` is

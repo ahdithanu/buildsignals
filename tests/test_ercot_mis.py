@@ -73,8 +73,11 @@ class FakeHttpClient:
         return body, message
 
 
-def _connector(**overrides) -> ErcotMisXlsxConnector:
-    client = FakeHttpClient(_index_html(), _workbook_bytes())
+def _connector(*, index_html=None, workbook=None, **overrides) -> ErcotMisXlsxConnector:
+    client = FakeHttpClient(
+        _index_html() if index_html is None else index_html,
+        _workbook_bytes() if workbook is None else workbook,
+    )
     connector = ErcotMisXlsxConnector(ENDPOINT, http_client=client, **overrides)
     connector._fake = client  # type: ignore[attr-defined]
     return connector
@@ -100,11 +103,20 @@ def test_fetch_normalizes_interconnection_records_with_durable_inr():
     by_inr = {r["inr"]: r for r in records}
     # Large Gen sample row has an "Approved for Synchronization" date -> decision.
     assert by_inr["15INR0064b"]["stage"] == "decision"
+    assert by_inr["15INR0064b"]["approval_stage"] == "approved"
+    assert by_inr["15INR0064b"]["approved_synchronization"] == "2020-05-12"
     assert by_inr["15INR0064b"]["county"] == "Glasscock"
     assert by_inr["15INR0064b"]["projected_cod"] == "2026-12-03"  # Excel serial 46359
     # Crafted queued row -> application.
     assert by_inr["99INR9999"]["stage"] == "application"
     assert by_inr["99INR9999"]["event_type"] == "interconnection_queue_application"
+    assert by_inr["99INR9999"]["approval_stage"] == "pre_approval"
+    # This real fixture has completed studies, FIS approval and a signed IA,
+    # but neither operator approval milestone. It is still an application.
+    assert by_inr["16INR0049"]["status"] == "SS Completed, FIS Completed, IA"
+    assert by_inr["16INR0049"]["stage"] == "application"
+    assert by_inr["16INR0049"]["approved_synchronization"] is None
+    assert by_inr["16INR0049"]["approved_energization"] is None
     # Small Gen row present with its own identity + tab provenance.
     assert "22INR0596" in by_inr
     assert by_inr["22INR0596"]["tab"].endswith("Small Gen")
@@ -117,7 +129,86 @@ def test_pagination_is_bounded_and_checkpoint_advances():
     assert first.checkpoint == {"offset": 2}
     second = connector.fetch(first.checkpoint)
     assert second.metadata["total"] == len(list(_connector().iter_records()))
-    assert second.metadata["report_period"] == "2026-10"
+    assert second.metadata["report_period"] == "2026-09"
+    assert second.metadata["post_date"] == "2026-10-01"
+
+
+def _queue_workbook(status=None, synchronization=None, energization=None) -> bytes:
+    return build_xlsx({"Project Details - Large Gen": [
+        ["INR", "Project Name", "GIM Study Phase", "IA Signed",
+         "Approved for Synchronization", "Approved for Energization"],
+        ["26INR0001", "Queued generator", status, "46086", synchronization, energization],
+    ]})
+
+
+@pytest.mark.parametrize("status", [
+    "SS Completed, FIS Completed, IA", "FIS Approved", "Screening Study Complete",
+    "IA Executed", "Approved", "Complete", "Not Approved for Synchronization",
+    "Not Energized", "Synchronization Pending", "Commercial Operation Pending",
+    "Not In Service", "Withdrawn", "Cancelled", None,
+])
+def test_study_progression_and_nonterminal_statuses_remain_applications(status):
+    record, = _connector(workbook=_queue_workbook(status=status)).iter_records()
+    assert record["stage"] == "application"
+    assert record["approval_stage"] == "pre_approval"
+    assert record["event_type"] == "interconnection_queue_application"
+
+
+@pytest.mark.parametrize("status", [
+    "Synchronized", "Energized", "In Service", "In-Service", "Commercial Operation",
+    "Commercial Operations", "  IN   SERVICE  ",
+])
+def test_only_exact_operating_statuses_are_decisions_without_approval_dates(status):
+    record, = _connector(workbook=_queue_workbook(status=status)).iter_records()
+    assert record["stage"] == "decision"
+    assert record["approval_stage"] == "approved"
+    assert record["event_type"] == "interconnection_queue_decision"
+
+
+@pytest.mark.parametrize("field", ["synchronization", "energization"])
+@pytest.mark.parametrize("value,expected", [("43963", "2020-05-12"), ("2026-09-01", "2026-09-01")])
+def test_valid_operator_approval_dates_produce_decisions(field, value, expected):
+    record, = _connector(workbook=_queue_workbook("FIS Approved", **{field: value})).iter_records()
+    assert record["stage"] == "decision"
+    assert record[f"approved_{field}"] == expected
+
+
+@pytest.mark.parametrize("placeholder", [
+    "Yes", "No", "Not Required", "TBD", "0", "-1", "nan", "inf", "2026-02-30", "invalid",
+])
+def test_nondate_operator_approval_values_do_not_produce_decisions(placeholder):
+    workbook = _queue_workbook("FIS Approved", placeholder, placeholder)
+    record, = _connector(workbook=workbook).iter_records()
+    assert record["stage"] == "application"
+    assert record["approved_synchronization"] is None
+    assert record["approved_energization"] is None
+
+
+@pytest.mark.parametrize("label,period", [
+    ("GIS_Report_September2026", "2026-09"),
+    ("GIS_Report_October2026", "2026-10"),
+    ("GIS_Report_April_2024", "2024-04"),
+    ("GIS_Report_Jun2026", "2026-06"),
+    ("GIS_Report_September2026_revised", "2026-09"),
+    ("GIS_Report_Sept_2026_Corrected", "2026-09"),
+    ("GIS_Report_Sep2026_CORRECTION", "2026-09"),
+])
+def test_reporting_period_uses_label_while_retaining_publication_date(label, period):
+    index = _index_html().replace("GIS_Report_September2026", label)
+    envelope = _connector(index_html=index).fetch()
+    assert envelope.metadata["report_period"] == period
+    assert envelope.metadata["post_date"] == "2026-10-01"
+    assert envelope.records
+    assert all(record["report_period"] == period for record in envelope.records)
+    assert all(record["post_date"] == "2026-10-01" for record in envelope.records)
+    assert all(record["report_label"] == label for record in envelope.records)
+
+
+@pytest.mark.parametrize("label", ["GIS_Report_unknown", "GIS_Report_Septober2026", "GIS_Report_2026"])
+def test_unknown_report_period_is_rejected_instead_of_using_publication_month(label):
+    index = _index_html().replace("GIS_Report_September2026", label)
+    with pytest.raises(ConnectorResponseError, match="report label"):
+        _connector(index_html=index).fetch()
 
 
 def test_max_records_caps_output():
