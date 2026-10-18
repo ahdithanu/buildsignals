@@ -5,6 +5,20 @@ then `docs/agent-onboarding.md` for setup and the relevant product checklist.
 These files carry context across sessions; the current user request and actual
 Git/code state take precedence over stale notes.
 
+## Operating Mode
+
+- **Build with multiple agents by default.** Fan independent work out into parallel
+  subagents (or a Workflow at scale) so there is no single point of failure or
+  single-threaded bottleneck. Keep exactly one writer per set of files and
+  serialize edits to shared files (catalog JSON, migrations, rollout manifest,
+  `render.yaml`); read-only investigation can run fully parallel. Relay the
+  conclusions, not raw agent transcripts.
+- **Keep this context harness current at all times.** When a change alters how the
+  product works, what is actually live, or what remains gated, update `AGENTS.md`,
+  `CLAUDE.md`, `docs/agent-handoff.md` and the relevant `docs/` in the same change
+  — never let an agent run on stale context. Record durable, non-obvious decisions
+  in agent memory. Treat a stale harness as a defect.
+
 ## Start a Session
 
 1. Run `python3 scripts/agent_status.py` (or `make agent-status`). It is offline,
