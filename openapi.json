@@ -5052,6 +5052,195 @@
         "title": "DeploymentReadinessCheck",
         "type": "object"
       },
+      "DevelopmentVelocityRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/ActivityBaselineRequest"
+          },
+          "minimum_populated_baseline_windows": {
+            "default": 3,
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Minimum Populated Baseline Windows",
+            "type": "integer"
+          },
+          "seasonal_adjustment": {
+            "const": "off",
+            "default": "off",
+            "title": "Seasonal Adjustment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline"
+        ],
+        "title": "DevelopmentVelocityRequest",
+        "type": "object"
+      },
+      "DevelopmentVelocitySignal": {
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "attribute": {
+            "title": "Attribute",
+            "type": "string"
+          },
+          "baseline_periods": {
+            "title": "Baseline Periods",
+            "type": "integer"
+          },
+          "cited_driver_observation_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cited Driver Observation Ids",
+            "type": "array"
+          },
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "unassessed"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "confidence_rationale": {
+            "title": "Confidence Rationale",
+            "type": "string"
+          },
+          "invalidation_conditions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Invalidation Conditions",
+            "type": "array"
+          },
+          "method_id": {
+            "const": "development-velocity-v0",
+            "default": "development-velocity-v0",
+            "title": "Method Id",
+            "type": "string"
+          },
+          "period_days": {
+            "title": "Period Days",
+            "type": "integer"
+          },
+          "reporting_lag_days": {
+            "title": "Reporting Lag Days",
+            "type": "integer"
+          },
+          "request_fingerprint": {
+            "title": "Request Fingerprint",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "score_is_validated": {
+            "const": false,
+            "default": false,
+            "title": "Score Is Validated",
+            "type": "boolean"
+          },
+          "seasonal_adjustment_applied": {
+            "const": false,
+            "default": false,
+            "title": "Seasonal Adjustment Applied",
+            "type": "boolean"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceVelocity"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "calculated",
+              "abstained_insufficient_sample",
+              "coverage_unverified",
+              "bounded_query_exceeded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unavailable_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unavailable Fields",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "what_changed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "What Changed"
+          }
+        },
+        "required": [
+          "request_fingerprint",
+          "as_of",
+          "city",
+          "state",
+          "attribute",
+          "period_days",
+          "baseline_periods",
+          "reporting_lag_days",
+          "status",
+          "what_changed",
+          "confidence",
+          "confidence_rationale",
+          "sources",
+          "cited_driver_observation_ids",
+          "invalidation_conditions",
+          "unavailable_fields",
+          "warnings"
+        ],
+        "title": "DevelopmentVelocitySignal",
+        "type": "object"
+      },
       "DiligenceObservation": {
         "additionalProperties": false,
         "properties": {
@@ -16510,6 +16699,130 @@
           "items"
         ],
         "title": "SourceSchedulePlanResponse",
+        "type": "object"
+      },
+      "SourceVelocity": {
+        "properties": {
+          "baseline_mean": {
+            "title": "Baseline Mean",
+            "type": "number"
+          },
+          "baseline_std": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Std"
+          },
+          "baseline_total": {
+            "title": "Baseline Total",
+            "type": "integer"
+          },
+          "current": {
+            "title": "Current",
+            "type": "integer"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "evidence_fingerprint": {
+            "title": "Evidence Fingerprint",
+            "type": "string"
+          },
+          "methodology_version": {
+            "title": "Methodology Version",
+            "type": "string"
+          },
+          "percent_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent Change"
+          },
+          "populated_baseline_windows": {
+            "title": "Populated Baseline Windows",
+            "type": "integer"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Score"
+          },
+          "status": {
+            "enum": [
+              "calculated",
+              "zero_baseline",
+              "zero_variance_baseline",
+              "abstained_insufficient_sample",
+              "ambiguous_latest_observation",
+              "needs_coverage_review"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityWindow"
+            },
+            "title": "Windows",
+            "type": "array"
+          },
+          "z": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z"
+          }
+        },
+        "required": [
+          "source_id",
+          "methodology_version",
+          "status",
+          "windows",
+          "baseline_mean",
+          "baseline_std",
+          "baseline_total",
+          "populated_baseline_windows",
+          "current",
+          "delta",
+          "percent_change",
+          "z",
+          "source_score",
+          "evidence_fingerprint"
+        ],
+        "title": "SourceVelocity",
         "type": "object"
       },
       "StateCoverageBucket": {
@@ -31302,6 +31615,66 @@
           }
         },
         "summary": "Get Change",
+        "tags": [
+          "temporal"
+        ]
+      }
+    },
+    "/v1/temporal/development-velocity": {
+      "post": {
+        "description": "Pure, cutoff-safe Development Velocity v0; the score is an unvalidated research output.",
+        "operationId": "get_development_velocity_v1_temporal_development_velocity_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevelopmentVelocityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DevelopmentVelocitySignal"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Development Velocity",
         "tags": [
           "temporal"
         ]
