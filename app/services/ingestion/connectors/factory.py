@@ -12,6 +12,7 @@ from .base import Connector, RetryingHttpClient
 from .civicplus_newsflash import CivicPlusNewsFlashConnector
 from .ckan import CKANConnector
 from .csv import CSVConnector
+from .ercot_mis import ErcotMisXlsxConnector
 from .html_document_index import HTMLDocumentIndexConnector
 from .json_array import JSONArrayConnector
 from .legistar import LegistarPlanningConnector
@@ -184,6 +185,26 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             max_items_per_document=int(config.get("max_items_per_document", 250)),
             max_item_characters=int(config.get("max_item_characters", 100_000)),
             max_records=int(config.get("max_records", 1000)),
+            headers=_public_headers(config),
+            **common,
+        )
+    if connector_type in {"ercot_mis_xlsx", "ercot_gis"}:
+        return ErcotMisXlsxConnector(
+            _required(config, "endpoint"),
+            allowed_hosts=_string_set(config.get("allowed_hosts"), "allowed_hosts"),
+            tabs=_string_list(config.get("tabs"), "tabs")
+            or ("Project Details - Large Gen", "Project Details - Small Gen"),
+            status_header_aliases=_string_list(
+                config.get("status_header_aliases"), "status_header_aliases"
+            )
+            or ("GIM Study Phase", "Status", "Project Status"),
+            max_records=int(config.get("max_records", 5000)),
+            max_document_bytes=int(config.get("max_document_bytes", 25 * 1024 * 1024)),
+            max_index_bytes=int(config.get("max_index_bytes", 4 * 1024 * 1024)),
+            max_rows_per_tab=int(config.get("max_rows_per_tab", 20000)),
+            max_cols=int(config.get("max_cols", 64)),
+            max_cell_chars=int(config.get("max_cell_chars", 2000)),
+            report_type_id=str(config.get("report_type_id", "15933")),
             headers=_public_headers(config),
             **common,
         )

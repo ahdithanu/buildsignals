@@ -2894,5 +2894,109 @@
     "last_checked_on": "2026-09-04",
     "next_audit_on": "2026-09-18",
     "notes": "Treat March 3, 2026 as a source-system boundary and retain the official legacy portal as the pre-transition backfill lane. Do not automate undocumented Tyler browser APIs or collect personal contact data."
+  },
+  {
+    "key": "ercot_tx_interconnection_queue",
+    "name": "ERCOT Monthly GIS Interconnection Queue",
+    "adapter": "ercot_mis_xlsx",
+    "record_type": "permit",
+    "jurisdiction": "ERCOT (Texas)",
+    "base_url": "https://www.ercot.com/misapp/GetReports.do?reportTypeId=15933",
+    "official_landing_page": "https://www.ercot.com/mp/data-products/data-product-details?id=PG7-200-ER",
+    "license": "ERCOT public MIS raw-data terms require written commercial-reuse confirmation before activation or redistribution; ERCOT marks excluded",
+    "status": "technical_hold",
+    "blocker_summary": "Bounded ERCOT Monthly GIS XLSX connector implemented and tested offline through normalization and persistence, not activated. The public GetReports index (reportTypeId=15933) resolves monthly Large/Small Gen tabs with durable INR identities. technical_hold remains until authorized live MIS verification and written commercial-reuse confirmation. Only www.ercot.com is configured; alternate MIS hosts are not approved. Synthetic tests do not establish live workbook compatibility, source completeness, or reuse rights.",
+    "early_warning_value": "Monthly statewide view of new large/small generation projects entering the ERCOT interconnection queue (county, fuel, MW) before construction or commercial operation, surfacing power-supply build-out in the Dallas-Fort Worth and data-center-adjacent load zones ahead of permits.",
+    "candidate_source_fields": [
+      "inr",
+      "project_name",
+      "county",
+      "fuel",
+      "technology",
+      "capacity_mw",
+      "status",
+      "stage",
+      "approval_stage",
+      "event_type",
+      "projected_cod",
+      "approved_synchronization",
+      "approved_energization",
+      "report_period",
+      "report_label",
+      "post_date",
+      "tab"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://www.ercot.com/misapp/GetReports.do?reportTypeId=15933",
+        "report_type_id": "15933",
+        "allowed_hosts": [
+          "www.ercot.com"
+        ],
+        "tabs": [
+          "Project Details - Large Gen",
+          "Project Details - Small Gen"
+        ],
+        "status_header_aliases": [
+          "GIM Study Phase",
+          "Status",
+          "Project Status"
+        ],
+        "page_size": 500,
+        "max_records": 5000,
+        "max_document_bytes": 26214400,
+        "max_index_bytes": 4194304,
+        "max_rows_per_tab": 20000,
+        "max_cols": 64,
+        "max_cell_chars": 2000,
+        "headers": {
+          "User-Agent": "BuildSignals/1.0 (+https://buildsignals.ai) public MIS reader"
+        }
+      },
+      "defaults": {
+        "state": "TX",
+        "jurisdiction": "ERCOT",
+        "permit_type": "Generation interconnection request",
+        "permit_subtype": "ERCOT Monthly GIS queue"
+      },
+      "signal_stage": "pre_approval_and_approved",
+      "freshness_field": "post_date",
+      "freshness_semantics": "dataset_refreshed_at",
+      "freshness_sla_hours": 1080
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "inr",
+        "canonical_field": "application_number",
+        "is_required": true
+      },
+      {
+        "source_field": "project_name",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "status",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "approval_stage",
+        "canonical_field": "approval_stage",
+        "is_required": true
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
+    ],
+    "production_page_size": 500,
+    "can_run_canary": false,
+    "last_checked_on": "2026-10-18",
+    "next_audit_on": "2026-11-17",
+    "notes": "Connector app/services/ingestion/connectors/ercot_mis.py and stdlib xlsx_reader.py; design and contract in docs/source-qualification/2026-10-17-ercot-connector-design.md and 2026-10-17-ercot-contract-spec.md. Existing permit storage is a compatibility container, not a building-permit assertion: permit_type explicitly identifies a generation interconnection request, INR maps to application_number, and permit_number is unset. stage/application-vs-decision and interconnection_queue event_type remain source-specific evidence in unmapped attributes and immutable raw payloads. County, fuel, technology, MW, projected COD, milestone dates, report period/label, publication date and tab remain evidence; projected COD is not an actual completion or approval date. Canonical approval_stage is pre_approval/approved, based only on explicit supported interconnection milestones. Study completion, generic approval and IA signature alone do not establish synchronization or energization approval. Reporting month comes from the descriptive report label, separately from publication date. Keep technical_hold and can_run_canary=false; remain excluded from production catalogs and schedules until authorized live verification and written commercial-reuse confirmation."
   }
 ]

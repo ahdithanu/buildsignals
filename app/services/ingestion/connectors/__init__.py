@@ -17,6 +17,7 @@ from .base import (
 from .civicplus_newsflash import CivicPlusNewsFlashConnector
 from .ckan import CKANConnector, CKANDataStoreConnector
 from .csv import CSVConnector, CsvConnector
+from .ercot_mis import ErcotMisXlsxConnector
 from .factory import build_connector
 from .html_document_index import HTMLDocumentIndexConnector
 from .json_array import JSONArrayConnector
@@ -40,6 +41,7 @@ __all__ = [
     "CivicPlusNewsFlashConnector",
     "CSVConnector",
     "CsvConnector",
+    "ErcotMisXlsxConnector",
     "FetchEnvelope",
     "HttpClient",
     "HTMLDocumentIndexConnector",

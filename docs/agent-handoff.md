@@ -3,6 +3,84 @@
 Last updated: 2026-10-18 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
 
+## Current Task: PR #252 ERCOT review corrections
+
+Work on the existing `codex/ercot-connector` branch, based on `a6d4155` and
+`e8f43b7`. PR #252 is stacked on open PR #251; the shared context updates from
+`b547447` and `a6d4155` are retained here. Do not separately edit PR #251's
+branch or claim this work resolves its methodology findings.
+
+Authorized scope: fix decision classification, canonical normalization/stage
+contracts, reporting-month derivation, persistence regression coverage and this
+context harness. No live ingestion, source activation, merge or deployment is
+authorized. `ercot_tx_interconnection_queue` stays `technical_hold`,
+`can_run_canary=false`, with no production settings or enrollment.
+
+Implemented: exact positive operational statuses or validated operator dates
+classify decisions; completed studies, generic approval, signed IA and invalid
+milestone placeholders remain applications. Separate canonical approval stages
+and supported mappings now normalize successfully. Explicit interconnection
+types and raw/unmapped evidence preserve domain meaning. The report label
+supplies the snapshot month, with publication retained separately. The probe
+uses publication `post_date` as `dataset_refreshed_at` freshness, rather
+than the unsupported `report_period_month` label; raw source-update timestamps
+do not become filing dates. The checked-in rollout manifest and three Render
+digest pins are synchronized; runnable
+candidate count remains zero and production/host policies are unchanged.
+
+Verification in project `.venv` (Python 3.12, `OPENROUTER_API_KEY=` empty):
+- Connector, ingestion persistence, XLSX reader, rollout, promotion and host
+  policy subset: **113 passed** (`python -m pytest tests/test_ercot_mis.py
+  tests/test_ercot_ingestion.py tests/test_xlsx_reader.py
+  tests/test_ingestion_rollout.py tests/test_ingestion_promotion.py
+  tests/test_ingestion_host_policy.py -q`).
+- Existing permit ingestion, catalog, connector and XLSX subset: **259 passed**.
+- After correcting freshness metadata, ERCOT ingestion, rollout, catalog and
+  health subset: **245 passed**. Persistence asserts the publication timestamp
+  is October 1 while report-period evidence remains September.
+- `ruff check app/ scripts/ tests/`, `git diff --check` and
+  `python3 scripts/agent_status.py --check`: passed.
+- `catalog rollout-manifest --check`: current. Catalog validation passed for
+  134 production and 37 candidate definitions; ERCOT remains held and excluded.
+- `render.yaml` validates against the retrieved current Render JSON schema;
+  no Blueprint sync or deployment was performed.
+- Full backend suite (`OPENROUTER_API_KEY= python -m pytest -q`): **1,830 passed,
+  69 skipped, one environment/setup failure** in 1,286.82 seconds. The sole
+  failure was the public TypeScript example check: this fresh checkout lacked
+  the locked TypeScript compiler, so `npx` selected the unrelated `tsc` package.
+  After `npm ci --no-audit --no-fund`, rerunning
+  `python -m pytest tests/test_public_api_examples.py -q` passed **both tests**.
+  No product code or lockfile change was needed. The entire suite was not
+  repeated after dependency installation. PostgreSQL/PostGIS integration and
+  other skipped checks remain unverified locally; browser E2E was not run.
+
+Persistence uses the real connector factory, XLSX reader, normalizer, run route
+and ingestion service with synthetic HTTP and disposable SQLite. Four records
+persist without failures; the second run adds no duplicates or events. This
+does not verify production/PostgreSQL ingestion. The old 1,783-test receipt
+below belongs to the original implementation, before these corrections.
+
+Publication scope: this follow-up belongs on PR #252's existing branch only;
+PR #251's branch and both PRs' merge/deploy state are unchanged. Next action is
+review of this correction and its CI receipts, retaining all source holds.
+Any live qualification/canary, promotion, merge or deployment remains separate.
+
+Remaining qualification gates: written commercial-reuse confirmation; live
+verification of the current public host/TLS and workbook contract through the
+supported connector; and a bounded canary with a receipt, each under separate
+authorization before promotion. Earlier manually captured index/workbook
+observations are historical evidence, not a successful connector canary.
+
+The roadmap's P0.8 corpus qualification remains partial; retrospective
+observations alone cannot establish cutoff-safe, prospectively available
+signals. P0.8 additionally needs rights-cleared historical permit/planning,
+land, construction and infrastructure evidence and accepted minimum history;
+the current Columbus corpus does not unlock scoring. Outcomes, horizons,
+cohorts, samples, holdouts and false positive tolerance must be declared before
+tuning. PR #251's remaining review findings stay outstanding. The offline
+ERCOT increment does not validate Development Velocity, a Columbus historical
+corpus, a power-constraint signal, or nationwide coverage.
+
 ## Session 2026-10-17/18: pilot demo map + 30-day build kickoff (multi-agent)
 
 Operating mode now in effect (see AGENTS.md "Operating Mode"): build with
@@ -12,7 +90,15 @@ Merged to `main` since the last entry:
 - PR #249 (Biloxi/MDEQ + reliability: quarantine guard, IAM policy accumulation,
   source-update-date completeness) and PR #250 (demo geocoding backfill + pilot
   script). `main` tip ~`b18b080`.
-- PR #251 OPEN: AGENTS.md operating-mode section + `docs/30-day-ingestion-bridge-plan.md`.
+- PR #251 OPEN: AGENTS.md operating-mode section + `docs/30-day-ingestion-bridge-plan.md`
+  + refreshed handoff + Week-1 qualification reports.
+- PR #252 OPEN (stacked on #251): `ercot_mis_xlsx` connector — stdlib XLSX reader
+  + `ErcotMisXlsxConnector`, factory/__init__ wiring, and a NON-activated
+  `technical_hold` candidate `ercot_tx_interconnection_queue`. Regenerated
+  `production_rollout.json` + synced `render.yaml` manifest digest. Full suite
+  1783 passed at the original implementation, before the review corrections.
+  Held pending authorized live connector verification/canary + written
+  commercial-reuse confirmation; this is not an activation-ready source.
 
 Verified-live state (2026-10-17/18):
 - API live (App Runner RUNNING); public demo enabled at www.buildsignals.ai.
@@ -38,8 +124,11 @@ Week-1 groundwork (three parallel agents, reports written, no catalog edits yet)
   reuse with Loudoun OMAGI). BLOCKED = Prince William (rights conflict), Dallas
   Socrata (stale since 2020), Denton (no license). No new rights-clean DFW endpoint.
 - `docs/source-qualification/2026-10-17-utility-interconnection-queues.md`:
-  ERCOT Monthly GIS Report = rights-clean + viable recurring (needs a new
-  `ercot_mis_xlsx` connector; durable INR identity, monthly XLSX). PJM = blocker
+  ERCOT Monthly GIS Report = recurring-interface candidate with durable INR
+  identity and monthly XLSX; `ercot_mis_xlsx` is now implemented in PR #252.
+  Written commercial-reuse confirmation and live connector qualification are
+  outstanding; the earlier rights-clean interpretation is not clearance.
+  PJM = blocker
   (no public queue feed; derived-data redistribution restricted; undocumented
   key-gated endpoint).
 
@@ -48,10 +137,14 @@ regional workers (App Runner auto-deploy off); per user, hold and BATCH with the
 next deploy once Week-1 build increments are ready. No new source is activated;
 all legal_hold sources untouched; parcels remain unqualified/unplotted.
 
-Next build increment (serial catalog writes, one writer): add Census BPS (after
-header-flatten) and Loudoun LOLA as candidate entries + canaries (not activated);
-scope the `ercot_mis_xlsx` connector; pursue written rights for Prince William.
-Then build Development Velocity v0 + the replay/backtest scaffold over Columbus.
+Next build increments (serial catalog writes, one writer): the `ercot_mis_xlsx`
+connector is built (PR #252, not activated). Remaining: add Census BPS (after a
+single-header flatten) and Loudoun LOLA as candidate entries + canaries; pursue
+written rights for Prince William. ERCOT remains held; obtain separate
+live-verification/canary authorization and written commercial-reuse confirmation
+before any promotion. Then build Development Velocity v0 + the replay/
+backtest scaffold over Columbus. Deploy posture unchanged: batch the #249
+reliability deploy with the next deploy.
 
 ## Session 2026-10-16: Mississippi production-readiness + reliability
 
@@ -129,7 +222,7 @@ Implemented locally vs tested vs production-ready vs live:
 - Actually live: nothing from this session. No push, merge, image build, migration,
   schedule, or source activation was performed.
 
-## Current Task
+## Historical Task: Mississippi follow-up
 
 Mississippi follow-up (2026-10-16): owner authorized proceeding with review,
 not an agency license grant. See `docs/releases/2026-10-16-mississippi-review.md`.
