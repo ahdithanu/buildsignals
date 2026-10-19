@@ -20,6 +20,16 @@ from eval.replay.driver import (
     register,
     replay,
 )
+
+# Importing the bridge registers the REAL Development Velocity v0 signal
+# (method id ``development-velocity-v0``) with the driver registry.
+from eval.replay.dv_signal import (
+    DV_METHOD_ID,
+    DV_METHOD_VERSION,
+    development_velocity_signal,
+    dv_series,
+    firing_threshold_value,
+)
 from eval.replay.manifest import (
     APPROVED_DATA_SCOPES,
     FIXTURES,
@@ -42,6 +52,8 @@ from eval.replay.metrics import (
 
 __all__ = [
     "APPROVED_DATA_SCOPES",
+    "DV_METHOD_ID",
+    "DV_METHOD_VERSION",
     "FIXTURES",
     "BaselineRun",
     "CutoffSignal",
@@ -49,6 +61,9 @@ __all__ = [
     "REFERENCE_METHOD_ID",
     "REFERENCE_METHOD_VERSION",
     "REGISTRY",
+    "development_velocity_signal",
+    "dv_series",
+    "firing_threshold_value",
     "ReplayManifest",
     "ReplayRun",
     "SeriesSpec",
