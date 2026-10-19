@@ -83,88 +83,45 @@ licence; if pursued, adapter fit is a **new connector** (XLSX fetch), not
 
 ---
 
-## ERCOT
+## ERCOT (updated 2026-10-18)
 
-ERCOT is the cleaner of the two. Two public surfaces exist; the GIS report is
-reliably reachable via the MIS report list.
+This section supersedes the original design-only recommendation. PR #252 now
+implements `ercot_mis_xlsx` on the PR #251 stack, with review corrections
+implemented and verified offline. The candidate remains `technical_hold` and `can_run_canary=false`;
+no live ingestion or promotion is authorized.
 
-### A. Monthly Generator Interconnection Status (GIS) Report — primary
+The dated manual evidence and actual workbook headers are recorded in
+`2026-10-17-ercot-contract-spec.md`. They identify the public **HTML** report
+index at `https://www.ercot.com/misapp/GetReports.do?reportTypeId=15933` and
+`Project Details - Large Gen` / `Project Details - Small Gen` XLSX tabs. The
+original `misapp.ercot.com`/XML assumption is superseded. Read the current
+connector design for implemented bounds, stage contracts and normalization.
 
-- **Product:** EMIL id **PG7-200-ER**, Report Type Id **15933**
-  ("Monthly GIS Report"). Data-product page lists **Audience: Public**,
-  **Security Classification: Public**, **Channel: Public, EWS**.
-- **Download mechanism:** the public MIS report list,
-  `https://misapp.ercot.com/misapp/GetReports.do?reportTypeId=15933` (returns an
-  XML index of documents) → per-document download via the `mirDownload` servlet.
-  The data-product page itself shows "MIS Posting Location: N/A" and an empty
-  Available Files list, so the GetReports list is the resolution point. The
-  individual file URL **changes each month** (new document id), but the
-  `reportTypeId=15933` list is **stable** and resolvable on each run — exactly
-  what a recurring fetch needs.
-- **Format:** XLSX, with "Large Gen" and "Small Gen" tabs (reported ~1.85k
-  rows). Since 2026-03 the series also includes a Transmission Interconnection
-  Costs Report.
-- **Identity:** source-assigned **INR** (e.g. `24INR0080` = year prefix +
-  sequence) — a durable per-request key.
-- **Application vs decision:** derivable from the per-row **status** and
-  interconnection-agreement / COD milestone columns (historically: unit/project
-  name, county, region, fuel, MW, status, projected COD), not a separate stream.
-- **Cadence:** `Generation Frequency: Chron – Monthly` (EMIL last updated
-  2026-02-09; first run 2017-02-01).
-- **Control total:** none per se; the GetReports XML index is the bound, and row
-  counts come from the file itself.
-- **Technical note / uncertainty:** a direct read-only probe of the MIS host
-  over TLS failed with an SSL handshake error (`SSLV3_ALERT_HANDSHAKE_FAILURE`)
-  on one hostname variant, and `misapp.ercot.com` vs `mis.ercot.com` resolution
-  differs; the exact host + TLS profile must be validated when a fetch is
-  actually implemented. This is a config detail, not a rights blocker.
+INR is the durable request identity. The report label supplies the snapshot
+month; the publication date selects the newest document. A September report
+posted October 1 remains a September snapshot. Operator energization or
+synchronization milestones can support decision classification; study/FIS
+completion, signed IA and projected COD alone cannot. Interconnection events
+remain explicitly identified even though the supported storage class is
+`permit`.
 
-### B. ERCOT Public API (`api.ercot.com`) — exists, but GIS not clearly exposed
+Commercial reuse is **not cleared**: the original rights-clean interpretation
+of Website User Agreement Clause 5 is provisional and does not replace written
+confirmation. Public download does not establish public-domain status. Required
+before promotion: written commercial-reuse confirmation, separately authorized
+live host/TLS/workbook verification using the supported connector, and a bounded
+canary receipt. Historical manual downloads are not a successful connector
+canary. No new live access was performed for this documentation update.
 
-- **Base:** `https://api.ercot.com/api/public-reports`. JSON (HAL
-  `_embedded`/`_links`); report files carry `fileType` zip/csv/xml.
-- **Auth:** `Ocp-Apim-Subscription-Key` header **plus** a Bearer ID token
-  (OAuth/B2C); **free registration** required; bot-created accounts barred by
-  API terms. Listing/pagination endpoints documented as "Coming Soon."
-- **GIS coverage:** not evidenced — the PG7-200-ER data-product page lists no
-  API artifact id and no posting location, so the queue is **not confirmed** on
-  the public-reports API. The MIS GetReports path (A) is the dependable route.
-
-### ERCOT rights (rights-clean)
-
-Website User Agreement, Clause 5: publicly available contents "may be used,
-reproduced, and redistributed, provided that the contents are not modified," and
-**raw data** "may be used, reproduced, and redistributed in compilations,
-charts, and analyses" (expressly without maintaining notices). Commercial use is
-not restricted; only the ERCOT logo/marks (Clause 9) need prior permission. No
-attribution is explicitly mandated for raw data. Treated as **rights-clean** for
-compilations/analyses — materially better than PJM.
-
-### ERCOT recommendation — (a) viable recurring interface
-
-The Monthly GIS Report is a genuine reliable recurring public contract: a public
-monthly XLSX with a durable per-request identity (INR), derivable application-vs-
-decision semantics, and permissive reuse terms. Adapter fit: a **new connector**
-("ercot_mis_xlsx" — resolve the stable `reportTypeId=15933` GetReports index,
-pick the newest document id, download + parse the two gen tabs). It is not a
-`json_array` or native `csv` source (source is XLSX, monthly, not JSON/CSV).
-Closest existing precedent is the `manual_export` adapter. Remaining work before
-activation: confirm the MIS host/TLS profile and the current column headers from
-one live file.
-
----
 
 ## Honesty / limits
 
-- PJM §B endpoint, row counts, key behaviour and cadence come from a
-  third-party scraper's documentation plus one 405 probe; they are **not**
-  confirmed from PJM's own pages (the current PJM interconnection-queues page was
-  under maintenance / 404 at inspection time).
-- No queue export was downloaded for either operator; column lists are from
-  historical/secondary sources and must be re-read from a live file before any
-  field mapping.
-- ERCOT MIS fetch host/TLS needs validation (one probe failed the TLS
-  handshake).
-- Neither source should be activated on this evidence alone: ERCOT is
-  qualify-to-build (rights-clean, durable identity) pending a live-file schema
-  read; PJM is blocked on rights + an undocumented, key-dependent endpoint.
+- PJM §B endpoint, row counts, key behavior and cadence remain based on the
+  original third-party documentation plus one 405 probe, not a qualified
+  supported public queue contract.
+- The initial qualification did not download either operator's queue export.
+  A later historical manual ERCOT read is documented in the companion contract
+  spec; no current supported-connector live run has been qualified here.
+- Neither operator is activated by these reports. PJM retains its documented
+  rights/interface blockers; ERCOT retains its technical hold and written
+  commercial-reuse/live-contract/canary gates.

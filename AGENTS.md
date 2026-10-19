@@ -47,6 +47,14 @@ nearby parcels -> saved opportunity/export. Keep the acquisition use case visibl
 - Graph: relational entities/relationships in PostgreSQL; consult
   `docs/knowledge_graph.md` before claiming a separate graph engine or AI inference.
 - Ingestion: `app/services/ingestion/`; use existing normalization and provenance.
+  ERCOT `ercot_mis_xlsx` is implemented on PR #252, stacked on open PR #251.
+  `ercot_tx_interconnection_queue` remains `technical_hold`, with canaries and
+  ingestion disabled. Offline fixture checks do not establish live operation or
+  commercial reuse rights; live contract/TLS verification, a bounded canary,
+  written commercial-reuse confirmation and activation need separate authorization.
+  Preserve interconnection event types and evidence; shared permit-table storage
+  does not make these ordinary building permits. See the ERCOT connector design
+  and current handoff before continuing.
 - Models: `app/services/llm_client.py` routes configured calls through OpenRouter.
   `SCORING_MODE` defaults to deterministic. `evaluate_deal_score` must remain a
   pure offline API used by evaluation workflows. `eval/` is the offline harness;
