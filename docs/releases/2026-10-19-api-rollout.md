@@ -46,5 +46,31 @@ activated.
   the prior worker script, so these take effect only on a **regional
   re-provision** (a separate, gated op needing fresh source canaries +
   `--confirm-production`). The API deploy does not change the running schedules.
-- No source activation, no demo re-seed, no regional re-provision, no OpenRouter
-  key. The replay/backtest harness is offline tooling, not a deployed service.
+- No source activation, no demo re-seed, no OpenRouter key. The replay/backtest
+  harness is offline tooling, not a deployed service.
+
+## Regional worker re-provision (2026-10-19, same day)
+
+Shipped the #249 **worker** fixes (quarantine guard + IAM-policy accumulation) to
+the live regional schedules, authorized by the user.
+
+- Fresh bounded canaries for the 14 regional sources (`recurring_regions.py
+  --verify`): **13 verified**. `texas_comptroller_sales_tax_locations` failed its
+  canary legitimately — "recent scope is empty or exceeds the 1000-record budget"
+  (the 7-day sales-tax window is out of the bounded budget right now), so it was
+  NOT re-provisioned.
+- `configure_regional_ingestion.py --confirm-production` re-provisioned the **13
+  verified** sources: new task-definition revisions (mostly `:4`, Austin `:3`) on
+  image `dealsignal-api@sha256:3115a8ca…` (today's deployed main) with the current
+  `recurring_regions.py` embedded (now carrying the quarantine guard), and their
+  EventBridge schedules updated + ENABLED.
+- **IAM-accumulation fix verified in production**: the inline policy
+  `RunVerifiedRegionalTasks` now lists 27 `ecs:RunTask` ARNs, and
+  `texas_comptroller`'s existing task ARN is **preserved** — so the un-reprovisioned
+  source kept RunTask permission (without the fix a subset re-provision would have
+  stripped it). Its schedule is untouched and ENABLED. All 14 regional schedules
+  ENABLED.
+- `texas_comptroller` still runs its prior embedded script; it picks up the #249
+  quarantine guard on a future re-provision once its window is in-budget. A failed
+  reconciliation now quarantines a source (is_active False) and the next scheduled
+  run will no longer silently re-enable it.

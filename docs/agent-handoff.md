@@ -14,10 +14,14 @@ live in the deployed OpenAPI. Full receipt: `docs/releases/2026-10-19-api-rollou
 Shipped (API): source-update-date completeness in health; Biloxi decoding + MDEQ
 qualification record; the Development Velocity v0 route (score UNVALIDATED);
 ERCOT/BPS/Loudoun connectors as INERT `technical_hold` candidates (NOT activated).
-NOT shipped: the #249 **worker** fixes (quarantine guard + IAM-policy accumulation
-in the regional provisioning scripts) — the live EventBridge schedules run an
-embedded snapshot, so those need a gated regional RE-PROVISION (fresh canaries +
-`--confirm-production`). No source activation; replay harness is offline tooling.
+Then SHIPPED the #249 **worker** fixes via a regional re-provision (same day):
+fresh canaries verified 13/14 (texas_comptroller failed its bounded-budget guard,
+left as-is), and `configure_regional_ingestion.py --confirm-production`
+re-provisioned the 13 on image `3115a8ca…` with the quarantine-guard script;
+schedules updated + ENABLED. The IAM-accumulation fix is proven in prod — the
+inline policy preserved texas_comptroller's ARN (27 RunTask ARNs; all 14 schedules
+ENABLED). texas_comptroller gets the fix on a future in-budget canary. No source
+activation; replay harness is offline tooling.
 
 Next options: (a) regional re-provision to ship the worker fixes; (b) P2.2 signal
 evaluation (predeclare outcomes/holdouts, run the backtest); (c) pursue Loudoun
