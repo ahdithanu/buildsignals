@@ -1,0 +1,8 @@
+Survey,State,6-Digit,County,Census Place,FIPS Place,FIPS MCD,Pop,CSA,CBSA,Footnote,Central,Zip,Region,Division,Number of,Place,,1-unit,,,2-units,,,3-4 units,,,5+ units,,,1-unit rep,,,2-units rep,,,3-4 units rep,,,5+ units rep
+Date,Code,ID,Code,Code,Code,Code,  ,Code,Code,Code,City,Code,Code,Code,Months Rep,Name,Bldgs,Units,Value,Bldgs,Units,Value,Bldgs,Units,Value,Bldgs,Units,Value,Bldgs,Units,Value,Bldgs,Units,Value,Bldgs,Units,Value,Bldgs,Units,Value
+
+2025,01,001000,067,0020,00124 ,00000 ,2553 ,222,20020, , ,36310      ,3,6,12,Abbeville,40,40,11840668,0,0,0,0,0,0,0,0,0,40,40,11840668,0,0,0,0,0,0,0,0,0
+2025,01,005000,117,0025,00820 ,00000 ,33701 ,142,13820, , ,35007      ,3,6,12,Alabaster,86,86,17929261,0,0,0,0,0,0,0,0,0,86,86,17929261,0,0,0,0,0,0,0,0,0
+2025,01,012000,039,0055,01708 ,00000 ,8677 ,999,99999, , ,36420      ,3,6,9,Andalusia,9,9,1899507,0,0,0,0,0,0,0,0,0,8,8,1620000,0,0,0,0,0,0,0,0,0
+2025,48,383500,453,2303,40264 ,00000 ,7943 ,999,12420, , ,78645      ,3,7,1,Lago Vista,153,153,54953830,10,20,2708886,3,9,900000,0,0,0,3,3,888615,0,0,0,0,0,0,0,0,0
+2025,51,415000,113,    ,00000 ,00000 ,13074 ,999,99999, , ,22727      ,3,5,12,Madison County,48,48,22152686,0,0,0,0,0,0,0,0,0,48,48,22152686,0,0,0,0,0,0,0,0,0

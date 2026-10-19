@@ -76,7 +76,11 @@
         "canonical_field": "source_record_id",
         "transform": "join_fields",
         "transform_options": {
-          "fields": ["PermitNumber", "Address", "OBJECTID"],
+          "fields": [
+            "PermitNumber",
+            "Address",
+            "OBJECTID"
+          ],
           "separator": "|"
         },
         "is_required": true
@@ -98,7 +102,10 @@
             {
               "field": "PermitStatus",
               "operator": "in",
-              "values": ["Approved", "Issued"],
+              "values": [
+                "Approved",
+                "Issued"
+              ],
               "value": "approved"
             }
           ],
@@ -362,8 +369,22 @@
       },
       "signal_stage": "pre_approval_and_approved",
       "canary_stage_probes": [
-        {"name": "bend_planning_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NULL"}},
-        {"name": "bend_planning_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NOT NULL"}}
+        {
+          "name": "bend_planning_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NULL"
+          }
+        },
+        {
+          "name": "bend_planning_approved",
+          "expected_stage": "approved",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND DecisionDate IS NOT NULL"
+          }
+        }
       ]
     },
     "probe_field_mappings": [
@@ -393,7 +414,13 @@
         "canonical_field": "approval_stage",
         "transform": "conditional_map",
         "transform_options": {
-          "cases": [{"field": "DecisionDate", "operator": "present", "value": "approved"}],
+          "cases": [
+            {
+              "field": "DecisionDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
           "default": "pre_approval"
         },
         "is_active": true
@@ -442,14 +469,23 @@
         "source_field": "centroid",
         "canonical_field": "latitude",
         "transform": "object_path",
-        "transform_options": {"path": ["y"]},
+        "transform_options": {
+          "path": [
+            "y"
+          ]
+        },
         "is_active": true
       },
       {
         "source_field": "__longitude",
         "canonical_field": "longitude",
         "transform": "object_path",
-        "transform_options": {"source_field": "centroid", "path": ["x"]},
+        "transform_options": {
+          "source_field": "centroid",
+          "path": [
+            "x"
+          ]
+        },
         "is_active": true
       }
     ],
@@ -512,8 +548,22 @@
       },
       "signal_stage": "pre_approval_and_approved",
       "canary_stage_probes": [
-        {"name": "bend_permit_point_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"}},
-        {"name": "bend_permit_point_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"}}
+        {
+          "name": "bend_permit_point_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"
+          }
+        },
+        {
+          "name": "bend_permit_point_approved",
+          "expected_stage": "approved",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"
+          }
+        }
       ]
     },
     "probe_field_mappings": [
@@ -548,7 +598,13 @@
         "canonical_field": "approval_stage",
         "transform": "conditional_map",
         "transform_options": {
-          "cases": [{"field": "IssueDate", "operator": "present", "value": "approved"}],
+          "cases": [
+            {
+              "field": "IssueDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
           "default": "pre_approval"
         },
         "is_active": true
@@ -573,12 +629,36 @@
         "canonical_field": "address",
         "is_active": true
       },
-      {"source_field": "TAXLOT", "canonical_field": "parcel_id", "is_active": true},
-      {"source_field": "ProjectValuation", "canonical_field": "valuation", "is_active": true},
-      {"source_field": "SQFT", "canonical_field": "square_feet", "is_active": true},
-      {"source_field": "Units", "canonical_field": "units", "is_active": true},
-      {"source_field": "ProposedLandUse", "canonical_field": "proposed_use", "is_active": true},
-      {"source_field": "UseDesc", "canonical_field": "occupancy_type", "is_active": true},
+      {
+        "source_field": "TAXLOT",
+        "canonical_field": "parcel_id",
+        "is_active": true
+      },
+      {
+        "source_field": "ProjectValuation",
+        "canonical_field": "valuation",
+        "is_active": true
+      },
+      {
+        "source_field": "SQFT",
+        "canonical_field": "square_feet",
+        "is_active": true
+      },
+      {
+        "source_field": "Units",
+        "canonical_field": "units",
+        "is_active": true
+      },
+      {
+        "source_field": "ProposedLandUse",
+        "canonical_field": "proposed_use",
+        "is_active": true
+      },
+      {
+        "source_field": "UseDesc",
+        "canonical_field": "occupancy_type",
+        "is_active": true
+      },
       {
         "source_field": "ApplicationType",
         "canonical_field": "permit_subtype",
@@ -599,8 +679,29 @@
         "canonical_field": "status_updated_at",
         "is_active": true
       },
-      {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}, "is_active": true},
-      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}, "is_active": true}
+      {
+        "source_field": "geometry",
+        "canonical_field": "latitude",
+        "transform": "object_path",
+        "transform_options": {
+          "path": [
+            "y"
+          ]
+        },
+        "is_active": true
+      },
+      {
+        "source_field": "__longitude",
+        "canonical_field": "longitude",
+        "transform": "object_path",
+        "transform_options": {
+          "source_field": "geometry",
+          "path": [
+            "x"
+          ]
+        },
+        "is_active": true
+      }
     ],
     "can_run_canary": true,
     "last_checked_on": "2026-07-23",
@@ -664,8 +765,22 @@
       },
       "signal_stage": "pre_approval_and_approved",
       "canary_stage_probes": [
-        {"name": "bend_permit_line_pre_approval", "expected_stage": "pre_approval", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"}},
-        {"name": "bend_permit_line_approved", "expected_stage": "approved", "sample_size": 5, "connector": {"where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"}}
+        {
+          "name": "bend_permit_line_pre_approval",
+          "expected_stage": "pre_approval",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NULL"
+          }
+        },
+        {
+          "name": "bend_permit_line_approved",
+          "expected_stage": "approved",
+          "sample_size": 5,
+          "connector": {
+            "where": "ApplicationNumber IS NOT NULL AND IssueDate IS NOT NULL"
+          }
+        }
       ]
     },
     "probe_field_mappings": [
@@ -700,7 +815,13 @@
         "canonical_field": "approval_stage",
         "transform": "conditional_map",
         "transform_options": {
-          "cases": [{"field": "IssueDate", "operator": "present", "value": "approved"}],
+          "cases": [
+            {
+              "field": "IssueDate",
+              "operator": "present",
+              "value": "approved"
+            }
+          ],
           "default": "pre_approval"
         },
         "is_active": true
@@ -725,11 +846,31 @@
         "canonical_field": "address",
         "is_active": true
       },
-      {"source_field": "TAXLOT", "canonical_field": "parcel_id", "is_active": true},
-      {"source_field": "ProjectValuation", "canonical_field": "valuation", "is_active": true},
-      {"source_field": "SQFT", "canonical_field": "square_feet", "is_active": true},
-      {"source_field": "Units", "canonical_field": "units", "is_active": true},
-      {"source_field": "UseDesc", "canonical_field": "occupancy_type", "is_active": true},
+      {
+        "source_field": "TAXLOT",
+        "canonical_field": "parcel_id",
+        "is_active": true
+      },
+      {
+        "source_field": "ProjectValuation",
+        "canonical_field": "valuation",
+        "is_active": true
+      },
+      {
+        "source_field": "SQFT",
+        "canonical_field": "square_feet",
+        "is_active": true
+      },
+      {
+        "source_field": "Units",
+        "canonical_field": "units",
+        "is_active": true
+      },
+      {
+        "source_field": "UseDesc",
+        "canonical_field": "occupancy_type",
+        "is_active": true
+      },
       {
         "source_field": "ApplicationType",
         "canonical_field": "permit_subtype",
@@ -841,7 +982,9 @@
         "canonical_field": "application_number",
         "transform": "first_nonempty",
         "transform_options": {
-          "fields": ["record_id"]
+          "fields": [
+            "record_id"
+          ]
         },
         "is_active": true
       },
@@ -859,7 +1002,9 @@
             {
               "field": "task_status",
               "operator": "in",
-              "values": ["Plans Approved"],
+              "values": [
+                "Plans Approved"
+              ],
               "value": "approved"
             }
           ],
@@ -1816,18 +1961,56 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "published_at", "canonical_field": "published_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "published_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 25,
     "last_checked_on": "2026-08-24",
@@ -1847,15 +2030,29 @@
     "blocker_summary": "The official Plan Commission schedule, public Legistar API, agenda items, and decision records were technically validated on 2026-08-25. Production activation requires explicit approval for bounded commercial storage, derived display, attribution, and the documented field-suppression scope.",
     "early_warning_value": "Plan Commission agendas and minutes expose conditional uses, rezonings, subdivisions, annexations, demolitions, land transactions, project sponsors, locations, public decisions, and official Legistar file identities before or alongside permit issuance.",
     "candidate_source_fields": [
-      "source_record_id", "event_type", "stage", "title", "summary",
-      "evidence_excerpt", "agenda_item_number", "reference_number",
-      "legistar_matter_id", "meeting_date", "meeting_at", "governing_body",
-      "published_at", "decision_at", "modified_at", "source_url"
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "legistar_matter_id",
+      "meeting_date",
+      "meeting_at",
+      "governing_body",
+      "published_at",
+      "decision_at",
+      "modified_at",
+      "source_url"
     ],
     "probe_settings": {
       "connector": {
         "endpoint": "https://webapi.legistar.com/v1/madison",
-        "body_names": ["PLAN COMMISSION"],
+        "body_names": [
+          "PLAN COMMISSION"
+        ],
         "page_size": 25,
         "event_page_size": 10,
         "max_events": 20,
@@ -1888,20 +2085,64 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "published_at", "canonical_field": "published_at"},
-      {"source_field": "decision_at", "canonical_field": "decision_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "published_at"
+      },
+      {
+        "source_field": "decision_at",
+        "canonical_field": "decision_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 25,
     "last_checked_on": "2026-08-25",
@@ -1921,10 +2162,22 @@
     "blocker_summary": "The County's official planning pages, Legistar calendar, public API, current agenda items, and recorded decisions were technically validated on 2026-08-25. Production activation requires explicit approval for bounded commercial storage, derived display, attribution, and the documented suppression scope.",
     "early_warning_value": "Planning Commission, Board of Adjustment, and East Arapahoe County Advisory Planning Commission records expose rezonings, subdivisions, land-development-code changes, variances, named projects, hearings, and decisions before building-permit issuance.",
     "candidate_source_fields": [
-      "source_record_id", "event_type", "stage", "title", "summary",
-      "evidence_excerpt", "agenda_item_number", "reference_number",
-      "legistar_matter_id", "meeting_date", "meeting_at", "governing_body",
-      "published_at", "decision_at", "modified_at", "source_url"
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "legistar_matter_id",
+      "meeting_date",
+      "meeting_at",
+      "governing_body",
+      "published_at",
+      "decision_at",
+      "modified_at",
+      "source_url"
     ],
     "probe_settings": {
       "connector": {
@@ -1966,20 +2219,64 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "published_at", "canonical_field": "published_at"},
-      {"source_field": "decision_at", "canonical_field": "decision_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "published_at"
+      },
+      {
+        "source_field": "decision_at",
+        "canonical_field": "decision_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 25,
     "last_checked_on": "2026-08-25",
@@ -1999,10 +2296,22 @@
     "blocker_summary": "The official CivicEngage Planning and Zoning agenda feed was technically validated on 2026-08-27. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public applicant and organization display, and contact suppression.",
     "early_warning_value": "Current public-hearing agendas expose exact zoning cases, applicants, companies, development requests, and locations before City Council action or downstream permit issuance, including national retailer, fueling, drone-delivery, multifamily, industrial, and data-center-related activity.",
     "candidate_source_fields": [
-      "source_record_id", "event_type", "stage", "title", "summary",
-      "evidence_excerpt", "agenda_item_number", "reference_number",
-      "file_numbers", "meeting_date", "meeting_at", "meeting_name",
-      "governing_body", "source_url", "source_pages", "document_hash"
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "file_numbers",
+      "meeting_date",
+      "meeting_at",
+      "meeting_name",
+      "governing_body",
+      "source_url",
+      "source_pages",
+      "document_hash"
     ],
     "probe_settings": {
       "connector": {
@@ -2062,18 +2371,56 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 50,
     "last_checked_on": "2026-08-27",
@@ -2093,9 +2440,19 @@
     "blocker_summary": "The official current-year planning development case layer was technically validated on 2026-08-28. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public project display, derived point geometry, and parcel joins.",
     "early_warning_value": "Current zoning and specific-use cases, site plans, plats, development types, case status, acreage, parcel cross-references, project comments, and geometry expose active development before downstream building permits.",
     "candidate_source_fields": [
-      "OBJECTID", "ASSETID", "STATUS", "CROSS_REF", "Case_No",
-      "Case_Type", "Dev_Type", "Comments", "Acreage", "YEAR",
-      "created_date", "last_edited_date", "geometry"
+      "OBJECTID",
+      "ASSETID",
+      "STATUS",
+      "CROSS_REF",
+      "Case_No",
+      "Case_Type",
+      "Dev_Type",
+      "Comments",
+      "Acreage",
+      "YEAR",
+      "created_date",
+      "last_edited_date",
+      "geometry"
     ],
     "probe_settings": {
       "connector": {
@@ -2139,27 +2496,66 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "ASSETID", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "Case_No", "canonical_field": "application_number", "is_required": true},
-      {"source_field": "Case_Type", "canonical_field": "permit_type"},
-      {"source_field": "Dev_Type", "canonical_field": "work_class"},
-      {"source_field": "STATUS", "canonical_field": "status"},
-      {"source_field": "Comments", "canonical_field": "description"},
-      {"source_field": "CROSS_REF", "canonical_field": "external_parcel_id"},
-      {"source_field": "Acreage", "canonical_field": "acreage"},
-      {"source_field": "created_date", "canonical_field": "filed_at", "transform": "date"},
-      {"source_field": "last_edited_date", "canonical_field": "status_updated_at", "transform": "date"},
+      {
+        "source_field": "ASSETID",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "Case_No",
+        "canonical_field": "application_number",
+        "is_required": true
+      },
+      {
+        "source_field": "Case_Type",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "Dev_Type",
+        "canonical_field": "work_class"
+      },
+      {
+        "source_field": "STATUS",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "Comments",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "CROSS_REF",
+        "canonical_field": "external_parcel_id"
+      },
+      {
+        "source_field": "Acreage",
+        "canonical_field": "acreage"
+      },
+      {
+        "source_field": "created_date",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      },
+      {
+        "source_field": "last_edited_date",
+        "canonical_field": "status_updated_at",
+        "transform": "date"
+      },
       {
         "source_field": "geometry",
         "canonical_field": "latitude",
         "transform": "arcgis_polygon_centroid",
-        "transform_options": {"axis": "y"}
+        "transform_options": {
+          "axis": "y"
+        }
       },
       {
         "source_field": "__longitude",
         "canonical_field": "longitude",
         "transform": "arcgis_polygon_centroid",
-        "transform_options": {"source_field": "geometry", "axis": "x"}
+        "transform_options": {
+          "source_field": "geometry",
+          "axis": "x"
+        }
       }
     ],
     "production_page_size": 200,
@@ -2180,9 +2576,18 @@
     "blocker_summary": "The official EnerGov planning-case layer was technically validated on 2026-08-28. Its ArcGIS items have blank license metadata and disable dashboard downloads, so production activation requires explicit City approval for bounded commercial storage, analysis, attribution, derived display, and parcel joins.",
     "early_warning_value": "Submitted and in-review zoning, specific-use, site-plan, platting, variance, and comprehensive-plan cases expose named retailers, data centers, logistics projects, builders, addresses, parcels, acreage, and status before downstream building permits.",
     "candidate_source_fields": [
-      "OBJECTID", "APPLY_DATE", "PLAN_NUMBER", "PLAN_TYPE", "WORK_CLASS",
-      "PROJECT", "PLAN_STATUS", "MAIN_ADDRESS_LINE1", "MAIN_PARCEL_NUMBER",
-      "RequestDescription", "CaseName", "geometry"
+      "OBJECTID",
+      "APPLY_DATE",
+      "PLAN_NUMBER",
+      "PLAN_TYPE",
+      "WORK_CLASS",
+      "PROJECT",
+      "PLAN_STATUS",
+      "MAIN_ADDRESS_LINE1",
+      "MAIN_PARCEL_NUMBER",
+      "RequestDescription",
+      "CaseName",
+      "geometry"
     ],
     "probe_settings": {
       "connector": {
@@ -2225,17 +2630,64 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "PLAN_NUMBER", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "__permit_number", "canonical_field": "permit_number", "transform": "first_nonempty", "transform_options": {"fields": ["PLAN_NUMBER"]}},
-      {"source_field": "__application_number", "canonical_field": "application_number", "transform": "first_nonempty", "transform_options": {"fields": ["PLAN_NUMBER"]}},
-      {"source_field": "CaseName", "canonical_field": "project_name"},
-      {"source_field": "RequestDescription", "canonical_field": "description"},
-      {"source_field": "MAIN_ADDRESS_LINE1", "canonical_field": "address"},
-      {"source_field": "MAIN_PARCEL_NUMBER", "canonical_field": "parcel_id"},
-      {"source_field": "PLAN_TYPE", "canonical_field": "permit_type"},
-      {"source_field": "WORK_CLASS", "canonical_field": "work_class"},
-      {"source_field": "PLAN_STATUS", "canonical_field": "status"},
-      {"source_field": "APPLY_DATE", "canonical_field": "filed_at", "transform": "date"},
+      {
+        "source_field": "PLAN_NUMBER",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "__permit_number",
+        "canonical_field": "permit_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "PLAN_NUMBER"
+          ]
+        }
+      },
+      {
+        "source_field": "__application_number",
+        "canonical_field": "application_number",
+        "transform": "first_nonempty",
+        "transform_options": {
+          "fields": [
+            "PLAN_NUMBER"
+          ]
+        }
+      },
+      {
+        "source_field": "CaseName",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "RequestDescription",
+        "canonical_field": "description"
+      },
+      {
+        "source_field": "MAIN_ADDRESS_LINE1",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "MAIN_PARCEL_NUMBER",
+        "canonical_field": "parcel_id"
+      },
+      {
+        "source_field": "PLAN_TYPE",
+        "canonical_field": "permit_type"
+      },
+      {
+        "source_field": "WORK_CLASS",
+        "canonical_field": "work_class"
+      },
+      {
+        "source_field": "PLAN_STATUS",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "APPLY_DATE",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      },
       {
         "source_field": "__approval_stage",
         "canonical_field": "approval_stage",
@@ -2245,15 +2697,39 @@
             {
               "field": "PLAN_STATUS",
               "operator": "in",
-              "values": ["Approved", "Approved (awaiting final case close out)", "Approved with Conditions", "Complete"],
+              "values": [
+                "Approved",
+                "Approved (awaiting final case close out)",
+                "Approved with Conditions",
+                "Complete"
+              ],
               "value": "approved"
             }
           ],
           "default": "pre_approval"
         }
       },
-      {"source_field": "geometry", "canonical_field": "latitude", "transform": "object_path", "transform_options": {"path": ["y"]}},
-      {"source_field": "__longitude", "canonical_field": "longitude", "transform": "object_path", "transform_options": {"source_field": "geometry", "path": ["x"]}}
+      {
+        "source_field": "geometry",
+        "canonical_field": "latitude",
+        "transform": "object_path",
+        "transform_options": {
+          "path": [
+            "y"
+          ]
+        }
+      },
+      {
+        "source_field": "__longitude",
+        "canonical_field": "longitude",
+        "transform": "object_path",
+        "transform_options": {
+          "source_field": "geometry",
+          "path": [
+            "x"
+          ]
+        }
+      }
     ],
     "production_page_size": 500,
     "last_checked_on": "2026-08-28",
@@ -2273,10 +2749,22 @@
     "blocker_summary": "The official CivicEngage agenda index and project-level HTML agendas were technically validated on 2026-08-26. Arizona commercial-purpose public-record rules require BuildSignal to disclose the intended use and obtain County approval before commercial storage, analysis, or customer-facing display.",
     "early_warning_value": "Planning and Zoning Commission agendas expose zoning, comprehensive-plan, special-use, temporary-use, plan-of-development, variance, and military-compatibility case numbers before final Board action or building-permit issuance.",
     "candidate_source_fields": [
-      "source_record_id", "event_type", "stage", "title", "summary",
-      "evidence_excerpt", "agenda_item_number", "reference_number",
-      "file_numbers", "meeting_date", "meeting_at", "meeting_name",
-      "governing_body", "source_url", "source_pages", "document_hash"
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "file_numbers",
+      "meeting_date",
+      "meeting_at",
+      "meeting_name",
+      "governing_body",
+      "source_url",
+      "source_pages",
+      "document_hash"
     ],
     "probe_settings": {
       "connector": {
@@ -2332,18 +2820,56 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 25,
     "last_checked_on": "2026-08-26",
@@ -2363,11 +2889,26 @@
     "blocker_summary": "The official current Planning Commission agenda and results PDFs were technically validated on 2026-08-26. Jacksonville states that website material is City-owned copyright; production activation requires explicit approval for bounded commercial storage, analysis, attribution, and derived customer display.",
     "early_warning_value": "Planning Commission agendas expose exceptions, variances, liquor-location waivers, administrative deviations, land-use amendments, companion rezonings, conventional rezonings, and PUD changes with addresses, requests, staff recommendations, and later commission outcomes.",
     "candidate_source_fields": [
-      "source_record_id", "event_type", "stage", "title", "summary",
-      "evidence_excerpt", "agenda_item_number", "reference_number",
-      "file_numbers", "address", "project_description", "staff_recommendation",
-      "decision", "meeting_date", "meeting_at", "meeting_name",
-      "governing_body", "source_url", "source_pages", "document_hash"
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "file_numbers",
+      "address",
+      "project_description",
+      "staff_recommendation",
+      "decision",
+      "meeting_date",
+      "meeting_at",
+      "meeting_name",
+      "governing_body",
+      "source_url",
+      "source_pages",
+      "document_hash"
     ],
     "probe_settings": {
       "connector": {
@@ -2435,19 +2976,60 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "address", "canonical_field": "address"},
-      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "address",
+        "canonical_field": "address"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 50,
     "last_checked_on": "2026-08-26",
@@ -2467,10 +3049,22 @@
     "blocker_summary": "The County's official Legistar land-use bodies, current matter records, actions, and evidence links were technically validated on 2026-08-27. Production activation requires explicit approval for bounded commercial storage, derived display, attribution, public applicant/entity retention, and contact suppression.",
     "early_warning_value": "BOCC Land Use, Zoning Hearing Master, and Land Use Hearing Officer records expose rezonings, planned developments, minor modifications, special uses, folios, acreage, locations, continuances, withdrawals, and decisions before building-permit issuance, including national retail expansion signals.",
     "candidate_source_fields": [
-      "source_record_id", "event_type", "stage", "title", "summary",
-      "evidence_excerpt", "agenda_item_number", "reference_number",
-      "legistar_matter_id", "meeting_date", "meeting_at", "governing_body",
-      "published_at", "decision_at", "modified_at", "source_url"
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "legistar_matter_id",
+      "meeting_date",
+      "meeting_at",
+      "governing_body",
+      "published_at",
+      "decision_at",
+      "modified_at",
+      "source_url"
     ],
     "probe_settings": {
       "connector": {
@@ -2524,20 +3118,64 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "published_at", "canonical_field": "published_at"},
-      {"source_field": "decision_at", "canonical_field": "decision_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "published_at"
+      },
+      {
+        "source_field": "decision_at",
+        "canonical_field": "decision_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 50,
     "last_checked_on": "2026-08-27",
@@ -2557,11 +3195,25 @@
     "blocker_summary": "The official Planning and Zoning Board Legistar feed was technically validated on 2026-08-27. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public applicant and organization display, and contact suppression.",
     "early_warning_value": "Planning and Zoning Board hearings expose comprehensive-plan amendments, rezonings, PUD and MPUD amendments, special exceptions, variances, sign programs, locations, legal descriptions, applicants, project names, and decisions before downstream construction permits.",
     "candidate_source_fields": [
-      "source_record_id", "event_type", "stage", "title", "summary",
-      "evidence_excerpt", "agenda_item_number", "reference_number",
-      "legistar_matter_id", "matter_type", "matter_status", "action_name",
-      "meeting_date", "meeting_at", "governing_body", "published_at",
-      "decision_at", "modified_at", "source_url"
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "legistar_matter_id",
+      "matter_type",
+      "matter_status",
+      "action_name",
+      "meeting_date",
+      "meeting_at",
+      "governing_body",
+      "published_at",
+      "decision_at",
+      "modified_at",
+      "source_url"
     ],
     "probe_settings": {
       "connector": {
@@ -2621,23 +3273,76 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "matter_type", "canonical_field": "matter_type"},
-      {"source_field": "matter_status", "canonical_field": "matter_status"},
-      {"source_field": "action_name", "canonical_field": "action_name"},
-      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "published_at", "canonical_field": "published_at"},
-      {"source_field": "decision_at", "canonical_field": "decision_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "matter_type",
+        "canonical_field": "matter_type"
+      },
+      {
+        "source_field": "matter_status",
+        "canonical_field": "matter_status"
+      },
+      {
+        "source_field": "action_name",
+        "canonical_field": "action_name"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "published_at"
+      },
+      {
+        "source_field": "decision_at",
+        "canonical_field": "decision_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 100,
     "last_checked_on": "2026-08-27",
@@ -2657,11 +3362,25 @@
     "blocker_summary": "The official Planning and Zoning Commission Legistar feed was technically validated on 2026-08-27. Production activation requires explicit City approval for bounded commercial storage, analysis, attribution, public applicant and organization display, and contact suppression.",
     "early_warning_value": "Planning and Zoning Commission records expose subdivisions, rezonings, planned developments, future-land-use changes, annexations, abrogations, parcel IDs, acreage, addresses, local cases, and commission decisions before downstream construction permits.",
     "candidate_source_fields": [
-      "source_record_id", "event_type", "stage", "title", "summary",
-      "evidence_excerpt", "agenda_item_number", "reference_number",
-      "legistar_matter_id", "matter_type", "matter_status", "action_name",
-      "meeting_date", "meeting_at", "governing_body", "published_at",
-      "decision_at", "modified_at", "source_url"
+      "source_record_id",
+      "event_type",
+      "stage",
+      "title",
+      "summary",
+      "evidence_excerpt",
+      "agenda_item_number",
+      "reference_number",
+      "legistar_matter_id",
+      "matter_type",
+      "matter_status",
+      "action_name",
+      "meeting_date",
+      "meeting_at",
+      "governing_body",
+      "published_at",
+      "decision_at",
+      "modified_at",
+      "source_url"
     ],
     "probe_settings": {
       "connector": {
@@ -2724,23 +3443,76 @@
       "collection_sla_hours": 48
     },
     "probe_field_mappings": [
-      {"source_field": "source_record_id", "canonical_field": "source_record_id", "is_required": true},
-      {"source_field": "event_type", "canonical_field": "event_type"},
-      {"source_field": "stage", "canonical_field": "stage"},
-      {"source_field": "title", "canonical_field": "title", "is_required": true},
-      {"source_field": "summary", "canonical_field": "summary"},
-      {"source_field": "evidence_excerpt", "canonical_field": "evidence_excerpt"},
-      {"source_field": "agenda_item_number", "canonical_field": "agenda_item_number"},
-      {"source_field": "reference_number", "canonical_field": "reference_number"},
-      {"source_field": "matter_type", "canonical_field": "matter_type"},
-      {"source_field": "matter_status", "canonical_field": "matter_status"},
-      {"source_field": "action_name", "canonical_field": "action_name"},
-      {"source_field": "meeting_name", "canonical_field": "meeting_name"},
-      {"source_field": "governing_body", "canonical_field": "governing_body"},
-      {"source_field": "meeting_at", "canonical_field": "meeting_at"},
-      {"source_field": "published_at", "canonical_field": "published_at"},
-      {"source_field": "decision_at", "canonical_field": "decision_at"},
-      {"source_field": "source_url", "canonical_field": "source_url"}
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "event_type",
+        "canonical_field": "event_type"
+      },
+      {
+        "source_field": "stage",
+        "canonical_field": "stage"
+      },
+      {
+        "source_field": "title",
+        "canonical_field": "title",
+        "is_required": true
+      },
+      {
+        "source_field": "summary",
+        "canonical_field": "summary"
+      },
+      {
+        "source_field": "evidence_excerpt",
+        "canonical_field": "evidence_excerpt"
+      },
+      {
+        "source_field": "agenda_item_number",
+        "canonical_field": "agenda_item_number"
+      },
+      {
+        "source_field": "reference_number",
+        "canonical_field": "reference_number"
+      },
+      {
+        "source_field": "matter_type",
+        "canonical_field": "matter_type"
+      },
+      {
+        "source_field": "matter_status",
+        "canonical_field": "matter_status"
+      },
+      {
+        "source_field": "action_name",
+        "canonical_field": "action_name"
+      },
+      {
+        "source_field": "meeting_name",
+        "canonical_field": "meeting_name"
+      },
+      {
+        "source_field": "governing_body",
+        "canonical_field": "governing_body"
+      },
+      {
+        "source_field": "meeting_at",
+        "canonical_field": "meeting_at"
+      },
+      {
+        "source_field": "published_at",
+        "canonical_field": "published_at"
+      },
+      {
+        "source_field": "decision_at",
+        "canonical_field": "decision_at"
+      },
+      {
+        "source_field": "source_url",
+        "canonical_field": "source_url"
+      }
     ],
     "production_page_size": 100,
     "last_checked_on": "2026-08-27",
@@ -2998,5 +3770,196 @@
     "last_checked_on": "2026-10-18",
     "next_audit_on": "2026-11-17",
     "notes": "Connector app/services/ingestion/connectors/ercot_mis.py and stdlib xlsx_reader.py; design and contract in docs/source-qualification/2026-10-17-ercot-connector-design.md and 2026-10-17-ercot-contract-spec.md. Existing permit storage is a compatibility container, not a building-permit assertion: permit_type explicitly identifies a generation interconnection request, INR maps to application_number, and permit_number is unset. stage/application-vs-decision and interconnection_queue event_type remain source-specific evidence in unmapped attributes and immutable raw payloads. County, fuel, technology, MW, projected COD, milestone dates, report period/label, publication date and tab remain evidence; projected COD is not an actual completion or approval date. Canonical approval_stage is pre_approval/approved, based only on explicit supported interconnection milestones. Study completion, generic approval and IA signature alone do not establish synchronization or energization approval. Reporting month comes from the descriptive report label, separately from publication date. Keep technical_hold and can_run_canary=false; remain excluded from production catalogs and schedules until authorized live verification and written commercial-reuse confirmation."
+  },
+  {
+    "key": "census_bps_south_region_place",
+    "name": "Census Building Permits Survey \u2014 South Region (place)",
+    "adapter": "csv",
+    "record_type": "permit",
+    "jurisdiction": "US Census South Region (TX, VA, et al.)",
+    "base_url": "https://www2.census.gov/econ/bps/Place/South%20Region/so2025a.txt",
+    "official_landing_page": "https://www.census.gov/construction/bps/",
+    "license": "US Census Bureau Building Permits Survey \u2014 U.S. Government public-domain data (no reuse restriction); attribute Census",
+    "status": "technical_hold",
+    "blocker_summary": "Public-domain BPS place file parses via the new CSVConnector skip_leading_lines + explicit fieldnames (two header rows + blank line). Held non-activated: BPS rows are AGGREGATE monthly permit counts/valuations per census place, not individual permits, so there is no natural per-record id (source_record_id needs composition from survey_date+state+fips_place) and no address/permit number. Best used as a Development-Velocity BASELINE input, not an individual-signal feed.",
+    "early_warning_value": "Monthly residential building-permit counts, units and valuation by census place for TX, VA and the rest of the South Region \u2014 a public baseline for permit-volume trends and seasonality behind the Development Velocity signal.",
+    "candidate_source_fields": [
+      "survey_date",
+      "state_code",
+      "fips_place_code",
+      "place_name",
+      "months_reported",
+      "1unit_units",
+      "1unit_value",
+      "5plus_units_units"
+    ],
+    "probe_settings": {
+      "connector": {
+        "source": "https://www2.census.gov/econ/bps/Place/South%20Region/so2025a.txt",
+        "delimiter": ",",
+        "encoding": "latin-1",
+        "skip_leading_lines": 3,
+        "fieldnames": [
+          "survey_date",
+          "state_code",
+          "county_id_6digit",
+          "county_code",
+          "census_place_code",
+          "fips_place_code",
+          "fips_mcd_code",
+          "population",
+          "csa_code",
+          "cbsa_code",
+          "footnote",
+          "central_city",
+          "zip_code",
+          "region_code",
+          "division_code",
+          "months_reported",
+          "place_name",
+          "1unit_bldgs",
+          "1unit_units",
+          "1unit_value",
+          "2units_bldgs",
+          "2units_units",
+          "2units_value",
+          "3to4units_bldgs",
+          "3to4units_units",
+          "3to4units_value",
+          "5plus_units_bldgs",
+          "5plus_units_units",
+          "5plus_units_value",
+          "1unit_rep_bldgs",
+          "1unit_rep_units",
+          "1unit_rep_value",
+          "2units_rep_bldgs",
+          "2units_rep_units",
+          "2units_rep_value",
+          "3to4units_rep_bldgs",
+          "3to4units_rep_units",
+          "3to4units_rep_value",
+          "5plus_units_rep_bldgs",
+          "5plus_units_rep_units",
+          "5plus_units_rep_value"
+        ],
+        "page_size": 500,
+        "timeout": 30.0,
+        "max_retries": 2
+      },
+      "defaults": {
+        "region": "SOUTH",
+        "source_system": "US Census Building Permits Survey (place)"
+      },
+      "signal_stage": "baseline",
+      "freshness_semantics": "report_period_month",
+      "freshness_sla_hours": 1080
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "source_record_id",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "place_name",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "state_code",
+        "canonical_field": "state"
+      },
+      {
+        "source_field": "survey_date",
+        "canonical_field": "filed_at",
+        "transform": "date"
+      }
+    ],
+    "production_page_size": 500,
+    "can_run_canary": false,
+    "last_checked_on": "2026-10-18",
+    "next_audit_on": "2026-11-18",
+    "notes": "Parsed with CSVConnector skip_leading_lines=3 + explicit 41-column fieldnames (fixed BPS layout: 17 descriptors + 8 structure categories x bldgs/units/value). Public-domain; TX (48) and VA (51) present. Canary: parser unit-tested against tests/fixtures/bps/place_sample.txt; a bounded live read of the real file was confirmed during qualification (docs/source-qualification/2026-10-18-census-bps.md). Promotion blockers: compose a durable source_record_id (survey_date+state+fips_place), and decide baseline-vs-signal placement \u2014 BPS is aggregate, not per-permit."
+  },
+  {
+    "key": "loudoun_va_lola_land_applications",
+    "name": "Loudoun County, VA LOLA Land Applications",
+    "adapter": "arcgis",
+    "record_type": "planning",
+    "jurisdiction": "Loudoun County, VA",
+    "base_url": "https://logis.loudoun.gov/gis/rest/services/Projects/LOLA_DATA/MapServer/0/query",
+    "official_landing_page": "https://www.loudoun.gov/lola",
+    "license": "Loudoun County GeoHub public access-and-use posture with a liability-only disclaimer; NO affirmative commercial-reuse grant \u2014 candidate-grade, confirm with Loudoun OMAGI before promotion",
+    "status": "technical_hold",
+    "blocker_summary": "Live ArcGIS layer qualified with a successful bounded canary (3 records, keyset pagination on PlanNumber, 7 candidate fields present, zero failures, 2026-10-18). Held non-activated pending: (1) written reuse confirmation from Loudoun OMAGI (candidate-grade rights only), and (2) a durable update/deletion contract \u2014 the layer exposes no last-edited watermark or deletion feed and PlanGuid is a presumed-but-unconfirmed immutable key. Polygon-only layer (no centroid/lat-long).",
+    "early_warning_value": "Loudoun (Northern Virginia data-center alley) land-development applications \u2014 rezonings, special exceptions, site plans \u2014 with application date, type, status and project name ahead of permits and construction.",
+    "candidate_source_fields": [
+      "PlanGuid",
+      "PlanNumber",
+      "PlanApplicationDate",
+      "PlanType",
+      "PlanStatus",
+      "PlanName",
+      "PlanDescription"
+    ],
+    "probe_settings": {
+      "connector": {
+        "endpoint": "https://logis.loudoun.gov/gis/rest/services/Projects/LOLA_DATA/MapServer/0/query",
+        "where": "1=1",
+        "out_fields": "PlanGuid,PlanNumber,PlanApplicationDate,PlanType,PlanStatus,PlanName,PlanDescription",
+        "keyset_field": "PlanNumber",
+        "include_geometry": false,
+        "include_centroid": false,
+        "page_size": 500,
+        "timeout": 30.0,
+        "max_retries": 2
+      },
+      "defaults": {
+        "jurisdiction": "Loudoun County",
+        "state": "VA",
+        "source_system": "Loudoun LOLA (LOLA_DATA/MapServer/0)"
+      },
+      "signal_stage": "pre_approval",
+      "freshness_field": "PlanApplicationDate",
+      "freshness_semantics": "unclassified_source_timestamp",
+      "freshness_sla_hours": 720
+    },
+    "probe_field_mappings": [
+      {
+        "source_field": "PlanGuid",
+        "canonical_field": "source_record_id",
+        "is_required": true
+      },
+      {
+        "source_field": "PlanNumber",
+        "canonical_field": "application_number",
+        "is_required": true
+      },
+      {
+        "source_field": "PlanName",
+        "canonical_field": "project_name"
+      },
+      {
+        "source_field": "PlanType",
+        "canonical_field": "project_type"
+      },
+      {
+        "source_field": "PlanStatus",
+        "canonical_field": "status"
+      },
+      {
+        "source_field": "PlanApplicationDate",
+        "canonical_field": "filed_at",
+        "transform": "unix_milliseconds"
+      },
+      {
+        "source_field": "PlanDescription",
+        "canonical_field": "project_description"
+      }
+    ],
+    "production_page_size": 500,
+    "can_run_canary": false,
+    "last_checked_on": "2026-10-18",
+    "next_audit_on": "2026-11-18",
+    "notes": "Live endpoint logis.loudoun.gov/gis/rest/services/Projects/LOLA_DATA/MapServer/0 (the /loudoungis/ path 404s). Bounded canary via build_connector('arcgis',...) page_size=3: 3 records, keyset checkpoint on PlanNumber, all 7 fields present, PlanApplicationDate epoch-ms normalizable, zero failures (docs/source-qualification/2026-10-18-loudoun-lola.md). Staff PII columns (AssignedTo/AssignedEmail) deliberately excluded from out_fields. Do not promote until OMAGI reuse confirmation and an update/deletion contract are established."
   }
 ]

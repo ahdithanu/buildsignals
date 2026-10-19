@@ -5,7 +5,7 @@ import csv
 import hashlib
 import io
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Sequence
 from urllib.parse import urlparse
 
 from .base import (
@@ -32,6 +32,8 @@ class CSVConnector(BaseConnector):
         page_size: int = 1000,
         delimiter: str | None = None,
         encoding: str = "utf-8-sig",
+        skip_leading_lines: int = 0,
+        fieldnames: Sequence[str] | None = None,
         headers: Mapping[str, str] | None = None,
         timeout: float = 30.0,
         max_retries: int = 3,
@@ -43,9 +45,17 @@ class CSVConnector(BaseConnector):
             raise ValueError("source is required")
         if delimiter is not None and len(delimiter) != 1:
             raise ValueError("delimiter must be one character")
+        if isinstance(skip_leading_lines, bool) or not isinstance(skip_leading_lines, int) or skip_leading_lines < 0:
+            raise ValueError("skip_leading_lines must be a non-negative integer")
+        if fieldnames is not None:
+            fieldnames = [str(name) for name in fieldnames]
+            if not fieldnames:
+                raise ValueError("fieldnames, when set, must be non-empty")
         self.source = str(source)
         self.delimiter = delimiter
         self.encoding = encoding
+        self.skip_leading_lines = skip_leading_lines
+        self.fieldnames = list(fieldnames) if fieldnames is not None else None
         self.headers = dict(headers or {})
         self.verify_snapshot = verify_snapshot
         self.http_client = http_client or RetryingHttpClient(
@@ -61,7 +71,16 @@ class CSVConnector(BaseConnector):
                 raise InvalidCheckpointError(
                     "CSV snapshot changed or checkpoint lacks a fingerprint; restart from the first page"
                 )
-        reader = csv.DictReader(io.StringIO(text, newline=""), dialect=self._dialect(text))
+        body = text
+        if self.skip_leading_lines:
+            # Trim banner/multi-header lines for parsing; fingerprint stays on the
+            # full text so a changed file still invalidates a snapshot checkpoint.
+            body = "".join(text.splitlines(keepends=True)[self.skip_leading_lines :])
+        reader = csv.DictReader(
+            io.StringIO(body, newline=""),
+            dialect=self._dialect(text),
+            fieldnames=self.fieldnames,
+        )
         if not reader.fieldnames:
             raise ConnectorResponseError("CSV source is missing a header row")
 

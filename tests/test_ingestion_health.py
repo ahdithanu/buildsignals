@@ -1034,6 +1034,8 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
     body = response.json()
     assert {row["key"] for row in body} == {
         "ercot_tx_interconnection_queue",
+        "census_bps_south_region_place",
+        "loudoun_va_lola_land_applications",
         "savannah_ga_commercial_building_permits",
         "detroit_mi_bseed_building_plan_reviews",
         "san_marcos_tx_planning_application_notices",
