@@ -97,12 +97,27 @@ Merged to `main` since the last entry:
   reader + NON-activated `technical_hold` `ercot_tx_interconnection_queue`.
   Held pending authorized live connector verification/canary + written
   commercial-reuse confirmation; not activation-ready.
-- PR #253 OPEN (retargeted to `main`): Census BPS + Loudoun LOLA as NON-activated
-  `technical_hold` candidates + a backward-compatible `CSVConnector`
-  `skip_leading_lines`/`fieldnames` option. `main` merged in and the rollout
-  manifest regenerated (digest `9c60821…`, candidate_count still 0). Full suite
-  1835 passed. Loudoun held on OMAGI rights (live canary passed); BPS is an
-  aggregate baseline input (needs a composed source_record_id).
+- PR #253 MERGED: Census BPS + Loudoun LOLA as NON-activated `technical_hold`
+  candidates + a backward-compatible `CSVConnector` `skip_leading_lines`/
+  `fieldnames` option. Rollout manifest regenerated; Loudoun held on OMAGI rights
+  (live canary passed); BPS is an aggregate baseline input (needs a composed id).
+- PR #254 OPEN: **Development Velocity v0 + cutoff-safe replay/backtest scaffold**
+  (the bridge, Columbus only). `app/services/development_velocity.py` is a pure
+  offline signal on `activity_baseline()` (method `development-velocity-v0`;
+  unvalidated 0-100 score, confidence separate, abstains below sample floor, no
+  fabrication; `POST /temporal/development-velocity`). `eval/replay/` is a
+  deterministic as-of replay harness (SignalFn registry + reference signal,
+  manifest freeze, lead-time/frequency/reproducibility metrics, time-proof
+  fixture). DV is now WIRED into the replay registry (`eval/replay/dv_signal.py`):
+  the harness replays the real signal cutoff-safe with a firing threshold (score
+  >= 70) PREDECLARED in the hashed thresholds file and pinned into
+  `run_fingerprint` via `series.params` (not hardcoded, not tunable post-hoc —
+  P2.2). Verified implement-then-independently (verifier PASS). 12 DV + 23 replay
+  tests; full suite 1870 passed. The 0-100 score stays UNVALIDATED — this enables
+  backtesting it, not validation. Benign caveat: activity_baseline's future-as_of
+  guard reads datetime.now, uncovered by the driver clock guard (harmless for
+  historical replays). NEXT (P2.2): predeclare outcomes/holdouts and evaluate.
+  Designs: docs/signals/2026-10-18-*.
 
 Verified-live state (2026-10-17/18):
 - API live (App Runner RUNNING); public demo enabled at www.buildsignals.ai.

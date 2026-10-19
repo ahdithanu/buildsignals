@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.schemas.activity_baseline import ActivityBaselineRequest, ActivityBaselineResponse
+from app.schemas.development_velocity import DevelopmentVelocityRequest, DevelopmentVelocitySignal
 from app.schemas.temporal import EventResponse, ObservationResponse, UtcCutoff
 from app.services.activity_baseline import activity_baseline
+from app.services.development_velocity import develop_velocity
 from app.services.temporal_service import events_as_of, numeric_change, observations_as_of
 from app.utils.auth_deps import get_current_user
 
@@ -21,6 +23,17 @@ def get_activity_baseline(payload: ActivityBaselineRequest, db: Session = Depend
     """Read-only diagnostics for a pinned cohort; does not qualify market coverage."""
     try:
         return activity_baseline(db, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/development-velocity", response_model=DevelopmentVelocitySignal)
+def get_development_velocity(payload: DevelopmentVelocityRequest, db: Session = Depends(get_db)):
+    """Pure, cutoff-safe Development Velocity v0; the score is an unvalidated research output."""
+    try:
+        return develop_velocity(db, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

@@ -1,0 +1,14 @@
+{
+  "method": "devvelocity-v0",
+  "note": "Predeclared before any result is seen; never tuned afterward. P2.2 fields are placeholders pinned into the manifest via thresholds_id.",
+  "outcome_definition": {"status": "predeclared_pending_P2.2", "value": null},
+  "horizon_days": {"status": "predeclared_pending_P2.2", "value": null},
+  "holdout_periods": {"status": "predeclared_pending_P2.2", "value": null},
+  "holdout_markets": {"status": "predeclared_pending_P2.2", "value": null},
+  "false_positive_tolerance": {"status": "predeclared_pending_P2.2", "value": null},
+  "min_sample_size": {"status": "predeclared_pending_P2.2", "value": null},
+  "lead_time_comparator": {"status": "predeclared", "value": "activity_baseline trailing comparator"},
+  "signal_frequency": {"status": "predeclared", "value": 0.5},
+  "baseline_move": {"status": "predeclared", "value": 2.0},
+  "firing_threshold": {"status": "predeclared_provisional", "value": 70, "note": "PROVISIONAL, UNVALIDATED research cutoff: development-velocity-v0 fires when the 0-100 score >= 70 (~2 baseline SD above the trailing mean). Declared before any replay result was seen; frozen for the run via the manifest thresholds_id and copied into series.params so it is part of run_fingerprint. It is NOT calibrated and MUST NOT be tuned after seeing results (P2.2)."}
+}
