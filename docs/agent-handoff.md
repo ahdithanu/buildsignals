@@ -90,15 +90,19 @@ Merged to `main` since the last entry:
 - PR #249 (Biloxi/MDEQ + reliability: quarantine guard, IAM policy accumulation,
   source-update-date completeness) and PR #250 (demo geocoding backfill + pilot
   script). `main` tip ~`b18b080`.
-- PR #251 OPEN: AGENTS.md operating-mode section + `docs/30-day-ingestion-bridge-plan.md`
-  + refreshed handoff + Week-1 qualification reports.
-- PR #252 OPEN (stacked on #251): `ercot_mis_xlsx` connector — stdlib XLSX reader
-  + `ErcotMisXlsxConnector`, factory/__init__ wiring, and a NON-activated
-  `technical_hold` candidate `ercot_tx_interconnection_queue`. Regenerated
-  `production_rollout.json` + synced `render.yaml` manifest digest. Full suite
-  1783 passed at the original implementation, before the review corrections.
+- PR #251 MERGED: AGENTS.md operating-mode section + `docs/30-day-ingestion-bridge-plan.md`
+  + Week-1 qualification reports.
+- PR #252 MERGED (incl. the user's `0e24772` ERCOT review corrections +
+  `tests/test_ercot_ingestion.py`): `ercot_mis_xlsx` connector + stdlib XLSX
+  reader + NON-activated `technical_hold` `ercot_tx_interconnection_queue`.
   Held pending authorized live connector verification/canary + written
-  commercial-reuse confirmation; this is not an activation-ready source.
+  commercial-reuse confirmation; not activation-ready.
+- PR #253 OPEN (retargeted to `main`): Census BPS + Loudoun LOLA as NON-activated
+  `technical_hold` candidates + a backward-compatible `CSVConnector`
+  `skip_leading_lines`/`fieldnames` option. `main` merged in and the rollout
+  manifest regenerated (digest `9c60821…`, candidate_count still 0). Full suite
+  1835 passed. Loudoun held on OMAGI rights (live canary passed); BPS is an
+  aggregate baseline input (needs a composed source_record_id).
 
 Verified-live state (2026-10-17/18):
 - API live (App Runner RUNNING); public demo enabled at www.buildsignals.ai.
