@@ -105,6 +105,48 @@ def test_availability_evidence_requires_actual_source_evidence(client, db):
     assert "source URL or excerpt" in response.text
 
 
+def test_bulk_availability_import_matches_only_source_and_external_id(client, db):
+    headers = _admin_headers(db)
+    parcel = _parcel(db)
+
+    response = client.post(
+        "/parcel-availability/import",
+        headers=headers,
+        json={
+            "rows": [
+                {
+                    "source_id": parcel.source_id,
+                    "external_parcel_id": parcel.external_parcel_id,
+                    "status": "for_sale",
+                    "evidence_type": "listing",
+                    "source_url": "https://listing.example/P-AVAILABLE",
+                    "confidence": 0.92,
+                },
+                {
+                    "source_id": parcel.source_id,
+                    "external_parcel_id": "STALE-PARCEL-ID",
+                    "status": "for_sale",
+                    "evidence_type": "listing",
+                    "source_url": "https://listing.example/STALE-PARCEL-ID",
+                    "confidence": 0.92,
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json() == {
+        "imported": 1,
+        "skipped": 1,
+        "errors": [{
+            "row": 1,
+            "reason": "No active parcel matches source_id and external_parcel_id",
+        }],
+    }
+    fact = db.query(ParcelFact).filter(ParcelFact.parcel_id == parcel.id).one()
+    assert fact.value["status"] == "for_sale"
+
+
 def test_availability_evidence_import_flows_into_zip3_heatmap(client, db, tmp_path):
     headers = _admin_headers(db)
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path, headers=headers)

@@ -171,3 +171,51 @@ def create_availability_evidence(
     )
     db.flush()
     return fact
+
+
+def import_availability_evidence(
+    db: Session,
+    *,
+    rows: list[dict],
+    actor_user_id: str | None,
+) -> dict:
+    """Import source-backed availability rows without guessing parcel identity.
+
+    Matching is deliberately limited to source_id + external_parcel_id. A
+    caller that only has an address must resolve that identity before import.
+    Each row is isolated in a savepoint so one stale or unmatched listing does
+    not discard the rest of a bounded batch.
+    """
+    imported = 0
+    errors: list[dict[str, int | str]] = []
+    for index, row in enumerate(rows):
+        parcel = active_query(db.query(ParcelRecord), ParcelRecord).filter(
+            ParcelRecord.source_id == row["source_id"],
+            ParcelRecord.external_parcel_id == row["external_parcel_id"],
+        ).first()
+        if parcel is None:
+            errors.append({
+                "row": index,
+                "reason": "No active parcel matches source_id and external_parcel_id",
+            })
+            continue
+        try:
+            with db.begin_nested():
+                create_availability_evidence(
+                    db,
+                    parcel_id=parcel.id,
+                    status=row["status"],
+                    evidence_type=row["evidence_type"],
+                    source_url=row.get("source_url"),
+                    excerpt=row.get("excerpt"),
+                    confidence=row["confidence"],
+                    observed_at=row.get("observed_at"),
+                    asking_price=row.get("asking_price"),
+                    contact_name=row.get("contact_name"),
+                    contact_company=row.get("contact_company"),
+                    actor_user_id=actor_user_id,
+                )
+            imported += 1
+        except (LookupError, ValueError) as exc:
+            errors.append({"row": index, "reason": str(exc)})
+    return {"imported": imported, "skipped": len(errors), "errors": errors}

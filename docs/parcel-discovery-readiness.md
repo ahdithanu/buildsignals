@@ -36,3 +36,12 @@ Availability connectors can later replace or supplement manual evidence, but
 must produce the same source-backed `ParcelFact` contract. That keeps ranking,
 review, export, and customer-facing claims independent from any one listing
 provider.
+
+## Bulk availability intake
+
+`POST /parcel-availability/import` accepts up to 500 evidence rows for a
+workspace. Each row must include `source_id` and `external_parcel_id`; the
+service will not match by address or infer identity across parcel sources.
+Rows that do not match an active parcel are returned as skipped row errors.
+Valid rows use the same evidence validation, immutable raw receipt, current
+fact replacement, and audit logging as the single-parcel endpoint.
