@@ -1,6 +1,6 @@
 # Current Agent Handoff
 
-Last updated: 2026-10-19 (America/Los_Angeles). This is a dated snapshot;
+Last updated: 2026-10-20 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
 
 ## Deploy 2026-10-19: main shipped to App Runner
@@ -33,11 +33,33 @@ minimums). The 0-100 score stays UNVALIDATED; a real evaluation needs the P0.8
 qualified Columbus corpus (NOT available). Protocol/report:
 docs/signals/2026-10-20-development-velocity-v0-evaluation-*.md.
 
-Next options: (a) P0.8 — qualify a real historical Columbus corpus so the
-predeclared P2.2 protocol can actually run (the true blocker to validating DV);
-(b) pursue Loudoun (OMAGI) / MDEQ / ERCOT live qualification + commercial-reuse
-sign-off before any activation; (c) texas_comptroller regional re-provision once
-its window is in-budget. Keep every legal/technical source gate.
+## P0.8 2026-10-20: Columbus corpus qualification -> NOT QUALIFIED -> HOLD
+
+Built a pure, offline, cutoff-safe qualification harness
+(`app/services/corpus_qualification.py`, `qualify_corpus`, method
+`corpus-qualification-v0`; 11 deterministic tests) that measures a pinned Columbus
+cohort against the predeclared P2.2 floors: time depth, **recorded-time depth**,
+complete 30-day windows, evaluable periods, per-stage counts, filing-date
+completeness, duplicate-project rate, month gaps -> verdict
+`ready|insufficient_depth|insufficient_completeness` + exact shortfall. Run over
+the committed Columbus fixture returns **`insufficient_depth`** (0 evaluable
+periods vs 12 required; 0 max fired vs 5 required; recorded span 27 days), locked
+by a test. The available corpus is ~3 contiguous filing-dated months (Jan-Mar
+2024) vs ~24 needed; decisively, that 2024 history was **captured in 2026**, so
+cutoff-safe known-then evaluable periods today are ~0 and DV cannot be honestly
+replayed "as known then". **Verdict NOT QUALIFIED -> HOLD; the 0-100 score stays
+UNVALIDATED.** Measurement + report + specified (unrun) production audit:
+`docs/signals/2026-10-20-columbus-corpus-p0-8-{measurement,qualification-report}.md`.
+PR #258 (open). No source activated; synthetic fixtures are not a qualified corpus.
+
+Next options: (a) a **rights-cleared historical Columbus intake** of >=24
+contiguous complete months on one pinned attribute with honest, non-backdated
+`recorded_at` (the true blocker to validating DV; re-run `qualify_corpus` until
+`ready`, then the hash-pinned P2.2 protocol unchanged); (b) run the specified
+read-only production corpus audit (needs authorization) to measure customer-tenant
+depth; (c) pursue Loudoun (OMAGI) / MDEQ / ERCOT live qualification +
+commercial-reuse sign-off before any activation; (d) texas_comptroller regional
+re-provision once its window is in-budget. Keep every legal/technical source gate.
 
 ## Current Task: PR #252 ERCOT review corrections (historical; now merged)
 
