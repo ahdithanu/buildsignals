@@ -1,0 +1,102 @@
+{
+  "protocol_id": "dv-v0-evaluation-protocol-2026-10-20",
+  "method": "development-velocity-v0",
+  "method_version": "development-velocity-v0",
+  "score_method_version": "development-velocity-score-v0",
+  "predeclared_on": "2026-10-20",
+  "status": "predeclared_provisional",
+  "market": "City of Columbus, OH (issuing jurisdiction only)",
+  "note": "PREDECLARED before any evaluation result, backtest, or metric was computed or seen. Provisional and un-calibrated. Thresholds here MUST NOT be changed after seeing results (roadmap P2.2); a post-hoc edit changes this file's hash and the manifest thresholds_id, so tuning is detectable. If the evidence is inconclusive, the decision is HOLD, not a validation claim. This file is intended to be hashed and pinned exactly like fixtures/thresholds.devvelocity-v0.json; values that also appear there (firing_threshold, baseline_move, signal_frequency, lead_time_comparator) MUST match that file and never drift.",
+  "preconditions": {
+    "qualified_historical_corpus_P0_8": {
+      "status": "NOT_AVAILABLE",
+      "value": false,
+      "rationale": "A real evaluation additionally requires a qualified, rights-cleared historical Columbus corpus (roadmap P0.8) with reproducible dates/units/stages/dedupe/gaps and honest first_observed_at/recorded_at. That corpus is NOT yet available, so this protocol can be predeclared but NOT yet executed as a validation."
+    },
+    "score_is_validated": {
+      "status": "predeclared",
+      "value": false,
+      "rationale": "The development-velocity-v0 0-100 score stays UNVALIDATED. It has no empirical calibration, no mapping to investment outcome, and is not comparable across markets. This protocol does not change that; passing it is a P2.2/P2.3 prerequisite, not an assertion."
+    }
+  },
+  "outcome_definition": {
+    "status": "predeclared",
+    "value": {
+      "name": "sustained_elevated_activity",
+      "definition": "For a signal that FIRED at cutoff T (known_then only), the outcome is POSITIVE iff the observed per-window permit count, for the same pinned source and the same pinned attribute (permit.filed_at XOR permit.issued_at), is >= the trailing baseline mean computed as-of T (baseline_mean_observed_records at T) in EACH of the next H consecutive 30-day windows that fall strictly after T's current window. Otherwise the outcome is NEGATIVE (activity reverted / was not sustained).",
+      "horizon_windows_H": 3,
+      "window_days": 30,
+      "comparison_level": "per_pinned_source (counts are never summed across sources)",
+      "elevated_rule": "observed_records_in_window >= baseline_mean_at_T",
+      "outcome_window": "strictly_after_T: windows w_k = [T + k*30d, T + (k+1)*30d) for k in 1..H, each ending at or before the evaluation cutoff",
+      "evaluation_cutoff_T_eval": "T + (H * 30) + reporting_lag_days",
+      "cutoff_safety": "The outcome is read ONLY through activity_baseline()/observations_as_of at as_of = T_eval, so it uses only observations eligible (first_observed_at <= T_eval, recorded_at <= T_eval, received_at <= T_eval) and the latest interpretation known as-of T_eval. It therefore uses only information that became available strictly after T and never leaks a future correction dated after T_eval.",
+      "evaluable_requirement": "A fired signal is EVALUABLE only if all H post-T windows end at or before the end of the qualified corpus; signals whose outcome window is not fully observed are reported as not_yet_evaluable and excluded from rates."
+    },
+    "rationale": "Honest, measurable, cutoff-safe outcome: 'did the elevated activity persist, or did it immediately revert?' H is a fixed integer (3 months) chosen before any result. No forward-looking or price/deal outcome is claimed in v0; this measures persistence of the measured quantity only."
+  },
+  "horizon_days": {
+    "status": "predeclared",
+    "value": 90,
+    "rationale": "H = 3 monthly (30-day) windows = 90 days. Fixed integer set before tuning; un-tunable post-hoc."
+  },
+  "simple_baseline_comparator": {
+    "status": "predeclared",
+    "value": "activity_baseline trailing comparator",
+    "baseline_move": 2.0,
+    "rationale": "The lead-time/naive comparator is the existing descriptive trailing comparator app/services/activity_baseline.py (its baseline_periods trailing windows), run as-of the same cutoffs through the same cutoff-safe driver (driver.baseline_run). It 'crosses' when a source's current window >= baseline_move * baseline mean. baseline_move = 2.0 matches fixtures/thresholds.devvelocity-v0.json and must not drift."
+  },
+  "lead_time_comparator": {
+    "status": "predeclared",
+    "value": "activity_baseline trailing comparator",
+    "min_median_lead_days": 0,
+    "rationale": "Lead time is the signed days between the first known_then cutoff at which development-velocity-v0 fires and the first cutoff at which the trailing comparator crosses baseline_move. Predeclared acceptance floor: the signal must not LAG the naive comparator (median lead >= 0 days). This is a comparison only; it is not an assertion the lead is real or significant (needs outcomes + sample sizes)."
+  },
+  "false_positive_tolerance": {
+    "status": "predeclared_provisional",
+    "value": 0.33,
+    "false_positive_definition": "A known_then fired, evaluable signal whose sustained_elevated_activity outcome is NEGATIVE (activity reverted below the T baseline mean within H).",
+    "rationale": "Provisional maximum acceptable false-positive rate: at most one third of evaluable fired signals may revert within H. Above this, the signal is not acceptable at this threshold. Un-calibrated; predeclared before any result; must not be tuned afterward. Exceeding it, or an inconclusive sample, means HOLD."
+  },
+  "signal_frequency": {
+    "status": "predeclared",
+    "value": 0.5,
+    "interpretation": "sanity_ceiling",
+    "rationale": "Fraction of known-then eligible cutoffs where the signal fires. A signal that fires on more than half of eligible cutoffs is too trigger-happy to be informative. Sanity bound, not a validation target. Matches fixtures/thresholds.devvelocity-v0.json."
+  },
+  "min_sample_size": {
+    "status": "predeclared",
+    "value": {
+      "min_fired_signals": 5,
+      "min_evaluable_periods": 12,
+      "insufficient_result_status": "inconclusive_insufficient_sample"
+    },
+    "rationale": "Below EITHER floor the evaluation MUST return 'inconclusive_insufficient_sample' and make NO validation claim (HOLD). Floors are conservative-but-small because Columbus is a single market with <2 complete years of qualified commercial history: a 6-window baseline warm-up (~6 months) plus a 3-window outcome tail (~3 months) consumes most of the usable span, and overlapping monthly windows are autocorrelated so nominal counts overstate independent evidence. min_evaluable_periods=12 requires at least a year of evaluable known_then cutoffs; min_fired_signals=5 prevents a validation claim from a handful of fires. These are necessary, not sufficient: meeting them still only permits a measured result, never an automatic pass."
+  },
+  "holdout_periods": {
+    "status": "predeclared",
+    "value": {
+      "reserved_window": "final_6_monthly_windows",
+      "count": 6,
+      "contiguous": true,
+      "most_recent": true,
+      "reserved_for": "out_of_sample_reporting; excluded from any future threshold-setting or revision"
+    },
+    "rationale": "Single-market temporal holdout: the most recent contiguous 6 monthly windows of the qualified Columbus corpus are reserved. Because every threshold here is predeclared (not fit to data), the holdout is the out-of-sample window on which metrics are reported and against which any future threshold revision is forbidden. Reserved before any result was seen."
+  },
+  "holdout_markets": {
+    "status": "future_work",
+    "value": null,
+    "rationale": "Columbus is the only qualified market, so a market (geography) holdout is impossible in v0. Market holdouts become required future work once >=2 markets qualify under roadmap P0.8 (the other four markets). Until then, only the temporal holdout above applies and no cross-market generalization is claimed."
+  },
+  "firing_threshold": {
+    "status": "predeclared_provisional",
+    "value": 70,
+    "rationale": "development-velocity-v0 fires when the 0-100 score >= 70 (~2 baseline SD above the trailing mean, since score = 50 + 10*clamp(z, +/-5)). PROVISIONAL, UNVALIDATED research cutoff, declared before any replay result; mirrors and must match fixtures/thresholds.devvelocity-v0.json. Frozen for a run via the manifest thresholds_id and copied into series.params (part of run_fingerprint). MUST NOT be tuned after seeing results."
+  },
+  "decision_rule": {
+    "status": "predeclared",
+    "value": "HOLD_unless_all_pass",
+    "rationale": "The evaluation yields a measured result only; it renders no automatic keep/revise/kill (that is the independent P2.3 go/no-go). If min_sample_size floors are not met, OR the false-positive rate exceeds false_positive_tolerance, OR the median lead is below min_median_lead_days, OR the result is otherwise inconclusive, the decision is HOLD (roadmap P2.3: inconclusive evidence means hold, not predictive marketing). Thresholds cannot be chosen after seeing results."
+  }
+}

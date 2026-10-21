@@ -23,10 +23,21 @@ inline policy preserved texas_comptroller's ARN (27 RunTask ARNs; all 14 schedul
 ENABLED). texas_comptroller gets the fix on a future in-budget canary. No source
 activation; replay harness is offline tooling.
 
-Next options: (a) regional re-provision to ship the worker fixes; (b) P2.2 signal
-evaluation (predeclare outcomes/holdouts, run the backtest); (c) pursue Loudoun
-(OMAGI) / MDEQ / ERCOT live qualification + commercial-reuse sign-off before any
-activation. Keep every legal/technical source gate.
+The #249 worker fixes were then SHIPPED via a regional re-provision (13/14; see
+the release receipt). P2.2 signal evaluation is also DONE and committed (PR #257,
+open): the DV v0 evaluation protocol is predeclared + hashed, the parameterized
+metrics + abstaining verdict are built and tested, and the backtest over the only
+available (synthetic, NON-qualified) Columbus fixture returned
+`insufficient_sample` -> **HOLD** (1 fired, 0 decidable; << the predeclared 5/12
+minimums). The 0-100 score stays UNVALIDATED; a real evaluation needs the P0.8
+qualified Columbus corpus (NOT available). Protocol/report:
+docs/signals/2026-10-20-development-velocity-v0-evaluation-*.md.
+
+Next options: (a) P0.8 — qualify a real historical Columbus corpus so the
+predeclared P2.2 protocol can actually run (the true blocker to validating DV);
+(b) pursue Loudoun (OMAGI) / MDEQ / ERCOT live qualification + commercial-reuse
+sign-off before any activation; (c) texas_comptroller regional re-provision once
+its window is in-budget. Keep every legal/technical source gate.
 
 ## Current Task: PR #252 ERCOT review corrections (historical; now merged)
 

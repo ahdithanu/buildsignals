@@ -199,3 +199,24 @@ def test_signal_fn_rejects_unknown_version():
     )
     with pytest.raises(ValueError):
         development_velocity_signal(None, as_of=T_FIRE, series=series, method_version="nope")
+
+
+def test_p2_2_evaluation_over_available_fixture_is_insufficient_sample(db):
+    """P2.2 backtest over the only available (synthetic, non-qualified) fixture.
+
+    The Columbus fixture has a single fired cutoff and is far too short to realize
+    any fired signal's 90-day outcome, so the predeclared minimums (5 fired / 12
+    evaluable periods) are not met: the verdict must be insufficient_sample (HOLD),
+    never a validation claim. Real evaluation needs the P0.8 qualified corpus.
+    """
+    from eval.replay.evaluate import evaluate_outcomes, load_protocol
+
+    _, _, _, run = _build(db, COLUMBUS, [T_ABSTAIN, T_NO, T_FIRE])
+    protocol = load_protocol(FIXTURES / "dv_v0_evaluation_protocol.json")
+    outcomes: dict = {}  # fixture too short to realize a 90-day outcome -> undecidable
+    report = evaluate_outcomes(run, outcomes=outcomes, protocol=protocol)
+
+    assert report["verdict"]["verdict"] == "insufficient_sample"
+    assert report["verdict"]["fired_n"] < protocol["min_fired_signals"]
+    # Deterministic / reproducible.
+    assert evaluate_outcomes(run, outcomes=outcomes, protocol=protocol) == report
