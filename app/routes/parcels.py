@@ -28,6 +28,8 @@ from app.schemas.parcel import (
     NearbyParcelSearchResponse,
     NearbyParcelSearchSummary,
     ParcelAvailabilityEvidenceCreate,
+    ParcelAvailabilityImportRequest,
+    ParcelAvailabilityImportResponse,
     ParcelDetailResponse,
     ParcelFactResponse,
     ParcelLineageEventResponse,
@@ -43,7 +45,10 @@ from app.services.deal_service import deal_to_detail_response
 from app.services.graph_service import relationships_for_entity
 from app.services.map_readiness import map_readiness
 from app.services.map_signals import list_map_signals
-from app.services.parcel_availability_ingestion import create_availability_evidence
+from app.services.parcel_availability_ingestion import (
+    create_availability_evidence,
+    import_availability_evidence,
+)
 from app.services.parcel_export import ParcelExportDenied, export_nearby_parcel_search
 from app.services.parcel_lineage import get_lineage_event, lineage_events_for_parcel
 from app.services.parcel_service import (
@@ -129,6 +134,26 @@ def create_parcel_availability_evidence(
     except ValueError as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/parcel-availability/import",
+    response_model=ParcelAvailabilityImportResponse,
+    status_code=201,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def import_parcel_availability(
+    payload: ParcelAvailabilityImportRequest,
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    result = import_availability_evidence(
+        db,
+        rows=[row.model_dump() for row in payload.rows],
+        actor_user_id=principal["user_id"],
+    )
+    db.commit()
+    return result
 
 
 def _lineage_response(event) -> dict:
