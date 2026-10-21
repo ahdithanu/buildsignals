@@ -85,25 +85,47 @@ Each record becomes one `TemporalObservation`. Required per record:
 Dedup key (cutoff-safe latest interpretation):
 `series_key = fingerprint([entity_id, source_id, external_record_id, attribute, methodology_version])`.
 
-## 4. Acceptance checklist — flips `insufficient_depth` → `ready`
+## 4. Acceptance checklist — advancing toward `ready`
 
-All must hold at the evaluation `as_of`:
+**Important — `ready` is intentionally unreachable from timestamps alone.** The
+harness verdict falls through `insufficient_depth` → `insufficient_completeness` →
+**`insufficient_coverage`**, and `coverage_audited` is hardcoded `False` with no
+code path that sets it (`corpus_qualification.py:285,340-343`). So a corpus that
+satisfies every condition below still returns **`insufficient_coverage`**
+("independently audited per-window source coverage and known-then availability are
+required; timestamp span alone cannot qualify a corpus"). Clearing 1–8 is necessary
+but NOT sufficient; an independent coverage audit (condition 9) is the final gate
+and is deliberately a human/attested step, not something the intake can self-certify.
 
-1. **Depth:** `complete_windows >= 21` (event-date span ≥ ~630 days) so
-   `evaluable_periods = complete_windows − 9 >= 12` (also clears `min_fired_signals = 5`).
+Conditions, all at the evaluation `as_of`:
+
+1. **Event-date depth:** `complete_windows >= 21` (event-date span ≥ ~630 days) so
+   the event-date bound `complete_windows − 9 >= 12` (also clears `min_fired_signals = 5`).
 2. **No month gaps:** ≥1 eligible dated record in every 30-day window index
    `0..complete_windows−1` → `month_gaps == 0`.
 3. **Completeness:** `event_date_completeness >= 0.95` (≤5% collection-only/invalid-date).
 4. **Duplicates:** `duplicate_project_rate <= 0.10` (distinct `entity_id` per project).
 5. **Geography / non-empty:** every counted record Columbus/OH; `cohort_records > 0`.
-6. **Honest known-then:** every record `first_observed_at <= as_of` and
-   `recorded_at <= as_of`, with a genuine (non-backdated) `recorded_span_days` — the
-   gate Track R cannot meet retrospectively and Track P satisfies by construction.
-7. **Scan bound:** cohort within the paging bound (`scan_overflow == False`).
+6. **Known-then depth:** `evaluable_periods = min(event-date bound, known_then
+   bound)`, where the known-then bound derives from elapsed time since the
+   **earliest** `recorded_at` (`corpus_qualification.py:247-254`). So besides 21
+   event-windows you also need ~21 months of elapsed recording time since capture
+   began — the gate Track R (archive captured ≈now) collapses to ~0, and Track P
+   (prospective capture) accrues over real time.
+7. **Honest recorded_at:** every record `first_observed_at <= as_of` and
+   `recorded_at <= as_of`, never backdated to the event date.
+8. **Scan bound:** cohort within the paging bound (`scan_overflow == False`).
+9. **Independent coverage audit (final gate):** an external, attested per-window
+   source-coverage + known-then-availability audit must certify the corpus; until
+   then the verdict is `insufficient_coverage` by design. There is currently **no
+   mechanism** in the harness to supply this attestation — adding one (an explicit,
+   signed, dated coverage-audit input that sets `coverage_audited`, defaulting off)
+   is an open design decision, not an assumed step.
 
-Then re-run the **hash-pinned P2.2 protocol unchanged** (no threshold tuning) under
-P2.3 for the go/no-go. `ready` is a necessary P0.8 gate only — not source
-activation, commercial-reuse clearance, or score validation.
+Only once 1–9 hold does the verdict become `ready`; then re-run the **hash-pinned
+P2.2 protocol unchanged** (no threshold tuning) under P2.3 for the go/no-go. `ready`
+is a necessary P0.8 gate only — not source activation, commercial-reuse clearance,
+or score validation.
 
 ## 5. Rights & authorization gates (preserve every hold)
 
