@@ -17,7 +17,21 @@ interface Readiness {
   has_geocoded_parcels?: boolean;
   has_saved_searches?: boolean;
   ready_for_ranked_map?: boolean;
+  nearby_candidate_parcels?: number;
+  verified_available_parcels?: number;
+  nearby_verified_available_parcels?: number;
+  discovery_stage?: string;
+  discovery_next_action?: string;
 }
+
+const discoveryLabels: Record<string, string> = {
+  signals_not_geocoded: 'Signals need coordinates',
+  parcel_records_not_geocoded: 'Parcel records need coordinates',
+  search_not_run: 'Nearby search not run',
+  no_nearby_matches: 'No nearby records matched',
+  candidates_need_availability_evidence: 'Candidates need availability evidence',
+  verified_available_candidates: 'Verified available candidates found',
+};
 
 export function MapReadiness() {
   const { organizationId } = useAuth();
@@ -67,8 +81,13 @@ export function MapReadiness() {
         'Planning records': data.planning_records ?? 0, 'Planning with coordinates': data.geocoded_planning_records ?? 0,
         'Geocoded signals': geocodedSignals,
         'Active parcels': data.parcels, 'Parcels with coordinates': data.geocoded_parcels,
-        'Saved searches': data.saved_searches }).map(([label, count]) => <div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="font-semibold">{count.toLocaleString()}</dd></div>)}
+        'Saved searches': data.saved_searches, 'Nearby candidates': data.nearby_candidate_parcels ?? 0,
+        'Verified available nearby': data.nearby_verified_available_parcels ?? 0,
+        'Verified available workspace-wide': data.verified_available_parcels ?? 0,
+      }).map(([label, count]) => <div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="font-semibold">{count.toLocaleString()}</dd></div>)}
     </dl>
+    <p className="mt-4 text-sm font-semibold">{discoveryLabels[data.discovery_stage ?? ''] ?? 'Discovery readiness not classified'}</p>
+    <p className="mt-1 text-sm text-muted-foreground">{data.discovery_next_action}</p>
     <p className="my-4 text-sm text-muted-foreground">Workspace counts do not establish local coverage, match quality, or availability for sale.</p>
     <Link className="underline" to={primaryAction.href}>{primaryAction.label}</Link>
   </section>;
