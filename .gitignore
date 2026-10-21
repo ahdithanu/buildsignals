@@ -33,6 +33,7 @@ Thumbs.db
 
 # Test artifacts
 tests/test.db*
+:memory:*
 .pytest_cache/
 playwright-report/
 test-results/
