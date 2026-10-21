@@ -50,7 +50,60 @@ cutoff-safe known-then evaluable periods today are ~0 and DV cannot be honestly
 replayed "as known then". **Verdict NOT QUALIFIED -> HOLD; the 0-100 score stays
 UNVALIDATED.** Measurement + report + specified (unrun) production audit:
 `docs/signals/2026-10-20-columbus-corpus-p0-8-{measurement,qualification-report}.md`.
-PR #258 (open). No source activated; synthetic fixtures are not a qualified corpus.
+PR #258 MERGED to main (ab92d1f). No source activated; synthetic fixtures are not a qualified corpus.
+
+## P0.8 intake scoping 2026-10-20: the ≥24-month Columbus intake
+
+Scoped (offline; nothing accessed/activated) what a rights-cleared historical
+intake must be to flip `qualify_corpus` to `ready`. Doc:
+`docs/signals/2026-10-20-columbus-historical-intake-scoping.md`. Key findings:
+
+- **Pinned series:** `permit.filed_at` / stage `approved` from
+  `columbus_oh_site_engineering_applications` — the ONLY catalogued Columbus series
+  with a filing-date mapping (`B1_FILE_DD → filed_at`); dense enough from 2022, so
+  ~2023-01 forward is the candidate span. Commercial permits are issued-only
+  (no `filed_at`, capped `ISSUED_YEAR>=2025`) → 0 filing months, out of scope.
+- **Access:** paged ArcGIS query API only (`historical_intake.py` pattern, widened);
+  NO bulk/archive endpoint exists. A 24–36-mo `approved` cohort (~1.8–2.6k rows)
+  fits the harness paging bound (`offset<=10000`).
+- **`ready` bar:** `complete_windows>=21` (span ≥~630d) → `evaluable_periods>=12`;
+  `month_gaps==0`; `event_date_completeness>=0.95`; `duplicate_project_rate<=0.10`;
+  Columbus/OH geography; honest non-backdated `recorded_at` with real
+  `recorded_span_days`; within scan bound.
+- **Decisive constraint:** a retrospective archive CANNOT validate DV — captured in
+  2026 it has `recorded_at≈now` → ~0 known-then evaluable periods. Two honest tracks:
+  **(P) prospective collection going forward** (the real unblock; ~24 months of
+  real-time capture) and **(R) rights-cleared retrospective archive** (descriptive
+  baselines + dense harness fixture only, labeled "observed at capture time",
+  event dates NEVER backdated into `recorded_at`). Validation is ~24 months of
+  prospective capture away unless non-backdated historical receipt is separately
+  evidenced.
+- **Rights gate (OPEN; no hold tag to clear):** both sources are CC0 1.0 (verified
+  in item metadata) but operational admission is NOT cleared. Needs written P0.8
+  rights-cleared-intake authorization + first-market sign-off + item-specific rights
+  review with the City of Columbus Dept of Building & Zoning Services + a separate
+  operational activation authorization. Parcel/land candidates: unknown, need
+  written clearance.
+
+## Parallel tracks: Claude + Codex co-development
+
+To run two editors (Claude Code and Codex) at once without collisions, partition by
+FILE OWNERSHIP, not task phase (AGENTS.md Operating Mode: exactly one writer per
+file set; serialize shared-file edits). Mechanics: each editor in its OWN worktree
+on its OWN branch, one PR each, merged into main one at a time (the other rebases).
+Both read AGENTS.md + this handoff first. Shared single-owner files:
+`candidate_catalog.json`, `catalog.json`, migrations, `render.yaml`, and this
+handoff. Current P0.8-intake ownership split:
+
+- **Track A — harness/acceptance/eval (Claude):** `app/services/corpus_qualification.py`,
+  `tests/test_corpus_qualification.py`, `eval/replay/*`, the scoping doc, this handoff.
+- **Track B — connector/source intake (Codex):** the Columbus ArcGIS adapter path /
+  `historical_intake.py` widening, `candidate_catalog.json`/`catalog.json` Columbus
+  entries, intake fixtures, `docs/source-qualification/*`.
+
+Interface contract between tracks = the record schema in the scoping doc §3. Once
+fixed, the tracks don't touch each other's files. Neither track activates a source
+or clears a rights/legal hold; those stay separately authorized.
 
 Next options: (a) a **rights-cleared historical Columbus intake** of >=24
 contiguous complete months on one pinned attribute with honest, non-backdated
