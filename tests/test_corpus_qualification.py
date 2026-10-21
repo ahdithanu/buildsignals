@@ -101,13 +101,13 @@ def _add_windows(add, count, *, start=0):
     ]
 
 
-def test_deep_corpus_is_ready(db, cohort):
+def test_deep_corpus_requires_coverage_audit(db, cohort):
     source, add = cohort()
     _add_windows(add, 22)  # 21 complete windows -> 12 evaluable periods
     report = qualify_corpus(db, request_for(source))
     assert report["status"] == "measured"
-    assert report["verdict"] == "ready"
-    assert report["shortfall"] == []
+    assert report["verdict"] == "insufficient_coverage"
+    assert any("audited" in item for item in report["shortfall"])
     depth = report["time_depth"]
     assert depth["complete_windows"] == 21
     assert depth["evaluable_periods"] == 12
@@ -241,3 +241,135 @@ def test_committed_columbus_fixture_is_insufficient_depth(db):
     assert report["time_depth"]["evaluable_periods"] < req.min_evaluable_periods
     assert any("evaluable periods" in s for s in report["shortfall"])
     assert qualify_corpus(db, req) == report  # deterministic
+
+
+def test_batch_backfill_cannot_qualify_known_then_history(db, cohort):
+    source, add = cohort()
+    for i in range(22):
+        add(f"batch{i}", effective=_event(i), recorded=AS_OF - timedelta(days=1))
+    report = qualify_corpus(db, request_for(source))
+    assert report["verdict"] == "insufficient_depth"
+    assert report["time_depth"]["known_then_evaluable_periods_upper_bound"] == 0
+    assert report["time_depth"]["event_evaluable_periods_upper_bound"] == 12
+
+
+def test_methodology_mismatch_is_excluded(db, cohort):
+    source, add = cohort()
+    for i in range(22):
+        add(f"wrong{i}", effective=_event(i), recorded=_event(i), methodology_version="other-v2")
+    report = qualify_corpus(db, request_for(source))
+    assert report["completeness"]["cohort_records"] == 0
+
+
+def test_sources_cannot_be_pooled(cohort):
+    from pydantic import ValidationError
+    first, _ = cohort()
+    second, _ = cohort()
+    with pytest.raises(ValidationError):
+        request_for(first, second)
+
+
+def test_future_event_dates_do_not_extend_depth(db, cohort):
+    source, add = cohort()
+    _add_windows(add, 22)
+    add("future", effective=AS_OF + timedelta(days=365), recorded=AS_OF - timedelta(days=1))
+    report = qualify_corpus(db, request_for(source))
+    assert report["time_depth"]["latest_event_date"] == _event(21).isoformat()
+    assert report["diagnostics"]["future_event_date"] == 1
+
+
+def test_backfilled_baseline_can_support_first_future_cutoff_without_known_time_warmup(db, cohort):
+    source, add = cohort()
+    # History is captured together. A decision can use it immediately; after
+    # horizon+lag the first decision's outcome could mature, with no extra
+    # six-month contemporaneous baseline wait. Coverage remains unaudited.
+    captured = AS_OF - timedelta(days=97)
+    for i in range(22):
+        add(f"future-cutoff{i}", effective=_event(i), recorded=captured)
+    report = qualify_corpus(db, request_for(source))
+    assert report["time_depth"]["known_then_evaluable_periods_upper_bound"] == 1
+    assert report["verdict"] != "ready"
+
+
+def _audit(fingerprint, windows, **overrides):
+    values = dict(
+        auditor="analyst@buildsignals",
+        attested_at=AS_OF - timedelta(days=1),
+        audit_methodology_version="coverage-audit-v1",
+        attested_request_fingerprint=fingerprint,
+        covered_window_indices=list(range(windows)),
+        known_then_availability_confirmed=True,
+        decision="coverage_audited",
+        rationale="Per-window source coverage independently audited.",
+    )
+    values.update(overrides)
+    return values
+
+
+def test_coverage_audit_promotes_deep_corpus_to_ready(db, cohort):
+    source, add = cohort()
+    _add_windows(add, 22)  # 21 complete windows
+    fingerprint = qualify_corpus(db, request_for(source))["request_fingerprint"]
+    report = qualify_corpus(db, request_for(source, coverage_audit=_audit(fingerprint, 21)))
+    assert report["verdict"] == "ready"
+    assert report["shortfall"] == []
+    assert report["time_depth"]["coverage_audited"] is True
+    assert report["coverage_audit"]["fingerprint_matched"] is True
+    assert report["coverage_audit"]["auditor"] == "analyst@buildsignals"
+
+
+def test_coverage_audit_excluded_from_request_fingerprint(db, cohort):
+    source, add = cohort()
+    _add_windows(add, 22)
+    without = qualify_corpus(db, request_for(source))["request_fingerprint"]
+    with_audit = qualify_corpus(db, request_for(source, coverage_audit=_audit(without, 21)))
+    # The attestation signs the measured-inputs fingerprint; adding it must not
+    # change that fingerprint, or the auditor could never reproduce it.
+    assert with_audit["request_fingerprint"] == without
+
+
+def test_coverage_audit_wrong_fingerprint_stays_insufficient(db, cohort):
+    source, add = cohort()
+    _add_windows(add, 22)
+    report = qualify_corpus(db, request_for(source, coverage_audit=_audit("0" * 64, 21)))
+    assert report["verdict"] == "insufficient_coverage"
+    assert any("fingerprint" in item for item in report["shortfall"])
+    assert report["time_depth"]["coverage_audited"] is False
+
+
+def test_coverage_audit_partial_windows_stays_insufficient(db, cohort):
+    source, add = cohort()
+    _add_windows(add, 22)
+    fingerprint = qualify_corpus(db, request_for(source))["request_fingerprint"]
+    report = qualify_corpus(db, request_for(source, coverage_audit=_audit(fingerprint, 20)))
+    assert report["verdict"] == "insufficient_coverage"
+    assert any("must be explicitly audited" in item for item in report["shortfall"])
+
+
+def test_coverage_audit_requires_known_then_confirmation(db, cohort):
+    source, add = cohort()
+    _add_windows(add, 22)
+    fingerprint = qualify_corpus(db, request_for(source))["request_fingerprint"]
+    audit = _audit(fingerprint, 21, known_then_availability_confirmed=False)
+    report = qualify_corpus(db, request_for(source, coverage_audit=audit))
+    assert report["verdict"] == "insufficient_coverage"
+    assert any("known-then" in item for item in report["shortfall"])
+
+
+def test_coverage_audit_future_attested_at_stays_insufficient(db, cohort):
+    source, add = cohort()
+    _add_windows(add, 22)
+    fingerprint = qualify_corpus(db, request_for(source))["request_fingerprint"]
+    audit = _audit(fingerprint, 21, attested_at=AS_OF + timedelta(days=1))
+    report = qualify_corpus(db, request_for(source, coverage_audit=audit))
+    assert report["verdict"] == "insufficient_coverage"
+    assert any("after the cutoff" in item for item in report["shortfall"])
+
+
+def test_coverage_audit_cannot_bypass_insufficient_depth(db, cohort):
+    source, add = cohort()
+    _add_windows(add, 5)  # 4 complete windows -> 0 evaluable periods
+    fingerprint = qualify_corpus(db, request_for(source))["request_fingerprint"]
+    report = qualify_corpus(db, request_for(source, coverage_audit=_audit(fingerprint, 4)))
+    # Depth is gated before coverage: a valid audit cannot rescue a shallow corpus.
+    assert report["verdict"] == "insufficient_depth"
