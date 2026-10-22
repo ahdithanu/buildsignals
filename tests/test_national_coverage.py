@@ -3,7 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+import pytest
+
 from app.main import app
+from app.schemas.national_coverage import NationalParcelCoverageResponse
+from app.services.ingestion.catalog import US_STATE_CODES
 from app.services.ingestion.national_coverage import national_parcel_coverage
 from app.utils.auth_deps import get_current_user
 
@@ -40,6 +44,7 @@ def test_national_parcel_coverage_is_honest_about_measured_vs_configured(monkeyp
     )
 
     report = national_parcel_coverage(db, now=datetime(2026, 10, 21, tzinfo=timezone.utc))
+    NationalParcelCoverageResponse.model_validate(report)
 
     assert report["summary"]["state_count"] == 50
     assert report["summary"]["measured_state_count"] == 1
@@ -108,6 +113,22 @@ def test_national_parcel_coverage_executes_real_empty_inventory_queries(monkeypa
 
 
 def test_national_parcel_coverage_endpoint_returns_typed_report(client, monkeypatch):
+    state_row = {
+        "posture": "uncovered",
+        "configured_source_count": 0,
+        "candidate_source_count": 0,
+        "measured_source_count": 0,
+        "stored_parcel_records": 0,
+        "geocoded_parcel_records": 0,
+        "recently_seen_parcel_records": 0,
+        "nearby_candidate_parcels": 0,
+        "verified_available_parcels": 0,
+        "nearby_verified_available_parcels": 0,
+        "candidate_status_counts": {},
+        "next_action": "research_official_parcel_source",
+        "priority_score": 80,
+        "priority_reason": "No configured or candidate parcel source",
+    }
     monkeypatch.setattr(
         "app.routes.ingestion.national_parcel_coverage",
         lambda db: {
@@ -129,7 +150,7 @@ def test_national_parcel_coverage_endpoint_returns_typed_report(client, monkeypa
                 "verified_available_parcels": 0,
                 "nearby_verified_available_parcels": 0,
             },
-            "states": [],
+            "states": [{"state": state, **state_row} for state in US_STATE_CODES],
             "next_connector_targets": [],
             "warnings": [],
         },
@@ -143,3 +164,83 @@ def test_national_parcel_coverage_endpoint_returns_typed_report(client, monkeypa
     assert response.status_code == 200
     assert response.json()["summary"]["state_count"] == 50
     assert response.headers["cache-control"] == "no-store"
+
+
+def test_national_parcel_schema_rejects_partial_state_matrix():
+    with pytest.raises(ValueError, match="exactly one row"):
+        NationalParcelCoverageResponse(
+            measured_at=datetime(2026, 10, 21, tzinfo=timezone.utc),
+            record_type="parcel",
+            scope="synthetic",
+            coverage_claim="synthetic",
+            summary={
+                "state_count": 0,
+                "measured_state_count": 0,
+                "configured_only_state_count": 0,
+                "candidate_only_state_count": 0,
+                "uncovered_state_count": 0,
+                "states_with_nearby_candidates": 0,
+                "states_with_verified_available_parcels": 0,
+                "stored_parcel_records": 0,
+                "geocoded_parcel_records": 0,
+                "nearby_candidate_parcels": 0,
+                "verified_available_parcels": 0,
+                "nearby_verified_available_parcels": 0,
+            },
+            states=[],
+            next_connector_targets=[],
+            warnings=[],
+        )
+
+
+def test_national_parcel_schema_rejects_inconsistent_summary_and_targets():
+    row = {
+        "posture": "uncovered",
+        "configured_source_count": 0,
+        "candidate_source_count": 0,
+        "measured_source_count": 0,
+        "stored_parcel_records": 0,
+        "geocoded_parcel_records": 0,
+        "recently_seen_parcel_records": 0,
+        "nearby_candidate_parcels": 0,
+        "verified_available_parcels": 0,
+        "nearby_verified_available_parcels": 0,
+        "candidate_status_counts": {},
+        "next_action": "research_official_parcel_source",
+        "priority_score": 80,
+        "priority_reason": "No configured or candidate parcel source",
+    }
+    payload = {
+        "measured_at": datetime(2026, 10, 21, tzinfo=timezone.utc),
+        "record_type": "parcel",
+        "scope": "synthetic",
+        "coverage_claim": "synthetic",
+        "summary": {
+            "state_count": 50,
+            "measured_state_count": 0,
+            "configured_only_state_count": 0,
+            "candidate_only_state_count": 0,
+            "uncovered_state_count": 49,
+            "states_with_nearby_candidates": 0,
+            "states_with_verified_available_parcels": 0,
+            "stored_parcel_records": 0,
+            "geocoded_parcel_records": 0,
+            "nearby_candidate_parcels": 0,
+            "verified_available_parcels": 0,
+            "nearby_verified_available_parcels": 0,
+        },
+        "states": [{"state": state, **row} for state in US_STATE_CODES],
+        "next_connector_targets": [],
+        "warnings": [],
+    }
+
+    with pytest.raises(ValueError, match="summary mismatch"):
+        NationalParcelCoverageResponse.model_validate(payload)
+
+    payload["summary"]["uncovered_state_count"] = 50
+    payload["next_connector_targets"] = [
+        {"state": "ZZ", **row},
+        {"state": "ZZ", **row},
+    ]
+    with pytest.raises(ValueError, match="connector targets"):
+        NationalParcelCoverageResponse.model_validate(payload)
