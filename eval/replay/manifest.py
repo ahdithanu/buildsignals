@@ -32,10 +32,13 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 # Only these two scopes may ever run. Anything else is refused by ``freeze``.
 APPROVED_DATA_SCOPES = ("local_fixture", "approved_local_snapshot")
 
-# Modules whose bytes are pinned for provenance (not folded into the
-# reproducibility fingerprint, so a code edit does not silently invalidate a
-# pinned result - it only shows up as a provenance change in the manifest).
-_PINNED_MODULES = ("driver.py", "manifest.py", "metrics.py", "run.py")
+# Relevant implementation bytes are verified before replay. They remain outside
+# the signal reproducibility fingerprint, but any code drift requires a new
+# freeze before the saved manifest may run again.
+_PINNED_MODULES = ("driver.py", "manifest.py", "metrics.py", "run.py", "evaluate.py",
+                   "dv_signal.py", "corpus_binding.py")
+_PINNED_SERVICES = ("corpus_qualification.py", "temporal_service.py",
+                    "activity_baseline.py", "development_velocity.py")
 
 
 def _iso(value: datetime) -> str:
@@ -222,6 +225,7 @@ def _cohort_observations(
         return []
     return (
         db.query(TemporalObservation)
+        .populate_existing()
         .filter(
             TemporalObservation.organization_id == org_id,
             TemporalObservation.series_key.in_(list(series_keys)),
@@ -236,6 +240,7 @@ def _snapshot_payload(db: Session, series_keys: Sequence[str], *, org_id: str) -
     raw_ids = sorted({obs.raw_source_record_id for obs in observations})
     raws = (
         db.query(RawSourceRecord)
+        .populate_existing()
         .filter(
             RawSourceRecord.organization_id == org_id,
             RawSourceRecord.id.in_(raw_ids),
@@ -247,6 +252,7 @@ def _snapshot_payload(db: Session, series_keys: Sequence[str], *, org_id: str) -
     obs_ids = sorted(obs.id for obs in observations)
     events = (
         db.query(TemporalEvent)
+        .populate_existing()
         .filter(
             TemporalEvent.organization_id == org_id,
             TemporalEvent.observation_id.in_(obs_ids),
@@ -259,7 +265,10 @@ def _snapshot_payload(db: Session, series_keys: Sequence[str], *, org_id: str) -
         "observations": sorted(
             [
                 [
-                    obs.id, obs.series_key, obs.attribute,
+                    obs.id, obs.organization_id, obs.entity_id, obs.source_id,
+                    obs.raw_source_record_id, obs.observation_key, obs.series_key, obs.attribute,
+                    obs.source_type, obs.source_system, obs.source_url, obs.confidence,
+                    obs.geography, _iso(obs.source_updated_at) if obs.source_updated_at else None,
                     obs.value, obs.unit,
                     _iso(obs.effective_at) if obs.effective_at else None,
                     _iso(obs.first_observed_at), _iso(obs.recorded_at),
@@ -271,7 +280,10 @@ def _snapshot_payload(db: Session, series_keys: Sequence[str], *, org_id: str) -
         ),
         "raw_records": sorted(
             [
-                [raw.id, raw.external_record_id, raw.content_hash, _iso(raw.received_at)]
+                [raw.id, raw.organization_id, raw.source_id, raw.run_id,
+                 raw.external_record_id, raw.record_type, raw.content_hash,
+                 raw.payload, _iso(raw.received_at),
+                 _iso(raw.source_updated_at) if raw.source_updated_at else None]
                 for raw in raws
             ],
             key=lambda item: item[0],
@@ -279,7 +291,7 @@ def _snapshot_payload(db: Session, series_keys: Sequence[str], *, org_id: str) -
         "events": sorted(
             [
                 [
-                    ev.id, ev.observation_id, ev.event_type,
+                    ev.id, ev.organization_id, ev.observation_id, ev.event_type,
                     _iso(ev.occurred_at) if ev.occurred_at else None,
                     _iso(ev.recorded_at),
                 ]
@@ -306,6 +318,9 @@ def _module_hashes() -> dict[str, str]:
         target = here / name
         if target.exists():
             hashes[name] = hashlib.sha256(target.read_bytes()).hexdigest()
+    for name in _PINNED_SERVICES:
+        target = ROOT / "app" / "services" / name
+        hashes[f"app/services/{name}"] = hashlib.sha256(target.read_bytes()).hexdigest()
     return hashes
 
 
@@ -428,6 +443,8 @@ def verify(db: Session, manifest: ReplayManifest) -> None:
     """Re-hash the in-scope snapshot and raise on any drift."""
     if manifest.data_scope not in APPROVED_DATA_SCOPES:
         raise ValueError(f"Refusing run: data_scope {manifest.data_scope!r} is not approved")
+    if manifest.module_hashes != _module_hashes():
+        raise ValueError("Replay implementation drift detected since the manifest was frozen")
     current = _snapshot_id(db, manifest.series.series_keys, org_id=manifest.org_id)
     if current != manifest.snapshot_id:
         raise ValueError(
