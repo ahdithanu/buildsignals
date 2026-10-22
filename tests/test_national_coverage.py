@@ -142,3 +142,4 @@ def test_national_parcel_coverage_endpoint_returns_typed_report(client, monkeypa
 
     assert response.status_code == 200
     assert response.json()["summary"]["state_count"] == 50
+    assert response.headers["cache-control"] == "no-store"

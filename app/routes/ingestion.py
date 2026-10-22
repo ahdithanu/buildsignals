@@ -195,8 +195,9 @@ def get_measured_coverage(
     response_model=NationalParcelCoverageResponse,
     dependencies=[Depends(get_current_user)],
 )
-def get_national_parcel_coverage(db: Session = Depends(get_db)):
+def get_national_parcel_coverage(response: Response, db: Session = Depends(get_db)):
     """Return a measured 50-state parcel gap report without changing intake state."""
+    response.headers["Cache-Control"] = "no-store"
     return national_parcel_coverage(db)
 
 
