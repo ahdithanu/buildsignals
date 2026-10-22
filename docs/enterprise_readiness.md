@@ -1,5 +1,12 @@
 # Enterprise readiness checklist
 
+**October 22, 2026 update:** use the
+[production readiness audit](releases/2026-10-22-production-readiness-audit.md)
+for fresh health, demo-boundary, scheduler and RDS backup-configuration receipts,
+plus the deployed API cache-policy repair. Monitoring/paging, authenticated
+customer workflows and actual restore/RLS/RPO/RTO evidence remain open. The
+historical checkmarks below do not override those measured limits.
+
 > Historical implementation tracker, not a production attestation. A checked
 > item can indicate code or documentation only. Use
 > [the September commercial readiness audit](commercial-readiness-audit.md)

@@ -1,0 +1,40 @@
+{
+  "observed_at": "2026-10-22T15:41:10.845365+00:00",
+  "deployment_id": "dpl_A9YYo2JuK92juqsYUsn6CNuD8EQB",
+  "checks": [
+    {
+      "path": "/v1/auth/demo",
+      "status": 200,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/v1/demo/summary",
+      "method": "GET",
+      "status": 200,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/v1/deals",
+      "method": "POST",
+      "status": 403,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/v1/deals/export",
+      "method": "GET",
+      "status": 403,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/v1/deals",
+      "method": "GET",
+      "status": 401,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/login",
+      "status": 200,
+      "cache_control": "public, max-age=0, must-revalidate"
+    }
+  ]
+}

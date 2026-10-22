@@ -1,7 +1,74 @@
 # Current Agent Handoff
 
-Last updated: 2026-10-20 (America/Los_Angeles). This is a dated snapshot;
+Last updated: 2026-10-22 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
+
+## Current session: Columbus capture complete + production cache repair
+
+Starting checkout on resume: `codex/p0-8-eval-gate` at `f95fbd5` (newer shared
+work through PR #263 preserved). User explicitly requested multi-agent
+implementation/review/verification loops, finishing the Columbus capture and all
+production checklist items possible, with the harness kept current.
+Checkpoint branch: `codex/columbus-capture-readiness`; local changes are split
+into corpus tooling/receipts, evaluator gate, and production cache/harness commits.
+No PR, push or merge is claimed; the frontend cache correction is already live.
+
+**Capture:** 36 completed monthly site-filing imports for 2023–2025, **2,543 source
+records / 10,110 temporal observations**, zero failed records/checkpoints. Seven
+months are the original October 20 captures; August 2023–December 2025 are new
+October 22 captures. Preserve original partial `2023-08.db` and journal; they are
+excluded, never overwritten. September 2023 drifted from preflight70 to capture69,
+with new before/after counts reconciled. Local artifacts are under ignored
+`data/qualification/columbus-site-20261020/` (remaining months in `resume-20261022`).
+No raw rows/DBs are committed or deployed.
+
+**Audit:** all planned months present; zero duplicate stable IDs, missing/outside
+filing dates, future update dates or capture-time violations. Zero historical
+known-then observations. This is integrity acceptance, **not independent source
+completeness/admission or DV validation**. Reports:
+`docs/signals/2026-10-22-columbus-corpus-{capture.md,audit.json}`. Source CC0 metadata
+and count-only probe evidence live in the October 20 monthly-preflight JSON.
+
+**Tools:** default-off monthly preflight, capture/resume and offline audit in
+`scripts/columbus_corpus_{preflight,capture}.py` / `audit_columbus_corpus.py`.
+Exact scope hashes; fresh count drift explicit; interrupted/failed evidence
+preserved; verified completed receipts/checkpoints required; read-only SQLite
+audit outputs only aggregates and artifact hashes. Partial journals are ignored.
+
+**Evaluation:** explicit P0.8 protocols reject request-only `ready` receipts,
+including matching request fingerprints, until audited evidence is bound to the
+actual replay snapshot/method/tenant/cutoffs/floors. Generic metric helpers remain
+usable. Frozen v0 protocol unchanged. Real outcome extraction, holdout enforcement
+and window-end/evaluation-date inconsistency remain unresolved; DV stays HOLD.
+
+**Production:** dated read-only AWS audit confirms API RUNNING/health200, all16
+schedules enabled, RDS encryption/seven-day retention/recent PITR metadata and
+demo write/export denials. No alarms/SNS topics/DLQs found; restore success and
+customer auth/MFA workflows remain unverified. An owned alert destination was
+requested, not invented. See `docs/releases/2026-10-22-production-readiness-audit.md`.
+
+**Released:** Vercel API cache override fixed and production deployment
+`dpl_A9YYo2JuK92juqsYUsn6CNuD8EQB` promoted after staged checks. Public smoke at
+15:41Z: demo auth/summary200, demo write/export403, unauthenticated deals401, all
+API responses no-store; frontend `/login`200 retains prior cache policy. Only
+frontend cache config changed; no API/worker/migration/source activation occurred.
+Sanitized receipt: `docs/releases/2026-10-22-api-cache-smoke.json`.
+
+**Verification:** final focused shared backend/corpus/DV/replay/cache suite
+**149 passed** (after recovery-edge review fixes); new tools/historical subset41
+passed independently during implementation.
+Frontend366 tests, typecheck and build passed (existing bundle-size warning).
+Ruff/diff checks pass. Local SQLite recovery helper passed integrity/foreign-key/
+required-table checks on January's archive; not PostgreSQL recovery acceptance.
+Full backend, PostgreSQL integration and browser E2E were not rerun this session.
+
+**Next:** follow `tasks/todo.md`: independent category/lifecycle/completeness
+reconciliation; provenance-preserving unified admitted snapshot; versioned
+qualification-to-replay evidence contract and protocol clarification; prospective
+frozen outputs with older-filing reconciliation; alert destination + delivered
+failure/recovery test; isolated PostgreSQL application/RLS recovery drill; customer
+workflow/MFA acceptance. No external records request, paid calls or gated source
+activation was performed. Existing unrelated `:memory:*` files are preserved.
 
 ## Deploy 2026-10-19: main shipped to App Runner
 

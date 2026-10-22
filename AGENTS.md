@@ -47,7 +47,7 @@ nearby parcels -> saved opportunity/export. Keep the acquisition use case visibl
 - Graph: relational entities/relationships in PostgreSQL; consult
   `docs/knowledge_graph.md` before claiming a separate graph engine or AI inference.
 - Ingestion: `app/services/ingestion/`; use existing normalization and provenance.
-  ERCOT `ercot_mis_xlsx` is implemented on PR #252, stacked on open PR #251.
+  ERCOT `ercot_mis_xlsx` is implemented on merged PR #252 (PR #251 is also merged).
   `ercot_tx_interconnection_queue` remains `technical_hold`, with canaries and
   ingestion disabled. Offline fixture checks do not establish live operation or
   commercial reuse rights; live contract/TLS verification, a bounded canary,
@@ -55,6 +55,13 @@ nearby parcels -> saved opportunity/export. Keep the acquisition use case visibl
   Preserve interconnection event types and evidence; shared permit-table storage
   does not make these ordinary building permits. See the ERCOT connector design
   and current handoff before continuing.
+- Columbus corpus: the 2023–2025 site-filing archive is a **retrospective local
+  capture**, never historical known-then evidence. Preserve original receipts and
+  partial databases; retry partial months into new paths. Use the October 22
+  corpus audit/production receipt in `docs/` for current acceptance limits.
+  Source-row counts are not unique projects; source statuses observed today cannot
+  be used as historical approval filters. Existing 31-day refresh does not
+  establish capture of later revisions to older filings. DV stays UNVALIDATED.
 - Models: `app/services/llm_client.py` routes configured calls through OpenRouter.
   `SCORING_MODE` defaults to deterministic. `evaluate_deal_score` must remain a
   pure offline API used by evaluation workflows. `eval/` is the offline harness;

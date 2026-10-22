@@ -1,5 +1,15 @@
 # Database Backups & Restore
 
+## Production configuration observed October 22, 2026
+
+The active inspected database is **AWS RDS `dealsignal-pg`**, not Render. Read-only
+metadata confirms encryption, seven-day retention, available daily automated
+snapshots and a latest restorable time of `2026-10-22T15:28:17Z`. An existing
+restore-inspection instance is available, but this does not prove a successful
+application/RLS recovery drill or measured RPO/RTO. See the
+[dated production audit](releases/2026-10-22-production-readiness-audit.md).
+No restore or database configuration change was performed in this session.
+
 > Verification status: the provider configuration and recovery targets below
 > are historical assumptions, not verified production guarantees. Confirm the
 > actual database provider, plan, retention, and successful restore history
@@ -15,9 +25,9 @@ PostgreSQL recovery, tenant isolation, production backups, or application flows.
 Production readiness requires a separately approved restore into an isolated
 database, measured recovery times, tenant isolation checks, and recorded results.
 
-## Where backups come from
+## Historical Render procedure (not current AWS production)
 
-Production Postgres is managed by Render. Render automatically takes **daily
+The historical Render configuration assumed managed Postgres with **daily
 snapshots** of the database with a default **7-day retention** window. No application
 code is involved — snapshots are taken at the storage layer.
 
