@@ -1,5 +1,14 @@
 # P0.8 → P2.2 evaluation gate (enforced precondition)
 
+**October 22 correction:** the request-only receipt described below cannot bind
+the audited data to an actual replay snapshot. Explicit P0.8 protocols now stay
+`corpus_not_qualified` even with `ready` and a matching request fingerprint until
+a versioned evidence producer/verifier contract exists. Generic metric protocols
+without P0.8 remain available for metric calculation, not DV product validation.
+See [the current corpus report](2026-10-22-columbus-corpus-capture.md) for the
+required data/method/tenant/cutoff/floor binding and other evaluation blockers.
+The older receipt-clears-gate description below is superseded by this correction.
+
 Date: 2026-10-21. Offline, deterministic. This records the enforcement that wires
 the P0.8 corpus-qualification gate into the P2.2 Development Velocity evaluation, so
 no validation verdict can be produced without a qualified corpus. No source is

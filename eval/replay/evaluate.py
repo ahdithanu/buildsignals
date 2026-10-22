@@ -18,8 +18,9 @@ below the predeclared minimums -- it never claims validation on thin data, and i
 never declares ``meets_predeclared_threshold`` unless the protocol predeclared
 the minimums and the acceptance thresholds that decision rests on. Before any of
 that, ``verdict`` returns ``corpus_not_qualified`` unless the caller supplies a
-``qualify_corpus`` result whose own verdict is ``ready`` (the enforced roadmap
-P0.8 precondition): no validation verdict is reachable without a qualified corpus.
+``qualify_corpus`` receipt bound to the actual replay evidence. The current
+request-only receipt contract cannot clear this gate, even with ``ready``.
+Generic metric protocols without the explicit P0.8 precondition remain usable.
 """
 from __future__ import annotations
 
@@ -395,9 +396,11 @@ def _corpus_precondition(
     """Enforce the roadmap P0.8 precondition: a qualified corpus must exist.
 
     The caller passes the dict returned by ``qualify_corpus``. The precondition is
-    met only when that dict's own verdict is ``ready`` and, when the protocol
-    predeclares a required corpus ``request_fingerprint``, it matches (constant
-    time). Absent or not-ready keeps the evaluation at a ``corpus_not_qualified``
+    gated only for protocols explicitly declaring P0.8. A ``ready`` receipt
+    alone never establishes that the replay snapshot is qualified. When the protocol
+    predeclares a required corpus ``request_fingerprint``, it must match (constant
+    time), but this request-only identity remains insufficient. Current receipts
+    cannot clear this gate until a verified evidence/snapshot binding is implemented. Absent or not-ready keeps the evaluation at a ``corpus_not_qualified``
     HOLD -- no validation verdict is reachable without a qualified corpus. Never
     raises; a bad receipt fails safe to HOLD.
     """
@@ -405,6 +408,9 @@ def _corpus_precondition(
     # malformed preconditions block means "no binding declared", never a crash.
     prec = protocol.get("preconditions") if isinstance(protocol, Mapping) else None
     prec = prec if isinstance(prec, Mapping) else {}
+    if "qualified_historical_corpus_P0_8" not in prec:
+        return {"qualified": True, "echo": None,
+                "reason": "generic metric protocol does not declare the P0.8 precondition"}
     corpus_pre = prec.get("qualified_historical_corpus_P0_8")
     corpus_pre = corpus_pre if isinstance(corpus_pre, Mapping) else {}
     required = corpus_pre.get("required_request_fingerprint")
@@ -431,7 +437,14 @@ def _corpus_precondition(
     ):
         return {"qualified": False, "echo": echo,
                 "reason": "P0.8 precondition: corpus request_fingerprint does not match the protocol's predeclared corpus"}
-    return {"qualified": True, "echo": echo, "reason": "P0.8 precondition: corpus qualification is ready"}
+    # The current producer signs request parameters only. It supplies no frozen
+    # snapshot/evidence digest, source-method pins or replay identity, so even a
+    # matching request fingerprint cannot establish that THIS replay uses the
+    # independently audited data or the predeclared floors. Do not introduce a
+    # caller-asserted binding object that would merely move the same bypass.
+    # A versioned producer/verifier contract is required before this can clear.
+    return {"qualified": False, "echo": echo,
+            "reason": "P0.8 precondition: corpus receipt has no verified binding to the replay snapshot, source methodology and protocol floors"}
 
 
 def verdict(
@@ -546,8 +559,8 @@ def evaluate_outcomes(
     """Bundle every P2.2 outcome metric plus the verdict into one JSON dict.
 
     ``corpus_qualification`` (a ``qualify_corpus`` result) is required for any
-    non-HOLD verdict: without a ``ready`` receipt the verdict is
-    ``corpus_not_qualified`` (enforced roadmap P0.8 precondition).
+    non-HOLD verdict for protocols declaring P0.8. Current request-only receipts
+    return ``corpus_not_qualified`` until verified replay evidence binding exists.
     """
     result = {
         "run_id": run.manifest.run_id,

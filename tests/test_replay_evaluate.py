@@ -52,8 +52,10 @@ PROTOCOL = {
     "false_positive_tolerance": 0.3,
 }
 
-# A ``ready`` qualify_corpus receipt: the enforced P0.8 precondition. Tests that
-# exercise the sample/threshold logic must clear this gate first.
+# A request-only receipt must not clear the explicit P0.8 precondition.
+# Generic metric tests deliberately omit that product-specific precondition.
+GATED_PROTOCOL = {**PROTOCOL, "preconditions": {"qualified_historical_corpus_P0_8": {}}}
+
 READY_CQ = {
     "verdict": "ready",
     "request_fingerprint": "a" * 64,
@@ -270,7 +272,7 @@ def test_evaluate_outcomes_bundle_is_deterministic_and_json_safe():
 def test_verdict_corpus_not_qualified_without_receipt():
     # Adequate sample, clearing thresholds -- but no corpus qualification at all.
     signals, outcomes = _four_fired_three_hits()
-    out = verdict(signals, outcomes=outcomes, protocol=PROTOCOL)
+    out = verdict(signals, outcomes=outcomes, protocol=GATED_PROTOCOL)
     assert out["verdict"] == "corpus_not_qualified"
     assert out["corpus_qualification"] is None
     assert "P0.8" in out["reason"]
@@ -279,7 +281,7 @@ def test_verdict_corpus_not_qualified_without_receipt():
 def test_verdict_corpus_not_qualified_when_receipt_not_ready():
     signals, outcomes = _four_fired_three_hits()
     not_ready = {"verdict": "insufficient_depth", "request_fingerprint": "b" * 64}
-    out = verdict(signals, outcomes=outcomes, protocol=PROTOCOL, corpus_qualification=not_ready)
+    out = verdict(signals, outcomes=outcomes, protocol=GATED_PROTOCOL, corpus_qualification=not_ready)
     assert out["verdict"] == "corpus_not_qualified"
     assert out["corpus_qualification"]["verdict"] == "insufficient_depth"
 
@@ -296,25 +298,44 @@ def test_verdict_corpus_fingerprint_must_match_predeclared():
     out = verdict(signals, outcomes=outcomes, protocol=protocol, corpus_qualification=READY_CQ)
     assert out["verdict"] == "corpus_not_qualified"
     assert "does not match" in out["reason"]
-    # The matching receipt clears the gate (and then the sample/threshold logic runs).
+    # Matching request identity still does not bind the replay evidence.
     matching = {**READY_CQ, "request_fingerprint": "c" * 64}
     cleared = verdict(signals, outcomes=outcomes, protocol=protocol, corpus_qualification=matching)
-    assert cleared["verdict"] != "corpus_not_qualified"
+    assert cleared["verdict"] == "corpus_not_qualified"
     assert cleared["corpus_qualification"]["fingerprint_bound"] is True
 
 
 def test_verdict_non_mapping_receipt_fails_safe_to_hold():
     # A malformed (non-Mapping) receipt must HOLD, not raise.
     signals, outcomes = _four_fired_three_hits()
-    out = verdict(signals, outcomes=outcomes, protocol=PROTOCOL, corpus_qualification="ready")
+    out = verdict(signals, outcomes=outcomes, protocol=GATED_PROTOCOL, corpus_qualification="ready")
     assert out["verdict"] == "corpus_not_qualified"
     assert out["corpus_qualification"] is None
 
 
 def test_verdict_tolerates_malformed_preconditions():
-    # preconditions=None must not crash; a ready receipt (no binding) still clears.
+    # A generic protocol without P0.8 remains usable for metric calculations.
     signals, outcomes = _four_fired_three_hits()
     protocol = {**PROTOCOL, "preconditions": None}
     out = verdict(signals, outcomes=outcomes, protocol=protocol, corpus_qualification=READY_CQ)
     assert out["verdict"] != "corpus_not_qualified"
-    assert out["corpus_qualification"]["fingerprint_bound"] is False
+    assert out["corpus_qualification"] is None
+
+
+def test_forged_ready_receipt_cannot_clear_explicit_corpus_gate():
+    signals, outcomes = _four_fired_three_hits()
+    out = verdict(signals, outcomes=outcomes, protocol=GATED_PROTOCOL,
+                  corpus_qualification={"verdict": "ready"})
+    assert out["verdict"] == "corpus_not_qualified"
+
+
+def test_request_fingerprint_alone_does_not_bind_receipt_to_replay():
+    signals, outcomes = _four_fired_three_hits()
+    protocol = {**GATED_PROTOCOL, "preconditions": {
+        "qualified_historical_corpus_P0_8": {"required_request_fingerprint": "a" * 64}}}
+    for mismatch in ({"snapshot_id": "other-snapshot"},
+                     {"sources": [{"source_id": "other-source", "methodology_version": "other"}]},
+                     {"methodology_version": "unrecognized-method"}):
+        out = verdict(_run(signals), outcomes=outcomes, protocol=protocol,
+                      corpus_qualification={**READY_CQ, **mismatch})
+        assert out["verdict"] == "corpus_not_qualified"
