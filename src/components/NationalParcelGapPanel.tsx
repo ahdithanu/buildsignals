@@ -28,8 +28,24 @@ function StateCell({ state }: { state: NationalParcelStateCoverage }) {
   );
 }
 
-export function NationalParcelGapPanel({ coverage }: { coverage?: NationalParcelCoverage | null }) {
-  if (!coverage) return null;
+export function NationalParcelGapPanel({
+  coverage,
+  error = false,
+}: {
+  coverage?: NationalParcelCoverage | null;
+  error?: boolean;
+}) {
+  if (!coverage && !error) return null;
+  if (!coverage) {
+    return (
+      <section className="rounded-md border border-amber-200 bg-amber-50 p-4 card-shadow" aria-label="National parcel coverage gap unavailable">
+        <h3 className="text-sm font-semibold text-amber-900">National Parcel Coverage Gap</h3>
+        <p className="mt-1 text-xs text-amber-800">
+          The coverage report could not be loaded. No coverage conclusion was recorded; retry after the ingestion service recovers.
+        </p>
+      </section>
+    );
+  }
   const { summary } = coverage;
   const targets = coverage.next_connector_targets.slice(0, 8);
 

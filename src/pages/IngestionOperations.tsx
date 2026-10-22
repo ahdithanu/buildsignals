@@ -759,7 +759,10 @@ export default function IngestionOperations() {
 
         <MeasuredCoveragePanel />
 
-        <NationalParcelGapPanel coverage={data?.nationalParcelCoverage} />
+        <NationalParcelGapPanel
+          coverage={data?.nationalParcelCoverage}
+          error={data?.nationalParcelCoverageError}
+        />
 
         <ParcelAvailabilityImportPanel canManage={canManage} />
 
