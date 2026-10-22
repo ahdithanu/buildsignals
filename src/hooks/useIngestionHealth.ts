@@ -7,13 +7,14 @@ export function useIngestionHealth(state?: string | null) {
   const query = useQuery({
     queryKey: queryKeys.ingestion.health(state),
     queryFn: async () => {
-      const [sources, candidates, coverage, reliability] = await Promise.all([
+      const [sources, candidates, coverage, reliability, nationalParcelCoverage] = await Promise.all([
         ingestionApi.health(state),
         ingestionApi.candidates(state),
         ingestionApi.coverage(),
         ingestionApi.reliabilitySummary(),
+        ingestionApi.nationalParcelCoverage().catch(() => null),
       ]);
-      return { sources, candidates, coverage, reliability };
+      return { sources, candidates, coverage, reliability, nationalParcelCoverage };
     },
     retry: 1,
     staleTime: 30_000,

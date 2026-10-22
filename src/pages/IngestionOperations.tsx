@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { MeasuredCoveragePanel } from '@/components/MeasuredCoveragePanel';
+import { NationalParcelGapPanel } from '@/components/NationalParcelGapPanel';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -756,6 +757,8 @@ export default function IngestionOperations() {
         </section>
 
         <MeasuredCoveragePanel />
+
+        <NationalParcelGapPanel coverage={data?.nationalParcelCoverage} />
 
         {!isLoading && !error && sources.length > 0 && (
           <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Configured source mix">
