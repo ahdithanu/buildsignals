@@ -37,7 +37,7 @@ docs/signals/2026-10-20-development-velocity-v0-evaluation-*.md.
 
 Built a pure, offline, cutoff-safe qualification harness
 (`app/services/corpus_qualification.py`, `qualify_corpus`, method
-`corpus-qualification-v0`; 11 deterministic tests) that measures a pinned Columbus
+`corpus-qualification-v1`; 23 deterministic tests) that measures a pinned Columbus
 cohort against the predeclared P2.2 floors: time depth, **recorded-time depth**,
 complete 30-day windows, evaluable periods, per-stage counts, filing-date
 completeness, duplicate-project rate, month gaps -> verdict
@@ -51,6 +51,22 @@ replayed "as known then". **Verdict NOT QUALIFIED -> HOLD; the 0-100 score stays
 UNVALIDATED.** Measurement + report + specified (unrun) production audit:
 `docs/signals/2026-10-20-columbus-corpus-p0-8-{measurement,qualification-report}.md`.
 PR #258 MERGED to main (ab92d1f). No source activated; synthetic fixtures are not a qualified corpus.
+
+## P0.8 coverage-audit attestation 2026-10-21: `ready` is now reachable (only via a verified audit)
+
+Added `CoverageAuditAttestation` + the `coverage_audit` request field so
+`qualify_corpus` can finally return `ready` — but **only** through an explicit,
+operator-supplied attestation that pins the measured-inputs `request_fingerprint`
+(constant-time compared), confirms known-then availability, is dated
+`attested_at <= as_of`, and explicitly certifies **every** complete window. Absent
+or invalid → unchanged `insufficient_coverage` (fail-safe HOLD); depth/completeness
+are still gated first; the fingerprint excludes the attestation so determinism
+holds. Independent adversarial review: SOUND (no dishonest path to `ready`). `ready`
+remains a measurement gate — not source activation, commercial-reuse clearance, or
+score validation; a reviewer must still check `predeclared_minimums` match the
+hash-pinned P2.2 protocol. Design note:
+`docs/signals/2026-10-21-corpus-coverage-audit-attestation.md`. Scoping doc §4
+updated. 23/23 tests pass; ruff clean. Track A; PR pending.
 
 ## P0.8 intake scoping 2026-10-20: the ≥24-month Columbus intake
 
