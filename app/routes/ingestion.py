@@ -41,6 +41,7 @@ from app.schemas.ingestion import (
     SourceSchedulePlanResponse,
 )
 from app.schemas.measured_coverage import MeasuredCoverageResponse
+from app.schemas.national_coverage import NationalParcelCoverageResponse
 from app.schemas.parcel_reference import (
     ParcelReferenceAcceptance,
     ParcelReferenceAudit,
@@ -65,6 +66,7 @@ from app.services.ingestion.health import (
     validate_source_canary,
 )
 from app.services.ingestion.host_policy import audit_ingestion_hosts
+from app.services.ingestion.national_coverage import national_parcel_coverage
 from app.services.ingestion.scheduling import build_schedule_plan, source_schedule_policy
 from app.services.ingestion.service import (
     ActiveRunConflict,
@@ -158,6 +160,16 @@ def get_measured_coverage(
     return measured_coverage(db, record_type=record_type, limit=limit,
                              offset=offset, freshness_hours=freshness_hours,
                              readiness_status=readiness_status)
+
+
+@router.get(
+    "/coverage/national-parcels",
+    response_model=NationalParcelCoverageResponse,
+    dependencies=[Depends(get_current_user)],
+)
+def get_national_parcel_coverage(db: Session = Depends(get_db)):
+    """Return a measured 50-state parcel gap report without changing intake state."""
+    return national_parcel_coverage(db)
 
 
 def _normalize_state_filter(state: str | None) -> str | None:

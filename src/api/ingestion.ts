@@ -10,6 +10,7 @@ import type {
   IngestionSourceRecord,
   MeasuredCoverage,
   MeasuredCoverageParams,
+  NationalParcelCoverage,
   PermitDetail,
   PermitRecord,
   SourceCanaryResult,
@@ -55,6 +56,8 @@ export const ingestionApi = {
     apiClient.get<IngestionCoverage>('/ingestion/coverage'),
   measuredCoverage: (params: MeasuredCoverageParams): Promise<MeasuredCoverage> =>
     apiClient.get<MeasuredCoverage>('/ingestion/coverage/measured', { ...params }),
+  nationalParcelCoverage: (): Promise<NationalParcelCoverage> =>
+    apiClient.get<NationalParcelCoverage>('/ingestion/coverage/national-parcels'),
   reliabilitySummary: (): Promise<IngestionReliabilitySummary> =>
     apiClient.get<IngestionReliabilitySummary>('/ingestion/reliability-summary'),
   schedulePlan: (state?: string | null): Promise<SourceSchedulePlan> =>

@@ -45,3 +45,23 @@ service will not match by address or infer identity across parcel sources.
 Rows that do not match an active parcel are returned as skipped row errors.
 Valid rows use the same evidence validation, immutable raw receipt, current
 fact replacement, and audit logging as the single-parcel endpoint.
+
+## Nationwide parcel gap report
+
+`GET /ingestion/coverage/national-parcels` is the control-plane view for the
+50-state parcel expansion. It deliberately separates four postures:
+
+- `measured`: stored parcel records were observed for the state.
+- `configured_only`: an active parcel source is configured, but no stored
+  parcel records were measured for the state.
+- `candidate_only`: source research exists, but the source is not admitted to
+  the active catalog.
+- `uncovered`: neither an active source nor a candidate source is recorded.
+
+Each state also reports nearby parcel candidates and verified available parcels.
+The latter requires the same source-backed availability contract described
+above; a parcel candidate never becomes a listing by inference. The response
+includes a bounded `next_connector_targets` queue that prioritizes candidate
+sources and configured-but-empty states before unresearched states. It is a
+read-only measurement: it does not run a connector, promote a candidate, or
+clear a legal or technical hold.

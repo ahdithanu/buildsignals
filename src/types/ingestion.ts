@@ -496,3 +496,49 @@ export interface MeasuredCoverage extends MeasuredCoverageParams {
   sources: MeasuredSourceCoverage[];
   warnings: string[];
 }
+
+export type NationalParcelPosture = 'measured' | 'configured_only' | 'candidate_only' | 'uncovered';
+
+export interface NationalParcelStateCoverage {
+  state: string;
+  posture: NationalParcelPosture;
+  configured_source_count: number;
+  candidate_source_count: number;
+  measured_source_count: number;
+  stored_parcel_records: number;
+  geocoded_parcel_records: number;
+  recently_seen_parcel_records: number;
+  nearby_candidate_parcels: number;
+  verified_available_parcels: number;
+  nearby_verified_available_parcels: number;
+  candidate_status_counts: Record<string, number>;
+  next_action: string;
+  priority_score: number;
+  priority_reason: string;
+}
+
+export interface NationalParcelCoverageSummary {
+  state_count: number;
+  measured_state_count: number;
+  configured_only_state_count: number;
+  candidate_only_state_count: number;
+  uncovered_state_count: number;
+  states_with_nearby_candidates: number;
+  states_with_verified_available_parcels: number;
+  stored_parcel_records: number;
+  geocoded_parcel_records: number;
+  nearby_candidate_parcels: number;
+  verified_available_parcels: number;
+  nearby_verified_available_parcels: number;
+}
+
+export interface NationalParcelCoverage {
+  measured_at: string;
+  record_type: 'parcel';
+  scope: string;
+  coverage_claim: string;
+  summary: NationalParcelCoverageSummary;
+  states: NationalParcelStateCoverage[];
+  next_connector_targets: NationalParcelStateCoverage[];
+  warnings: string[];
+}
