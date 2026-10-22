@@ -38,6 +38,8 @@ export default function IngestionSourceDetail() {
   const health = data?.health;
   const runs = useMemo(() => data?.runs ?? [], [data]);
   const permits = useMemo(() => data?.permits ?? [], [data]);
+  const reconciliation = data?.reconciliation;
+  const reconciliationUnavailable = data?.reconciliationUnavailable ?? false;
 
   if (isLoading) {
     return (
@@ -186,6 +188,76 @@ export default function IngestionSourceDetail() {
             </ul>
           )}
         </section>
+
+        {(reconciliation || reconciliationUnavailable) && (
+          <section className="rounded-md border bg-card p-4 card-shadow">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Parcel Reconciliation</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Read-only source matching. Nothing is accepted into the graph from this view.
+                </p>
+              </div>
+              <span className="rounded-md bg-secondary px-2 py-1 text-[11px] text-muted-foreground">
+                {reconciliation ? `${reconciliation.evaluated_permits} permits evaluated` : 'Not configured'}
+              </span>
+            </div>
+            {reconciliationUnavailable ? (
+              <p className="text-sm text-muted-foreground">
+                No active parcel source is configured for this permit source. Reconciliation is unavailable until parcel evidence is enrolled.
+              </p>
+            ) : reconciliation?.status === 'parcel_evidence_unavailable' ? (
+              <p className="text-sm text-muted-foreground">
+                The parcel source is configured, but no current parcel evidence is stored for this workspace.
+              </p>
+            ) : null}
+            {reconciliation?.status === 'measured_page' && <div className="mb-3 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-md border bg-background px-3 py-2">
+                <p className="text-xs text-muted-foreground">Eligible</p>
+                <p className="mt-1 text-lg font-semibold text-emerald-700">
+                  {reconciliation.items.filter((item) => item.review_state === 'eligible').length}
+                </p>
+              </div>
+              <div className="rounded-md border bg-background px-3 py-2">
+                <p className="text-xs text-muted-foreground">Needs review</p>
+                <p className="mt-1 text-lg font-semibold text-amber-700">
+                  {reconciliation.items.filter((item) => ['unreviewed', 'needs_review', 'accepted_other'].includes(item.review_state)).length}
+                </p>
+              </div>
+              <div className="rounded-md border bg-background px-3 py-2">
+                <p className="text-xs text-muted-foreground">Accepted</p>
+                <p className="mt-1 text-lg font-semibold text-sky-700">
+                  {reconciliation.items.filter((item) => item.review_state === 'accepted').length}
+                </p>
+              </div>
+            </div>}
+            {reconciliation?.status === 'measured_page' && (
+              reconciliation.items.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No parcel candidates were returned on this page.</p>
+              ) : (
+                <div className="space-y-2">
+                  {reconciliation.items.slice(0, 10).map((item) => (
+                    <div key={item.result.permit_id} className="rounded-md border bg-background px-3 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Link to={`/permits/${item.result.permit_id}`} className="text-sm font-medium text-foreground hover:underline">
+                          Permit {item.result.permit_id}
+                        </Link>
+                        <Badge variant={item.review_state === 'eligible' ? 'default' : 'secondary'} className="capitalize">
+                          {item.review_state.replace(/_/g, ' ')}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {item.result.candidates.length === 0
+                          ? 'No source-scoped parcel candidate'
+                          : `${item.result.candidates.length} candidate${item.result.candidates.length === 1 ? '' : 's'} · ${item.category.replace(/_/g, ' ')}`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </section>
+        )}
 
         <section className="rounded-md border bg-card p-4 card-shadow">
           <div className="mb-3 flex items-center justify-between gap-3">
