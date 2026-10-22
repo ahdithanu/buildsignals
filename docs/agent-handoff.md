@@ -68,6 +68,24 @@ hash-pinned P2.2 protocol. Design note:
 `docs/signals/2026-10-21-corpus-coverage-audit-attestation.md`. Scoping doc §4
 updated. 23/23 tests pass; ruff clean. Track A; PR pending.
 
+## P0.8 → P2.2 evaluation gate 2026-10-21: no validation without a qualified corpus
+
+Wired the P0.8 gate into the P2.2 evaluator (`eval/replay/evaluate.py`): `verdict`
+and `evaluate_outcomes` take a keyword-only `corpus_qualification` (a `qualify_corpus`
+result) and a new FIRST gate returns `corpus_not_qualified` unless the receipt's own
+verdict is `ready` (and matches the protocol's `required_request_fingerprint` when
+declared, constant-time). Gated before the sample/hit-rate branches; fails safe to
+HOLD (never raises). Before this, `meets_predeclared_threshold` was reachable from a
+fixture alone — now it is not. The synthetic-fixture DV backtest now returns the
+stricter `corpus_not_qualified` (was `insufficient_sample`); score still UNVALIDATED.
+Honest limitation: the shipped protocol does NOT yet pin `required_request_fingerprint`
+(no qualified corpus exists to pin), so binding is "unbound" (result flags
+`fingerprint_bound: false`); it MUST be set to the qualified corpus's fingerprint as
+a predeclared P2.3 step before any real validation run. Independent adversarial
+review: SOUND (no validation verdict reachable without a ready corpus). 24 eval tests
++ 23 corpus tests pass; ruff clean. Design note:
+`docs/signals/2026-10-21-p0-8-evaluation-gate.md`. Track A; PR pending.
+
 ## P0.8 intake scoping 2026-10-20: the ≥24-month Columbus intake
 
 Scoped (offline; nothing accessed/activated) what a rights-cleared historical

@@ -52,6 +52,14 @@ PROTOCOL = {
     "false_positive_tolerance": 0.3,
 }
 
+# A ``ready`` qualify_corpus receipt: the enforced P0.8 precondition. Tests that
+# exercise the sample/threshold logic must clear this gate first.
+READY_CQ = {
+    "verdict": "ready",
+    "request_fingerprint": "a" * 64,
+    "methodology_version": "corpus-qualification-v1",
+}
+
 
 def _four_fired_three_hits():
     signals = [
@@ -132,7 +140,7 @@ def test_subsequent_outcome_mean_and_median_fired_vs_non_fired():
 def test_verdict_insufficient_sample_on_thin_fired_count():
     signals = [_sig(_at(1), "fired"), _sig(_at(2), "fired")]
     outcomes = {_at(1): 150, _at(2): 150}  # only 2 fired, min is 3
-    out = verdict(signals, outcomes=outcomes, protocol=PROTOCOL)
+    out = verdict(signals, outcomes=outcomes, protocol=PROTOCOL, corpus_qualification=READY_CQ)
     assert out["verdict"] == "insufficient_sample"
     assert out["fired_n"] == 2
     assert out["min_fired_signals"] == 3
@@ -141,7 +149,7 @@ def test_verdict_insufficient_sample_on_thin_fired_count():
 def test_verdict_insufficient_sample_when_minimums_not_predeclared():
     signals, outcomes = _four_fired_three_hits()
     protocol = {"outcome_threshold": 100, "outcome_direction": "gte"}  # no minimums
-    out = verdict(signals, outcomes=outcomes, protocol=protocol)
+    out = verdict(signals, outcomes=outcomes, protocol=protocol, corpus_qualification=READY_CQ)
     assert out["verdict"] == "insufficient_sample"
     assert "minimums" in out["reason"]
 
@@ -162,7 +170,7 @@ def test_verdict_inconclusive_when_sample_ok_but_below_tolerance():
         "min_hit_rate": 0.9,
         "false_positive_tolerance": 0.1,
     }
-    out = verdict(signals, outcomes=outcomes, protocol=protocol)
+    out = verdict(signals, outcomes=outcomes, protocol=protocol, corpus_qualification=READY_CQ)
     assert out["verdict"] == "inconclusive"
     assert out["verdict"] != "meets_predeclared_threshold"
     assert out["fired_n"] == 4
@@ -228,7 +236,10 @@ def test_metrics_are_deterministic():
                 "subsequent_outcome": subsequent_outcome(
                     signals, outcomes=outcomes, protocol=PROTOCOL,
                 ),
-                "verdict": verdict(signals, outcomes=outcomes, protocol=PROTOCOL),
+                "verdict": verdict(
+                    signals, outcomes=outcomes, protocol=PROTOCOL,
+                    corpus_qualification=READY_CQ,
+                ),
             },
             sort_keys=True,
         )
@@ -246,11 +257,64 @@ def test_evaluate_outcomes_bundle_is_deterministic_and_json_safe():
         thresholds_id = "tid"
 
     run = ReplayRun(manifest=_M(), signals=tuple(signals), run_fingerprint="rfp")
-    first = evaluate_outcomes(run, outcomes=outcomes, protocol=PROTOCOL)
-    second = evaluate_outcomes(run, outcomes=outcomes, protocol=PROTOCOL)
+    first = evaluate_outcomes(run, outcomes=outcomes, protocol=PROTOCOL, corpus_qualification=READY_CQ)
+    second = evaluate_outcomes(run, outcomes=outcomes, protocol=PROTOCOL, corpus_qualification=READY_CQ)
     assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
     assert first["verdict"]["verdict"] in (
         "insufficient_sample", "inconclusive", "meets_predeclared_threshold",
     )
     # 4 fired, but default protocol has no lead-time baseline passed here.
     assert "lead_time_summary" not in first
+
+
+def test_verdict_corpus_not_qualified_without_receipt():
+    # Adequate sample, clearing thresholds -- but no corpus qualification at all.
+    signals, outcomes = _four_fired_three_hits()
+    out = verdict(signals, outcomes=outcomes, protocol=PROTOCOL)
+    assert out["verdict"] == "corpus_not_qualified"
+    assert out["corpus_qualification"] is None
+    assert "P0.8" in out["reason"]
+
+
+def test_verdict_corpus_not_qualified_when_receipt_not_ready():
+    signals, outcomes = _four_fired_three_hits()
+    not_ready = {"verdict": "insufficient_depth", "request_fingerprint": "b" * 64}
+    out = verdict(signals, outcomes=outcomes, protocol=PROTOCOL, corpus_qualification=not_ready)
+    assert out["verdict"] == "corpus_not_qualified"
+    assert out["corpus_qualification"]["verdict"] == "insufficient_depth"
+
+
+def test_verdict_corpus_fingerprint_must_match_predeclared():
+    signals, outcomes = _four_fired_three_hits()
+    protocol = {
+        **PROTOCOL,
+        "preconditions": {
+            "qualified_historical_corpus_P0_8": {"required_request_fingerprint": "c" * 64},
+        },
+    }
+    # READY_CQ's fingerprint ("a"*64) does not match the predeclared ("c"*64).
+    out = verdict(signals, outcomes=outcomes, protocol=protocol, corpus_qualification=READY_CQ)
+    assert out["verdict"] == "corpus_not_qualified"
+    assert "does not match" in out["reason"]
+    # The matching receipt clears the gate (and then the sample/threshold logic runs).
+    matching = {**READY_CQ, "request_fingerprint": "c" * 64}
+    cleared = verdict(signals, outcomes=outcomes, protocol=protocol, corpus_qualification=matching)
+    assert cleared["verdict"] != "corpus_not_qualified"
+    assert cleared["corpus_qualification"]["fingerprint_bound"] is True
+
+
+def test_verdict_non_mapping_receipt_fails_safe_to_hold():
+    # A malformed (non-Mapping) receipt must HOLD, not raise.
+    signals, outcomes = _four_fired_three_hits()
+    out = verdict(signals, outcomes=outcomes, protocol=PROTOCOL, corpus_qualification="ready")
+    assert out["verdict"] == "corpus_not_qualified"
+    assert out["corpus_qualification"] is None
+
+
+def test_verdict_tolerates_malformed_preconditions():
+    # preconditions=None must not crash; a ready receipt (no binding) still clears.
+    signals, outcomes = _four_fired_three_hits()
+    protocol = {**PROTOCOL, "preconditions": None}
+    out = verdict(signals, outcomes=outcomes, protocol=protocol, corpus_qualification=READY_CQ)
+    assert out["verdict"] != "corpus_not_qualified"
+    assert out["corpus_qualification"]["fingerprint_bound"] is False

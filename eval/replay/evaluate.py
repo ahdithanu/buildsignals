@@ -16,10 +16,14 @@ a thin sample can never be read as a confident result. ``verdict`` returns
 ``insufficient_sample`` whenever the fired count or the evaluable-period count is
 below the predeclared minimums -- it never claims validation on thin data, and it
 never declares ``meets_predeclared_threshold`` unless the protocol predeclared
-the minimums and the acceptance thresholds that decision rests on.
+the minimums and the acceptance thresholds that decision rests on. Before any of
+that, ``verdict`` returns ``corpus_not_qualified`` unless the caller supplies a
+``qualify_corpus`` result whose own verdict is ``ready`` (the enforced roadmap
+P0.8 precondition): no validation verdict is reachable without a qualified corpus.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import math
 import statistics
@@ -385,14 +389,61 @@ def by_confidence(
 
 # ── verdict ─────────────────────────────────────────────────────────────────
 
+def _corpus_precondition(
+    corpus_qualification: Mapping[str, Any] | None, protocol: Mapping[str, Any],
+) -> dict:
+    """Enforce the roadmap P0.8 precondition: a qualified corpus must exist.
+
+    The caller passes the dict returned by ``qualify_corpus``. The precondition is
+    met only when that dict's own verdict is ``ready`` and, when the protocol
+    predeclares a required corpus ``request_fingerprint``, it matches (constant
+    time). Absent or not-ready keeps the evaluation at a ``corpus_not_qualified``
+    HOLD -- no validation verdict is reachable without a qualified corpus. Never
+    raises; a bad receipt fails safe to HOLD.
+    """
+    # Read the (optional) predeclared fingerprint binding defensively: a missing or
+    # malformed preconditions block means "no binding declared", never a crash.
+    prec = protocol.get("preconditions") if isinstance(protocol, Mapping) else None
+    prec = prec if isinstance(prec, Mapping) else {}
+    corpus_pre = prec.get("qualified_historical_corpus_P0_8")
+    corpus_pre = corpus_pre if isinstance(corpus_pre, Mapping) else {}
+    required = corpus_pre.get("required_request_fingerprint")
+
+    if corpus_qualification is None:
+        return {"qualified": False, "echo": None,
+                "reason": "P0.8 precondition: no corpus_qualification supplied (corpus not qualified)"}
+    if not isinstance(corpus_qualification, Mapping):
+        return {"qualified": False, "echo": None,
+                "reason": "P0.8 precondition: corpus_qualification is not a mapping (corpus not qualified)"}
+    cq_verdict = corpus_qualification.get("verdict")
+    cq_fingerprint = corpus_qualification.get("request_fingerprint")
+    echo = {
+        "verdict": cq_verdict,
+        "request_fingerprint": cq_fingerprint,
+        "methodology_version": corpus_qualification.get("methodology_version"),
+        "fingerprint_bound": required is not None,
+    }
+    if cq_verdict != "ready":
+        return {"qualified": False, "echo": echo,
+                "reason": f"P0.8 precondition: corpus qualification verdict is {cq_verdict!r}, not 'ready'"}
+    if required is not None and not (
+        isinstance(cq_fingerprint, str) and hmac.compare_digest(str(required), cq_fingerprint)
+    ):
+        return {"qualified": False, "echo": echo,
+                "reason": "P0.8 precondition: corpus request_fingerprint does not match the protocol's predeclared corpus"}
+    return {"qualified": True, "echo": echo, "reason": "P0.8 precondition: corpus qualification is ready"}
+
+
 def verdict(
     run: ReplayRun | Sequence[CutoffSignal], *, outcomes: Mapping[Any, Any],
-    protocol: Mapping[str, Any],
+    protocol: Mapping[str, Any], corpus_qualification: Mapping[str, Any] | None = None,
 ) -> dict:
     """Overall go/no-go against the predeclared protocol.
 
-    Returns exactly one of ``insufficient_sample`` | ``inconclusive`` |
-    ``meets_predeclared_threshold``.
+    Returns exactly one of ``corpus_not_qualified`` | ``insufficient_sample`` |
+    ``inconclusive`` | ``meets_predeclared_threshold``. ``corpus_not_qualified`` is
+    the first gate: without a ``ready`` ``corpus_qualification`` receipt, no other
+    verdict is reachable.
 
     - ``insufficient_sample`` whenever the predeclared minimums are missing, or
       the fired count or the evaluable-period count is below them. Validation is
@@ -422,6 +473,8 @@ def verdict(
     min_hit_rate = _value(protocol, "min_hit_rate")
     fp_tolerance = _value(protocol, "false_positive_tolerance")
 
+    corpus_gate = _corpus_precondition(corpus_qualification, protocol)
+
     base = {
         "fired_n": fired_n,
         "evaluable_n": evaluable_n,
@@ -433,7 +486,12 @@ def verdict(
         "false_positive_rate": fpr,
         "reconstructed_excluded": part["reconstructed_excluded"],
         "status_excluded": part["status_excluded"],
+        "corpus_qualification": corpus_gate["echo"],
     }
+
+    # P0.8 precondition gates everything: no qualified corpus -> no validation.
+    if not corpus_gate["qualified"]:
+        return {**base, "verdict": "corpus_not_qualified", "reason": corpus_gate["reason"]}
 
     if min_fired is None or min_periods is None:
         return {
@@ -483,8 +541,14 @@ def verdict(
 def evaluate_outcomes(
     run: ReplayRun, *, outcomes: Mapping[Any, Any], protocol: Mapping[str, Any],
     baseline: BaselineRun | None = None,
+    corpus_qualification: Mapping[str, Any] | None = None,
 ) -> dict:
-    """Bundle every P2.2 outcome metric plus the verdict into one JSON dict."""
+    """Bundle every P2.2 outcome metric plus the verdict into one JSON dict.
+
+    ``corpus_qualification`` (a ``qualify_corpus`` result) is required for any
+    non-HOLD verdict: without a ``ready`` receipt the verdict is
+    ``corpus_not_qualified`` (enforced roadmap P0.8 precondition).
+    """
     result = {
         "run_id": run.manifest.run_id,
         "run_fingerprint": run.run_fingerprint,
@@ -499,7 +563,10 @@ def evaluate_outcomes(
             run, outcomes=outcomes, protocol=protocol,
         ),
         "by_confidence": by_confidence(run, outcomes=outcomes, protocol=protocol),
-        "verdict": verdict(run, outcomes=outcomes, protocol=protocol),
+        "verdict": verdict(
+            run, outcomes=outcomes, protocol=protocol,
+            corpus_qualification=corpus_qualification,
+        ),
     }
     if baseline is not None:
         result["lead_time_summary"] = lead_time_summary(

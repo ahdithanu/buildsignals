@@ -48,7 +48,13 @@ Evaluation result:
 - Evaluable periods: far below the predeclared 12.
 - Hit rate / false-positive rate: **not computed** (n = 0 — never reported on an
   empty sample).
-- **`verdict = insufficient_sample`.**
+- **`verdict = insufficient_sample`** at the time of this report. **Update
+  (2026-10-21):** the evaluator now enforces the P0.8 precondition in code (an
+  explicit `corpus_qualification` receipt whose verdict is `ready` is required), so
+  this same run — over the non-qualified fixture, with no receipt — now returns the
+  stricter **`corpus_not_qualified`** HOLD. See
+  `docs/signals/2026-10-21-p0-8-evaluation-gate.md`. Either way: HOLD, no validation
+  claim, score UNVALIDATED.
 
 ## Conclusion: HOLD
 
