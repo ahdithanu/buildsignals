@@ -30,6 +30,17 @@ export interface ParcelAvailabilityEvidenceCreate {
   contact_company?: string | null;
 }
 
+export interface ParcelAvailabilityImportRow extends ParcelAvailabilityEvidenceCreate {
+  source_id: string;
+  external_parcel_id: string;
+}
+
+export interface ParcelAvailabilityImportResult {
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; reason: string }>;
+}
+
 export type ParcelLineageEventType = 'split' | 'merge' | 'replat' | 'correction';
 
 export interface ParcelLineageEvidence {

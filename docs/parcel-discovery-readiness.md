@@ -65,3 +65,14 @@ includes a bounded `next_connector_targets` queue that prioritizes candidate
 sources and configured-but-empty states before unresearched states. It is a
 read-only measurement: it does not run a connector, promote a candidate, or
 clear a legal or technical hold.
+
+The ingestion console also exposes a bounded **Parcel Availability Intake** for
+admin/editor users. It accepts the same evidence contract as the API in CSV
+form, validates rows in the browser, and sends at most 500 rows to
+`POST /parcel-availability/import`. The server matches only
+`source_id + external_parcel_id` against active canonical parcel records and
+returns per-row skips; it never resolves a parcel from an address or promotes a
+candidate implicitly. Each accepted row still requires an explicit availability
+status, evidence type, confidence of at least `0.7`, and a source URL or
+excerpt. This is an operator-assisted bridge for verified inventory, not a
+replacement for statewide parcel connectors or listing rights review.
