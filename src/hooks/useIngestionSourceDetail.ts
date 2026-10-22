@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ingestionApi } from '@/api/ingestion';
+import { parcelReferencesApi } from '@/api/parcelReferences';
 import { queryKeys } from '@/lib/queryKeys';
 
 export function useIngestionSourceDetail(sourceId: string | undefined) {
@@ -7,12 +8,28 @@ export function useIngestionSourceDetail(sourceId: string | undefined) {
   const query = useQuery({
     queryKey: ['ingestion', 'source-detail', sourceId || ''] as const,
     queryFn: async () => {
-      const [health, runs, permits] = await Promise.all([
+      const [health, runs, permits, sources] = await Promise.all([
         ingestionApi.sourceHealth(sourceId!),
         ingestionApi.runs(sourceId!),
         ingestionApi.permits(sourceId!),
+        parcelReferencesApi.sources(),
       ]);
-      return { health, runs, permits };
+      const source = sources.find((candidate) => candidate.id === sourceId);
+      const parcelSource = sources.find(
+        (candidate) => candidate.record_type === 'parcel' && candidate.is_active,
+      );
+      const isPermitSource = source?.record_type === 'permit';
+      const reconciliation = isPermitSource && parcelSource
+        ? await parcelReferencesApi.reconciliation(sourceId!, parcelSource.id)
+        : null;
+      return {
+        health,
+        runs,
+        permits,
+        reconciliation,
+        parcelSource,
+        reconciliationUnavailable: Boolean(isPermitSource && !parcelSource),
+      };
     },
     enabled: !!sourceId,
     retry: 1,

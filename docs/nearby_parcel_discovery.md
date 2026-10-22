@@ -127,6 +127,16 @@ parcel is controlled by the detected brand.
 - Freshness: ownership, zoning, sale, listing, and improvement facts retain
   independent source dates rather than sharing one parcel-level timestamp.
 
+Availability evidence follows the same versioning rule. The intake service derives
+an evidence identity from the parcel, status, evidence type, source content, price,
+and contact fields, so replaying an identical submission is idempotent. If
+`observed_at` is omitted, capture time is used for the fact timestamp but is not
+treated as source freshness metadata. Explicit timestamps must be timezone-aware
+and cannot be in the future. A newer observation may become the current
+availability projection; an older observation is retained as historical evidence
+with `is_current=false` and cannot overwrite a newer listing. This keeps the
+national availability view monotonic while preserving the raw evidence trail.
+
 ```mermaid
 flowchart LR
     A["Confirmed or pre-approval retailer signal"] --> B["Resolved anchor property"]

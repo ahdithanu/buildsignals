@@ -17,6 +17,8 @@ import type {
   ParcelAcquisitionCase,
   ParcelAcquisitionCaseUpdate,
   ParcelAvailabilityEvidenceCreate,
+  ParcelAvailabilityImportResult,
+  ParcelAvailabilityImportRow,
   ParcelFact,
   Zip3HeatmapResponse,
 } from '@/types/parcel';
@@ -60,6 +62,10 @@ export const parcelsApi = {
     payload: ParcelAvailabilityEvidenceCreate,
   ): Promise<ParcelFact> =>
     apiClient.post<ParcelFact>(`/parcels/${parcelId}/availability-evidence`, payload),
+  importAvailabilityEvidence: (
+    rows: ParcelAvailabilityImportRow[],
+  ): Promise<ParcelAvailabilityImportResult> =>
+    apiClient.post<ParcelAvailabilityImportResult>('/parcel-availability/import', { rows }),
   create: (dealId: string, payload: NearbyParcelSearchCreate): Promise<NearbyParcelSearch> =>
     apiClient.post<NearbyParcelSearch>(`/deals/${dealId}/nearby-parcel-searches`, payload),
   createFromPlanning: (

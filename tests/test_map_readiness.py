@@ -1,3 +1,5 @@
+from app.models.deal import Deal
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact
 from app.models.planning import PlanningRecord
 from app.services.map_readiness import map_readiness
 from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
@@ -20,9 +22,14 @@ def test_inventory_coordinates_and_retirement(db):
         parcels=1,
         geocoded_parcels=0,
         saved_searches=0,
+        nearby_candidate_parcels=0,
+        verified_available_parcels=0,
+        nearby_verified_available_parcels=0,
         has_geocoded_signals=True,
         has_geocoded_parcels=False,
         has_saved_searches=False,
+        discovery_stage="parcel_records_not_geocoded",
+        discovery_next_action="Ingest geocoded parcel records for the target jurisdictions.",
         ready_for_ranked_map=False,
     )
     permit.is_active = False
@@ -38,9 +45,14 @@ def test_inventory_coordinates_and_retirement(db):
         parcels=0,
         geocoded_parcels=0,
         saved_searches=0,
+        nearby_candidate_parcels=0,
+        verified_available_parcels=0,
+        nearby_verified_available_parcels=0,
         has_geocoded_signals=False,
         has_geocoded_parcels=False,
         has_saved_searches=False,
+        discovery_stage="signals_not_geocoded",
+        discovery_next_action="Ingest or geocode permit and planning signals.",
         ready_for_ranked_map=False,
     )
 
@@ -84,3 +96,65 @@ def test_planning_records_count_as_early_geocoded_signals(db):
     assert result["signals"] == 1
     assert result["geocoded_signals"] == 1
     assert result["has_geocoded_signals"] is True
+
+
+def test_readiness_distinguishes_nearby_candidates_from_verified_availability(db):
+    _source, _run, now, parcel, permit = fixture_records(db)
+    permit.latitude, permit.longitude = 39.96, -82.99
+    parcel.latitude, parcel.longitude = 39.96, -82.99
+    deal = Deal(organization_id="default-org", name="Readiness test deal")
+    db.add(deal)
+    db.flush()
+    search = NearbyParcelSearch(
+        organization_id="default-org",
+        deal_id=deal.id,
+        anchor_permit_id=permit.id,
+        anchor_latitude=39.96,
+        anchor_longitude=-82.99,
+        radius_miles=2,
+        persona="developer",
+        result_limit=25,
+        as_of=now,
+        ranker_version="developer-v1",
+    )
+    db.add(search)
+    db.flush()
+    db.add(NearbyParcelCandidate(
+        organization_id="default-org",
+        search_id=search.id,
+        parcel_id=parcel.id,
+        rank=1,
+        distance_miles=0.4,
+        score=80,
+        score_confidence=0.9,
+        explanation={},
+        ranker_version="developer-v1",
+    ))
+    db.flush()
+
+    result = map_readiness(db)
+    assert result["nearby_candidate_parcels"] == 1
+    assert result["verified_available_parcels"] == 0
+    assert result["nearby_verified_available_parcels"] == 0
+    assert result["discovery_stage"] == "candidates_need_availability_evidence"
+
+    db.add(ParcelFact(
+        organization_id="default-org",
+        parcel_id=parcel.id,
+        raw_source_record_id=parcel.latest_raw_record_id,
+        fact_type="availability",
+        value={"status": "for_sale", "evidence_type": "listing"},
+        source_system="listing",
+        source_url="https://broker.example/listing/P-1",
+        excerpt="For sale",
+        confidence=0.9,
+        observed_at=now,
+        last_verified_at=now,
+        valid_from=now,
+        is_current=True,
+    ))
+    db.flush()
+    result = map_readiness(db)
+    assert result["verified_available_parcels"] == 1
+    assert result["nearby_verified_available_parcels"] == 1
+    assert result["discovery_stage"] == "verified_available_candidates"

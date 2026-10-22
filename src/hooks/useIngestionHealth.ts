@@ -13,7 +13,14 @@ export function useIngestionHealth(state?: string | null) {
         ingestionApi.coverage(),
         ingestionApi.reliabilitySummary(),
       ]);
-      return { sources, candidates, coverage, reliability };
+      let nationalParcelCoverage = null;
+      let nationalParcelCoverageError = false;
+      try {
+        nationalParcelCoverage = await ingestionApi.nationalParcelCoverage();
+      } catch {
+        nationalParcelCoverageError = true;
+      }
+      return { sources, candidates, coverage, reliability, nationalParcelCoverage, nationalParcelCoverageError };
     },
     retry: 1,
     staleTime: 30_000,

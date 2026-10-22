@@ -105,6 +105,129 @@ def test_availability_evidence_requires_actual_source_evidence(client, db):
     assert "source URL or excerpt" in response.text
 
 
+def test_duplicate_availability_evidence_is_idempotent(client, db):
+    headers = _admin_headers(db)
+    parcel = _parcel(db)
+    payload = {
+        "status": "for_sale",
+        "evidence_type": "listing",
+        "source_url": "https://listing.example/P-AVAILABLE",
+        "excerpt": "Listing marks the parcel available for sale.",
+        "confidence": 0.92,
+    }
+
+    first = client.post(f"/parcels/{parcel.id}/availability-evidence", headers=headers, json=payload)
+    second = client.post(f"/parcels/{parcel.id}/availability-evidence", headers=headers, json=payload)
+
+    assert first.status_code == 201, first.text
+    assert second.status_code == 201, second.text
+    assert second.json()["id"] == first.json()["id"]
+    assert db.query(ParcelFact).filter(ParcelFact.parcel_id == parcel.id).count() == 1
+    assert db.query(RawSourceRecord).filter(RawSourceRecord.record_type == "parcel_availability").count() == 1
+    manual_source = db.query(IngestionSource).filter(
+        IngestionSource.key == "manual_availability_evidence",
+    ).one()
+    assert db.query(IngestionRun).filter(IngestionRun.source_id == manual_source.id).count() == 1
+
+
+def test_availability_observed_at_must_not_be_future(client, db):
+    headers = _admin_headers(db)
+    parcel = _parcel(db)
+
+    response = client.post(
+        f"/parcels/{parcel.id}/availability-evidence",
+        headers=headers,
+        json={
+            "status": "for_sale",
+            "evidence_type": "listing",
+            "source_url": "https://listing.example/future",
+            "confidence": 0.92,
+            "observed_at": "2099-01-01T00:00:00Z",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "cannot be in the future" in response.text
+
+
+def test_older_availability_evidence_is_retained_but_not_promoted(client, db):
+    headers = _admin_headers(db)
+    parcel = _parcel(db)
+    newer = {
+        "status": "listed",
+        "evidence_type": "listing",
+        "source_url": "https://listing.example/newer",
+        "excerpt": "Newer listing evidence.",
+        "confidence": 0.95,
+        "observed_at": "2026-10-20T00:00:00Z",
+    }
+    older = {
+        "status": "for_sale",
+        "evidence_type": "broker",
+        "source_url": "https://broker.example/older",
+        "excerpt": "Older broker evidence.",
+        "confidence": 0.9,
+        "observed_at": "2026-10-19T00:00:00Z",
+    }
+
+    assert client.post(f"/parcels/{parcel.id}/availability-evidence", headers=headers, json=newer).status_code == 201
+    older_response = client.post(
+        f"/parcels/{parcel.id}/availability-evidence", headers=headers, json=older
+    )
+
+    assert older_response.status_code == 201, older_response.text
+    facts = db.query(ParcelFact).filter(ParcelFact.parcel_id == parcel.id).all()
+    assert len(facts) == 2
+    current = [fact for fact in facts if fact.is_current]
+    assert len(current) == 1
+    assert current[0].value["status"] == "listed"
+    stale = next(fact for fact in facts if not fact.is_current)
+    assert stale.value["status"] == "for_sale"
+    assert stale.valid_to is not None
+
+
+def test_bulk_availability_import_matches_only_source_and_external_id(client, db):
+    headers = _admin_headers(db)
+    parcel = _parcel(db)
+
+    response = client.post(
+        "/parcel-availability/import",
+        headers=headers,
+        json={
+            "rows": [
+                {
+                    "source_id": parcel.source_id,
+                    "external_parcel_id": parcel.external_parcel_id,
+                    "status": "for_sale",
+                    "evidence_type": "listing",
+                    "source_url": "https://listing.example/P-AVAILABLE",
+                    "confidence": 0.92,
+                },
+                {
+                    "source_id": parcel.source_id,
+                    "external_parcel_id": "STALE-PARCEL-ID",
+                    "status": "for_sale",
+                    "evidence_type": "listing",
+                    "source_url": "https://listing.example/STALE-PARCEL-ID",
+                    "confidence": 0.92,
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json() == {
+        "imported": 1,
+        "skipped": 1,
+        "errors": [{
+            "row": 1,
+            "reason": "No active parcel matches source_id and external_parcel_id",
+        }],
+    }
+    fact = db.query(ParcelFact).filter(ParcelFact.parcel_id == parcel.id).one()
+    assert fact.value["status"] == "for_sale"
+
+
 def test_availability_evidence_import_flows_into_zip3_heatmap(client, db, tmp_path):
     headers = _admin_headers(db)
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path, headers=headers)

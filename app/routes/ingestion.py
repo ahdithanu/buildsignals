@@ -41,7 +41,9 @@ from app.schemas.ingestion import (
     SourceSchedulePlanResponse,
 )
 from app.schemas.measured_coverage import MeasuredCoverageResponse
+from app.schemas.national_coverage import NationalParcelCoverageResponse
 from app.schemas.parcel_reference import (
+    ParcelReconciliation,
     ParcelReferenceAcceptance,
     ParcelReferenceAudit,
     PermitParcelCandidates,
@@ -65,6 +67,7 @@ from app.services.ingestion.health import (
     validate_source_canary,
 )
 from app.services.ingestion.host_policy import audit_ingestion_hosts
+from app.services.ingestion.national_coverage import national_parcel_coverage
 from app.services.ingestion.scheduling import build_schedule_plan, source_schedule_policy
 from app.services.ingestion.service import (
     ActiveRunConflict,
@@ -124,6 +127,33 @@ def get_parcel_reference_audit(
 
 
 @router.get(
+    "/sources/{source_id}/parcel-reconciliation", response_model=ParcelReconciliation,
+    dependencies=[Depends(get_current_user)],
+)
+def get_parcel_reconciliation(
+    source_id: str,
+    response: Response,
+    parcel_source_id: str = Query(min_length=1, max_length=36),
+    review_state: str = Query(default="all", pattern="^(all|eligible|needs_review|accepted)$"),
+    limit: int = Query(default=50, ge=1, le=100),
+    after_id: str | None = Query(default=None, min_length=1, max_length=36),
+    db: Session = Depends(get_db),
+):
+    from app.services.parcel_reference import reconcile_parcel_references
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return reconcile_parcel_references(
+            db, source_id, parcel_source_id, limit=limit,
+            after_id=after_id, review_state=review_state,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get(
     "/permits/{permit_id}/parcel-candidates", response_model=PermitParcelCandidates,
     dependencies=[Depends(get_current_user)],
 )
@@ -158,6 +188,17 @@ def get_measured_coverage(
     return measured_coverage(db, record_type=record_type, limit=limit,
                              offset=offset, freshness_hours=freshness_hours,
                              readiness_status=readiness_status)
+
+
+@router.get(
+    "/coverage/national-parcels",
+    response_model=NationalParcelCoverageResponse,
+    dependencies=[Depends(get_current_user)],
+)
+def get_national_parcel_coverage(response: Response, db: Session = Depends(get_db)):
+    """Return a measured 50-state parcel gap report without changing intake state."""
+    response.headers["Cache-Control"] = "no-store"
+    return national_parcel_coverage(db)
 
 
 def _normalize_state_filter(state: str | None) -> str | None:
