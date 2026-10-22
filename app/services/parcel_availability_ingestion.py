@@ -4,7 +4,6 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
-from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
@@ -20,6 +19,12 @@ ALLOWED_EVIDENCE_TYPES = {"listing", "broker", "owner", "auction"}
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _content_hash(payload: dict) -> str:
@@ -77,11 +82,18 @@ def create_availability_evidence(
     if not (source_url and source_url.strip()) and not (excerpt and excerpt.strip()):
         raise ValueError("Availability evidence requires a source URL or excerpt")
 
+    now = _utcnow()
+    if observed_at is not None:
+        if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+            raise ValueError("Availability observed_at must include a timezone")
+        observed_at = observed_at.astimezone(timezone.utc)
+        if observed_at > now:
+            raise ValueError("Availability observed_at cannot be in the future")
+
     parcel = active_query(db.query(ParcelRecord), ParcelRecord).filter(ParcelRecord.id == parcel_id).first()
     if parcel is None:
         raise LookupError("Parcel not found")
 
-    now = _utcnow()
     source = _manual_source(db)
     payload = {
         "parcel_id": parcel.id,
@@ -96,6 +108,23 @@ def create_availability_evidence(
         "contact_name": contact_name,
         "contact_company": contact_company,
     }
+    identity_payload = payload if observed_at is not None else {
+        key: value for key, value in payload.items() if key != "observed_at"
+    }
+    content_hash = _content_hash(identity_payload)
+    external_record_id = f"availability:{parcel.id}:{content_hash}"
+    existing_raw = active_query(db.query(RawSourceRecord), RawSourceRecord).filter(
+        RawSourceRecord.source_id == source.id,
+        RawSourceRecord.external_record_id == external_record_id,
+        RawSourceRecord.content_hash == content_hash,
+    ).first()
+    if existing_raw is not None:
+        existing_fact = db.query(ParcelFact).filter(
+            ParcelFact.raw_source_record_id == existing_raw.id,
+        ).first()
+        if existing_fact is not None:
+            return existing_fact
+
     run = IngestionRun(
         organization_id=get_org_id(),
         source_id=source.id,
@@ -112,11 +141,11 @@ def create_availability_evidence(
         organization_id=get_org_id(),
         source_id=source.id,
         run_id=run.id,
-        external_record_id=f"availability:{parcel.id}:{uuid4()}",
+        external_record_id=external_record_id,
         record_type="parcel_availability",
-        content_hash=_content_hash(payload),
+        content_hash=content_hash,
         payload=payload,
-        source_updated_at=observed_at,
+        source_updated_at=observed_at or now,
         received_at=now,
     )
     db.add(raw)
@@ -127,9 +156,13 @@ def create_availability_evidence(
         ParcelFact.fact_type.in_(AVAILABILITY_FACT_TYPES),
         ParcelFact.is_current.is_(True),
     ).all()
-    for fact in current:
-        fact.is_current = False
-        fact.valid_to = now
+    latest_current = max(current, key=lambda fact: fact.observed_at, default=None)
+    latest_observed_at = _as_utc(latest_current.observed_at) if latest_current is not None else None
+    is_stale = latest_observed_at is not None and (observed_at or now) < latest_observed_at
+    if not is_stale:
+        for fact in current:
+            fact.is_current = False
+            fact.valid_to = now
 
     value = {
         "status": normalized_status,
@@ -152,7 +185,8 @@ def create_availability_evidence(
         observed_at=observed_at or now,
         last_verified_at=now,
         valid_from=now,
-        is_current=True,
+        valid_to=now if is_stale else None,
+        is_current=not is_stale,
     )
     db.add(fact)
     log_change(
