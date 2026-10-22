@@ -1,5 +1,27 @@
 # Columbus corpus and Development Velocity: first executable increment
 
+## October 22 continuation: unified evidence and replay binding
+
+The user authorized the next offline implementation: consolidate verified monthly
+shards into a new, inactive local evidence snapshot; preserve original capture
+times/payloads/IDs with explicit source/tenant namespace lineage; bind actual
+qualification to the exact replay snapshot, source/method, cutoffs, protocol
+content and floors; run a real archive diagnostic and synthetic adversarial tests.
+
+Ownership: one agent builds the unifier/tests; one owns binding, manifest, driver
+and evaluator/tests; a read-only agent challenges scope and tampering; the main
+agent owns CLI integration, real-data runs and shared context. All original
+monthly/partial artifacts remain read-only. No production, source activation,
+network collection, paid calls or external evidence request is needed here.
+
+Acceptance: one source and local organization, 36 original capture runs, 2,543
+raw/permit records, 10,110 observations; immutable evidence timestamps retained;
+repeatable content digest; modified/incomplete/mixed inputs refused. Unbound,
+mismatched or stale evaluation receipts fail closed. A synthetic audited corpus
+must clear the binding gate, while the real retrospective archive stays HOLD.
+Full actual-reader scope and implementation hashes must be pinned, including
+DV's source-wide reads rather than only a caller-selected subset of series.
+
 Started: 2026-10-20; resumed 2026-10-22. Starting branch `codex/p0-8-corpus-qualification`,
 HEAD `7885280`. User requested the fastest credible data/validation path and to
 start authorized work now. Tasks are tracked in `tasks/todo.md`.

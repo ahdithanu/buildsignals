@@ -62,6 +62,12 @@ nearby parcels -> saved opportunity/export. Keep the acquisition use case visibl
   Source-row counts are not unique projects; source statuses observed today cannot
   be used as historical approval filters. Existing 31-day refresh does not
   establish capture of later revisions to older filings. DV stays UNVALIDATED.
+  A unified inactive local research snapshot and snapshot-bound replay receipts
+  now exist; see `docs/signals/2026-10-22-unified-columbus-snapshot.md`. Preserve
+  original capture times during trusted local copies. Bound receipts verify
+  data/code identity, not independent coverage or auditor authenticity. Replays
+  must match frozen series/cutoffs and source-wide read scope; code drift requires
+  refreezing. Research snapshots are not production application databases.
 - Models: `app/services/llm_client.py` routes configured calls through OpenRouter.
   `SCORING_MODE` defaults to deterministic. `evaluate_deal_score` must remain a
   pure offline API used by evaluation workflows. `eval/` is the offline harness;

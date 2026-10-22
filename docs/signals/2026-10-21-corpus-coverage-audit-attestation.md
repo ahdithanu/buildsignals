@@ -1,5 +1,12 @@
 # Corpus coverage-audit attestation (P0.8 condition 9)
 
+**October 22 follow-through:** `attested_snapshot_id` is an optional 64-hex field
+for legacy standalone qualification, but **required to match the frozen snapshot**
+when an audit is used by the new replay binding contract. Request-only audits
+cannot be reused to certify changed/refrozen evidence. See
+[snapshot-bound evaluation](2026-10-22-unified-columbus-snapshot.md). Digests retain
+the trusted-operator model; they do not authenticate the auditor.
+
 Date: 2026-10-21. This records the mechanism that lets `qualify_corpus` reach the
 `ready` verdict — and only reach it — through an explicit, verified, independent
 coverage-audit attestation. It is the implementation of condition 9 in

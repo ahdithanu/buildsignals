@@ -18,5 +18,9 @@ on October 19; Texas still needs its in-budget canary/re-provision. The Columbus
 2023–2025 local archive is retrospective, not known-then validation. Preserve
 partial DBs and receipt timestamps. Read the latest October 22 corpus/production
 audit and shared handoff for completed capture, verification and remaining gates.
+Unified local snapshot and snapshot-bound evaluation are implemented offline;
+see `docs/signals/2026-10-22-unified-columbus-snapshot.md`. Real archive evaluation
+remains HOLD. Data/code integrity does not certify independent coverage, mature
+outcomes or a fully specified validation method. Do not activate its local source.
 Read the handoff and
 `docs/source-qualification/` before continuing.

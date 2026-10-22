@@ -3,6 +3,69 @@
 Last updated: 2026-10-22 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
 
+## Latest continuation: unified corpus + snapshot-bound evaluation
+
+Branch `codex/columbus-capture-readiness`, starting checkpoint `1c138b5`.
+New checkpoints: `36e3f87` (unified builder) and `7c5ca50` (snapshot-bound
+qualification and actual replay verification). The following integration/context
+checkpoint records the real-data receipts and end-to-end runner.
+User authorized offline unification, snapshot-bound evaluation, multi-agent review,
+end-to-end checks and current context. No network collection, source activation,
+production release, migrations, paid calls or external attestation in this step.
+
+**Implemented and tested locally:**
+- `scripts/unify_columbus_corpus.py`: exclusive new local SQLite snapshot and
+  lineage sidecar from the 36 audited shards. One inactive source/local org;
+  original raw payloads/IDs/hashes/capture times, observations and events retained;
+  source-dependent series keys remapped explicitly. Before/after input hash checks,
+  mixed/duplicate/incomplete evidence refused. Not an application/graph restore.
+- `eval/replay/corpus_binding.py`: qualification producer and DB-backed verifier
+  bind actual data, source/method/tenant/geography/windows, protocol/floors, exact
+  manifest and relevant implementation bytes. Positive coverage audit must pin
+  `attested_snapshot_id`; request-only/reused audits cannot certify new data.
+  Operator trust is explicit; hashes do not authenticate an auditor.
+- Replay rejects changed series/cutoffs and binding rejects omitted source-wide
+  reader inputs. Relevant raw/observation/event fields (including geography,
+  confidence, entity and raw update timestamps) are hashed. Code drift requires
+  refreezing. Qualified-gate evaluation recomputes actual DV outputs to reject
+  forged signal values/modes/evidence/fingerprints. Raw permit-kind and trusted
+  receipt checks align qualification with the actual DV reader.
+- `eval/replay/columbus_snapshot.py`: read-only artifact verification, real DV
+  replay twice, binding receipt and diagnostic outputs into a new directory.
+  Synthetic audited evidence clears binding and reaches sample metrics. Actual
+  unaudited archive stays HOLD; no real audit was created or protocol tuned.
+
+**Actual artifacts:** ignored `data/qualification/columbus-site-unified-20261022.db`
+and `.snapshot.json`; final diagnostic directory
+`data/qualification/columbus-site-replay-verified-20261022/`. A second independent
+build/replay has identical logical content, snapshot ID and run fingerprint
+(SQLite binary hashes may differ). Both builds preserve **2,543 raw/permit rows,
+10,110 observations, 5,086 temporal events and 36 original runs**. Original shards
+and partial August evidence are unchanged. No raw data committed.
+
+**Measured result:** 37 cutoffs; all `insufficient_history`; zero eligible signal
+cutoffs. `binding_verified=true`, `binding_qualified=false`; qualifier
+`insufficient_depth`, evaluation `corpus_not_qualified`, DV score UNVALIDATED.
+Event-date depth36 complete30-day windows; known-then evaluable periods0.
+Reports: `docs/signals/2026-10-22-unified-columbus-{snapshot.md,receipt.json}`.
+
+**Verification:** final focused suite **165 passed**: qualifier, monthly tools,
+unifier, real-local-intake → diagnostic E2E, historical intake, baseline/DV and all
+replay/binding regressions. Relevant Ruff, whitespace and harness checks passed.
+Review fixes have failing-then-passing regressions: reused audit/new snapshot,
+forged self-consistent replay, raw record-kind mismatch and raw-update drift.
+Golden fingerprint changed only with expanded evidence hashing; all existing
+numeric/status outcomes and frozen protocol/threshold files are unchanged.
+Full backend/PostgreSQL, frontend and browser suites were not rerun this offline
+increment. No merge/push/production deployment is claimed for these changes.
+
+**Next:** separate independent admission/completeness and mature prospective data
+from software completion. Remaining local method work: reviewed versioned outcome
+window clarification/extraction, temporal holdout, manifest-bound comparator and
+acceptance rules. Adequate-sample explicit P0.8 results stay inconclusive until
+those exist. Production alert destination/restore/customer-workflow gates from the
+prior receipt remain open; do not treat a research snapshot as their completion.
+
 ## Current session: Columbus capture complete + production cache repair
 
 Starting checkout on resume: `codex/p0-8-eval-gate` at `f95fbd5` (newer shared

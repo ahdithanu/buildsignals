@@ -16,13 +16,17 @@
 
 - [ ] Independently reconcile source categories, monthly completeness, lifecycle,
   project linkage and operational admission before an accepted product corpus.
-- [ ] Produce unified, provenance-preserving admitted snapshot from local shards.
+- [x] Produce unified, provenance-preserving local research snapshot from shards.
+  - [x] Build a timestamp-preserving local research snapshot (not admission).
+  - [x] Verify actual archive counts, lineage and repeatable content digest.
 - [ ] Freeze prospective cohort, protocol, comparator and outputs; verify worker
   capture/revision retention and alerting under applicable production scope.
 - [ ] Implement and test protocol-to-outcome extraction and holdout enforcement;
   independent methodology review before any real outcome result.
 - [ ] Evaluate matured known-then cutoffs unchanged; independent P2.3 review.
-- [ ] Bind coverage receipt to actual frozen replay evidence and exact floors.
+- [x] Bind coverage receipt to actual frozen replay evidence and exact floors.
+  - [x] Implement producer/verifier and strict replay argument/read-scope pins.
+  - [x] Exercise real archive HOLD and synthetic audited gate success end to end.
 - [ ] Configure delivered failure alerts after an owned destination is supplied;
   test failure/recovery, and verify completed ingestion runs beyond scheduler state.
 - [ ] Verify isolated PostgreSQL restore with application-role RLS and measured

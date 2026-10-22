@@ -1,5 +1,11 @@
 # Columbus capture and audit — October 22, 2026
 
+**Follow-through:** a unified local research snapshot and executable snapshot-bound
+evaluation contract are now implemented and tested. See
+[the current snapshot report](2026-10-22-unified-columbus-snapshot.md).
+The per-month evidence below remains unchanged; product admission and actual
+known-then DV validation remain open.
+
 ## Completed
 
 The local retrospective site-filing archive now covers **January 2023 through

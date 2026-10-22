@@ -1,5 +1,13 @@
 # P0.8 → P2.2 evaluation gate (enforced precondition)
 
+**October 22 follow-through:** a real snapshot-bound producer/verifier now exists,
+with actual evidence/code/protocol/scope checks and replay-output recomputation.
+Use `db` plus `corpus_binding` for explicit P0.8 evaluation; legacy request-only
+receipts still cannot clear the gate. Authentic insufficient-depth evidence has
+`verified=true`, `qualified=false`. Synthetic audited fixtures clear this gate;
+the real Columbus archive remains HOLD. See
+[the current contract](2026-10-22-unified-columbus-snapshot.md).
+
 **October 22 correction:** the request-only receipt described below cannot bind
 the audited data to an actual replay snapshot. Explicit P0.8 protocols now stay
 `corpus_not_qualified` even with `ready` and a matching request fingerprint until
