@@ -168,3 +168,18 @@ The Source Health page also summarizes those classifications into a 50-state
 readiness funnel. The funnel is intentionally catalog-derived: it helps operators
 prioritize activation work, but it is not measured live inventory, freshness, or
 full-market completeness.
+
+## Parcel Coverage Is a Separate Contract
+
+Permit-source breadth must not be presented as parcel or land-availability
+coverage. The authoritative parcel view is
+`GET /ingestion/coverage/national-parcels`, which measures stored canonical
+parcel records for the authenticated organization and separately reports
+configured-only, candidate-only, and uncovered states. A state can therefore
+have strong permit coverage and still have no measured parcel inventory.
+
+Nearby parcel candidates are discovery leads, not available land. A parcel is
+counted as verified available only when a current fact has an explicit
+availability status, a qualifying evidence type, confidence of at least `0.7`,
+and a source URL or excerpt. This separation is intentional: the moat is the
+permit-to-parcel-to-availability chain, not a map with unverified dots.

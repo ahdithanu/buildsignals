@@ -912,6 +912,12 @@ next onboarding loop can focus on adjacent jurisdictions with momentum.
 States that have candidate coverage but no live source are surfaced as the next
 activation queue, which keeps research and production onboarding connected.
 
+This permit footprint is not a parcel-availability claim. Parcel inventory and
+nearby land evidence are measured by the separate national parcel coverage
+endpoint and its source-backed availability contract. Keep those surfaces
+separate when describing customer coverage: a state can be permit-covered,
+parcel-unmeasured, or have parcel candidates without verified availability.
+
 Agency-specific variations belong in source configuration and field mappings.
 
 ### Field value semantics
