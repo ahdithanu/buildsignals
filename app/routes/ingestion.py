@@ -43,6 +43,7 @@ from app.schemas.ingestion import (
 from app.schemas.measured_coverage import MeasuredCoverageResponse
 from app.schemas.national_coverage import NationalParcelCoverageResponse
 from app.schemas.parcel_reference import (
+    ParcelReconciliation,
     ParcelReferenceAcceptance,
     ParcelReferenceAudit,
     PermitParcelCandidates,
@@ -123,6 +124,33 @@ def get_parcel_reference_audit(
         return audit_parcel_references(db, source_id, parcel_source_id, limit=limit, after_id=after_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/sources/{source_id}/parcel-reconciliation", response_model=ParcelReconciliation,
+    dependencies=[Depends(get_current_user)],
+)
+def get_parcel_reconciliation(
+    source_id: str,
+    response: Response,
+    parcel_source_id: str = Query(min_length=1, max_length=36),
+    review_state: str = Query(default="all", pattern="^(all|eligible|needs_review|accepted)$"),
+    limit: int = Query(default=50, ge=1, le=100),
+    after_id: str | None = Query(default=None, min_length=1, max_length=36),
+    db: Session = Depends(get_db),
+):
+    from app.services.parcel_reference import reconcile_parcel_references
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return reconcile_parcel_references(
+            db, source_id, parcel_source_id, limit=limit,
+            after_id=after_id, review_state=review_state,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get(

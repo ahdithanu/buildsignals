@@ -2,9 +2,11 @@ from uuid import uuid4
 
 import pytest
 
+from app.models.graph import GraphRelationship
 from app.models.ingestion import IngestionSource, PermitRecord
 from app.schemas.parcel_reference import ParcelReferenceAudit
-from app.services.parcel_reference import audit_parcel_references
+from app.services.parcel_reference import audit_parcel_references, reconcile_parcel_references
+from app.services.parcel_reference_review import accept_parcel_reference
 from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
 from tests.test_parcel_lineage import _parcel, _raw
 from tests.test_parcel_reference import fixture_records
@@ -109,3 +111,27 @@ def test_wrong_source_evidence_does_not_enable_measurement(db):
     db.flush()
     result = audit_parcel_references(db, source.id, parcels.id)
     assert result["status"] == "parcel_evidence_unavailable"
+
+
+def test_reconciliation_is_read_only_and_marks_corroborated_candidates_eligible(db):
+    from tests.test_parcel_reference_review import setup_review
+
+    permit, parcel, _, _ = setup_review(db)
+    result = reconcile_parcel_references(db, permit.source_id, parcel.source_id, limit=10)
+    assert result["coverage_verified"] is False
+    assert result["items"][0]["review_state"] == "eligible"
+    assert result["items"][0]["eligible_for_acceptance"] is True
+    assert result["items"][0]["result"]["permit_id"] == permit.id
+    assert not db.new
+
+
+def test_reconciliation_surfaces_existing_acceptance_without_writing(db):
+    from tests.test_parcel_reference_review import setup_review
+
+    permit, parcel, user, payload = setup_review(db)
+    accept_parcel_reference(db, permit.id, payload, actor_id=user.id)
+    before = db.query(GraphRelationship).count()
+    result = reconcile_parcel_references(db, permit.source_id, parcel.source_id, limit=10)
+    assert result["items"][0]["review_state"] == "accepted"
+    assert result["items"][0]["eligible_for_acceptance"] is False
+    assert db.query(GraphRelationship).count() == before
