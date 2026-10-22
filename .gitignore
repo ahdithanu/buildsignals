@@ -13,6 +13,7 @@ dist/
 *.db-shm
 *.db-journal
 *.qualification.json
+data/qualification/
 
 # Environment
 .env
