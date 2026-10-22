@@ -1,0 +1,617 @@
+{
+  "method": "columbus-monthly-count-preflight-v0",
+  "mode": "count_probe",
+  "source_key": "columbus_oh_site_engineering_applications",
+  "date_field": "B1_FILE_DD",
+  "start_inclusive": "2023-01-01",
+  "end_exclusive": "2026-01-01",
+  "created_at": "2026-10-21T05:49:16.130438+00:00",
+  "maximum_requests": 36,
+  "coverage_verified": false,
+  "known_then_verified": false,
+  "commercial_reuse_verified": false,
+  "limitations": [
+    "Current provider counts are not a frozen snapshot or historical completeness proof.",
+    "Current historical values cannot establish what was known at historical cutoffs.",
+    "Count availability does not establish commercial reuse rights or authorize import.",
+    "Months above 1000 rows require smaller intake intervals before existing bounded intake.",
+    "An observed zero is not proof of no development activity."
+  ],
+  "plan_sha256": "0e142a63188363a714013aa951c190f1f2fa7edf59cbdf0a14796920359783fb",
+  "source_catalog_commit": "7885280",
+  "logical_count_queries": 36,
+  "source_metadata": {
+    "url": "https://columbus.maps.arcgis.com/sharing/rest/content/items/be5e75e4c59e467faf29b6cd99c39113",
+    "captured_at": "2026-10-21T05:50:10.826538+00:00",
+    "metadata_sha256": "9c32d8c475939334a0df9b513982d986904405b607a177e702f21ce34bf3296b",
+    "title": "Site Engineering",
+    "licenseInfo": "<p><span style='background-color:rgb(255,255,255); color:rgb(74,74,74); font-family:&quot;Avenir Next W01&quot;, &quot;Avenir Next W00&quot;, &quot;Avenir Next&quot;, Avenir, &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif; font-size:17px;'><span style='display:inline !important; float:none; font-style:normal; font-variant-caps:normal; font-variant-ligatures:normal; font-weight:400; letter-spacing:normal; text-align:start; text-decoration-color:initial; text-decoration-style:initial; text-indent:0px; text-transform:none; word-spacing:0px;'>This data is dedicated to the public domain under the Creative Commons Universal License (CC0).</span></span></p>",
+    "accessInformation": "",
+    "access": "public",
+    "error": null
+  },
+  "total_observed_source_records": 2544,
+  "months": [
+    {
+      "start_inclusive": "2023-01-01",
+      "end_exclusive": "2023-02-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-01-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-02-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "f99db9855dfaed348b6d6d22c0232ca0c1de7e8f1be53ed2caa38bd154dabeae",
+      "count": 61,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:16.693443+00:00"
+    },
+    {
+      "start_inclusive": "2023-02-01",
+      "end_exclusive": "2023-03-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-02-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-03-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "eb95e70352be986c1407085cbd645cb26096a72236e8416df5159cbfea5d57e2",
+      "count": 61,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:17.214903+00:00"
+    },
+    {
+      "start_inclusive": "2023-03-01",
+      "end_exclusive": "2023-04-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-03-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-04-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "4ea23f24ddbe037474a245f1a5eb6eb9da287d45d8c1d7e55a3a0a6544737c2d",
+      "count": 90,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:17.704246+00:00"
+    },
+    {
+      "start_inclusive": "2023-04-01",
+      "end_exclusive": "2023-05-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-04-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-05-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "79a20e18383494f0a153a55cb542be37f399dfb64ebd9d78be8f4f8423f3173a",
+      "count": 67,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:18.214726+00:00"
+    },
+    {
+      "start_inclusive": "2023-05-01",
+      "end_exclusive": "2023-06-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-05-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-06-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "9625742c10df085e3a9524f7669a4d5f9641b88652274df39b5004ff79c43e24",
+      "count": 54,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:18.715113+00:00"
+    },
+    {
+      "start_inclusive": "2023-06-01",
+      "end_exclusive": "2023-07-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-06-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-07-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "30a86181f4308b2f12059e61e46baf63484276abc920808e4f75530be129eeb8",
+      "count": 67,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:19.217677+00:00"
+    },
+    {
+      "start_inclusive": "2023-07-01",
+      "end_exclusive": "2023-08-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-07-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-08-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "5f6d7d10f901840fd36295e539003cdda97dfbe2c71b363b7da03b727b4e7e2e",
+      "count": 59,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:19.485503+00:00"
+    },
+    {
+      "start_inclusive": "2023-08-01",
+      "end_exclusive": "2023-09-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-08-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-09-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "76c02c2bedc857febbb54882f2d33bff7880f978c7f03418373e5b65cb61b839",
+      "count": 72,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:19.755045+00:00"
+    },
+    {
+      "start_inclusive": "2023-09-01",
+      "end_exclusive": "2023-10-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-09-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-10-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "99cc7b580fdde63ae905398ab135b76f0d14f3de8bcc8587c9120e18ae1cc3bc",
+      "count": 70,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:20.254668+00:00"
+    },
+    {
+      "start_inclusive": "2023-10-01",
+      "end_exclusive": "2023-11-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-10-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-11-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "47eaac38f28a765355832cc828fd4dda370e7ae0847dc3405f3c9d73a2e103ff",
+      "count": 73,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:20.554716+00:00"
+    },
+    {
+      "start_inclusive": "2023-11-01",
+      "end_exclusive": "2023-12-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-11-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2023-12-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "ad8e7a0bbf3d16c8790faecd0cf33d1b18c519beacd19aa407b025351979a969",
+      "count": 70,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:21.057680+00:00"
+    },
+    {
+      "start_inclusive": "2023-12-01",
+      "end_exclusive": "2024-01-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2023-12-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-01-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "d1e2a08589924c16071153b8ea5603d3b7d2a06675c28ab48850db55d3ef1fb0",
+      "count": 50,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:21.343036+00:00"
+    },
+    {
+      "start_inclusive": "2024-01-01",
+      "end_exclusive": "2024-02-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-01-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-02-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "edbf502dccf251c5d243a06698f6ac06ccba2bd4e9f4d9800a3f98513a334bcd",
+      "count": 72,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:21.605097+00:00"
+    },
+    {
+      "start_inclusive": "2024-02-01",
+      "end_exclusive": "2024-03-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-02-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-03-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "1f6be5ac29923af0e0b0ef7d9d2979dadda81e4531a9f3f817e2cb3b14934674",
+      "count": 70,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:22.113259+00:00"
+    },
+    {
+      "start_inclusive": "2024-03-01",
+      "end_exclusive": "2024-04-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-03-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-04-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "ade9442f8dc0297969985555db1c8814ac69b5e713de8ee7735b222bbe37f115",
+      "count": 67,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:22.413577+00:00"
+    },
+    {
+      "start_inclusive": "2024-04-01",
+      "end_exclusive": "2024-05-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-04-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-05-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "a1d59a3d66f3c3f24cd3bac37c606def7ea9b269b7782296f8f4a8361b05fb16",
+      "count": 80,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:22.690829+00:00"
+    },
+    {
+      "start_inclusive": "2024-05-01",
+      "end_exclusive": "2024-06-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-05-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-06-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "86ecc13ef56fe31eaf99964f296df1c1dcde832179ce1095ce4e6f4d03a52a00",
+      "count": 77,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:22.982962+00:00"
+    },
+    {
+      "start_inclusive": "2024-06-01",
+      "end_exclusive": "2024-07-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-06-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-07-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "760dbaffd83d6e48c34659ec529048c143b827ffadc896ec912e5e15611c500b",
+      "count": 65,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:23.293003+00:00"
+    },
+    {
+      "start_inclusive": "2024-07-01",
+      "end_exclusive": "2024-08-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-07-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-08-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "7e153f14a32b03be446dfbc9e4fc3a72b755fa10606e248eaec78fd7fb68579c",
+      "count": 43,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:23.596986+00:00"
+    },
+    {
+      "start_inclusive": "2024-08-01",
+      "end_exclusive": "2024-09-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-08-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-09-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "ae5f1b7b0280863cf33a6a3dc2a81f62b72d1d38b0d735a1510ba3519365f6c2",
+      "count": 114,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:23.882737+00:00"
+    },
+    {
+      "start_inclusive": "2024-09-01",
+      "end_exclusive": "2024-10-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-09-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-10-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "f2473a6303f60c7c1fb7f7b20f5536ae45d39d5fefeb1a08296266c868391c5f",
+      "count": 78,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:24.288774+00:00"
+    },
+    {
+      "start_inclusive": "2024-10-01",
+      "end_exclusive": "2024-11-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-10-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-11-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "7bdcd0ca2ccef3e5779f2458cf9e758f043756b73dce8cbc6b6dcf01a8cc8d18",
+      "count": 66,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:24.850263+00:00"
+    },
+    {
+      "start_inclusive": "2024-11-01",
+      "end_exclusive": "2024-12-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-11-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2024-12-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "68aabb738111e2901264c6f17819027c8849a6bd976d3d2a19277cd0d4f1b41c",
+      "count": 67,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:25.393152+00:00"
+    },
+    {
+      "start_inclusive": "2024-12-01",
+      "end_exclusive": "2025-01-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2024-12-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-01-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "a83c2172bcbf4cf54092f8223879dcf45fbb000bb5e6a285a24e4ece04565798",
+      "count": 62,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:25.656106+00:00"
+    },
+    {
+      "start_inclusive": "2025-01-01",
+      "end_exclusive": "2025-02-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-01-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-02-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "946ccd4858fb56ad70e3ff85121a64c3ccb3646be8eecbed4e0245d7db3fcb89",
+      "count": 62,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:25.950452+00:00"
+    },
+    {
+      "start_inclusive": "2025-02-01",
+      "end_exclusive": "2025-03-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-02-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-03-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "f59e015248987f14b693907ac31d8638db982173c0b4da11d371134ebe54971c",
+      "count": 69,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:26.277881+00:00"
+    },
+    {
+      "start_inclusive": "2025-03-01",
+      "end_exclusive": "2025-04-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-03-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-04-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "649b20c571a9116dac9f80e128ecc1b7510a9b3442f1b0fceb8ff30d5791a4d1",
+      "count": 79,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:26.595610+00:00"
+    },
+    {
+      "start_inclusive": "2025-04-01",
+      "end_exclusive": "2025-05-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-04-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-05-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "10f9e290d86794b38d19eed93267bc514682d53557f21badbfadffac6547d899",
+      "count": 74,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:26.894205+00:00"
+    },
+    {
+      "start_inclusive": "2025-05-01",
+      "end_exclusive": "2025-06-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-05-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-06-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "f5efb480f24a6d109f26e56bda9e1de059575031e8c01fd7c8a72cca81e78177",
+      "count": 80,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:27.435772+00:00"
+    },
+    {
+      "start_inclusive": "2025-06-01",
+      "end_exclusive": "2025-07-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-06-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-07-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "21d33d47fa20210e5c85a9f885df34e3ac1300dd1bb61baf9509fcdb5794abcb",
+      "count": 90,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:27.724457+00:00"
+    },
+    {
+      "start_inclusive": "2025-07-01",
+      "end_exclusive": "2025-08-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-07-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-08-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "c7eda6ad35f987b9cf221ad09f21a68e63da35ffc2f779cec2ab6f576c4cda3f",
+      "count": 66,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:28.029732+00:00"
+    },
+    {
+      "start_inclusive": "2025-08-01",
+      "end_exclusive": "2025-09-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-08-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-09-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "23673540a7223d5cb816c290f5c68fda6f98ed1ea947eebf71d3b5e90446ad59",
+      "count": 86,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:28.321461+00:00"
+    },
+    {
+      "start_inclusive": "2025-09-01",
+      "end_exclusive": "2025-10-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-09-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-10-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "f29b0a61ab0058d9ff5bee92c6cc2e1dd8aea3c5e91d97a5b355c8cafbbda934",
+      "count": 74,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:28.818928+00:00"
+    },
+    {
+      "start_inclusive": "2025-10-01",
+      "end_exclusive": "2025-11-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-10-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-11-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "3e1532e7998c7fabd8d04e6bb49120b1ad6611c1d2ee24e7912e35cabcc9d02b",
+      "count": 79,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:29.078532+00:00"
+    },
+    {
+      "start_inclusive": "2025-11-01",
+      "end_exclusive": "2025-12-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-11-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2025-12-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "e8d625ad3852e80126949e62e78149104ee74797ff9e946437fae5cfb36baa63",
+      "count": 64,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:29.384620+00:00"
+    },
+    {
+      "start_inclusive": "2025-12-01",
+      "end_exclusive": "2026-01-01",
+      "url": "https://maps2.columbus.gov/arcgis/rest/services/Schemas/BuildingZoning/MapServer/22/query",
+      "query": {
+        "f": "json",
+        "where": "(B1_ALT_ID IS NOT NULL AND B1_FILE_DD IS NOT NULL AND SITE_ADDRESS IS NOT NULL AND (B1_PER_TYPE = 'Site Compliance Plan' OR (B1_PER_TYPE = 'Lot Split' AND B1_PER_SUB_TYPE = 'Commercial'))) AND B1_FILE_DD >= TIMESTAMP '2025-12-01 00:00:00' AND B1_FILE_DD < TIMESTAMP '2026-01-01 00:00:00'",
+        "returnCountOnly": "true",
+        "returnGeometry": "false"
+      },
+      "scope_sha256": "cfea681cfaf3e87c52450c4f39e17125b791e3e3a13bc9c9f2b9c66aef14a2e1",
+      "count": 66,
+      "status": "count_observed",
+      "error": null,
+      "observed_at": "2026-10-21T05:49:29.717311+00:00"
+    }
+  ],
+  "scope_reproduction": "historical_entry(source_key,start_inclusive,end_exclusive) from the catalog at source_catalog_commit; per-month scope_sha256 pins full source settings and mappings. No raw records are in this receipt.",
+  "failed_sandbox_attempt": {
+    "month_queries": 36,
+    "outcome": "all unavailable (ConnectorRequestError); DNS resolution failed in restricted sandbox; never interpreted as zero"
+  }
+}

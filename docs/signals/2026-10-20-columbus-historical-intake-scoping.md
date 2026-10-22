@@ -1,5 +1,18 @@
 # P0.8 — Columbus Historical Intake Scoping (DV-validation blocker)
 
+**October 22 update:** the local 36-month site-filing capture and integrity audit
+are complete (2,543 source rows); it remains retrospective and unqualified for
+known-then validation. See [the current report](2026-10-22-columbus-corpus-capture.md).
+The calendar estimates below were conservative historical planning assumptions:
+an admitted retrospective baseline is eligible at future decision cutoffs, so
+there is no extra six-month knowledge-time warmup. Twelve nominal matured monthly
+cutoffs imply roughly 14–16 months after the first admitted decision, subject to
+the unresolved protocol window timing, coverage, firing and independent-review
+gates. Neither 24 months nor that shorter arithmetic is a validation promise.
+`CorpusQualificationRequest` now measures exactly one source; stage is diagnostic,
+not a filter selecting today's approval status for historical filing counts.
+Graph permit identities are not independently verified unique physical projects.
+
 Date: 2026-10-20. Offline desk review; no source accessed, nothing activated.
 This scopes what a **rights-cleared ≥24-month historical Columbus intake** would
 have to be to let `qualify_corpus` return `ready` and unblock a real P2.2
