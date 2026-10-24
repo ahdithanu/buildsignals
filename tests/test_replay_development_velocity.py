@@ -204,10 +204,10 @@ def test_signal_fn_rejects_unknown_version():
 def test_p2_2_evaluation_over_available_fixture_is_insufficient_sample(db):
     """P2.2 backtest over the only available (synthetic, non-qualified) fixture.
 
-    The Columbus fixture has a single fired cutoff and is far too short to realize
-    any fired signal's 90-day outcome, so the predeclared minimums (5 fired / 12
-    evaluable periods) are not met: the verdict must be insufficient_sample (HOLD),
-    never a validation claim. Real evaluation needs the P0.8 qualified corpus.
+    No P0.8-qualified corpus exists, so no corpus_qualification receipt is passed:
+    the enforced precondition must return corpus_not_qualified (HOLD), never a
+    validation claim. (Even with a receipt the fixture is far too short to meet the
+    predeclared minimums.) Real evaluation needs the P0.8 qualified corpus.
     """
     from eval.replay.evaluate import evaluate_outcomes, load_protocol
 
@@ -216,7 +216,8 @@ def test_p2_2_evaluation_over_available_fixture_is_insufficient_sample(db):
     outcomes: dict = {}  # fixture too short to realize a 90-day outcome -> undecidable
     report = evaluate_outcomes(run, outcomes=outcomes, protocol=protocol)
 
-    assert report["verdict"]["verdict"] == "insufficient_sample"
+    assert report["verdict"]["verdict"] == "corpus_not_qualified"
+    assert report["verdict"]["corpus_qualification"] is None
     assert report["verdict"]["fired_n"] < protocol["min_fired_signals"]
     # Deterministic / reproducible.
     assert evaluate_outcomes(run, outcomes=outcomes, protocol=protocol) == report
