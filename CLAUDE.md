@@ -6,6 +6,13 @@ Read `docs/agent-handoff.md` before taking the next task. Use
 `docs/agent-onboarding.md` for setup. Update the shared handoff when stopping;
 keep durable project instructions in AGENTS.md rather than duplicating them here.
 
+October 24 local operational increment: source/run acceptance tooling and restore
+target guards are described in `docs/runbooks/production-acceptance.md`. Do not
+equate offline tests, completed source jobs, or provider backup metadata with
+delivered alerts, tested restoration or customer-workflow acceptance. Read the
+latest shared handoff before acting; production has not been reverified by these
+local changes.
+
 Current context (2026-10-22): PRs #251–#254 are MERGED and `main` was deployed to
 the API (see `docs/releases/2026-10-19-api-rollout.md`). The ERCOT
 (`ercot_mis_xlsx`), Census BPS and Loudoun LOLA connectors are committed as

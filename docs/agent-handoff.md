@@ -1,7 +1,50 @@
 # Current Agent Handoff
 
-Last updated: 2026-10-22 (America/Los_Angeles). This is a dated snapshot;
+Last updated: 2026-10-24 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
+
+## October 24 operational hardening (local, not released)
+
+User requested continued multi-agent production-checklist implementation, then
+asked for current coverage using screenshots. Existing research snapshots and
+unrelated untracked `:memory:*` files were preserved. No source activation,
+production database operation, cloud mutation or paid model call occurred.
+
+- `scripts/verify_ingestion_runs.py`: explicit-scope, GET-only customer-workspace
+  acceptance with environment-only token, demo/workspace guards, bounded HTTPS
+  responses/pagination, identity/scope/date checks, recent scheduled completion,
+  zero failures and nonempty inventory. Quiet zero-row refreshes and completed
+  terminal keyset cursors remain valid. This is collection verification, not an
+  independent completeness, filing-freshness or for-sale attestation.
+- Parallel recovery review hardened `verify_postgres_recovery.py` against
+  same-database URL variants, libpq routing overrides and truthy nonboolean passes;
+  DNS aliases still require operator verification. No actual restore was run.
+- Direct ingestion CLI now exits nonzero for every non-completed or errorful
+  run. Unknown-health sources now appear in the existing reliability watchlist;
+  no alert delivery is implied.
+- Adversarial review caught verifier request-time skew, echoed measurement scope
+  and unsafe run-ID output; these were corrected with regression coverage.
+- Focused integration checks: 157 passed in 9.98s; scoped Ruff passed. Full
+  backend suite was started with an explicit local SQLite target before the
+  final review changes: 2,048 passed, 69 skipped in 276.30s. The post-review
+  157-test focused run covers final operational edits; skips are not PostgreSQL
+  acceptance, and the full run is not a final frozen-tree rerun.
+- Public GET-only recheck: `/health`200, `/v1/auth/demo`200, unauthenticated
+  `/v1/deals?limit=1`401. All returned public revalidation cache headers. This
+  regresses the October 22 no-store receipt; checked-in `vercel.json` still has
+  the fix, so deployed configuration/alias drift needs investigation. No
+  authenticated token response or cache disclosure was tested/observed.
+- Owner alert destination was requested asynchronously, not invented. Live
+  authenticated inventory acceptance, delivery/recovery, isolated PostgreSQL
+  restoration, customer workflow/MFA and cache-policy release remain open.
+- October 24 user screenshots show 4,267 permit records, 2,217 with coordinates,
+  82 planning records, zero active parcels, 14 permit feeds across AZ/TX/FL/OH/GA.
+  Source-local counts are not deduplicated projects or statewide coverage. The
+  screenshot is user-supplied current evidence, not a fresh authenticated audit
+  performed by this agent. Keep local research corpus separate from these counts.
+
+Runbook: `docs/runbooks/production-acceptance.md`. Changes are local on
+`codex/columbus-capture-readiness`; no push/merge/deploy is claimed.
 
 ## Latest continuation: unified corpus + snapshot-bound evaluation
 

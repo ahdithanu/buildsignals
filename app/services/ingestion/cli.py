@@ -1289,7 +1289,7 @@ def main(argv: list[str] | None = None) -> int:
             f"inserted={run.records_inserted} updated={run.records_updated} "
             f"failed={run.records_failed}"
         )
-        return 0 if run.status != "failed" else 1
+        return 0 if run.status == "completed" and run.records_failed == 0 else 1
     except Exception as exc:
         db.rollback()
         print(f"error: {exc}")

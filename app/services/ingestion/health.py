@@ -411,7 +411,7 @@ def summarize_ingestion_reliability(
             reasons=source.reasons,
         )
         for source in sources
-        if source.active_run_stale or source.cursor_stalled or source.status == "critical"
+        if source.active_run_stale or source.cursor_stalled or source.status in {"critical", "unknown"}
     ][:4]
     return IngestionReliabilitySummary(
         healthy_sources=healthy_sources,

@@ -75,6 +75,15 @@ nearby parcels -> saved opportunity/export. Keep the acquisition use case visibl
 
 ## Commands and Verification
 
+Operational acceptance tooling (2026-10-24, local implementation):
+`scripts/verify_ingestion_runs.py` performs explicit-workspace/source, read-only
+API acceptance; schedules alone do not pass it. Supply its bearer credential via
+`INGESTION_VERIFY_TOKEN`, never a command-line token. It does not configure alerts
+or prove publisher completeness. `scripts/verify_postgres_recovery.py` rejects
+same-database URL variants and routing overrides; DNS aliases still require
+operator verification. Neither tool's offline tests prove production acceptance.
+See `docs/runbooks/production-acceptance.md` and the current handoff.
+
 Use a project virtualenv and `requirements.txt`; test dependencies also include
 `pytest`, `httpx`, `pytest-cov`, and `ruff` (see CI). Use `npm ci` for the lockfile.
 Never overwrite an existing `.env` or run a seed/migration before checking the
