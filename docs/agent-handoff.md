@@ -1,7 +1,180 @@
 # Current Agent Handoff
 
-Last updated: 2026-10-20 (America/Los_Angeles). This is a dated snapshot;
+Last updated: 2026-10-24 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
+
+## October 24 operational hardening (local, not released)
+
+User requested continued multi-agent production-checklist implementation, then
+asked for current coverage using screenshots. Existing research snapshots and
+unrelated untracked `:memory:*` files were preserved. No source activation,
+production database operation, cloud mutation or paid model call occurred.
+
+- `scripts/verify_ingestion_runs.py`: explicit-scope, GET-only customer-workspace
+  acceptance with environment-only token, demo/workspace guards, bounded HTTPS
+  responses/pagination, identity/scope/date checks, recent scheduled completion,
+  zero failures and nonempty inventory. Quiet zero-row refreshes and completed
+  terminal keyset cursors remain valid. This is collection verification, not an
+  independent completeness, filing-freshness or for-sale attestation.
+- Parallel recovery review hardened `verify_postgres_recovery.py` against
+  same-database URL variants, libpq routing overrides and truthy nonboolean passes;
+  DNS aliases still require operator verification. No actual restore was run.
+- Direct ingestion CLI now exits nonzero for every non-completed or errorful
+  run. Unknown-health sources now appear in the existing reliability watchlist;
+  no alert delivery is implied.
+- Adversarial review caught verifier request-time skew, echoed measurement scope
+  and unsafe run-ID output; these were corrected with regression coverage.
+- Focused integration checks: 157 passed in 9.98s; scoped Ruff passed. Full
+  backend suite was started with an explicit local SQLite target before the
+  final review changes: 2,048 passed, 69 skipped in 276.30s. The post-review
+  157-test focused run covers final operational edits; skips are not PostgreSQL
+  acceptance, and the full run is not a final frozen-tree rerun.
+- Public GET-only recheck: `/health`200, `/v1/auth/demo`200, unauthenticated
+  `/v1/deals?limit=1`401. All returned public revalidation cache headers. This
+  regresses the October 22 no-store receipt; checked-in `vercel.json` still has
+  the fix, so deployed configuration/alias drift needs investigation. No
+  authenticated token response or cache disclosure was tested/observed.
+- Owner alert destination was requested asynchronously, not invented. Live
+  authenticated inventory acceptance, delivery/recovery, isolated PostgreSQL
+  restoration, customer workflow/MFA and cache-policy release remain open.
+- October 24 user screenshots show 4,267 permit records, 2,217 with coordinates,
+  82 planning records, zero active parcels, 14 permit feeds across AZ/TX/FL/OH/GA.
+  Source-local counts are not deduplicated projects or statewide coverage. The
+  screenshot is user-supplied current evidence, not a fresh authenticated audit
+  performed by this agent. Keep local research corpus separate from these counts.
+
+Runbook: `docs/runbooks/production-acceptance.md`. Changes are local on
+`codex/columbus-capture-readiness`; no push/merge/deploy is claimed.
+
+## Latest continuation: unified corpus + snapshot-bound evaluation
+
+Branch `codex/columbus-capture-readiness`, starting checkpoint `1c138b5`.
+New checkpoints: `36e3f87` (unified builder) and `7c5ca50` (snapshot-bound
+qualification and actual replay verification). The following integration/context
+checkpoint records the real-data receipts and end-to-end runner.
+User authorized offline unification, snapshot-bound evaluation, multi-agent review,
+end-to-end checks and current context. No network collection, source activation,
+production release, migrations, paid calls or external attestation in this step.
+
+**Implemented and tested locally:**
+- `scripts/unify_columbus_corpus.py`: exclusive new local SQLite snapshot and
+  lineage sidecar from the 36 audited shards. One inactive source/local org;
+  original raw payloads/IDs/hashes/capture times, observations and events retained;
+  source-dependent series keys remapped explicitly. Before/after input hash checks,
+  mixed/duplicate/incomplete evidence refused. Not an application/graph restore.
+- `eval/replay/corpus_binding.py`: qualification producer and DB-backed verifier
+  bind actual data, source/method/tenant/geography/windows, protocol/floors, exact
+  manifest and relevant implementation bytes. Positive coverage audit must pin
+  `attested_snapshot_id`; request-only/reused audits cannot certify new data.
+  Operator trust is explicit; hashes do not authenticate an auditor.
+- Replay rejects changed series/cutoffs and binding rejects omitted source-wide
+  reader inputs. Relevant raw/observation/event fields (including geography,
+  confidence, entity and raw update timestamps) are hashed. Code drift requires
+  refreezing. Qualified-gate evaluation recomputes actual DV outputs to reject
+  forged signal values/modes/evidence/fingerprints. Raw permit-kind and trusted
+  receipt checks align qualification with the actual DV reader.
+- `eval/replay/columbus_snapshot.py`: read-only artifact verification, real DV
+  replay twice, binding receipt and diagnostic outputs into a new directory.
+  Synthetic audited evidence clears binding and reaches sample metrics. Actual
+  unaudited archive stays HOLD; no real audit was created or protocol tuned.
+
+**Actual artifacts:** ignored `data/qualification/columbus-site-unified-20261022.db`
+and `.snapshot.json`; final diagnostic directory
+`data/qualification/columbus-site-replay-verified-20261022/`. A second independent
+build/replay has identical logical content, snapshot ID and run fingerprint
+(SQLite binary hashes may differ). Both builds preserve **2,543 raw/permit rows,
+10,110 observations, 5,086 temporal events and 36 original runs**. Original shards
+and partial August evidence are unchanged. No raw data committed.
+
+**Measured result:** 37 cutoffs; all `insufficient_history`; zero eligible signal
+cutoffs. `binding_verified=true`, `binding_qualified=false`; qualifier
+`insufficient_depth`, evaluation `corpus_not_qualified`, DV score UNVALIDATED.
+Event-date depth36 complete30-day windows; known-then evaluable periods0.
+Reports: `docs/signals/2026-10-22-unified-columbus-{snapshot.md,receipt.json}`.
+
+**Verification:** final focused suite **165 passed**: qualifier, monthly tools,
+unifier, real-local-intake → diagnostic E2E, historical intake, baseline/DV and all
+replay/binding regressions. Relevant Ruff, whitespace and harness checks passed.
+Review fixes have failing-then-passing regressions: reused audit/new snapshot,
+forged self-consistent replay, raw record-kind mismatch and raw-update drift.
+Golden fingerprint changed only with expanded evidence hashing; all existing
+numeric/status outcomes and frozen protocol/threshold files are unchanged.
+Full backend/PostgreSQL, frontend and browser suites were not rerun this offline
+increment. No merge/push/production deployment is claimed for these changes.
+
+**Next:** separate independent admission/completeness and mature prospective data
+from software completion. Remaining local method work: reviewed versioned outcome
+window clarification/extraction, temporal holdout, manifest-bound comparator and
+acceptance rules. Adequate-sample explicit P0.8 results stay inconclusive until
+those exist. Production alert destination/restore/customer-workflow gates from the
+prior receipt remain open; do not treat a research snapshot as their completion.
+
+## Current session: Columbus capture complete + production cache repair
+
+Starting checkout on resume: `codex/p0-8-eval-gate` at `f95fbd5` (newer shared
+work through PR #263 preserved). User explicitly requested multi-agent
+implementation/review/verification loops, finishing the Columbus capture and all
+production checklist items possible, with the harness kept current.
+Checkpoint branch: `codex/columbus-capture-readiness`; local changes are split
+into corpus tooling/receipts, evaluator gate, and production cache/harness commits.
+No PR, push or merge is claimed; the frontend cache correction is already live.
+
+**Capture:** 36 completed monthly site-filing imports for 2023–2025, **2,543 source
+records / 10,110 temporal observations**, zero failed records/checkpoints. Seven
+months are the original October 20 captures; August 2023–December 2025 are new
+October 22 captures. Preserve original partial `2023-08.db` and journal; they are
+excluded, never overwritten. September 2023 drifted from preflight70 to capture69,
+with new before/after counts reconciled. Local artifacts are under ignored
+`data/qualification/columbus-site-20261020/` (remaining months in `resume-20261022`).
+No raw rows/DBs are committed or deployed.
+
+**Audit:** all planned months present; zero duplicate stable IDs, missing/outside
+filing dates, future update dates or capture-time violations. Zero historical
+known-then observations. This is integrity acceptance, **not independent source
+completeness/admission or DV validation**. Reports:
+`docs/signals/2026-10-22-columbus-corpus-{capture.md,audit.json}`. Source CC0 metadata
+and count-only probe evidence live in the October 20 monthly-preflight JSON.
+
+**Tools:** default-off monthly preflight, capture/resume and offline audit in
+`scripts/columbus_corpus_{preflight,capture}.py` / `audit_columbus_corpus.py`.
+Exact scope hashes; fresh count drift explicit; interrupted/failed evidence
+preserved; verified completed receipts/checkpoints required; read-only SQLite
+audit outputs only aggregates and artifact hashes. Partial journals are ignored.
+
+**Evaluation:** explicit P0.8 protocols reject request-only `ready` receipts,
+including matching request fingerprints, until audited evidence is bound to the
+actual replay snapshot/method/tenant/cutoffs/floors. Generic metric helpers remain
+usable. Frozen v0 protocol unchanged. Real outcome extraction, holdout enforcement
+and window-end/evaluation-date inconsistency remain unresolved; DV stays HOLD.
+
+**Production:** dated read-only AWS audit confirms API RUNNING/health200, all16
+schedules enabled, RDS encryption/seven-day retention/recent PITR metadata and
+demo write/export denials. No alarms/SNS topics/DLQs found; restore success and
+customer auth/MFA workflows remain unverified. An owned alert destination was
+requested, not invented. See `docs/releases/2026-10-22-production-readiness-audit.md`.
+
+**Released:** Vercel API cache override fixed and production deployment
+`dpl_A9YYo2JuK92juqsYUsn6CNuD8EQB` promoted after staged checks. Public smoke at
+15:41Z: demo auth/summary200, demo write/export403, unauthenticated deals401, all
+API responses no-store; frontend `/login`200 retains prior cache policy. Only
+frontend cache config changed; no API/worker/migration/source activation occurred.
+Sanitized receipt: `docs/releases/2026-10-22-api-cache-smoke.json`.
+
+**Verification:** final focused shared backend/corpus/DV/replay/cache suite
+**149 passed** (after recovery-edge review fixes); new tools/historical subset41
+passed independently during implementation.
+Frontend366 tests, typecheck and build passed (existing bundle-size warning).
+Ruff/diff checks pass. Local SQLite recovery helper passed integrity/foreign-key/
+required-table checks on January's archive; not PostgreSQL recovery acceptance.
+Full backend, PostgreSQL integration and browser E2E were not rerun this session.
+
+**Next:** follow `tasks/todo.md`: independent category/lifecycle/completeness
+reconciliation; provenance-preserving unified admitted snapshot; versioned
+qualification-to-replay evidence contract and protocol clarification; prospective
+frozen outputs with older-filing reconciliation; alert destination + delivered
+failure/recovery test; isolated PostgreSQL application/RLS recovery drill; customer
+workflow/MFA acceptance. No external records request, paid calls or gated source
+activation was performed. Existing unrelated `:memory:*` files are preserved.
 
 ## Deploy 2026-10-19: main shipped to App Runner
 

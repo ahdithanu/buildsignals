@@ -1,11 +1,12 @@
 """P2.2 evaluation-metric machinery for the cutoff-safe replay harness.
 
-These are pure, offline, deterministic functions. They take an existing replay
+The metric helpers are pure, offline, deterministic functions. They take an existing replay
 result (a :class:`~eval.replay.driver.ReplayRun`, or its ``CutoffSignal`` list),
 an ``outcomes`` mapping that the *caller* has already computed from post-cutoff
 data (cutoff/``as_of`` -> realized outcome value), and a ``protocol`` dict of the
-*predeclared* values. Nothing here runs a backtest, reads the wall clock, or
-touches a database; nothing here hardcodes a threshold or an outcome definition
+*predeclared* values. Explicit P0.8 verdicts additionally require a read-only DB
+session to verify snapshot-bound qualification and recompute the frozen replay.
+No helper hardcodes a statistical threshold or an outcome definition
 -- every tolerance, minimum, and outcome rule is read from the passed
 ``protocol``, exactly like ``metrics.py`` reads its thresholds and never writes
 them back.
@@ -18,8 +19,9 @@ below the predeclared minimums -- it never claims validation on thin data, and i
 never declares ``meets_predeclared_threshold`` unless the protocol predeclared
 the minimums and the acceptance thresholds that decision rests on. Before any of
 that, ``verdict`` returns ``corpus_not_qualified`` unless the caller supplies a
-``qualify_corpus`` result whose own verdict is ``ready`` (the enforced roadmap
-P0.8 precondition): no validation verdict is reachable without a qualified corpus.
+producer/verifier receipt bound to the actual replay evidence. Legacy
+request-only receipts cannot clear this gate, even with ``ready``.
+Generic metric protocols without the explicit P0.8 precondition remain usable.
 """
 from __future__ import annotations
 
@@ -30,6 +32,8 @@ import statistics
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
+
+from sqlalchemy.orm import Session
 
 from eval.replay.driver import BaselineRun, CutoffSignal, ReplayRun
 from eval.replay.manifest import utc
@@ -87,6 +91,11 @@ def _outcome_spec(protocol: Mapping[str, Any]) -> tuple[Any, str]:
     if isinstance(nested, Mapping):
         threshold = nested.get("threshold", nested.get("value"))
         direction = nested.get("direction", "gte")
+        # Structured method-specific outcome rules are not scalar thresholds.
+        # Until the cutoff-safe extractor exists, mark them undecidable instead
+        # of comparing an observed number/bool with a rule dictionary.
+        if isinstance(threshold, Mapping):
+            threshold = None
     else:
         threshold = _value(protocol, "outcome_threshold")
         direction = _value(protocol, "outcome_direction") or "gte"
@@ -395,9 +404,12 @@ def _corpus_precondition(
     """Enforce the roadmap P0.8 precondition: a qualified corpus must exist.
 
     The caller passes the dict returned by ``qualify_corpus``. The precondition is
-    met only when that dict's own verdict is ``ready`` and, when the protocol
-    predeclares a required corpus ``request_fingerprint``, it matches (constant
-    time). Absent or not-ready keeps the evaluation at a ``corpus_not_qualified``
+    gated only for protocols explicitly declaring P0.8. A ``ready`` receipt
+    alone never establishes that the replay snapshot is qualified. When the protocol
+    predeclares a required corpus ``request_fingerprint``, it must match (constant
+    time), but this request-only identity remains insufficient. Current receipts
+    cannot clear this legacy path; the evaluator uses the separate read-only
+    binding verifier for supported receipts. Absent or not-ready keeps the evaluation at a ``corpus_not_qualified``
     HOLD -- no validation verdict is reachable without a qualified corpus. Never
     raises; a bad receipt fails safe to HOLD.
     """
@@ -405,6 +417,9 @@ def _corpus_precondition(
     # malformed preconditions block means "no binding declared", never a crash.
     prec = protocol.get("preconditions") if isinstance(protocol, Mapping) else None
     prec = prec if isinstance(prec, Mapping) else {}
+    if "qualified_historical_corpus_P0_8" not in prec:
+        return {"qualified": True, "echo": None,
+                "reason": "generic metric protocol does not declare the P0.8 precondition"}
     corpus_pre = prec.get("qualified_historical_corpus_P0_8")
     corpus_pre = corpus_pre if isinstance(corpus_pre, Mapping) else {}
     required = corpus_pre.get("required_request_fingerprint")
@@ -431,12 +446,20 @@ def _corpus_precondition(
     ):
         return {"qualified": False, "echo": echo,
                 "reason": "P0.8 precondition: corpus request_fingerprint does not match the protocol's predeclared corpus"}
-    return {"qualified": True, "echo": echo, "reason": "P0.8 precondition: corpus qualification is ready"}
+    # The current producer signs request parameters only. It supplies no frozen
+    # snapshot/evidence digest, source-method pins or replay identity, so even a
+    # matching request fingerprint cannot establish that THIS replay uses the
+    # independently audited data or the predeclared floors. Do not introduce a
+    # caller-asserted binding object that would merely move the same bypass.
+    # This legacy receipt cannot clear; verdict handles the supported binding separately.
+    return {"qualified": False, "echo": echo,
+            "reason": "P0.8 precondition: corpus receipt has no verified binding to the replay snapshot, source methodology and protocol floors"}
 
 
 def verdict(
     run: ReplayRun | Sequence[CutoffSignal], *, outcomes: Mapping[Any, Any],
     protocol: Mapping[str, Any], corpus_qualification: Mapping[str, Any] | None = None,
+    db: Session | None = None, corpus_binding: Mapping[str, Any] | None = None,
 ) -> dict:
     """Overall go/no-go against the predeclared protocol.
 
@@ -474,6 +497,23 @@ def verdict(
     fp_tolerance = _value(protocol, "false_positive_tolerance")
 
     corpus_gate = _corpus_precondition(corpus_qualification, protocol)
+    preconditions = protocol.get("preconditions")
+    gated = isinstance(preconditions, Mapping) and "qualified_historical_corpus_P0_8" in preconditions
+    if gated and db is not None and corpus_binding is not None and isinstance(run, ReplayRun):
+        from eval.replay.corpus_binding import verify_corpus_binding, verify_replay_result
+        if (run.manifest is None or tuple(signal.as_of for signal in run.signals) != run.manifest.cutoffs):
+            corpus_gate = {"qualified": False, "echo": None,
+                           "reason": "P0.8 replay signal cutoffs differ from the bound manifest"}
+        else:
+            corpus_gate = verify_corpus_binding(
+                db, manifest=run.manifest, protocol=protocol, receipt=corpus_binding,
+            )
+            if corpus_gate["qualified"]:
+                try:
+                    verify_replay_result(db, run)
+                except (ValueError, TypeError, KeyError, AttributeError) as exc:
+                    corpus_gate = {"qualified": False, "echo": None,
+                                   "reason": f"P0.8 replay verification refused: {exc}"}
 
     base = {
         "fired_n": fired_n,
@@ -509,6 +549,10 @@ def verdict(
             ),
         }
 
+    if gated:
+        return {**base, "verdict": "inconclusive",
+                "reason": "P0.8 evidence is bound, but method-specific outcome extraction, temporal holdout and manifest-bound comparator acceptance are not implemented"}
+
     rate = hr["hit_rate"]
     interval = hr["interval"]
     fp_rate = fpr["false_positive_rate"]
@@ -542,12 +586,13 @@ def evaluate_outcomes(
     run: ReplayRun, *, outcomes: Mapping[Any, Any], protocol: Mapping[str, Any],
     baseline: BaselineRun | None = None,
     corpus_qualification: Mapping[str, Any] | None = None,
+    db: Session | None = None, corpus_binding: Mapping[str, Any] | None = None,
 ) -> dict:
     """Bundle every P2.2 outcome metric plus the verdict into one JSON dict.
 
     ``corpus_qualification`` (a ``qualify_corpus`` result) is required for any
-    non-HOLD verdict: without a ``ready`` receipt the verdict is
-    ``corpus_not_qualified`` (enforced roadmap P0.8 precondition).
+    non-HOLD verdict for protocols declaring P0.8. Current request-only receipts
+    return ``corpus_not_qualified`` until verified replay evidence binding exists.
     """
     result = {
         "run_id": run.manifest.run_id,
@@ -565,7 +610,7 @@ def evaluate_outcomes(
         "by_confidence": by_confidence(run, outcomes=outcomes, protocol=protocol),
         "verdict": verdict(
             run, outcomes=outcomes, protocol=protocol,
-            corpus_qualification=corpus_qualification,
+            corpus_qualification=corpus_qualification, db=db, corpus_binding=corpus_binding,
         ),
     }
     if baseline is not None:

@@ -30,7 +30,9 @@ CREATED = datetime(2026, 1, 1, tzinfo=UTC)
 
 # Pinned reproducibility constant for the known-then run over the three cutoffs
 # below. Catches any accidental change to the canonical result format.
-KNOWN_THEN_RUN_FINGERPRINT = "7546a4f05c31cf16f5aeadbc3d3caf1cbe97053101c88ddfd979c508eab24484"
+# Evidence hashing now includes source/entity/geography and raw update timestamps;
+# the independently asserted signal statuses and numeric values below are unchanged.
+KNOWN_THEN_RUN_FINGERPRINT = "75c481e139dcc7d6464fb710070115309bf0aa88e76af942f88cf807f12c74c1"
 
 T_PRE = datetime(2025, 12, 31, tzinfo=UTC)
 T_ONE = datetime(2026, 1, 5, tzinfo=UTC)

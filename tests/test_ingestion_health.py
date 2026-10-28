@@ -586,6 +586,17 @@ def test_source_health_endpoint_filters_by_state(client, db):
     assert any(row["source_key"] == "canary_source" for row in body)
 
 
+def test_reliability_watchlist_includes_unknown_source_without_run_evidence(client, db):
+    source = _source(db, key="unobserved_source", name="Unobserved source")
+    db.commit()
+    response = client.get("/ingestion/reliability-summary")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["critical_sources"] == 1
+    assert any(row["source_id"] == source.id and row["status"] == "unknown"
+               for row in body["watchlist_sources"])
+
+
 def test_reliability_summary_endpoint_surfaces_watchlist_and_canary_failures(client, db):
     now = datetime.now(timezone.utc)
     healthy_source = _source(db, key="healthy_source", name="Healthy source")

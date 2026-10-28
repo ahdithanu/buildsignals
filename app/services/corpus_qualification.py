@@ -78,6 +78,11 @@ class CoverageAuditAttestation(BaseModel):
     attested_request_fingerprint: Annotated[
         str, Field(min_length=64, max_length=64, pattern=r"^[0-9a-fA-F]{64}$")
     ]
+    # Optional for legacy standalone measurement; replay binding requires this
+    # evidence digest so an old audit cannot certify a newly changed snapshot.
+    attested_snapshot_id: Annotated[
+        str, Field(min_length=64, max_length=64, pattern=r"^[0-9a-fA-F]{64}$")
+    ] | None = None
     covered_window_indices: list[int] = Field(min_length=1)
     known_then_availability_confirmed: bool
     decision: Literal["coverage_audited"]
@@ -227,6 +232,7 @@ def _evaluate_coverage_audit(
         "attested_at": utc(audit.attested_at).isoformat(),
         "audit_methodology_version": audit.audit_methodology_version,
         "decision": audit.decision,
+        "attested_snapshot_id": audit.attested_snapshot_id,
         "covered_window_count": len(covered),
         "fingerprint_matched": fingerprint_matched,
         "known_then_availability_confirmed": audit.known_then_availability_confirmed,

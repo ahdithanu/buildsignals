@@ -238,6 +238,10 @@ def replay(
     """Produce the signal as-of each cutoff, cutoff-safe and reproducibly."""
     if manifest.method_id != method_id or manifest.method_version != method_version:
         raise ValueError("Manifest method/version does not match the requested run")
+    if series.canonical() != manifest.series.canonical():
+        raise ValueError("Manifest series does not match the requested run")
+    if _normalize(cutoffs) != manifest.cutoffs:
+        raise ValueError("Manifest cutoffs do not match the requested run")
     verify(db, manifest)
     method = get_method(method_id, method_version)
 

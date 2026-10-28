@@ -47,7 +47,7 @@ nearby parcels -> saved opportunity/export. Keep the acquisition use case visibl
 - Graph: relational entities/relationships in PostgreSQL; consult
   `docs/knowledge_graph.md` before claiming a separate graph engine or AI inference.
 - Ingestion: `app/services/ingestion/`; use existing normalization and provenance.
-  ERCOT `ercot_mis_xlsx` is implemented on PR #252, stacked on open PR #251.
+  ERCOT `ercot_mis_xlsx` is implemented on merged PR #252 (PR #251 is also merged).
   `ercot_tx_interconnection_queue` remains `technical_hold`, with canaries and
   ingestion disabled. Offline fixture checks do not establish live operation or
   commercial reuse rights; live contract/TLS verification, a bounded canary,
@@ -55,12 +55,34 @@ nearby parcels -> saved opportunity/export. Keep the acquisition use case visibl
   Preserve interconnection event types and evidence; shared permit-table storage
   does not make these ordinary building permits. See the ERCOT connector design
   and current handoff before continuing.
+- Columbus corpus: the 2023–2025 site-filing archive is a **retrospective local
+  capture**, never historical known-then evidence. Preserve original receipts and
+  partial databases; retry partial months into new paths. Use the October 22
+  corpus audit/production receipt in `docs/` for current acceptance limits.
+  Source-row counts are not unique projects; source statuses observed today cannot
+  be used as historical approval filters. Existing 31-day refresh does not
+  establish capture of later revisions to older filings. DV stays UNVALIDATED.
+  A unified inactive local research snapshot and snapshot-bound replay receipts
+  now exist; see `docs/signals/2026-10-22-unified-columbus-snapshot.md`. Preserve
+  original capture times during trusted local copies. Bound receipts verify
+  data/code identity, not independent coverage or auditor authenticity. Replays
+  must match frozen series/cutoffs and source-wide read scope; code drift requires
+  refreezing. Research snapshots are not production application databases.
 - Models: `app/services/llm_client.py` routes configured calls through OpenRouter.
   `SCORING_MODE` defaults to deterministic. `evaluate_deal_score` must remain a
   pure offline API used by evaluation workflows. `eval/` is the offline harness;
   `app/services/eval_workflows.py` is the tenant-scoped product evaluation path.
 
 ## Commands and Verification
+
+Operational acceptance tooling (2026-10-24, local implementation):
+`scripts/verify_ingestion_runs.py` performs explicit-workspace/source, read-only
+API acceptance; schedules alone do not pass it. Supply its bearer credential via
+`INGESTION_VERIFY_TOKEN`, never a command-line token. It does not configure alerts
+or prove publisher completeness. `scripts/verify_postgres_recovery.py` rejects
+same-database URL variants and routing overrides; DNS aliases still require
+operator verification. Neither tool's offline tests prove production acceptance.
+See `docs/runbooks/production-acceptance.md` and the current handoff.
 
 Use a project virtualenv and `requirements.txt`; test dependencies also include
 `pytest`, `httpx`, `pytest-cov`, and `ruff` (see CI). Use `npm ci` for the lockfile.

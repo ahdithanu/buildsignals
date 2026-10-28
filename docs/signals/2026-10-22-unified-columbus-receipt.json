@@ -1,0 +1,421 @@
+{
+  "scope": "local_research_only",
+  "unified_snapshot": {
+    "method": "columbus-local-evidence-snapshot-v0",
+    "plan_sha256": "0e142a63188363a714013aa951c190f1f2fa7edf59cbdf0a14796920359783fb",
+    "audit_evidence_sha256": "1a7aed01c1fcc377c236cc94ede9faaf6e6b99adeb0b9a4a1f689a10e67ea184",
+    "lineage": [
+      {
+        "month": "2023-01",
+        "database": "2023-01.db",
+        "database_sha256": "de3551932dda268eeaff6af670fa9f675ad1ad06662bcf3a142c0fa4c707ec98",
+        "receipt_sha256": "1ac8757b0efa26957ffcc05e64d85743e571a22f7a304d74d3309e4a55224b28"
+      },
+      {
+        "month": "2023-02",
+        "database": "2023-02.db",
+        "database_sha256": "3cbc7c2f5aeed5278b72a52ce864c01a59d72e7d3e2cf8b3d66fa20a128b2a36",
+        "receipt_sha256": "56c81a4fd326f45972d4a62fa0dea0f4a80f77cdc157974a7afed1310552c128"
+      },
+      {
+        "month": "2023-03",
+        "database": "2023-03.db",
+        "database_sha256": "be3259d80118a3a25981c6a6da603a04aea144614a553265528c656ed61e2319",
+        "receipt_sha256": "e7a6ede6d9ad65db33dda801eff0e985990cd0fe104c6cded1818ee849d34d52"
+      },
+      {
+        "month": "2023-04",
+        "database": "2023-04.db",
+        "database_sha256": "00187aa0e9b954eca263670cf17315208896d798a2f2f6354c72e5b88ef58d3b",
+        "receipt_sha256": "0da9e78489ba0bd340bae0d9348239ceba6521bef84a0e45f2a3019bf3803af0"
+      },
+      {
+        "month": "2023-05",
+        "database": "2023-05.db",
+        "database_sha256": "76de10bfc9d76250fd981ca0216b2b35337575ab92e6e8768665904db02fa18f",
+        "receipt_sha256": "5b4b101d3bbe28b1f6babd233b739ce799090cb9812c1712f25668b9e0c3575d"
+      },
+      {
+        "month": "2023-06",
+        "database": "2023-06.db",
+        "database_sha256": "3495a609834c1d530a5ba4d96a311d74359cd0ac76ea4d357d18374afcec935a",
+        "receipt_sha256": "dd9dae58d652b5e6e07c58dc5dd20d5b072acdceb7b8ce9599985b0f92526bda"
+      },
+      {
+        "month": "2023-07",
+        "database": "2023-07.db",
+        "database_sha256": "41e9d1d70644380589af96ce0c6789a00d006fe17c7aae32281282166038f26c",
+        "receipt_sha256": "d02115eb949ebb929f03981743a76a1f9af0c697a23a9793a1b891932a4dc999"
+      },
+      {
+        "month": "2023-08",
+        "database": "resume-20261022/2023-08.db",
+        "database_sha256": "aa7d44baec2c7663c98ecf6519418f6f873e2cc26b84640002463f74ef7c4464",
+        "receipt_sha256": "ef7a8979c8b4955f09902a5b4f7576ec618df31518d4eb128456a72293738205"
+      },
+      {
+        "month": "2023-09",
+        "database": "resume-20261022/2023-09.db",
+        "database_sha256": "66472ab268271c5706930d43e142e5e6fb9ddfa772dad28fc687db3c12c08f4e",
+        "receipt_sha256": "67f8fd20ebbb3a1caef90daa161398374f9ac28a5613c383d949d078a4d2eb0c"
+      },
+      {
+        "month": "2023-10",
+        "database": "resume-20261022/2023-10.db",
+        "database_sha256": "dec4c1ce0d69d5b6f9b7321afaa1131a2c864891b04af6db2b1cee8a38e43da9",
+        "receipt_sha256": "d6a67c71effa0daf424f45cb3a9e3c9e942293aa2889a17819e82c299c01b65d"
+      },
+      {
+        "month": "2023-11",
+        "database": "resume-20261022/2023-11.db",
+        "database_sha256": "4062ccf074523fa826d52ce6c677cca40b3cc168b54c46982e13dafd26abe6f5",
+        "receipt_sha256": "eba56472beb4dc8998d77c4a855bd35610485c6adaba0a64c334e54d228f8bef"
+      },
+      {
+        "month": "2023-12",
+        "database": "resume-20261022/2023-12.db",
+        "database_sha256": "5b1bc2d7ced3c9f91d2140f4610b0ef6461b34b7243d0bdd2fc6eee997fa00b0",
+        "receipt_sha256": "66c39ca28872f280c5ab78fe8fe5fe607018d472b451bbd14c5965b967c84ccc"
+      },
+      {
+        "month": "2024-01",
+        "database": "resume-20261022/2024-01.db",
+        "database_sha256": "769d8f18d648c4757cdfe7d8bf37e8ec65c74815607e3e7607def71a0b2f3638",
+        "receipt_sha256": "b5520b85bb7eff45b92b33fac9534138985fcdf8db4cf0c4320807ad2d13159b"
+      },
+      {
+        "month": "2024-02",
+        "database": "resume-20261022/2024-02.db",
+        "database_sha256": "bbaf8f91f427b0900b557a47072eab2e7cb49bfbe2f6f0837e174b6270ca7d8b",
+        "receipt_sha256": "9cf340b22aa4bb23585c3da22aa8f1bfdf991d3127e91c97a6f58e91dc51f98f"
+      },
+      {
+        "month": "2024-03",
+        "database": "resume-20261022/2024-03.db",
+        "database_sha256": "84370ff0b202c5d25ccb8be6f979a4dce202ce46bf5b0bcc5e94922399126959",
+        "receipt_sha256": "c7153c45b7f0bf43a99df59f1205909e2cecda6c6b6685d1633ab44a9afe5f18"
+      },
+      {
+        "month": "2024-04",
+        "database": "resume-20261022/2024-04.db",
+        "database_sha256": "0ecf83213bfb3c9a9a0e6765b0868d4e24e7d543b4d8b273cd5b3f2e70680ffe",
+        "receipt_sha256": "ecec0300f8083951632b51355f19a045aedf729db3aac6f20c16a16564477784"
+      },
+      {
+        "month": "2024-05",
+        "database": "resume-20261022/2024-05.db",
+        "database_sha256": "48c10c742444953ec9cacf3874284d74c5c18471fa34ad7a6d9086dad4a6e895",
+        "receipt_sha256": "8bf267245993c4348eb05b1e270e11910defd4f271a375a10e391ae7a041e748"
+      },
+      {
+        "month": "2024-06",
+        "database": "resume-20261022/2024-06.db",
+        "database_sha256": "1b4e1165c82eb28cc7f079ad358970ef0628dbf83554b0ffa31fa3ca7790f0e8",
+        "receipt_sha256": "bff33baf32be42a17c41223cc1d501a6e1f935fde8ad1fc1db1d83db695cdccc"
+      },
+      {
+        "month": "2024-07",
+        "database": "resume-20261022/2024-07.db",
+        "database_sha256": "507e8d2cec3a724d4354a191cddd680d9097a8d587d405abfd01c5c071aa8916",
+        "receipt_sha256": "704d907346d05d641f9c8e69535298b4f8cf8b20754c29ba5c4d1d9f793d005d"
+      },
+      {
+        "month": "2024-08",
+        "database": "resume-20261022/2024-08.db",
+        "database_sha256": "2a9513501890d4902f49a81dbe1d70a7713874b80f70d805b00c8bf083016aa7",
+        "receipt_sha256": "1feecc0e7ab24985ef3890027038542ac2dc0db65b3248140fc1aba9fb3bae53"
+      },
+      {
+        "month": "2024-09",
+        "database": "resume-20261022/2024-09.db",
+        "database_sha256": "d8ad5051727118ab4af1438d727bf32a1c9c9708dbd4e9589c424d3b37ae49ed",
+        "receipt_sha256": "a5e40cd8b5d7c1316d359c90a3c995ad2d72df65d42d89f7d29c44e303bf4105"
+      },
+      {
+        "month": "2024-10",
+        "database": "resume-20261022/2024-10.db",
+        "database_sha256": "c223f6679ecace96e75d4b93b414b9f3b80590e27f46c2fce92132971d33807a",
+        "receipt_sha256": "a7e7e44e3fbbf8c2da25a22f6c6dec5f1c2c3744cf6190f5595d6daa2a845053"
+      },
+      {
+        "month": "2024-11",
+        "database": "resume-20261022/2024-11.db",
+        "database_sha256": "18d4910ea3228af8dc6d355f69c342a577def0c61d453a7c506833729407f1a8",
+        "receipt_sha256": "62db9141940b9b9a622038fda60b469bd60cd11bf0d896c492eb7ea61c14a37d"
+      },
+      {
+        "month": "2024-12",
+        "database": "resume-20261022/2024-12.db",
+        "database_sha256": "0a8417239453c80c671960f541c5fc6230b8f7995b15e60be8bfb845c953d2d6",
+        "receipt_sha256": "d31cef4a7c0768be910991323f5c34378ee9916311c1ff32b2b47b45e48bfe13"
+      },
+      {
+        "month": "2025-01",
+        "database": "resume-20261022/2025-01.db",
+        "database_sha256": "32bac8fbfcc5db71b24fa98cde8d06678abfeaded55a90574542ca80d1788ef2",
+        "receipt_sha256": "5a97a6926a6ba3a0644a9d158474536c9059c82bb1d7a8c3d9656d831ff06fc7"
+      },
+      {
+        "month": "2025-02",
+        "database": "resume-20261022/2025-02.db",
+        "database_sha256": "8781aa4e073af7aafe9dd6ff49d6911a4ff75707454f58cf755d7d73e58c9e4c",
+        "receipt_sha256": "2568edec9d330605e32037d238e124d3ed1c8a02dc78d6dc81daa4ac5a7adbbe"
+      },
+      {
+        "month": "2025-03",
+        "database": "resume-20261022/2025-03.db",
+        "database_sha256": "3f621b420679d6928e0bf8497811097315d2d22558f41ace3c4132f8d4602a20",
+        "receipt_sha256": "449573ae5d190ffc4b44cb6a088911a4e46d5bf505ba8adaa2b372440a30e7c3"
+      },
+      {
+        "month": "2025-04",
+        "database": "resume-20261022/2025-04.db",
+        "database_sha256": "e1312a37e806fba5ff1e8f10ea51811872a231b92de780ab12d181347c3747aa",
+        "receipt_sha256": "30b3820e64237a29601755079bb422611426e4afb44229b784b443432bdaedad"
+      },
+      {
+        "month": "2025-05",
+        "database": "resume-20261022/2025-05.db",
+        "database_sha256": "02902930e5a749c9998d70104cd8de3c0a783d5489f81567ac906a8d0e084c19",
+        "receipt_sha256": "cf1ea29fcbd0389484ee47bc5c4b6e990b289b6f455044235acb9614a0bc5c40"
+      },
+      {
+        "month": "2025-06",
+        "database": "resume-20261022/2025-06.db",
+        "database_sha256": "ab400b9b12ee3dbaef1ed5ffa7c9cfe0e387cff14936b909cd5b7d081d5085a7",
+        "receipt_sha256": "1ef03d0a71a4b71ca80c030e7149459fb4684e45181902198f08ad49d8ad5022"
+      },
+      {
+        "month": "2025-07",
+        "database": "resume-20261022/2025-07.db",
+        "database_sha256": "f7f7f5572fea065fda794c0904fa681ab5f9a85b3fef5dcdea0fe0f7eb574f1c",
+        "receipt_sha256": "50fd4146957086b102e96a773507cd027fb2ffb2be830b25fbddd65e9d77e814"
+      },
+      {
+        "month": "2025-08",
+        "database": "resume-20261022/2025-08.db",
+        "database_sha256": "c54a47284f9a7238f5003d6070fa4833c2f42cca121f32e3d0b8a33ccd6dcaa9",
+        "receipt_sha256": "dd187392ff100ad74d2611cd2c2cf8e8a764ad8858bfd987a71905d0c2bc877b"
+      },
+      {
+        "month": "2025-09",
+        "database": "resume-20261022/2025-09.db",
+        "database_sha256": "5987be92008bb9974a075b8da883461a1065656c289f43b0340769757099426f",
+        "receipt_sha256": "d4c46fd0f5f5aa35cb191883efe71e94140493e1ad94930c08f88030a6e026fc"
+      },
+      {
+        "month": "2025-10",
+        "database": "resume-20261022/2025-10.db",
+        "database_sha256": "dcab361d77b023c813d00ce7ad7d4742e622224ea8759c6a1a1741522a0201a5",
+        "receipt_sha256": "ba4308248b7c0bf0a5761c01b1e2f701c43bbbeaaf596806d6f231da09f9a99e"
+      },
+      {
+        "month": "2025-11",
+        "database": "resume-20261022/2025-11.db",
+        "database_sha256": "72a7fb6d702102c5bb0ce8935e4b00d14c4ea21c93cdac76252a616f934d0904",
+        "receipt_sha256": "132987d48dde493a3bd2a388ec9472c220f7e400d06e9e812bbcfb6ea646b3f7"
+      },
+      {
+        "month": "2025-12",
+        "database": "resume-20261022/2025-12.db",
+        "database_sha256": "47481f3f81ed2290b95d82c48d34a86fe61f135adad653706381eb1ee4456fce",
+        "receipt_sha256": "cb4d35112895753d4abde0e017eaae26c312aaadb027226b57ae1ed798714bdf"
+      }
+    ],
+    "counts": {
+      "organizations": 1,
+      "ingestion_sources": 1,
+      "source_field_mappings": 15,
+      "ingestion_runs": 36,
+      "raw_source_records": 2543,
+      "raw_source_record_observations": 2543,
+      "permit_records": 2543,
+      "permit_events": 2543,
+      "temporal_observations": 10110,
+      "temporal_events": 5086
+    },
+    "content_sha256": "1d0de0b036944b598f93bef0da4668c954ac923814c2e91fa74681ad4f61e3e7",
+    "coverage_verified": false,
+    "organization_id": "1632cdaf-182f-5803-a96e-bd95fec9c156",
+    "source_id": "1f51110b-7024-5fd1-b783-e2a1731f6687",
+    "source_key": "columbus_oh_site_engineering_applications",
+    "methodology_versions": [
+      "canonical-observation-v1:8e81a2e23acfaf821cb010d6efd69eb2d7fe615be81c8542d0dac258382f0bb0"
+    ],
+    "attribute_counts": {
+      "permit.approval_stage": 2543,
+      "permit.filed_at": 2543,
+      "permit.project_name": 2481,
+      "permit.status": 2543
+    },
+    "known_then_verified": false,
+    "semantics": "Trusted local evidence copy: original IDs, payloads, hashes and capture times preserved; only local tenant/source namespaces and dependent series keys remapped. No fresh observation recorded.",
+    "database_sha256": "37534e2f9985c6f3a042ae8c0f49102bec75f3eb13a0863cad21719a9fa968be"
+  },
+  "diagnostic": {
+    "method": "columbus-snapshot-diagnostic-v1",
+    "decision": "HOLD",
+    "score_is_validated": false,
+    "source_coverage_verified": false,
+    "snapshot_id": "4a8983be5dc4f9740591cb4eef6a9664ee58b730f42be45487faa1631d5af049",
+    "run_fingerprint": "53aba15e89749fea9dae9a9e074649b67ebf61a86d9e4182ece86d107683aee4",
+    "qualification_verdict": "insufficient_depth",
+    "binding_verified": true,
+    "binding_qualified": false,
+    "binding_reason": "P0.8 corpus remains insufficient_depth",
+    "observations": 10110,
+    "cutoffs": 37,
+    "statuses": {
+      "insufficient_history": 37
+    },
+    "eligible_signal_cutoffs": 0,
+    "reproducible": true,
+    "evaluation_verdict": "corpus_not_qualified",
+    "limitations": [
+      "Retrospective archive; original capture times preserved.",
+      "No independently accepted coverage attestation was supplied.",
+      "No outcomes extracted; v0 outcome timing and holdout contract remain unresolved.",
+      "This diagnostic can only HOLD; it does not certify validation."
+    ]
+  },
+  "corpus_binding": {
+    "binding_version": "replay-corpus-binding-v1",
+    "organization_id": "1632cdaf-182f-5803-a96e-bd95fec9c156",
+    "manifest_fingerprint": "3b9db277e6a1a9ccf64e0ce974144b9712d2e37772da303d68bdb25e55d899e4",
+    "snapshot_id": "4a8983be5dc4f9740591cb4eef6a9664ee58b730f42be45487faa1631d5af049",
+    "protocol_fingerprint": "3f1d107d3840561ed12f8671a528fd8e40a30a0f1059f822c7fa1235dc99a16a",
+    "request": {
+      "as_of": "2026-10-22T15:34:38.359211Z",
+      "sources": [
+        {
+          "source_id": "1f51110b-7024-5fd1-b783-e2a1731f6687",
+          "methodology_version": "canonical-observation-v1:8e81a2e23acfaf821cb010d6efd69eb2d7fe615be81c8542d0dac258382f0bb0"
+        }
+      ],
+      "city": "Columbus",
+      "state": "OH",
+      "attribute": "permit.filed_at",
+      "stage_attribute": "permit.approval_stage",
+      "window_days": 30,
+      "horizon_windows": 3,
+      "baseline_periods": 6,
+      "holdout_windows": 6,
+      "min_fired_signals": 5,
+      "min_evaluable_periods": 12,
+      "reporting_lag_days": 7,
+      "required_event_date_completeness": 0.95,
+      "max_duplicate_project_rate": 0.1,
+      "max_month_gaps": 0,
+      "coverage_audit": null
+    },
+    "qualification": {
+      "methodology_version": "corpus-qualification-v1",
+      "request_fingerprint": "5758407b762ad9c4c086734fa016120d1818c5ee762903099774c074e0dbaa49",
+      "as_of": "2026-10-22T15:34:38.359211+00:00",
+      "market": {
+        "city": "Columbus",
+        "state": "OH"
+      },
+      "attribute": "permit.filed_at",
+      "predeclared_minimums": {
+        "min_fired_signals": 5,
+        "min_evaluable_periods": 12,
+        "horizon_windows": 3,
+        "window_days": 30,
+        "baseline_periods": 6,
+        "holdout_windows": 6,
+        "required_event_date_completeness": 0.95,
+        "max_duplicate_project_rate": 0.1,
+        "max_month_gaps": 0
+      },
+      "warnings": [
+        "Qualification measures the corpus only; it is not source activation, commercial-reuse clearance, or score validation.",
+        "Depth is read through the cutoff-safe temporal path; backfilled history not known as-of the cutoff is excluded.",
+        "Counts describe latest-interpretation source records, not verified unique projects; overlapping sources are not summed.",
+        "Event-date completeness and duplicate rate are honest measurements, not a guarantee of source-latency or identity resolution.",
+        "Meeting the predeclared floors is necessary, not sufficient: it permits a measured evaluation, never an automatic pass.",
+        "Period counts are optimistic upper bounds, not audited complete coverage; this measurement cannot authorize validation.",
+        "Date completeness covers only existing date observations, not missing source records or records without date observations.",
+        "Inconclusive or below-floor corpora return insufficient_* (HOLD); no predictive claim is made.",
+        "A ready verdict requires an explicit operator-supplied coverage-audit attestation verified against the measured cohort; it records an independent audit, not an automatic pass, and authorizes no activation or reuse."
+      ],
+      "time_depth": {
+        "earliest_event_date": "2023-01-02T05:00:00+00:00",
+        "latest_event_date": "2025-12-30T05:00:00+00:00",
+        "event_span_days": 1093,
+        "complete_windows": 36,
+        "evaluable_periods": 0,
+        "event_evaluable_periods_upper_bound": 27,
+        "known_then_evaluable_periods_upper_bound": 0,
+        "coverage_audited": false,
+        "in_sample_evaluable_periods": 0,
+        "holdout_evaluable_periods": 0,
+        "max_possible_fired_signals": 0,
+        "recorded_time_depth": {
+          "earliest_recorded_at": "2026-10-21T05:51:46.912303+00:00",
+          "latest_recorded_at": "2026-10-22T15:34:38.359211+00:00",
+          "recorded_span_days": 1
+        }
+      },
+      "completeness": {
+        "cohort_records": 2543,
+        "event_date_present": 2543,
+        "collection_only": 0,
+        "event_date_completeness": 1.0,
+        "distinct_projects": 2543,
+        "duplicate_records": 0,
+        "duplicate_project_rate": 0.0,
+        "month_gaps": 0,
+        "gap_window_indices": []
+      },
+      "coverage_audit": null,
+      "per_stage_counts": {
+        "approved": 2390,
+        "pre_approval": 153
+      },
+      "diagnostics": {
+        "sources_pinned": 1,
+        "stage_records": 2543,
+        "stage_attribute": "permit.approval_stage",
+        "scan_overflow": false
+      },
+      "status": "measured",
+      "verdict": "insufficient_depth",
+      "shortfall": [
+        "0 evaluable periods vs 12 required",
+        "0 max possible fired signals vs 5 required"
+      ]
+    },
+    "receipt_fingerprint": "cf33418630b848b2e4dd052c9c1f0a127eb79ee184777e7e9202e2b025d6b86e"
+  },
+  "code_provenance": {
+    "git_at_freeze": "1c138b58f1cec0c21f6c3cebcc82c03061f398f9",
+    "module_hashes": {
+      "driver.py": "0c6b93f7946e9cf0adcc9270466af13a3d6db173d87e357042f5055ed7a363e9",
+      "manifest.py": "296dca7824c440470cdac73c207a03ca8d6d8931e65547c00cd27fe82d062caa",
+      "metrics.py": "dc93aa13fb69a2ce421c68923da18dc9853624b20812d2405116e50e3e0f7ee2",
+      "run.py": "b6bf5fcb9ff2ef324768f554be961e53c7ecb35d7e4c8723d54d2a64668297bf",
+      "evaluate.py": "4f1c1d1440b3a05fbcc09fc4fcac647ca862516e48f98318bf17db2938753f12",
+      "dv_signal.py": "587e3aea8c4d21a7f33730f974b23b90c21aaa3659d193f74012359b558cca04",
+      "corpus_binding.py": "4a844416dcfd91b3548cfbe15cb94231fd1f80282f511496142485bede183e41",
+      "app/services/corpus_qualification.py": "307cb092c47076b7b07f2389b66507ea61efafa090d6d81c6541dac166953447",
+      "app/services/temporal_service.py": "9eaee76a06e73ed72652ee5827c1927db48f9cc0fb86407f615bd2b8dcaecb23",
+      "app/services/activity_baseline.py": "a44f7e1728ea7753269785e49fd0fb57825909d3188e5d7412d845c45c711d2d",
+      "app/services/development_velocity.py": "d88510a9776d0a205c3d91925f5da25959332405af8a37364d3037d9061b84c9"
+    }
+  },
+  "cross_build_reproducibility": {
+    "logical_content_equal": true,
+    "snapshot_id_equal": true,
+    "run_fingerprint_equal": true,
+    "binary_sqlite_hash_equal": false,
+    "note": "Logical content and replay match; SQLite bytes are separately artifact-hashed."
+  },
+  "frozen_protocol_file_sha256": "7a3621bc36706575761ec39da506548483c625776d6454f88017ee73d3860dcd",
+  "frozen_threshold_file_sha256": "25bdeebba645938f52b914a5763f2199202f042ae3f2c068f2976b6fd61a4102",
+  "verification": {
+    "targeted_tests_passed": 165,
+    "external_evidence_attestation_created": false,
+    "production_changed": false
+  }
+}

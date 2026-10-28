@@ -4,8 +4,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy import update
 
 import app.models  # noqa: F401
+from app.models.ingestion import RawSourceRecord
 from app.services.temporal_service import fingerprint
 from eval.replay import (
     REFERENCE_METHOD_ID,
@@ -45,6 +47,14 @@ def test_freeze_then_verify_passes_on_untouched_snapshot(db):
     verify(db, manifest)  # does not raise
     assert manifest.snapshot_id
     assert manifest.feature_version.startswith("canonical-observation-v1:")
+
+
+def test_raw_update_timestamp_is_part_of_frozen_evidence(db):
+    _, manifest = _freeze(db)
+    db.execute(update(RawSourceRecord).values(source_updated_at=CREATED),
+               execution_options={"synchronize_session": False})
+    with pytest.raises(ValueError, match="drift"):
+        verify(db, manifest)
 
 
 def test_appending_to_the_cohort_breaks_verify(db):
