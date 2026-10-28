@@ -1,5 +1,12 @@
 import { z } from 'zod';
 import { apiClient } from './client';
+
+// zod v4 probes `new Function('')` to enable JIT codegen. Under our strict release
+// CSP (script-src 'self', no 'unsafe-eval') that probe is refused; zod catches the
+// throw and falls back, but the attempt still fires a `securitypolicyviolation`.
+// Force jitless so zod skips the probe entirely — no CSP relaxation needed. Set
+// before any schema below is constructed; this is the app's only zod consumer.
+z.config({ jitless: true });
 import type {
   DatasetCreate, DatasetDetail, DatasetRead, EvalOutput, EvaluationCapabilities,
   JsonValue, RunComparison, RunCreate, RunDetail, RunRead,
