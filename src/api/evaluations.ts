@@ -8,7 +8,7 @@ import type {
 const text = (max: number) => z.string().trim().min(1).max(max);
 const score = z.number().finite().min(0).max(100).nullable().optional();
 const json: z.ZodType<JsonValue> = z.lazy(() => z.union([
-  z.string(), z.number().finite(), z.boolean(), z.null(), z.array(json), z.record(json),
+  z.string(), z.number().finite(), z.boolean(), z.null(), z.array(json), z.record(z.string(), json),
 ]));
 const phrases = z.array(text(1000)).max(50).default([]);
 const expectedOutput = z.object({
@@ -16,7 +16,7 @@ const expectedOutput = z.object({
 }).strict().refine(value => value.required_phrases.length > 0 || value.required_citation_ids.length > 0 || value.expected_score != null,
   'At least one required phrase, citation, or expected score is required');
 const caseSchema = z.object({
-  name: text(200), input_json: z.record(json).default({}), expected_output: expectedOutput,
+  name: text(200), input_json: z.record(z.string(), json).default({}), expected_output: expectedOutput,
   retrieved_context: z.array(z.object({
     id: text(200), text: text(10000), source_url: z.string().trim().max(2000).nullable().optional(),
   }).strict()).max(100).default([]),
@@ -54,7 +54,7 @@ export function parseDatasetJson(value: string): DatasetCreate {
 }
 
 export function parseReplayOutputs(value: string, caseIds: string[]): Record<string, EvalOutput> {
-  const outputs = z.record(evalOutputSchema).parse(JSON.parse(value));
+  const outputs = z.record(z.string(), evalOutputSchema).parse(JSON.parse(value));
   const ids = Object.keys(outputs);
   if (!ids.length || ids.length > 25 || ids.length !== caseIds.length || caseIds.some(id => !Object.prototype.hasOwnProperty.call(outputs, id))) {
     throw new Error('Provide exactly one captured output for every case ID in this dataset, with no extra IDs.');
