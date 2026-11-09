@@ -91,7 +91,7 @@ export function availabilityState(fact: ParcelFact, now = new Date()): Availabil
   if (!['available', 'for_sale', 'listed', 'broker_listed', 'owner_indicated_available'].includes(status)
     || !['listing', 'broker', 'owner', 'auction'].includes(evidenceType)
     || fact.confidence < 0.7
-    || !Boolean(fact.source_url || fact.excerpt)) return null;
+    || !(fact.source_url || fact.excerpt)) return null;
   if (String(value.observed_at_source || '').toLowerCase() !== 'source') return 'verified_unaged';
   const observedAt = new Date(fact.observed_at).getTime();
   const nowMs = now.getTime();
