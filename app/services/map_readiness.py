@@ -5,12 +5,13 @@ candidates, and source-backed availability. A nearby candidate is a research
 lead; it is not evidence that a parcel is for sale.
 """
 
-from sqlalchemy import and_, case, exists, func, or_
+from sqlalchemy import and_, case, exists, func
 from sqlalchemy.orm import Session
 
 from app.models.ingestion import PermitRecord
-from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelRecord
 from app.models.planning import PlanningRecord
+from app.services.parcel_availability import current_availability_conditions
 from app.utils.org_scope import active_query
 
 
@@ -27,31 +28,10 @@ def _active_count_and_located(db: Session, model) -> tuple[int, int]:
 
 
 def _verified_availability_exists(parcel_id_column, organization_id_column):
-    status = func.lower(func.coalesce(
-        ParcelFact.value["status"].as_string(),
-        ParcelFact.value["availability_status"].as_string(),
-        "",
+    return exists().where(*current_availability_conditions(
+        parcel_id_column,
+        organization_id_column,
     ))
-    evidence_type = func.lower(func.coalesce(
-        ParcelFact.value["evidence_type"].as_string(),
-        ParcelFact.value["source_type"].as_string(),
-        "",
-    ))
-    return exists().where(
-        ParcelFact.parcel_id == parcel_id_column,
-        ParcelFact.organization_id == organization_id_column,
-        ParcelFact.is_current.is_(True),
-        ParcelFact.fact_type.in_({
-            "availability", "listing", "broker_listing", "owner_availability", "sale_availability",
-        }),
-        status.in_({"available", "for_sale", "listed", "broker_listed", "owner_indicated_available"}),
-        evidence_type.in_({"listing", "broker", "owner", "auction"}),
-        ParcelFact.confidence >= 0.7,
-        or_(
-            and_(ParcelFact.source_url.isnot(None), ParcelFact.source_url != ""),
-            and_(ParcelFact.excerpt.isnot(None), ParcelFact.excerpt != ""),
-        ),
-    )
 
 
 def map_readiness(db: Session) -> dict:

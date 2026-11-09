@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from app.models.deal import Deal
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact
 from app.models.planning import PlanningRecord
@@ -138,19 +140,20 @@ def test_readiness_distinguishes_nearby_candidates_from_verified_availability(db
     assert result["nearby_verified_available_parcels"] == 0
     assert result["discovery_stage"] == "candidates_need_availability_evidence"
 
+    observed_at = datetime.now(timezone.utc)
     db.add(ParcelFact(
         organization_id="default-org",
         parcel_id=parcel.id,
         raw_source_record_id=parcel.latest_raw_record_id,
         fact_type="availability",
-        value={"status": "for_sale", "evidence_type": "listing"},
+        value={"status": "for_sale", "evidence_type": "listing", "observed_at_source": "source"},
         source_system="listing",
         source_url="https://broker.example/listing/P-1",
         excerpt="For sale",
         confidence=0.9,
-        observed_at=now,
-        last_verified_at=now,
-        valid_from=now,
+        observed_at=observed_at,
+        last_verified_at=observed_at,
+        valid_from=observed_at,
         is_current=True,
     ))
     db.flush()
@@ -158,3 +161,10 @@ def test_readiness_distinguishes_nearby_candidates_from_verified_availability(db
     assert result["verified_available_parcels"] == 1
     assert result["nearby_verified_available_parcels"] == 1
     assert result["discovery_stage"] == "verified_available_candidates"
+
+    fact = db.query(ParcelFact).filter(ParcelFact.parcel_id == parcel.id).one()
+    fact.observed_at = observed_at - timedelta(days=31)
+    db.flush()
+    result = map_readiness(db)
+    assert result["verified_available_parcels"] == 0
+    assert result["nearby_verified_available_parcels"] == 0

@@ -251,6 +251,14 @@ class AcquisitionRadarItemResponse(BaseModel):
     contacted_at: Optional[datetime] = None
     follow_up_at: Optional[datetime] = None
     promoted_deal_id: Optional[str] = None
+    availability_state: Literal[
+        "nearby_candidate",
+        "verified_current",
+        "verified_stale",
+        "verified_unaged",
+    ] = "nearby_candidate"
+    availability_observed_at: Optional[datetime] = None
+    availability_recheck_at: Optional[datetime] = None
     latest_signal_at: datetime
     reasons: list[str]
     cautions: list[str]

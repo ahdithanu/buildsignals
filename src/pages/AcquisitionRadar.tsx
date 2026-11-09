@@ -85,8 +85,8 @@ function RadarRow({
 }) {
   const title = item.parcel.address || item.parcel.external_parcel_id;
   const due = shortDate(item.follow_up_at);
-  const availabilityEvidence = availabilityEvidenceSource(item.facts ?? []);
-  const availabilityLabel = availabilitySummary(item.facts ?? []);
+  const availabilityEvidence = availabilityEvidenceSource(item.facts ?? [], item.availability_state);
+  const availabilityLabel = availabilitySummary(item.facts ?? [], item.availability_state);
   return (
     <article className="border-b px-4 py-4 last:border-b-0">
       <div className="grid gap-4 xl:grid-cols-[minmax(220px,1.2fr)_80px_140px_minmax(190px,1fr)_190px_190px] xl:items-center">
@@ -103,14 +103,24 @@ function RadarRow({
                 href={availabilityEvidence.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 hover:underline"
+                className={cn(
+                  'rounded-md border px-2 py-0.5 text-[11px] font-medium hover:underline',
+                  availabilityEvidence.state === 'verified_current'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-amber-200 bg-amber-50 text-amber-800',
+                )}
                 title={availabilityLabel}
               >
-                Verified availability source
+                {availabilityEvidence.state === 'verified_current' ? 'Verified availability source' : 'Availability needs recheck'}
               </a>
             ) : availabilityEvidence && (
-              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800" title={availabilityLabel}>
-                Verified availability
+              <span className={cn(
+                'rounded-md border px-2 py-0.5 text-[11px] font-medium',
+                availabilityEvidence.state === 'verified_current'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-amber-200 bg-amber-50 text-amber-800',
+              )} title={availabilityLabel}>
+                {availabilityEvidence.state === 'verified_current' ? 'Verified availability' : 'Availability needs recheck'}
               </span>
             )}
           </div>

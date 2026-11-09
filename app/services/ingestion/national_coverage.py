@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
-from sqlalchemy import and_, distinct, exists, func, or_
+from sqlalchemy import and_, distinct, exists, func
 from sqlalchemy.orm import Session
 
 from app.models.parcel import NearbyParcelCandidate, ParcelFact, ParcelRecord
@@ -15,52 +15,19 @@ from app.services.ingestion.catalog import (
     load_catalog,
 )
 from app.services.ingestion.measured_coverage import measured_coverage
+from app.services.parcel_availability import current_availability_conditions
 from app.utils.org_scope import active_query
-
-_AVAILABILITY_FACT_TYPES = {
-    "availability",
-    "listing",
-    "broker_listing",
-    "owner_availability",
-    "sale_availability",
-}
-_VERIFIED_AVAILABILITY_STATUSES = {
-    "available",
-    "for_sale",
-    "listed",
-    "broker_listed",
-    "owner_indicated_available",
-}
 
 
 def _availability_exists(parcel_id_column, organization_id_column):
-    return exists().where(*_availability_conditions(parcel_id_column, organization_id_column))
+    return exists().where(*current_availability_conditions(
+        parcel_id_column,
+        organization_id_column,
+    ))
 
 
 def _availability_conditions(parcel_id_column, organization_id_column):
-    status = func.lower(func.coalesce(
-        ParcelFact.value["status"].as_string(),
-        ParcelFact.value["availability_status"].as_string(),
-        "",
-    ))
-    evidence_type = func.lower(func.coalesce(
-        ParcelFact.value["evidence_type"].as_string(),
-        ParcelFact.value["source_type"].as_string(),
-        "",
-    ))
-    return [
-        ParcelFact.parcel_id == parcel_id_column,
-        ParcelFact.organization_id == organization_id_column,
-        ParcelFact.is_current.is_(True),
-        ParcelFact.fact_type.in_(_AVAILABILITY_FACT_TYPES),
-        status.in_(_VERIFIED_AVAILABILITY_STATUSES),
-        evidence_type.in_(("listing", "broker", "owner", "auction")),
-        ParcelFact.confidence >= 0.7,
-        or_(
-            and_(ParcelFact.source_url.isnot(None), ParcelFact.source_url != ""),
-            and_(ParcelFact.excerpt.isnot(None), ParcelFact.excerpt != ""),
-        ),
-    ]
+    return current_availability_conditions(parcel_id_column, organization_id_column)
 
 
 def _state_parcel_counts(db: Session) -> dict[str, dict[str, int]]:

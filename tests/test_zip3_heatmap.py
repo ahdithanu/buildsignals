@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.models.ingestion import PermitRecord, RawSourceRecord
 from app.models.parcel import ParcelFact, ParcelRecord
@@ -69,12 +69,12 @@ def test_zip3_heatmap_counts_only_source_backed_availability_as_verified(client,
     _add_parcel(db, source_data["id"], raw.id, "P-LISTED", -97.735)
     parcel = db.query(ParcelRecord).filter(ParcelRecord.external_parcel_id == "P-LISTED").one()
     now = datetime.now(timezone.utc)
-    db.add(ParcelFact(
+    fact = ParcelFact(
         organization_id=parcel.organization_id,
         parcel_id=parcel.id,
         raw_source_record_id=raw.id,
         fact_type="availability",
-        value={"status": "for_sale", "evidence_type": "broker", "asking_price": 2250000},
+        value={"status": "for_sale", "evidence_type": "broker", "asking_price": 2250000, "observed_at_source": "source"},
         source_system="test-broker-feed",
         source_url="https://broker.example/listing/P-LISTED",
         excerpt="Broker marketing page marks the parcel available for sale.",
@@ -83,7 +83,8 @@ def test_zip3_heatmap_counts_only_source_backed_availability_as_verified(client,
         last_verified_at=now,
         valid_from=now,
         is_current=True,
-    ))
+    )
+    db.add(fact)
     db.commit()
     created = client.post(f"/deals/{deal['id']}/nearby-parcel-searches", json={
         "anchor_brand_match_id": match.id,
@@ -97,3 +98,9 @@ def test_zip3_heatmap_counts_only_source_backed_availability_as_verified(client,
     assert top["candidate_not_listing_count"] == 0
     assert top["sample_parcels"][0]["availability_label"] == "verified_for_sale"
     assert top["sample_parcels"][0]["availability_source_url"] == "https://broker.example/listing/P-LISTED"
+
+    fact.observed_at = now - timedelta(days=31)
+    db.commit()
+    stale = zip3_heatmap(db)["items"][0]
+    assert stale["verified_for_sale_count"] == 0
+    assert stale["sample_parcels"][0]["availability_label"] == "verified_for_sale_stale"

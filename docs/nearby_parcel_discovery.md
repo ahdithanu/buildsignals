@@ -136,6 +136,11 @@ and cannot be in the future. A newer observation may become the current
 availability projection; an older observation is retained as historical evidence
 with `is_current=false` and cannot overwrite a newer listing. This keeps the
 national availability view monotonic while preserving the raw evidence trail.
+Only a source-observed timestamp within the last 30 days is `verified_current`.
+Evidence without that source timestamp is `verified_unaged`; older evidence is
+`verified_stale`. Both states remain visible for recheck, but are excluded from
+verified filters, counts, heatmap totals, and readiness claims. Capture time is
+never used as a source observation time.
 
 ```mermaid
 flowchart LR
@@ -324,7 +329,8 @@ postal code begins with the selected market-cluster prefix.
 
 The `availability=verified` path requires source-backed listing, broker, owner,
 auction, or explicit availability evidence stored as a current parcel fact with
-recognized status, confidence, and source URL or excerpt. Parcels found only
+recognized status, confidence, source URL or excerpt, and a source-observed
+timestamp no more than 30 days old. Parcels found only
 because they are near a permit, planning record, or retailer signal remain
 nearby candidates and are labeled separately from verified sale availability.
 

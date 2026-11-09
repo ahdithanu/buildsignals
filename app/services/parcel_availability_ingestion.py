@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 from app.models.ingestion import IngestionRun, IngestionSource, RawSourceRecord
 from app.models.parcel import ParcelFact, ParcelRecord
 from app.services.audit_service import log_change
-from app.services.parcel_availability import AVAILABILITY_FACT_TYPES, VERIFIED_AVAILABILITY_STATUSES
+from app.services.parcel_availability import (
+    AVAILABILITY_FACT_TYPES,
+    OBSERVED_AT_SOURCE_KEY,
+    VERIFIED_AVAILABILITY_STATUSES,
+)
 from app.utils.org_scope import active_query, get_org_id
 
 MANUAL_AVAILABILITY_SOURCE_KEY = "manual_availability_evidence"
@@ -104,6 +108,7 @@ def create_availability_evidence(
         "excerpt": excerpt,
         "confidence": confidence,
         "observed_at": (observed_at or now).isoformat(),
+        OBSERVED_AT_SOURCE_KEY: "source" if observed_at is not None else "captured_at",
         "asking_price": asking_price,
         "contact_name": contact_name,
         "contact_company": contact_company,
@@ -170,6 +175,7 @@ def create_availability_evidence(
         "asking_price": asking_price,
         "contact_name": contact_name,
         "contact_company": contact_company,
+        OBSERVED_AT_SOURCE_KEY: "source" if observed_at is not None else "captured_at",
     }
     fact = ParcelFact(
         organization_id=get_org_id(),

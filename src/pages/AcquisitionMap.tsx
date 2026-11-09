@@ -163,7 +163,7 @@ export default function AcquisitionMap() {
     }
     if (activeOnly && item.review_status === 'dismissed') return false;
     if (activeFilters.has('Shortlisted') && item.review_status !== 'shortlisted') return false;
-    if (activeFilters.has('Verified availability') && !availabilityEvidenceSource(item.facts ?? [])) return false;
+    if (activeFilters.has('Verified availability') && availabilityEvidenceSource(item.facts ?? [], item.availability_state)?.state !== 'verified_current') return false;
     if (activeFilters.has('Owner evidence') && !ownerName(item.facts ?? [])) return false;
     if (activeFilters.has('Held 10+ yrs') && (ownershipTenureYears(item) ?? 0) < 10) return false;
     if (activeFilters.has('Tax evidence') && !hasTaxEvidence(item.facts ?? [])) return false;
@@ -584,7 +584,7 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
   const facts = item.facts ?? [];
   const owner = ownerName(facts);
   const sale = lastSale(facts);
-  const availabilityEvidence = availabilityEvidenceSource(facts);
+  const availabilityEvidence = availabilityEvidenceSource(facts, item.availability_state);
   const area = acres(item);
   return (
     <>
@@ -594,7 +594,7 @@ function SelectedParcel({ item }: { item: AcquisitionRadarItem }) {
       <div className="mt-3 border-t-2 border-foreground">
         <ParcelFact label="Workflow" value={workflowLabel(item.review_status)} />
         <ParcelFact label="Owner evidence" value={owner || 'Not available in admitted parcel facts'} />
-        <ParcelFact label="Availability" value={availabilitySummary(facts)} />
+        <ParcelFact label="Availability" value={availabilitySummary(facts, item.availability_state)} />
         <ParcelFact label="Evidence" value={sourceLabel(facts)} />
         <ParcelFact label="Last transfer" value={sale ? [sale.price, formatDate(sale.date)].filter(Boolean).join(' · ') : 'No admitted sale fact'} />
         <ParcelFact label="Last verified" value={formatDate(item.parcel.last_verified_at)} />

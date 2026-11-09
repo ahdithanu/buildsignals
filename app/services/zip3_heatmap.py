@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.ingestion import PermitRecord
 from app.models.parcel import NearbyParcelCandidate, ParcelRecord
-from app.services.parcel_availability import availability_label, verified_availability_fact
+from app.services.parcel_availability import availability_label, resolve_availability
 from app.utils.org_scope import active_query
 
 
@@ -116,8 +116,8 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
         seen_parcels_by_zip[key].add(parcel.id)
         if candidate.review_status == "shortlisted":
             shortlisted_by_zip[key].add(parcel.id)
-        availability_fact = verified_availability_fact(parcel.facts)
-        if availability_fact is not None:
+        availability_fact, availability_state = resolve_availability(parcel.facts)
+        if availability_state == "verified_current":
             verified_for_sale_by_zip[key].add(parcel.id)
         if parcel.state:
             bucket["states"].add(parcel.state.upper())
@@ -141,6 +141,8 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
                 "candidate_score": candidate.score,
                 "availability_label": availability_label(parcel.facts),
                 "availability_source_url": availability_fact.source_url if availability_fact else None,
+                "availability_state": availability_state,
+                "availability_observed_at": availability_fact.observed_at if availability_fact else None,
             })
 
     for key, bucket in buckets.items():
@@ -179,6 +181,8 @@ def zip3_heatmap(db: Session, *, limit: int = 50, state: str | None = None) -> d
         "state": state_filter,
         "for_sale_semantics": {
             "nearby_candidate": "Public parcel or ranked nearby result near a signal; not a listing.",
-            "verified_for_sale": "Requires listing, broker, owner, or explicit availability evidence. No such source is inferred here.",
+            "verified_for_sale": "Requires listing, broker, owner, or explicit availability evidence observed within the last 30 days. No such source is inferred here.",
+            "verified_for_sale_stale": "Source-backed availability older than 30 days remains visible for audit, but is excluded from verified counts until rechecked.",
+            "verified_for_sale_unaged": "Source-backed availability without a source-observed timestamp remains visible, but is excluded from verified counts until rechecked.",
         },
     }
