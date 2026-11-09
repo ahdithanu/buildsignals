@@ -38,6 +38,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
