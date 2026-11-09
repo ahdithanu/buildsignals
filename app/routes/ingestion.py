@@ -3,7 +3,7 @@ from __future__ import annotations
 import hmac
 import os
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
@@ -377,6 +377,12 @@ def canary_candidate(
     )
     if candidate is None:
         raise HTTPException(status_code=404, detail="Ingestion candidate not found")
+    today = datetime.now(timezone.utc).date()
+    if candidate.next_audit_on > today:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Candidate canary is not due until {candidate.next_audit_on.isoformat()}",
+        )
     try:
         result = validate_candidate_source_canary(candidate, sample_size=payload.sample_size)
         record_candidate_canary_attempt(db, candidate, result, sample_size=payload.sample_size)

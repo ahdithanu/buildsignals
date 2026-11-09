@@ -1156,6 +1156,19 @@ def test_candidate_canary_endpoint_runs_retry_probe(client, monkeypatch):
     assert rows[0]["ok"] is True
 
 
+def test_candidate_canary_endpoint_rejects_probe_before_audit_date(client, monkeypatch):
+    candidate = _install_retry_candidate(monkeypatch)
+    candidate.next_audit_on = date.today() + timedelta(days=1)
+
+    response = client.post(
+        f"/ingestion/candidates/{candidate.key}/canary",
+        json={"sample_size": 1},
+    )
+
+    assert response.status_code == 409, response.text
+    assert "not due" in response.json()["detail"]
+
+
 def test_candidate_canary_endpoint_rejects_unrunnable_candidates(client):
     response = client.post(
         "/ingestion/candidates/orlando_fl_planning_applications/canary",
