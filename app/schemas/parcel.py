@@ -51,6 +51,26 @@ class ParcelAvailabilityEvidenceCreate(BaseModel):
     contact_company: Optional[str] = Field(default=None, max_length=255)
 
 
+class ParcelAvailabilityImportRow(ParcelAvailabilityEvidenceCreate):
+    source_id: str = Field(..., min_length=1, max_length=36)
+    external_parcel_id: str = Field(..., min_length=1, max_length=500)
+
+
+class ParcelAvailabilityImportRequest(BaseModel):
+    rows: list[ParcelAvailabilityImportRow] = Field(..., min_length=1, max_length=500)
+
+
+class ParcelAvailabilityImportError(BaseModel):
+    row: int
+    reason: str
+
+
+class ParcelAvailabilityImportResponse(BaseModel):
+    imported: int
+    skipped: int
+    errors: list[ParcelAvailabilityImportError] = Field(default_factory=list)
+
+
 class ParcelFactResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

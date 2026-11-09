@@ -9985,6 +9985,236 @@
         "title": "MyOrganizationItem",
         "type": "object"
       },
+      "NationalParcelCoverageResponse": {
+        "properties": {
+          "coverage_claim": {
+            "title": "Coverage Claim",
+            "type": "string"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "next_connector_targets": {
+            "items": {
+              "$ref": "#/components/schemas/NationalParcelStateCoverage"
+            },
+            "title": "Next Connector Targets",
+            "type": "array"
+          },
+          "record_type": {
+            "const": "parcel",
+            "title": "Record Type",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "states": {
+            "items": {
+              "$ref": "#/components/schemas/NationalParcelStateCoverage"
+            },
+            "title": "States",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/NationalParcelCoverageSummary"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "measured_at",
+          "record_type",
+          "scope",
+          "coverage_claim",
+          "summary",
+          "states",
+          "next_connector_targets",
+          "warnings"
+        ],
+        "title": "NationalParcelCoverageResponse",
+        "type": "object"
+      },
+      "NationalParcelCoverageSummary": {
+        "properties": {
+          "candidate_only_state_count": {
+            "title": "Candidate Only State Count",
+            "type": "integer"
+          },
+          "configured_only_state_count": {
+            "title": "Configured Only State Count",
+            "type": "integer"
+          },
+          "geocoded_parcel_records": {
+            "title": "Geocoded Parcel Records",
+            "type": "integer"
+          },
+          "measured_state_count": {
+            "title": "Measured State Count",
+            "type": "integer"
+          },
+          "nearby_candidate_parcels": {
+            "title": "Nearby Candidate Parcels",
+            "type": "integer"
+          },
+          "nearby_verified_available_parcels": {
+            "title": "Nearby Verified Available Parcels",
+            "type": "integer"
+          },
+          "state_count": {
+            "title": "State Count",
+            "type": "integer"
+          },
+          "states_with_nearby_candidates": {
+            "title": "States With Nearby Candidates",
+            "type": "integer"
+          },
+          "states_with_verified_available_parcels": {
+            "title": "States With Verified Available Parcels",
+            "type": "integer"
+          },
+          "stored_parcel_records": {
+            "title": "Stored Parcel Records",
+            "type": "integer"
+          },
+          "uncovered_state_count": {
+            "title": "Uncovered State Count",
+            "type": "integer"
+          },
+          "verified_available_parcels": {
+            "title": "Verified Available Parcels",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state_count",
+          "measured_state_count",
+          "configured_only_state_count",
+          "candidate_only_state_count",
+          "uncovered_state_count",
+          "states_with_nearby_candidates",
+          "states_with_verified_available_parcels",
+          "stored_parcel_records",
+          "geocoded_parcel_records",
+          "nearby_candidate_parcels",
+          "verified_available_parcels",
+          "nearby_verified_available_parcels"
+        ],
+        "title": "NationalParcelCoverageSummary",
+        "type": "object"
+      },
+      "NationalParcelStateCoverage": {
+        "properties": {
+          "candidate_source_count": {
+            "title": "Candidate Source Count",
+            "type": "integer"
+          },
+          "candidate_status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Candidate Status Counts",
+            "type": "object"
+          },
+          "configured_source_count": {
+            "title": "Configured Source Count",
+            "type": "integer"
+          },
+          "geocoded_parcel_records": {
+            "title": "Geocoded Parcel Records",
+            "type": "integer"
+          },
+          "latest_verified_availability_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Verified Availability At"
+          },
+          "measured_source_count": {
+            "title": "Measured Source Count",
+            "type": "integer"
+          },
+          "nearby_candidate_parcels": {
+            "title": "Nearby Candidate Parcels",
+            "type": "integer"
+          },
+          "nearby_verified_available_parcels": {
+            "title": "Nearby Verified Available Parcels",
+            "type": "integer"
+          },
+          "next_action": {
+            "title": "Next Action",
+            "type": "string"
+          },
+          "posture": {
+            "enum": [
+              "measured",
+              "configured_only",
+              "candidate_only",
+              "uncovered"
+            ],
+            "title": "Posture",
+            "type": "string"
+          },
+          "priority_reason": {
+            "title": "Priority Reason",
+            "type": "string"
+          },
+          "priority_score": {
+            "title": "Priority Score",
+            "type": "integer"
+          },
+          "recently_seen_parcel_records": {
+            "title": "Recently Seen Parcel Records",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "stored_parcel_records": {
+            "title": "Stored Parcel Records",
+            "type": "integer"
+          },
+          "verified_available_parcels": {
+            "title": "Verified Available Parcels",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "posture",
+          "configured_source_count",
+          "candidate_source_count",
+          "measured_source_count",
+          "stored_parcel_records",
+          "geocoded_parcel_records",
+          "recently_seen_parcel_records",
+          "nearby_candidate_parcels",
+          "verified_available_parcels",
+          "nearby_verified_available_parcels",
+          "candidate_status_counts",
+          "next_action",
+          "priority_score",
+          "priority_reason"
+        ],
+        "title": "NationalParcelStateCoverage",
+        "type": "object"
+      },
       "NearbyParcelCandidateAssignment": {
         "properties": {
           "assigned_to_user_id": {
@@ -11810,6 +12040,192 @@
         "title": "ParcelAvailabilityEvidenceCreate",
         "type": "object"
       },
+      "ParcelAvailabilityImportError": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "row": {
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "reason"
+        ],
+        "title": "ParcelAvailabilityImportError",
+        "type": "object"
+      },
+      "ParcelAvailabilityImportRequest": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelAvailabilityImportRow"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "ParcelAvailabilityImportRequest",
+        "type": "object"
+      },
+      "ParcelAvailabilityImportResponse": {
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelAvailabilityImportError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "imported": {
+            "title": "Imported",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported",
+          "skipped"
+        ],
+        "title": "ParcelAvailabilityImportResponse",
+        "type": "object"
+      },
+      "ParcelAvailabilityImportRow": {
+        "properties": {
+          "asking_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asking Price"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.7,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "contact_company": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Company"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "evidence_type": {
+            "enum": [
+              "listing",
+              "broker",
+              "owner",
+              "auction"
+            ],
+            "title": "Evidence Type",
+            "type": "string"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "external_parcel_id": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "External Parcel Id",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "source_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "for_sale",
+              "listed",
+              "broker_listed",
+              "owner_indicated_available"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "evidence_type",
+          "confidence",
+          "source_id",
+          "external_parcel_id"
+        ],
+        "title": "ParcelAvailabilityImportRow",
+        "type": "object"
+      },
       "ParcelDetailResponse": {
         "properties": {
           "facts": {
@@ -12139,6 +12555,151 @@
           "last_verified_at"
         ],
         "title": "ParcelLineageParticipantResponse",
+        "type": "object"
+      },
+      "ParcelReconciliation": {
+        "description": "A bounded, read-only queue for analyst parcel identity review.",
+        "properties": {
+          "after_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Id"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "coverage_verified": {
+            "const": false,
+            "title": "Coverage Verified",
+            "type": "boolean"
+          },
+          "evaluated_permits": {
+            "title": "Evaluated Permits",
+            "type": "integer"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelReconciliationItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          },
+          "parcel_source_id": {
+            "title": "Parcel Source Id",
+            "type": "string"
+          },
+          "permit_source_id": {
+            "title": "Permit Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "measured_page",
+              "parcel_evidence_unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "permit_source_id",
+          "parcel_source_id",
+          "measured_at",
+          "status",
+          "counts",
+          "evaluated_permits",
+          "limit",
+          "after_id",
+          "next_after_id",
+          "has_more",
+          "items",
+          "coverage_verified",
+          "limitations"
+        ],
+        "title": "ParcelReconciliation",
+        "type": "object"
+      },
+      "ParcelReconciliationItem": {
+        "properties": {
+          "category": {
+            "enum": [
+              "missing_reference",
+              "no_match",
+              "ambiguous",
+              "address_corroborated",
+              "conflicting_address",
+              "missing_address_evidence"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "eligible_for_acceptance": {
+            "title": "Eligible For Acceptance",
+            "type": "boolean"
+          },
+          "result": {
+            "$ref": "#/components/schemas/PermitParcelCandidates"
+          },
+          "review_state": {
+            "enum": [
+              "unreviewed",
+              "eligible",
+              "needs_review",
+              "accepted",
+              "accepted_other"
+            ],
+            "title": "Review State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "review_state",
+          "eligible_for_acceptance",
+          "result"
+        ],
+        "title": "ParcelReconciliationItem",
         "type": "object"
       },
       "ParcelReferenceAcceptance": {
@@ -25520,6 +26081,56 @@
         ]
       }
     },
+    "/v1/ingestion/coverage/national-parcels": {
+      "get": {
+        "description": "Return a measured 50-state parcel gap report without changing intake state.",
+        "operationId": "get_national_parcel_coverage_v1_ingestion_coverage_national_parcels_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NationalParcelCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get National Parcel Coverage",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
     "/v1/ingestion/health": {
       "get": {
         "operationId": "get_ingestion_health_v1_ingestion_health_get",
@@ -26543,6 +27154,116 @@
           }
         },
         "summary": "Get Source Health",
+        "tags": [
+          "ingestion"
+        ]
+      }
+    },
+    "/v1/ingestion/sources/{source_id}/parcel-reconciliation": {
+      "get": {
+        "operationId": "get_parcel_reconciliation_v1_ingestion_sources__source_id__parcel_reconciliation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parcel_source_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Parcel Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "review_state",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "pattern": "^(all|eligible|needs_review|accepted)$",
+              "title": "Review State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelReconciliation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Parcel Reconciliation",
         "tags": [
           "ingestion"
         ]
@@ -28781,6 +29502,65 @@
           }
         },
         "summary": "Create Case Activity",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/parcel-availability/import": {
+      "post": {
+        "operationId": "import_parcel_availability_v1_parcel_availability_import_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParcelAvailabilityImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelAvailabilityImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Parcel Availability",
         "tags": [
           "nearby parcels"
         ]

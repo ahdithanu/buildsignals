@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { MeasuredCoveragePanel } from '@/components/MeasuredCoveragePanel';
+import { NationalParcelGapPanel } from '@/components/NationalParcelGapPanel';
+import { ParcelAvailabilityImportPanel } from '@/components/ParcelAvailabilityImportPanel';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -425,7 +427,7 @@ export default function IngestionOperations() {
   const candidates = data?.candidates ?? [];
   const coverage = data?.coverage;
   const reliability = resolveIngestionReliabilitySummary(sources, candidates, data?.reliability);
-  const canManage = role === 'admin';
+  const canManage = role === 'admin' || role === 'editor';
   const activeCanaryId = canary.isPending ? canary.variables?.sourceId : undefined;
   const activeCandidateCanaryKey = candidateCanary.isPending ? candidateCanary.variables?.candidateKey : undefined;
   const activePromoteCandidateKey = promoteCandidate.isPending ? promoteCandidate.variables?.candidateKey : undefined;
@@ -756,6 +758,13 @@ export default function IngestionOperations() {
         </section>
 
         <MeasuredCoveragePanel />
+
+        <NationalParcelGapPanel
+          coverage={data?.nationalParcelCoverage}
+          error={data?.nationalParcelCoverageError}
+        />
+
+        <ParcelAvailabilityImportPanel canManage={canManage} />
 
         {!isLoading && !error && sources.length > 0 && (
           <section className="rounded-md border bg-card p-4 card-shadow" aria-label="Configured source mix">

@@ -56,6 +56,32 @@ class ParcelReferenceAudit(BaseModel):
     limitations: list[str]
 
 
+class ParcelReconciliationItem(BaseModel):
+    category: Literal["missing_reference", "no_match", "ambiguous", "address_corroborated",
+                      "conflicting_address", "missing_address_evidence"]
+    review_state: Literal["unreviewed", "eligible", "needs_review", "accepted", "accepted_other"]
+    eligible_for_acceptance: bool
+    result: PermitParcelCandidates
+
+
+class ParcelReconciliation(BaseModel):
+    """A bounded, read-only queue for analyst parcel identity review."""
+
+    permit_source_id: str
+    parcel_source_id: str
+    measured_at: datetime
+    status: Literal["measured_page", "parcel_evidence_unavailable"]
+    counts: dict[str, int]
+    evaluated_permits: int
+    limit: int
+    after_id: str | None
+    next_after_id: str | None
+    has_more: bool
+    items: list[ParcelReconciliationItem]
+    coverage_verified: Literal[False]
+    limitations: list[str]
+
+
 class ParcelReferenceAcceptance(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

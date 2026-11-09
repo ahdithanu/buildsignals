@@ -81,7 +81,9 @@ BASE=https://YOUR-API.onrender.com \
 ```
 
 - **H-4 security headers:** smoke script checks frontend headers when `FRONTEND` is set.
-- **CSP:** open browser console — zero Content-Security-Policy violations.
+- **CSP (staging only):** open the browser console — zero
+  Content-Security-Policy violations. Production Render keeps strict CSP gated
+  until the real API, Sentry, map, and auth flows are observed under policy.
 - **M-3 Sentry token scrub:** `/reset-password?token=abc` → Sentry shows `token=[redacted]`.
 
 ---
@@ -91,7 +93,8 @@ BASE=https://YOUR-API.onrender.com \
 These were pending when this doc was authored; they are now done:
 
 1. **`npm ci`** in `.github/workflows/frontend.yml` and `e2e.yml`.
-2. **CSP enabled** in `render.yaml` (verify after first deploy).
+2. **Baseline security headers enabled** in `render.yaml`; strict CSP remains a
+   separately gated release item. Staging has the strict policy for browser QA.
 3. **Frontend + E2E CI** gated on PRs and `main` push.
 
 Track overall readiness in [docs/enterprise_readiness.md](docs/enterprise_readiness.md).

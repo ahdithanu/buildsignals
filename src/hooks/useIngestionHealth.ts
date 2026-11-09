@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ingestionApi } from '@/api/ingestion';
+import { useAuth } from '@/contexts/AuthContext';
 import { queryKeys } from '@/lib/queryKeys';
 
 export function useIngestionHealth(state?: string | null) {
@@ -13,7 +14,14 @@ export function useIngestionHealth(state?: string | null) {
         ingestionApi.coverage(),
         ingestionApi.reliabilitySummary(),
       ]);
-      return { sources, candidates, coverage, reliability };
+      let nationalParcelCoverage = null;
+      let nationalParcelCoverageError = false;
+      try {
+        nationalParcelCoverage = await ingestionApi.nationalParcelCoverage();
+      } catch {
+        nationalParcelCoverageError = true;
+      }
+      return { sources, candidates, coverage, reliability, nationalParcelCoverage, nationalParcelCoverageError };
     },
     retry: 1,
     staleTime: 30_000,
@@ -45,6 +53,17 @@ export function useIngestionCoverage() {
   return useQuery({
     queryKey: queryKeys.ingestion.coverage,
     queryFn: () => ingestionApi.coverage(),
+    retry: 1,
+    staleTime: 60_000,
+  });
+}
+
+export function useNationalParcelCoverage() {
+  const { organizationId, isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.ingestion.nationalParcelCoverage(organizationId),
+    queryFn: () => ingestionApi.nationalParcelCoverage(),
+    enabled: isAuthenticated && !!organizationId,
     retry: 1,
     staleTime: 60_000,
   });
