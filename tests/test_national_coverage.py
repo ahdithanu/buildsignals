@@ -83,6 +83,7 @@ def test_national_parcel_coverage_prioritizes_availability_evidence(monkeypatch,
             "nearby_candidate_parcels": 3,
             "verified_available_parcels": 1,
             "nearby_verified_available_parcels": 1,
+            "latest_verified_availability_at": datetime(2026, 10, 20, tzinfo=timezone.utc),
         }},
     )
 
@@ -91,6 +92,7 @@ def test_national_parcel_coverage_prioritizes_availability_evidence(monkeypatch,
 
     assert texas["next_action"] == "review_verified_available_parcels"
     assert report["summary"]["nearby_verified_available_parcels"] == 1
+    assert texas["latest_verified_availability_at"] == datetime(2026, 10, 20, tzinfo=timezone.utc)
 
 
 def test_national_parcel_coverage_executes_real_empty_inventory_queries(monkeypatch, db):

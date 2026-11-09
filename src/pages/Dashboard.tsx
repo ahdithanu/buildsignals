@@ -8,6 +8,8 @@ import { DetectedActivity } from "@/components/DetectedActivity";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { GraphCoverageCard } from "@/components/GraphCoverageCard";
+import { NationalParcelGapPanel } from "@/components/NationalParcelGapPanel";
+import { useNationalParcelCoverage } from "@/hooks/useIngestionHealth";
 import { TrendingUp, Target, Star, DollarSign, BarChart3, Lightbulb, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -38,6 +40,7 @@ export default function Dashboard() {
   const { data: pipelineSnapshot } = usePipelineSnapshot();
   const { data: recentSignals } = useRecentSignals();
   const { data: insights } = useAiInsights();
+  const { data: nationalParcelCoverage, isError: nationalParcelCoverageError } = useNationalParcelCoverage();
 
   if (kpisLoading) {
     return <Layout><LoadingState message="Loading dashboard..." /></Layout>;
@@ -58,6 +61,12 @@ export default function Dashboard() {
             <h2 className="text-lg md:text-xl font-semibold font-display text-foreground">Dashboard</h2>
             <p className="text-sm text-muted-foreground mt-0.5">Your acquisition engine at a glance</p>
           </div>
+          <div className="mb-5 md:mb-6">
+            <NationalParcelGapPanel
+              coverage={nationalParcelCoverage}
+              error={nationalParcelCoverageError}
+            />
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-y py-3 text-sm">
             <p className="text-muted-foreground">No saved deals yet.</p>
             <Button asChild variant="outline" size="sm">
@@ -76,6 +85,13 @@ export default function Dashboard() {
         <motion.div {...fadeIn}>
           <h2 className="text-lg md:text-xl font-semibold font-display text-foreground">Dashboard</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Your acquisition engine at a glance</p>
+        </motion.div>
+
+        <motion.div {...fadeIn} transition={{ delay: 0.05 }}>
+          <NationalParcelGapPanel
+            coverage={nationalParcelCoverage}
+            error={nationalParcelCoverageError}
+          />
         </motion.div>
 
         {/* KPIs */}

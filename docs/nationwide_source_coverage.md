@@ -181,5 +181,9 @@ have strong permit coverage and still have no measured parcel inventory.
 Nearby parcel candidates are discovery leads, not available land. A parcel is
 counted as verified available only when a current fact has an explicit
 availability status, a qualifying evidence type, confidence of at least `0.7`,
-and a source URL or excerpt. This separation is intentional: the moat is the
-permit-to-parcel-to-availability chain, not a map with unverified dots.
+and a source URL or excerpt. Each state row also carries the latest
+source-observed availability timestamp when one exists. That timestamp is
+evidence age, not a promise that the parcel remains available now; the customer
+workflow must re-check the source before outreach. This separation is
+intentional: the moat is the permit-to-parcel-to-availability chain, not a map
+with unverified dots.

@@ -28,7 +28,7 @@ ship. IDs match the tiers used in planning conversations.
 | A2 | Manual browser QA (`VALIDATION.md` §2) | 🟡 | Automated gates green; manual audit checklist remains |
 | A3 | Playwright E2E (auth + deal flows) | ✅ | 4/4 pass locally; workflow enabled on PR |
 | A4 | Regenerate `package-lock.json` | ✅ | Lock file committed; CI uses `npm ci` |
-| A5 | Content-Security-Policy on static frontend | 🟡 | Enabled in `render.yaml`; verify zero console violations after deploy |
+| A5 | Content-Security-Policy on static frontend | 🟡 | Strict policy is enabled in `render-staging.yaml` for browser QA; production `render.yaml` remains gated until real API, Sentry, map, and auth flows are observed under policy |
 | A6 | Render plans off free tier | 🟡 | Blueprint defaults to `starter`; confirm in dashboard before pilot |
 | A7 | Production env vars set (`CORS`, `APP_BASE_URL`, `VITE_*`) | 🔒 | Dashboard secrets — see `docs/runbooks/first-deploy.md` |
 | A8 | Post-deploy smoke test | ✅ | `scripts/smoke-test.sh` |

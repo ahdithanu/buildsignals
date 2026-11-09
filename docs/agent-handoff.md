@@ -1,5 +1,46 @@
 # Current Agent Handoff
 
+## Session 2026-11-09: nationwide value surfaced on the primary dashboard
+
+The 50-state parcel coverage service and evidence-aware nearby-parcel workflow
+already existed on `codex/parcel-discovery-readiness`. This increment makes that
+value visible on the authenticated dashboard instead of requiring an operator to
+open Source Health first. The dashboard now loads the organization-scoped
+`/v1/ingestion/coverage/national-parcels` report and reuses
+`NationalParcelGapPanel` in both populated and empty workspaces. The panel keeps
+the important distinction explicit: measured, configured-only, candidate-only,
+and uncovered states are different postures; nearby candidates are not verified
+for-sale inventory.
+
+Changed files:
+
+- `src/hooks/useIngestionHealth.ts`: organization-scoped national coverage query.
+- `src/lib/queryKeys.ts`: tenant-safe query key for the report.
+- `src/pages/Dashboard.tsx`: primary dashboard placement, including empty workspaces.
+- `src/test/dashboard.test.tsx`: regression coverage for dashboard visibility.
+- `app/services/ingestion/national_coverage.py`: latest source-observed availability
+  timestamp per state, derived only from current evidence-qualified facts.
+- `app/schemas/national_coverage.py`, `src/types/ingestion.ts`: typed timestamp field.
+- `src/components/NationalParcelGapPanel.tsx`: evidence-age display for verified
+  nearby candidates.
+- `tests/test_national_coverage.py`, `docs/nationwide_source_coverage.md`: coverage
+  regression and availability-age semantics.
+- `render-staging.yaml`: explicit cross-origin API mode for the separate Render
+  static host.
+- `VALIDATION.md`, `docs/enterprise_readiness.md`: accurate strict-CSP posture.
+- `openapi.json`: regenerated API contract including the national parcel,
+  reconciliation, and availability import routes.
+
+Verification: targeted backend coverage/availability/reference tests passed;
+Ruff passed; frontend unit tests, typecheck, and production build passed with the
+existing large-bundle warning; disposable Alembic upgrade/check reported no
+drift. No live connectors, canaries, migrations, paid model calls, or source
+rights gates were changed.
+
+Next action: review the rebased branch, then open a PR against the canonical
+BuildSignals backend/frontend repository. Do not merge or deploy until PR checks
+and the production target are verified.
+
 Last updated: 2026-10-24 (America/Los_Angeles). This is a dated snapshot;
 inspect Git and reverify production before acting. No credentials belong here.
 

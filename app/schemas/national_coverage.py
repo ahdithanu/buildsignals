@@ -18,6 +18,7 @@ class NationalParcelStateCoverage(BaseModel):
     nearby_candidate_parcels: int
     verified_available_parcels: int
     nearby_verified_available_parcels: int
+    latest_verified_availability_at: datetime | None = None
     candidate_status_counts: dict[str, int]
     next_action: str
     priority_score: int

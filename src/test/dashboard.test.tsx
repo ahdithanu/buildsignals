@@ -14,6 +14,9 @@ vi.mock("@/components/PreApprovalRetailSignalsCard", () => ({
 vi.mock("@/components/NationalCoverageCard", () => ({
   NationalCoverageCard: () => <div>NationalCoverageCard</div>,
 }));
+vi.mock("@/components/NationalParcelGapPanel", () => ({
+  NationalParcelGapPanel: () => <div>NationalParcelGapPanel</div>,
+}));
 vi.mock("@/components/GraphCoverageCard", () => ({
   GraphCoverageCard: () => <div>GraphCoverageCard</div>,
 }));
@@ -35,13 +38,14 @@ vi.mock("@/hooks/useDashboard", () => ({
 }));
 vi.mock("@/hooks/useIngestionHealth", () => ({
   useIngestionHealth: vi.fn(),
+  useNationalParcelCoverage: vi.fn(),
 }));
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({ user: { full_name: "Test User" }, role: "admin", isAuthenticated: true, logout: vi.fn() }),
 }));
 
 import { useDashboardKpis, useTopOpportunities, usePipelineSnapshot, useRecentSignals, useAiInsights } from "@/hooks/useDashboard";
-import { useIngestionHealth } from "@/hooks/useIngestionHealth";
+import { useIngestionHealth, useNationalParcelCoverage } from "@/hooks/useIngestionHealth";
 
 describe("<Dashboard>", () => {
   it("surfaces direct routes into the permit review and source health loops", () => {
@@ -130,6 +134,10 @@ describe("<Dashboard>", () => {
         },
       },
     });
+    (useNationalParcelCoverage as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { summary: { state_count: 50 } },
+      isError: false,
+    });
 
     render(
       <MemoryRouter>
@@ -143,6 +151,7 @@ describe("<Dashboard>", () => {
     expect(screen.getByText("AI Insights")).toBeInTheDocument();
     expect(screen.getByText(/1 evidence set/i)).toBeInTheDocument();
     expect(screen.getByText("GraphCoverageCard")).toBeInTheDocument();
+    expect(screen.getByText("NationalParcelGapPanel")).toBeInTheDocument();
     expect(screen.getByText("Test Deal")).toBeInTheDocument();
   });
 });

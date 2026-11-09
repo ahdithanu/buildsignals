@@ -17,6 +17,12 @@ function compact(value: number) {
   return value.toLocaleString();
 }
 
+function dateLabel(value?: string | null) {
+  if (!value) return 'No evidence yet';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Unknown date' : date.toLocaleDateString();
+}
+
 function StateCell({ state }: { state: NationalParcelStateCoverage }) {
   return (
     <span
@@ -124,6 +130,9 @@ function TargetRow({ target }: { target: NationalParcelStateCoverage }) {
       <div className="shrink-0 text-right text-[11px] text-muted-foreground">
         <p>{target.next_action.replace(/_/g, ' ')}</p>
         <p className="mt-1 tabular-nums">{compact(target.nearby_candidate_parcels)} nearby · {compact(target.nearby_verified_available_parcels)} verified</p>
+        {target.nearby_verified_available_parcels > 0 && (
+          <p className="mt-1">Evidence as of {dateLabel(target.latest_verified_availability_at)}</p>
+        )}
       </div>
     </div>
   );

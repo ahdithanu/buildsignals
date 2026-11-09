@@ -34,6 +34,10 @@ _VERIFIED_AVAILABILITY_STATUSES = {
 
 
 def _availability_exists(parcel_id_column, organization_id_column):
+    return exists().where(*_availability_conditions(parcel_id_column, organization_id_column))
+
+
+def _availability_conditions(parcel_id_column, organization_id_column):
     status = func.lower(func.coalesce(
         ParcelFact.value["status"].as_string(),
         ParcelFact.value["availability_status"].as_string(),
@@ -44,7 +48,7 @@ def _availability_exists(parcel_id_column, organization_id_column):
         ParcelFact.value["source_type"].as_string(),
         "",
     ))
-    return exists().where(
+    return [
         ParcelFact.parcel_id == parcel_id_column,
         ParcelFact.organization_id == organization_id_column,
         ParcelFact.is_current.is_(True),
@@ -56,7 +60,7 @@ def _availability_exists(parcel_id_column, organization_id_column):
             and_(ParcelFact.source_url.isnot(None), ParcelFact.source_url != ""),
             and_(ParcelFact.excerpt.isnot(None), ParcelFact.excerpt != ""),
         ),
-    )
+    ]
 
 
 def _state_parcel_counts(db: Session) -> dict[str, dict[str, int]]:
@@ -66,6 +70,7 @@ def _state_parcel_counts(db: Session) -> dict[str, dict[str, int]]:
         "nearby_candidate_parcels": 0,
         "verified_available_parcels": 0,
         "nearby_verified_available_parcels": 0,
+        "latest_verified_availability_at": None,
     })
 
     nearby_query = active_query(
@@ -86,18 +91,33 @@ def _state_parcel_counts(db: Session) -> dict[str, dict[str, int]]:
         counts[row.state]["nearby_candidate_parcels"] = int(row.count or 0)
 
     available_query = active_query(
-        db.query(state.label("state"), func.count(distinct(ParcelRecord.id)).label("count")),
+        db.query(
+            state.label("state"),
+            func.count(distinct(ParcelRecord.id)).label("count"),
+            func.max(ParcelFact.observed_at).label("latest_verified_availability_at"),
+        ),
         ParcelRecord,
+    ).join(
+        ParcelFact,
+        and_(
+            ParcelFact.parcel_id == ParcelRecord.id,
+            ParcelFact.organization_id == ParcelRecord.organization_id,
+        ),
     ).filter(
         ParcelRecord.is_active.is_(True),
         state.in_(US_STATE_CODES),
-        _availability_exists(ParcelRecord.id, ParcelRecord.organization_id),
+        *_availability_conditions(ParcelRecord.id, ParcelRecord.organization_id),
     ).group_by(state)
     for row in available_query.all():
         counts[row.state]["verified_available_parcels"] = int(row.count or 0)
+        counts[row.state]["latest_verified_availability_at"] = row.latest_verified_availability_at
 
     nearby_available_query = active_query(
-        db.query(state.label("state"), func.count(distinct(ParcelRecord.id)).label("count")),
+        db.query(
+            state.label("state"),
+            func.count(distinct(ParcelRecord.id)).label("count"),
+            func.max(ParcelFact.observed_at).label("latest_verified_availability_at"),
+        ),
         ParcelRecord,
     ).join(
         NearbyParcelCandidate,
@@ -105,14 +125,23 @@ def _state_parcel_counts(db: Session) -> dict[str, dict[str, int]]:
             NearbyParcelCandidate.parcel_id == ParcelRecord.id,
             NearbyParcelCandidate.organization_id == ParcelRecord.organization_id,
         ),
+    ).join(
+        ParcelFact,
+        and_(
+            ParcelFact.parcel_id == ParcelRecord.id,
+            ParcelFact.organization_id == ParcelRecord.organization_id,
+        ),
     ).filter(
         ParcelRecord.is_active.is_(True),
         NearbyParcelCandidate.review_status != "dismissed",
         state.in_(US_STATE_CODES),
-        _availability_exists(ParcelRecord.id, ParcelRecord.organization_id),
+        *_availability_conditions(ParcelRecord.id, ParcelRecord.organization_id),
     ).group_by(state)
     for row in nearby_available_query.all():
         counts[row.state]["nearby_verified_available_parcels"] = int(row.count or 0)
+        current_latest = counts[row.state]["latest_verified_availability_at"]
+        if current_latest is None or row.latest_verified_availability_at > current_latest:
+            counts[row.state]["latest_verified_availability_at"] = row.latest_verified_availability_at
 
     return counts
 
@@ -177,6 +206,7 @@ def national_parcel_coverage(db: Session, *, now: datetime | None = None) -> dic
             "nearby_candidate_parcels": measured_parcel_counts.get("nearby_candidate_parcels", 0),
             "verified_available_parcels": measured_parcel_counts.get("verified_available_parcels", 0),
             "nearby_verified_available_parcels": measured_parcel_counts.get("nearby_verified_available_parcels", 0),
+            "latest_verified_availability_at": measured_parcel_counts.get("latest_verified_availability_at"),
         }
         if int(measured_row.get("stored_records") or 0) > 0:
             posture = "measured"

@@ -511,6 +511,7 @@ export interface NationalParcelStateCoverage {
   nearby_candidate_parcels: number;
   verified_available_parcels: number;
   nearby_verified_available_parcels: number;
+  latest_verified_availability_at?: string | null;
   candidate_status_counts: Record<string, number>;
   next_action: string;
   priority_score: number;
