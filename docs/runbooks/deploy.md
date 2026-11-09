@@ -99,20 +99,21 @@ check state, then `alembic upgrade head` or a targeted `alembic upgrade
 After the API service goes green, run the automated script:
 
 ```bash
-BASE=https://buildsignals.ai ./scripts/smoke-test.sh
+API_ORIGIN=https://api.example.com # use the current direct API service origin
+BASE=$API_ORIGIN ./scripts/smoke-test.sh
 # With auth (requires a seeded smoke user in the vault):
-BASE=https://buildsignals.ai \
+BASE=$API_ORIGIN \
   REQUIRE_AUTH_SMOKE=true \
   SMOKE_EMAIL=smoke@buildsignals.ai \
   SMOKE_PASSWORD='<from vault>' \
-  FRONTEND=https://buildsignals.ai \
+  FRONTEND=https://www.buildsignals.ai \
   ./scripts/smoke-test.sh
 ```
 
 Manual equivalent:
 
 ```bash
-BASE=https://buildsignals.ai        # adjust per environment
+BASE=https://api.example.com        # direct API origin; do not use the Vercel frontend URL
 
 # Basic aliveness + version
 curl -sf $BASE/health | jq .        # shallow liveness — no DB check
@@ -129,7 +130,8 @@ curl -sf -X POST $BASE/v1/auth/login \
 grep ds_refresh /tmp/c.txt   # refresh cookie present (path /v1/auth)
 ```
 
-Frontend smoke: open the configured production frontend and sign in to the
+Frontend smoke: open the configured production frontend (for example,
+`https://www.buildsignals.ai`) and sign in to the
 intended pilot organization. Verify Planning and Brands load, then inspect a
 real imported record and its source evidence. Complete nearby-parcel review,
 save, and export. An empty HTTP 200 list proves endpoint availability, not
