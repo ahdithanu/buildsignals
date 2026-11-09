@@ -323,6 +323,9 @@ def measured_coverage(db, *, record_type: str, limit: int = 50, offset: int = 0,
                 "configured_active": item["source"].is_active,
                 "configured_jurisdiction": item["source"].jurisdiction,
                 "stored_records": item["stored_records"],
+                "geocoded_records": sum(
+                    row["geocoded_records"] for row in by_source.get(item["source"].id, [])
+                ),
                 "readiness_status": item["status"],
                 "readiness_reasons": item["reasons"],
                 "completion_evidence": _source_completion_evidence(db, item["source"]),

@@ -30,7 +30,7 @@ def _identifier(value):
     return isinstance(value, str) and 0 < len(value) <= 100 and value.strip() == value
 
 
-def evaluate_source(source, run, *, now, freshness_hours):
+def evaluate_source(source, run, *, now, freshness_hours, record_type="permit"):
     reasons = []
     stored = source.get("stored_records")
     if not isinstance(source.get("source_id"), str) or not source["source_id"]:
@@ -39,6 +39,12 @@ def evaluate_source(source, run, *, now, freshness_hours):
         reasons.append("source_not_active")
     if type(stored) is not int or stored <= 0:
         reasons.append("missing_inventory")
+    if record_type == "parcel":
+        geocoded = source.get("geocoded_records")
+        if type(geocoded) is not int or geocoded < 0 or (type(stored) is int and geocoded > stored):
+            reasons.append("invalid_geocoded_inventory")
+        elif geocoded == 0:
+            reasons.append("missing_geocoded_inventory")
     if not isinstance(run, dict):
         reasons.append("missing_latest_run")
     else:
@@ -68,7 +74,7 @@ def verify(*, api_base, organization_id, source_keys, token, allow_live,
     blocked = {"status": "blocked", "checks": [], "scope": "Specified workspace and sources only"}
     if (not allow_live or not token or not organization_id or not source_keys
             or len(source_keys) > 50 or len(set(source_keys)) != len(source_keys)
-            or record_type not in {"permit", "planning"} or not 1 <= freshness_hours <= 8760):
+            or record_type not in {"permit", "parcel", "planning"} or not 1 <= freshness_hours <= 8760):
         return {**blocked, "reason": "Explicit live scope, workspace, unique sources and bearer credential required"}
     clock = (lambda: now) if now is not None else (lambda: datetime.now(timezone.utc))
     deadline = time.monotonic() + 120
@@ -129,8 +135,13 @@ def verify(*, api_base, organization_id, source_keys, token, allow_live,
             runs = read("/v1/ingestion/runs?" + urlencode({"source_id": source["source_id"], "limit": 1}))
             if not isinstance(runs, list) or len(runs) > 1:
                 raise ValueError("Invalid run evidence")
-            checks.append(evaluate_source(source, runs[0] if runs else None,
-                                          now=clock(), freshness_hours=freshness_hours))
+            checks.append(evaluate_source(
+                source,
+                runs[0] if runs else None,
+                now=clock(),
+                freshness_hours=freshness_hours,
+                record_type=record_type,
+            ))
         return {"status": "passed" if all(c["passed"] for c in checks) else "blocked",
                 "checked_at": clock().isoformat(), "checks": checks,
                 "scope": "Specified workspace/source collection only; not source completeness, parcel availability or filing freshness"}
@@ -144,7 +155,7 @@ def main(argv=None):
     parser.add_argument("--api-base", required=True)
     parser.add_argument("--organization-id", required=True)
     parser.add_argument("--source-key", action="append", required=True)
-    parser.add_argument("--record-type", choices=["permit", "planning"], default="permit")
+    parser.add_argument("--record-type", choices=["permit", "parcel", "planning"], default="permit")
     parser.add_argument("--freshness-hours", type=int, default=36)
     parser.add_argument("--live-acceptance", action="store_true")
     args = parser.parse_args(argv)
