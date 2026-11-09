@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from app.models.audit_log import AuditLog
 from app.models.ingestion import IngestionRun, IngestionSource, RawSourceRecord
 from app.models.parcel import ParcelFact, ParcelRecord
+from app.services.parcel_availability import availability_state
 from app.services.zip3_heatmap import zip3_heatmap
 from tests.test_nearby_parcels import _add_parcel, _admin_headers, _setup_confirmed_signal
 
@@ -53,6 +54,32 @@ def _parcel(db):
     return parcel
 
 
+def test_availability_freshness_distinguishes_current_stale_and_unaged():
+    now = datetime(2026, 11, 9, 12, tzinfo=timezone.utc)
+
+    def fact(observed_at, source_marker):
+        return ParcelFact(
+            fact_type="availability",
+            value={
+                "status": "for_sale",
+                "evidence_type": "broker",
+                **({"observed_at_source": source_marker} if source_marker else {}),
+            },
+            source_url="https://broker.example/listing/P-AVAILABLE",
+            excerpt="Available",
+            confidence=0.9,
+            observed_at=observed_at,
+            is_current=True,
+        )
+
+    assert availability_state(fact(now, "source"), now=now) == "verified_current"
+    assert availability_state(
+        fact(datetime(2026, 10, 1, 12, tzinfo=timezone.utc), "source"),
+        now=now,
+    ) == "verified_stale"
+    assert availability_state(fact(now, None), now=now) == "verified_unaged"
+
+
 def test_availability_evidence_endpoint_creates_source_backed_fact(client, db):
     headers = _admin_headers(db)
     parcel = _parcel(db)
@@ -76,6 +103,7 @@ def test_availability_evidence_endpoint_creates_source_backed_fact(client, db):
     assert body["fact_type"] == "availability"
     assert body["value"]["status"] == "for_sale"
     assert body["value"]["evidence_type"] == "broker"
+    assert body["value"]["observed_at_source"] == "captured_at"
     assert body["source_url"] == "https://broker.example/listing/P-AVAILABLE"
     fact = db.query(ParcelFact).filter(ParcelFact.parcel_id == parcel.id).one()
     assert fact.raw_source_record.record_type == "parcel_availability"
@@ -248,6 +276,7 @@ def test_availability_evidence_import_flows_into_zip3_heatmap(client, db, tmp_pa
             "evidence_type": "listing",
             "source_url": "https://listing.example/P-LIVE-LISTING",
             "confidence": 0.91,
+            "observed_at": datetime.now(timezone.utc).isoformat(),
         },
     )
     assert response.status_code == 201, response.text

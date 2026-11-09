@@ -22,6 +22,43 @@ def evidence():
              "records_failed": 0, "records_seen": 0, "checkpoint": {"keyset": "terminal"}})
 
 
+@pytest.mark.parametrize("geocoded_records,expected", [(1, True), (0, False), (13, False), (True, False)])
+def test_parcel_acceptance_requires_valid_geocoded_inventory(geocoded_records, expected):
+    source, run = evidence()
+    source["geocoded_records"] = geocoded_records
+    result = verifier.evaluate_source(
+        source, run, now=NOW, freshness_hours=36, record_type="parcel"
+    )
+    assert result["passed"] is expected
+
+
+def test_live_parcel_gate_accepts_geocoded_source_and_rejects_empty_geometry_inventory():
+    source, run = evidence()
+    source["geocoded_records"] = 1
+
+    def get(path):
+        if path.endswith("/auth/me"):
+            return {"is_demo": False, "organization_id": "org"}
+        if "/runs?" in path:
+            return [run]
+        return coverage([source], record_type="parcel", freshness_hours=72)
+
+    args = dict(
+        api_base="https://example.com",
+        organization_id="org",
+        source_keys=["reviewed_feed"],
+        token="private",
+        allow_live=True,
+        record_type="parcel",
+        freshness_hours=72,
+        get=get,
+        now=NOW,
+    )
+    assert verifier.verify(**args)["status"] == "passed"
+    source["geocoded_records"] = 0
+    assert verifier.verify(**args)["status"] == "blocked"
+
+
 def test_completed_quiet_run_with_terminal_cursor_is_healthy():
     source, run = evidence()
     result = verifier.evaluate_source(source, run, now=NOW, freshness_hours=36)

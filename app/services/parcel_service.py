@@ -10,7 +10,7 @@ from app.models.brand import PermitBrandMatch
 from app.models.deal import Deal
 from app.models.graph import GraphEntityType, GraphRelationshipType
 from app.models.organization_membership import OrganizationMembership
-from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
+from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelRecord
 from app.models.planning import PlanningRecord
 from app.models.user import User
 from app.schemas.deal import DealCreate
@@ -26,7 +26,11 @@ from app.services.graph_service import (
     resolve_entity,
     upsert_deal_graph_context,
 )
-from app.services.parcel_availability import AVAILABILITY_FACT_TYPES, VERIFIED_AVAILABILITY_STATUSES
+from app.services.parcel_availability import (
+    availability_recheck_at,
+    current_availability_conditions,
+    resolve_availability,
+)
 from app.services.parcel_proximity import find_nearby_parcels
 from app.services.parcel_ranking import rank_parcel_candidate, ranker_version
 from app.utils.org_scope import active_query, get_org_id
@@ -122,28 +126,8 @@ def _radar_candidate_query(
 
 
 def _verified_availability_exists(parcel_id_column, organization_id_column):
-    status = func.lower(func.coalesce(
-        ParcelFact.value["status"].as_string(),
-        ParcelFact.value["availability_status"].as_string(),
-        "",
-    ))
-    evidence_type = func.lower(func.coalesce(
-        ParcelFact.value["evidence_type"].as_string(),
-        ParcelFact.value["source_type"].as_string(),
-        "",
-    ))
     return exists().where(
-        ParcelFact.parcel_id == parcel_id_column,
-        ParcelFact.organization_id == organization_id_column,
-        ParcelFact.is_current.is_(True),
-        ParcelFact.fact_type.in_(AVAILABILITY_FACT_TYPES),
-        status.in_(VERIFIED_AVAILABILITY_STATUSES),
-        evidence_type.in_(("listing", "broker", "owner", "auction")),
-        ParcelFact.confidence >= 0.7,
-        or_(
-            and_(ParcelFact.source_url.isnot(None), ParcelFact.source_url != ""),
-            and_(ParcelFact.excerpt.isnot(None), ParcelFact.excerpt != ""),
-        ),
+        *current_availability_conditions(parcel_id_column, organization_id_column),
     )
 
 
@@ -332,11 +316,26 @@ def list_acquisition_radar(
             reasons.append("Already shortlisted by the acquisition team")
         if _as_utc(aggregate.last_verified_at) >= now - timedelta(days=30):
             reasons.append("Parcel evidence verified within 30 days")
-        cautions = list(dict.fromkeys(
+        availability_fact, availability_state = resolve_availability(
+            representative.parcel.facts,
+            now=now,
+        )
+        if availability_state == "verified_stale":
+            cautions = [
+                "Availability evidence is stale; re-check the source before outreach.",
+            ]
+        elif availability_state == "verified_unaged":
+            cautions = [
+                "Availability evidence has no source-observed timestamp; re-check before outreach.",
+            ]
+        else:
+            cautions = []
+        cautions.extend(list(dict.fromkeys(
             caution
             for candidate in parcel_candidates
             for caution in (candidate.explanation or {}).get("cautions", [])
-        ))[:3]
+        )))
+        cautions = cautions[:3]
         review = acquisition_case.status if acquisition_case else (
             "shortlisted" if aggregate.shortlisted_count else (
             "candidate" if any(item.review_status == "candidate" for item in parcel_candidates) else "dismissed"
@@ -389,6 +388,12 @@ def list_acquisition_radar(
             "follow_up_at": acquisition_case.follow_up_at if acquisition_case else None,
             "promoted_deal_id": (
                 acquisition_case.promoted_deal_id if acquisition_case else None
+            ),
+            "availability_state": availability_state,
+            "availability_observed_at": availability_fact.observed_at if availability_fact else None,
+            "availability_recheck_at": availability_recheck_at(
+                availability_fact,
+                state=availability_state,
             ),
             "latest_signal_at": aggregate.latest_signal_at,
             "reasons": reasons,

@@ -1,4 +1,4 @@
-import type { AcquisitionCaseStatus, AcquisitionRadarItem, ParcelFact } from '@/types/parcel';
+import type { AcquisitionCaseStatus, AcquisitionRadarItem, AvailabilityState, ParcelFact } from '@/types/parcel';
 
 export interface AcquisitionMapSignal {
   id: string;
@@ -80,35 +80,47 @@ function availabilityValue(fact: ParcelFact) {
 }
 
 export function verifiedAvailabilityFact(facts: ParcelFact[]) {
-  return facts.find((fact) => {
-    if (!['availability', 'listing', 'broker_listing', 'owner_availability', 'sale_availability'].includes(fact.fact_type)) return false;
-    const value = availabilityValue(fact);
-    const status = String(value.status || value.availability_status || '').toLowerCase();
-    const evidenceType = String(value.evidence_type || value.source_type || '').toLowerCase();
-    return ['available', 'for_sale', 'listed', 'broker_listed', 'owner_indicated_available'].includes(status)
-      && ['listing', 'broker', 'owner', 'auction'].includes(evidenceType)
-      && fact.confidence >= 0.7
-      && Boolean(fact.source_url || fact.excerpt);
-  }) || null;
+  return facts.find((fact) => availabilityState(fact) === 'verified_current') || null;
 }
 
-export function availabilitySummary(facts: ParcelFact[]) {
-  const fact = verifiedAvailabilityFact(facts);
+export function availabilityState(fact: ParcelFact, now = new Date()): AvailabilityState | null {
+  if (!['availability', 'listing', 'broker_listing', 'owner_availability', 'sale_availability'].includes(fact.fact_type)) return null;
+  const value = availabilityValue(fact);
+  const status = String(value.status || value.availability_status || '').toLowerCase();
+  const evidenceType = String(value.evidence_type || value.source_type || '').toLowerCase();
+  if (!['available', 'for_sale', 'listed', 'broker_listed', 'owner_indicated_available'].includes(status)
+    || !['listing', 'broker', 'owner', 'auction'].includes(evidenceType)
+    || fact.confidence < 0.7
+    || !(fact.source_url || fact.excerpt)) return null;
+  if (String(value.observed_at_source || '').toLowerCase() !== 'source') return 'verified_unaged';
+  const observedAt = new Date(fact.observed_at).getTime();
+  const nowMs = now.getTime();
+  if (!Number.isFinite(observedAt) || observedAt > nowMs || nowMs - observedAt > 30 * 24 * 60 * 60 * 1000) return 'verified_stale';
+  return 'verified_current';
+}
+
+export function availabilitySummary(facts: ParcelFact[], stateOverride?: AvailabilityState) {
+  const fact = facts.find((candidate) => availabilityState(candidate));
   if (!fact) return 'Nearby candidate, not a verified listing';
+  const state = stateOverride || availabilityState(fact);
   const value = availabilityValue(fact);
   const source = String(value.evidence_type || value.source_type || fact.fact_type).replace(/_/g, ' ');
+  if (state === 'verified_stale') return `Stale availability evidence: ${source}`;
+  if (state === 'verified_unaged') return `Availability evidence needs a source timestamp: ${source}`;
   return `Verified availability evidence: ${source}`;
 }
 
-export function availabilityEvidenceSource(facts: ParcelFact[]) {
-  const fact = verifiedAvailabilityFact(facts);
+export function availabilityEvidenceSource(facts: ParcelFact[], stateOverride?: AvailabilityState) {
+  const fact = facts.find((candidate) => availabilityState(candidate));
   if (!fact) return null;
+  const state = stateOverride || availabilityState(fact);
   const value = availabilityValue(fact);
   return {
     url: fact.source_url || null,
     excerpt: fact.excerpt || null,
     evidenceType: String(value.evidence_type || value.source_type || fact.fact_type).replace(/_/g, ' '),
     confidence: fact.confidence,
+    state,
   };
 }
 

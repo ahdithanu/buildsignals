@@ -5,6 +5,7 @@ export type ParcelReviewStatus = 'candidate' | 'shortlisted' | 'dismissed';
 export type AcquisitionCaseStatus = ParcelReviewStatus | 'contacted' | 'promoted';
 export type AcquisitionActivityType = 'call' | 'email' | 'sms' | 'meeting' | 'note';
 export type ParcelPersona = 'developer' | 'investor' | 'broker' | 'realtor';
+export type AvailabilityState = 'nearby_candidate' | 'verified_current' | 'verified_stale' | 'verified_unaged';
 
 export interface ParcelFact {
   id: string;
@@ -230,6 +231,9 @@ export interface AcquisitionRadarItem {
   contacted_at?: string | null;
   follow_up_at?: string | null;
   promoted_deal_id?: string | null;
+  availability_state?: AvailabilityState;
+  availability_observed_at?: string | null;
+  availability_recheck_at?: string | null;
   latest_signal_at: string;
   reasons: string[];
   cautions: string[];
@@ -286,8 +290,10 @@ export interface Zip3HeatmapParcel {
   state?: string | null;
   review_status: string;
   candidate_score: number;
-  availability_label: 'nearby_candidate_not_verified_for_sale' | 'verified_for_sale';
+  availability_label: 'nearby_candidate_not_verified_for_sale' | 'verified_for_sale' | 'verified_for_sale_stale' | 'verified_for_sale_unaged';
   availability_source_url?: string | null;
+  availability_state?: AvailabilityState;
+  availability_observed_at?: string | null;
 }
 
 export interface Zip3HeatmapItem {

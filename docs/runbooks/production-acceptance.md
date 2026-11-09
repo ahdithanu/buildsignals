@@ -37,7 +37,21 @@ JSON output includes source keys, counts, run IDs and stable reason codes, not
 tokens, raw records, error text, people or actor details. Exit 0 means this
 explicit collection scope passed; all other dispositions exit nonzero. A pass
 does not prove independent provider totals, unique projects, new filing dates,
-complete geographic coverage, parcel matches or for-sale availability.
+complete geographic coverage, parcel matches or for-sale availability. For
+`--record-type parcel`, the selected sources must also report positive, valid
+geocoded inventory; this proves only that usable coordinates were observed in the
+selected workspace/source scope, not that parcel boundaries or statewide coverage
+are complete.
+
+Parcel acceptance uses the same explicit scope and read-only checks:
+
+```sh
+.venv/bin/python scripts/verify_ingestion_runs.py \
+  --api-base https://www.buildsignals.ai \
+  --organization-id CONFIRMED_WORKSPACE_ID \
+  --record-type parcel --source-key EXPECTED_PARCEL_SOURCE \
+  --freshness-hours 72 --live-acceptance
+```
 
 ## Isolated PostgreSQL Restore
 

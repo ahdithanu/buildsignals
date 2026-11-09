@@ -2,14 +2,14 @@
 # Post-deploy smoke test for DealSignal API + optional frontend URL.
 #
 # Usage:
-#   BASE=https://dealsignal-api.onrender.com ./scripts/smoke-test.sh
+#   BASE=https://api.example.com ./scripts/smoke-test.sh
 #   BASE=... FRONTEND=https://app.example.com SMOKE_EMAIL=... SMOKE_PASSWORD=... ./scripts/smoke-test.sh
 #
 # Exit 0 when all checks pass; non-zero on first failure.
 
 set -euo pipefail
 
-BASE="${BASE:?Set BASE to the API origin, e.g. https://dealsignal-api.onrender.com}"
+BASE="${BASE:?Set BASE to the direct API origin, not the frontend URL}"
 FRONTEND="${FRONTEND:-}"
 SMOKE_EMAIL="${SMOKE_EMAIL:-}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-}"
