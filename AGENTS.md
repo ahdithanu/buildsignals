@@ -34,7 +34,17 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
-Investment Areas (November 10): the authenticated read-only API/panel uses
+Investment Areas (November 10): the first web-fetch release returned production
+503s; its frontend was rolled back. App Runner's VPC connector lacks NAT internet
+egress. The correction uses a dated, hash-bound annual release-reference artifact,
+not web-time downloads or a silent stale fallback; local tenant evidence stays
+live. The corrected API/private-operations image and e1b6e30 frontend are now
+production-verified in the November10 receipt: owner console works, demo/anonymous
+operations are denied, and Ocala shows61live context rows with the annual reference.
+Only the owner's verified account is allowlisted; an organization-admin role
+alone is not an operator. Never commit the real allowlist value. Required
+attribution stays; public repo/history URLs are not made secret by UI controls.
+The authenticated read-only API/panel uses
 current-vintage 2025 FHFA/Census metro research plus separately tenant-scoped
 local evidence. See `docs/releases/2026-11-10-investment-areas.md` for exact
 verification/release state. It is not investment quality, expected returns or a

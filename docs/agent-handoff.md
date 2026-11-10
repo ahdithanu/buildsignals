@@ -1,6 +1,59 @@
 # Current Agent Handoff
 
+## November 10 Final Production Acceptance
+
+The correction supersedes the pending/failed-attempt notes below. API operation
+94b738facdec4ea2af519bd8ab164eb3 SUCCEEDED14:32:19-14:36:56PST, immutable image
+investment-private-3a814ee. Only image plus approved one-account operations
+allowlist changed; all other settings/secrets preserved. Vercel final frontend
+e1b6e30 / dpl_9mMaSrF9piDeEwso6b5WM66TAexS (21rm923bj) promoted successfully.
+Actual owner Chrome session: private Operations console populated; Signals
+annual2025/cohort360/Ocala0.251/61local61geocoded, generic provenance; Tampa no
+rank, demand context retained. Direct/proxy live checks: anonymous operations401,
+demo entry/summary200, demo operations403. No token extraction or production
+test accounts. Full lineage/attribution retained; no migration/source/schedule,
+paid model, NAT or network change. API internet egress is NOT globally fixed.
+
+Verification: final SQLite2,217passed/69skipped; local restricted-role PostGIS91
+passed including all69gated cases and drift/RLS; hosted backend2,286passed/91%
+coverage on1e7dc61; frontend418passed/typecheck/build; final fullE2E19passed with
+non-localhost network denied; CSP verifier passed. e1b6e30 hosted frontend/E2E/
+gitleaks/pre-commit passed; redundant backend rerun may still be pending. PR271
+open, not merged. Only documentation changes follow runtime freeze. Root research
+checkout preserved, not deployed. See the release receipt for audit chronology,
+rollback targets and dev-tool advisory caveat.
+
+Next: check the remaining PR backend run and request a fresh merge decision if
+needed. NPR remains blocked on a supported recurring City permit export/feed;
+inquiries stay drafts. New sources, paid infrastructure, migrations and subsequent
+releases require applicable approval. Do not expand this privacy release into
+erasing evidence URLs or source license obligations. Reference refresh requires
+a new reviewed capture/image release, never overwriting capture timestamps.
+
 ## November 10: Scoped Investment Areas Release
+
+Stop-and-fix update: initial App Runner rollout succeeded but the actual panel
+returned 503; frontend restored to prior deployment. VPC connector routing lacks
+NAT internet egress. The corrected API uses packaged annual-2025 reference
+inputs (full backend provenance), not web-time fetches; tenant evidence stays
+live. Owner now requests private source diagnostics, allowlisted only to their
+own account. Exact identity now verified by one active admin membership in a
+read-only production transaction; configuring its private allowlist is pending.
+Customer source projections and auth refresh revocation are under final review.
+See `docs/runbooks/internal-operations.md`. No new
+network/paid service/source/migration changes. See the release receipt's current
+state section; initial green tests/deployment status are not correction acceptance.
+
+Correction runtime code is frozen in 3026ea3/3a814ee/ab3270a; test config-module
+restoration d655106 fixed 9 integration failures without changing API guards.
+Full final backend 2,217 passed/69 skipped; independent restricted-role PostGIS
+run91passed (all69 PostgreSQL cases), migrations/drift/RLS passed. Frontend418
+tests/typecheck/build passed;4focusedbrowserjourneys passed. Hosted browser checks
+then identified stale operator mocks and9px Linux1024headeroverflow. These are
+being corrected; staged Vercel gia6zsl95 is not promoted and predates layoutfix.
+API image investment-private-3a814ee is uploaded and offline-tested, not deployed.
+Do not promote or call source privacy live until final corrected browser checks
+and actual owner-session/production receipts are recorded.
 
 Branch `codex/investment-area-live` starts at `origin/main` 2307b92 so newer
 parcel/discovery/CSP work is preserved. Root research work is not deployed or

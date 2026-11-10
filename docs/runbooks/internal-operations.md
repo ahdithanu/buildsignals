@@ -22,6 +22,9 @@ Navigation and query guards use this server-derived value; they are not the
 security boundary. Revoking membership or removing the server allowlist entry
 denies subsequent internal API calls, including with an older access token.
 Changing the environment requires the normal API service configuration rollout.
+Acceptance tools that read the restricted ingestion APIs now need an authorized
+operator session too; an ordinary customer-admin token is not sufficient.
+Scheduled workers use their existing direct ingestion path and are unchanged.
 
 ## Customer Surfaces
 
@@ -43,6 +46,10 @@ Use disposable local accounts to test an ordinary customer admin (403), an
 explicitly allowlisted admin (200), and a demo session (403) on internal APIs.
 Verify that non-operator coverage/maps still load, that direct console URLs
 redirect safely, and that session/organization changes discard operator caches.
+Silent refresh with a changed or missing user/organization/role fails closed
+before installing the refreshed token or retrying the request. A fresh sign-in
+is required after an identity-scope change; first-mount cookie hydration remains
+supported. Same-identity operator revocation clears the diagnostic cache.
 The browser fixture's synthetic operator exists only in disposable SQLite and
 does not activate or call any ingestion source. Production verification uses
 the owner's existing session, not a newly created customer account.
