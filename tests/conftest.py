@@ -19,6 +19,11 @@ from app.main import app
 @pytest.fixture()
 def client(tmp_path):
     """FastAPI TestClient with isolated DB per test."""
+    from app.services.rate_limiter import InMemoryRateLimiter, limiter
+
+    if not isinstance(limiter, InMemoryRateLimiter):
+        pytest.fail("Tests require an isolated limiter; run with REDIS_URL=")
+    limiter.clear()
     db_path = str(tmp_path / f"test_{uuid.uuid4().hex[:8]}.db")
     engine = create_engine(
         f"sqlite:///{db_path}",
