@@ -9,6 +9,10 @@ from tempfile import TemporaryDirectory
 
 
 def main():
+    api_port = int(os.environ.get("E2E_API_PORT") or "8000")
+    web_port = int(os.environ.get("E2E_WEB_PORT") or "8080")
+    if not all(1 <= port <= 65535 for port in (api_port, web_port)):
+        raise ValueError("E2E_API_PORT and E2E_WEB_PORT must be valid TCP ports")
     root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(root))
     with TemporaryDirectory(prefix="buildsignals-browser-workflows-") as directory:
@@ -21,7 +25,7 @@ def main():
             "REFRESH_COOKIE_SECURE": "false",
             "REFRESH_COOKIE_SAMESITE": "lax",
             "REFRESH_COOKIE_NAME": "bs_local_workflow",
-            "CORS_ALLOWED_ORIGINS": "http://localhost:8080",
+            "CORS_ALLOWED_ORIGINS": f"http://localhost:{web_port}",
             "REGISTER_RATE_LIMIT": "100000",
             "LOGIN_RATE_LIMIT": "100000",
             "REFRESH_RATE_LIMIT": "100000",
@@ -61,7 +65,7 @@ def main():
             seed_demo(db, snapshots)
 
         try:
-            uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
+            uvicorn.run(app, host="127.0.0.1", port=api_port, log_level="warning")
         finally:
             engine.dispose()
 
