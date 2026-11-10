@@ -108,7 +108,7 @@ export function Layout({ children }: LayoutProps) {
               className="flex h-8 items-center gap-2 px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <CircleUserRound className="h-4 w-4" />
-              <span className="hidden max-w-28 truncate text-[10px] font-medium md:block">{user?.full_name || "Account"}</span>
+              <span className="hidden max-w-28 truncate text-[10px] font-medium 2xl:block">{user?.full_name || "Account"}</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 rounded-none border-2 border-foreground">
               <DropdownMenuLabel>

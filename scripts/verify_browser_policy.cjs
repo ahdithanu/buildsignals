@@ -45,11 +45,11 @@ const server = http.createServer((request, response) => {
           if (inventoryMode) {
             signedIn = true;
             status = 200;
-            body = { access_token: 'synthetic-browser-only-token', token_type: 'bearer', user_id: 'synthetic-user', organization_id: 'synthetic-org', role: 'admin' };
+            body = { access_token: 'synthetic-browser-only-token', token_type: 'bearer', user_id: 'synthetic-user', organization_id: 'synthetic-org', role: 'admin', is_internal_operator: true };
           }
         } else if (inventoryMode && signedIn && url.pathname.endsWith('/auth/me')) {
           status = 200;
-          body = { user: { id: 'synthetic-user', full_name: 'Synthetic QA', email: 'qa@example.com', is_active: true, is_superuser: false }, organization_id: 'synthetic-org', role: 'admin' };
+          body = { user: { id: 'synthetic-user', full_name: 'Synthetic QA', email: 'qa@example.com', is_active: true, is_superuser: false }, organization_id: 'synthetic-org', role: 'admin', is_internal_operator: true };
         } else if (inventoryMode && signedIn && url.pathname.endsWith('/ingestion/coverage/measured')) {
           measurements.push(Object.fromEntries(url.searchParams));
           status = measurementFails ? 503 : 200;

@@ -12,7 +12,7 @@ const operator = {
   password: 'E2eOperatorOnly42!',
   sourceName: 'SYNTHETIC E2E source fixture - no ingestion',
 };
-const viewports = [{ width: 1024, height: 900 }, { width: 1440, height: 1000 }, { width: 390, height: 844 }];
+const viewports = [{ width: 1024, height: 900 }, { width: 1280, height: 900 }, { width: 1440, height: 1000 }, { width: 390, height: 844 }];
 const operationsPaths = [
   '/ingestion/sources', '/ingestion/health', '/ingestion/coverage/measured',
   '/ingestion/runs', '/ingestion/schedule-plan', '/observability/overview',
