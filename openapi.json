@@ -27436,6 +27436,63 @@
         ]
       }
     },
+    "/v1/investment-areas": {
+      "get": {
+        "operationId": "get_investment_area_v1_investment_areas_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cbsa",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{5}$",
+              "title": "Cbsa",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Investment Area",
+        "tags": [
+          "investment-areas"
+        ]
+      }
+    },
     "/v1/nearby-parcel-searches/{search_id}": {
       "get": {
         "operationId": "get_search_v1_nearby_parcel_searches__search_id__get",
