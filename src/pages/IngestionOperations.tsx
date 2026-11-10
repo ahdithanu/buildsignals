@@ -395,7 +395,7 @@ function CandidateRetryRow({
 }
 
 export default function IngestionOperations() {
-  const { role } = useAuth();
+  const { isInternalOperator } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedState = stateCodeFromJurisdiction(searchParams.get('state'));
@@ -427,7 +427,7 @@ export default function IngestionOperations() {
   const candidates = data?.candidates ?? [];
   const coverage = data?.coverage;
   const reliability = resolveIngestionReliabilitySummary(sources, candidates, data?.reliability);
-  const canManage = role === 'admin' || role === 'editor';
+  const canManage = isInternalOperator === true;
   const activeCanaryId = canary.isPending ? canary.variables?.sourceId : undefined;
   const activeCandidateCanaryKey = candidateCanary.isPending ? candidateCanary.variables?.candidateKey : undefined;
   const activePromoteCandidateKey = promoteCandidate.isPending ? promoteCandidate.variables?.candidateKey : undefined;

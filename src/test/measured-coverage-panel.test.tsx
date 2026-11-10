@@ -6,7 +6,7 @@ import { ingestionApi } from '@/api/ingestion';
 import { MeasuredCoveragePanel } from '@/components/MeasuredCoveragePanel';
 import type { MeasuredCoverage, MeasuredCoverageParams } from '@/types/ingestion';
 
-const auth = vi.hoisted(() => ({ organizationId: 'org-a' as string | null, isAuthenticated: true }));
+const auth = vi.hoisted(() => ({ organizationId: 'org-a' as string | null, isAuthenticated: true, isInternalOperator: true }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/api/ingestion', () => ({ ingestionApi: { measuredCoverage: vi.fn() } }));
 

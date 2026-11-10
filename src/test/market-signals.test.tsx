@@ -72,7 +72,7 @@ describe('Stored signal workspace', () => {
     await screen.findByText('No imported records available');
     expect(useImportedRecordAvailability).toHaveBeenCalledWith(['permit', 'planning', 'parcel']);
     expect(screen.getByText(/No stored permit, planning or parcel records were measured for this organization/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health');
+    expect(screen.getByRole('link', { name: 'View dashboard' })).toHaveAttribute('href', '/');
     expect(screen.queryByText(/No records match|No loaded records match|No signals found/)).not.toBeInTheDocument();
     expect(brandsApi.list).toHaveBeenCalledTimes(2);
     expect(planningApi.list).toHaveBeenCalledTimes(1);
@@ -86,7 +86,7 @@ describe('Stored signal workspace', () => {
     expect(screen.getByText('Incoming source records, separate from saved analyst assessments.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Review planning' })).toHaveAttribute('href', '/planning');
     expect(screen.getByRole('link', { name: 'Review permits' })).toHaveAttribute('href', '/permit-review');
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health');
+    expect(screen.getByRole('link', { name: 'View dashboard' })).toHaveAttribute('href', '/');
     expect(screen.queryByRole('region', { name: 'Signal queue' })).not.toBeInTheDocument();
   });
   it('does not claim incoming records are available when the inventory check fails', async () => {

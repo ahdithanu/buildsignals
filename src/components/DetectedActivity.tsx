@@ -36,6 +36,7 @@ function locationLabel(record: { address?: string | null; city?: string | null; 
 }
 
 function PlanningActivityRow({ record }: { record: PlanningRecord }) {
+  const { isInternalOperator } = useAuth();
   const headingId = `detected-planning-${encodeURIComponent(record.id)}`;
   const date = record.meeting_at ? { label: 'Meeting', value: record.meeting_at }
     : record.published_at ? { label: 'Published', value: record.published_at }
@@ -53,7 +54,7 @@ function PlanningActivityRow({ record }: { record: PlanningRecord }) {
       <SourceRecordText title={record.title} excerpt={record.evidence_excerpt || record.summary} />
       <div className="mt-2 flex flex-wrap items-center gap-4">
         <SourceLink url={record.source_url} />
-        <Link to={`/source-health/sources/${encodeURIComponent(record.source_id)}`} className="text-xs underline">Source details</Link>
+        {isInternalOperator === true && <Link to={`/source-health/sources/${encodeURIComponent(record.source_id)}`} className="text-xs underline">Source details</Link>}
       </div>
     </article>
   );

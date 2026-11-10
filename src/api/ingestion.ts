@@ -19,6 +19,10 @@ import type {
 } from '@/types/ingestion';
 
 export const ingestionApi = {
+  coverageSummary: (recordType: MeasuredCoverageParams['record_type']) =>
+    apiClient.get<{ measured_at: string; record_type: MeasuredCoverageParams['record_type']; stored_records: number; geocoded_records: number }>(
+      '/ingestion/coverage/summary', { record_type: recordType },
+    ),
   health: (state?: string | null): Promise<SourceHealth[]> =>
     apiClient.get<SourceHealth[]>('/ingestion/health', state ? { state } : undefined),
   sourceHealth: (sourceId: string): Promise<SourceHealth> =>

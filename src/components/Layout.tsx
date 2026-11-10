@@ -25,11 +25,12 @@ const primaryNavigation = [
   { label: "Map", href: "/map" },
   { label: "Watchlist", href: "/inbox" },
   { label: "Pipeline", href: "/pipeline" },
-  { label: "Coverage", href: "/source-health" },
+  { label: "Coverage", href: "/" },
+  { label: "Operations", href: "/source-health", operatorOnly: true },
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const { user, role, logout, isDemo } = useAuth();
+  const { user, role, logout, isDemo, isInternalOperator } = useAuth();
   const location = useLocation();
 
   if (isDemo) {
@@ -51,7 +52,7 @@ export function Layout({ children }: LayoutProps) {
         <BuildSignalsLogo compact />
 
         <nav className="ml-7 hidden h-full items-stretch lg:flex" aria-label="Primary navigation">
-          {primaryNavigation.map((item) => {
+          {primaryNavigation.filter(item => !item.operatorOnly || isInternalOperator === true).map((item) => {
             const active = location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
             return (
               <Link
@@ -78,7 +79,7 @@ export function Layout({ children }: LayoutProps) {
               <DropdownMenuItem asChild><Link to="/team">Team</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link to="/audit">Audit log</Link></DropdownMenuItem>
               {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/evals">AI Evaluations</Link></DropdownMenuItem>}
-              {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/observability">Observability</Link></DropdownMenuItem>}
+              {isInternalOperator === true && <DropdownMenuItem asChild><Link to="/admin/observability">Observability</Link></DropdownMenuItem>}
               {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/prompts">Prompt registry</Link></DropdownMenuItem>}
               <DropdownMenuItem asChild><Link to="/settings">Settings</Link></DropdownMenuItem>
             </DropdownMenuContent>
@@ -94,13 +95,13 @@ export function Layout({ children }: LayoutProps) {
             <Search className="h-3.5 w-3.5" />
             <span className="truncate">Search graph entities</span>
           </Link>
-          <Link
+          {isInternalOperator === true && <Link
             to="/source-health"
             className="hidden border-l-2 border-foreground pl-3 text-right text-[9px] leading-tight sm:block"
           >
             <span className="block font-semibold text-foreground">Source health</span>
             <span className="text-muted-foreground">Coverage and ingestion</span>
-          </Link>
+          </Link>}
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="Account menu"
@@ -116,6 +117,8 @@ export function Layout({ children }: LayoutProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link to="/account">Account</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/">Coverage</Link></DropdownMenuItem>
+              {isInternalOperator === true && <DropdownMenuItem asChild><Link to="/source-health">Operations</Link></DropdownMenuItem>}
               {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/evals">AI Evaluations</Link></DropdownMenuItem>}
               {role === "admin" && <DropdownMenuItem asChild><Link to="/admin/prompts">Prompt registry</Link></DropdownMenuItem>}
               <DropdownMenuItem onSelect={() => void logout()}>Sign out</DropdownMenuItem>

@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ingestionApi } from '@/api/ingestion';
 import { parcelReferencesApi } from '@/api/parcelReferences';
 import { queryKeys } from '@/lib/queryKeys';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useIngestionSourceDetail(sourceId: string | undefined) {
+  const { isInternalOperator } = useAuth();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['ingestion', 'source-detail', sourceId || ''] as const,
@@ -31,7 +33,7 @@ export function useIngestionSourceDetail(sourceId: string | undefined) {
         reconciliationUnavailable: Boolean(isPermitSource && !parcelSource),
       };
     },
-    enabled: !!sourceId,
+    enabled: isInternalOperator === true && !!sourceId,
     retry: 1,
     staleTime: 30_000,
   });

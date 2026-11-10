@@ -43,6 +43,25 @@ async function mountAuthenticated() {
 }
 
 describe("AuthProvider session races", () => {
+  it.each([undefined, false, true])('uses only the explicit operator flag from /auth/me (%s)', async flag => {
+    vi.mocked(authApi.me).mockResolvedValue({ ...me('new'), is_internal_operator: flag });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+    expect(result.current.role).toBe('admin');
+    expect(result.current.isInternalOperator).toBe(flag === true);
+    await act(async () => { await result.current.logout(); });
+    expect(result.current.isInternalOperator).toBe(false);
+  });
+
+  it('removes operator access on a refreshed customer identity', async () => {
+    vi.mocked(authApi.me).mockResolvedValueOnce({ ...me('new'), is_internal_operator: true });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isInternalOperator).toBe(true));
+    vi.mocked(authApi.me).mockResolvedValueOnce(me('new'));
+    await act(async () => { await result.current.refresh(); });
+    expect(result.current.isInternalOperator).toBe(false);
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
     setAccessToken(null);

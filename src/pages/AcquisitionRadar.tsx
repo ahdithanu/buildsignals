@@ -212,7 +212,7 @@ function Zip3OpportunityHeat({ items, semantics, selectedZip3, onSelectZip3 }: {
           <Flame className="h-4 w-4 text-amber-600" />ZIP3 opportunity heatmap
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          No ZIP3 clusters yet. Run geocoded permit/planning ingestion and nearby-parcel searches to populate this investor lens.
+          No ZIP3 clusters yet. Geocoded permit or planning evidence and nearby-parcel searches are needed; missing results do not establish an absence of activity.
         </p>
       </section>
     );

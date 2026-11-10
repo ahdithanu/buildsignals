@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { EmptyState, LoadingState } from '@/components/DataStates';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { useImportedRecordAvailability, type InventoryRecordTypes } from '@/hooks/useImportedRecordAvailability';
 
 interface ImportedDataEmptyStateProps {
@@ -20,6 +21,7 @@ function sourceHealthHref(recordTypes: InventoryRecordTypes) {
 }
 
 export function ImportedDataEmptyState({ recordTypes, recordLabel, title, description, action }: ImportedDataEmptyStateProps) {
+  const { isInternalOperator } = useAuth();
   const inventory = useImportedRecordAvailability(recordTypes);
   const sourceHealth = sourceHealthHref(recordTypes);
   if (inventory.isPending) return <LoadingState message="Checking imported records..." />;
@@ -32,12 +34,12 @@ export function ImportedDataEmptyState({ recordTypes, recordLabel, title, descri
         description={unknown
           ? 'Stored inventory could not be confirmed. An empty result does not establish an absence of activity.'
           : inventory.data ? description
-            : `No stored ${recordLabel} records were measured for this organization. Review source setup and collection status before drawing conclusions about activity.`}
+            : `No stored ${recordLabel} records were measured for this organization. Missing inventory does not establish an absence of activity or complete geographic coverage.`}
         action={
           <div className="flex flex-wrap justify-center gap-2">
             {!unknown && inventory.data && action}
             <Button asChild variant="outline" size="sm">
-              <Link to={sourceHealth}>Open Source Health<ArrowRight className="h-3.5 w-3.5" /></Link>
+              <Link to={isInternalOperator === true ? sourceHealth : '/'}>{isInternalOperator === true ? 'Open Source Health' : 'View dashboard'}<ArrowRight className="h-3.5 w-3.5" /></Link>
             </Button>
             <Button variant="ghost" size="sm" disabled={inventory.isFetching} onClick={() => void inventory.refetch()}>
               <RefreshCw className={`h-3.5 w-3.5 ${inventory.isFetching ? 'animate-spin' : ''}`} />

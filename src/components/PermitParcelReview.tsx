@@ -23,7 +23,7 @@ function Review({ permitId, organizationId, enabled, canReview }: {
   const [confidence, setConfidence] = useState('');
   const queryClient = useQueryClient();
   const sources = useQuery({ queryKey: ['parcel-review-sources', organizationId],
-    queryFn: parcelReferencesApi.sources, enabled, retry: 1 });
+    queryFn: parcelReferencesApi.sourceOptions, enabled, retry: 1 });
   const candidates = useQuery({ queryKey: ['parcel-review', organizationId, permitId, sourceId],
     queryFn: () => parcelReferencesApi.candidates(permitId, sourceId), enabled: enabled && !!sourceId, retry: 1 });
   const mutation = useMutation({
@@ -51,7 +51,7 @@ function Review({ permitId, organizationId, enabled, canReview }: {
           disabled={!enabled || sources.isLoading || mutation.isPending}
           onChange={event => { setSourceId(event.target.value); setReason(''); setConfidence(''); mutation.reset(); }}>
           <option value="">{sources.isLoading ? 'Loading sources...' : 'Select parcel source'}</option>
-          {parcelSources.map(source => <option key={source.id} value={source.id}>{source.name}</option>)}
+          {parcelSources.map((source, index) => <option key={source.id} value={source.id}>{source.name}{parcelSources.length > 1 ? ` ${index + 1}` : ''}</option>)}
         </select>
       </label>}
     {enabled && sources.isSuccess && parcelSources.length === 0 && <p className="text-sm text-muted-foreground">No active parcel sources.</p>}

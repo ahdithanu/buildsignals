@@ -497,11 +497,11 @@ export interface MeasuredCoverage extends MeasuredCoverageParams {
   warnings: string[];
 }
 
-export type NationalParcelPosture = 'measured' | 'configured_only' | 'candidate_only' | 'uncovered';
+export type NationalParcelPosture = 'measured' | 'unmeasured' | 'configured_only' | 'candidate_only' | 'uncovered';
 
-export interface NationalParcelStateCoverage {
+export interface NationalParcelOperatorStateCoverage {
   state: string;
-  posture: NationalParcelPosture;
+  posture: Exclude<NationalParcelPosture, 'unmeasured'>;
   configured_source_count: number;
   candidate_source_count: number;
   measured_source_count: number;
@@ -518,7 +518,7 @@ export interface NationalParcelStateCoverage {
   priority_reason: string;
 }
 
-export interface NationalParcelCoverageSummary {
+export interface NationalParcelOperatorCoverageSummary {
   state_count: number;
   measured_state_count: number;
   configured_only_state_count: number;
@@ -533,13 +533,39 @@ export interface NationalParcelCoverageSummary {
   nearby_verified_available_parcels: number;
 }
 
-export interface NationalParcelCoverage {
+export interface NationalParcelCustomerStateCoverage extends Pick<NationalParcelOperatorStateCoverage,
+  'state' | 'stored_parcel_records' | 'geocoded_parcel_records' | 'recently_seen_parcel_records'
+  | 'nearby_candidate_parcels' | 'verified_available_parcels' | 'nearby_verified_available_parcels'
+  | 'latest_verified_availability_at'> {
+  posture: 'measured' | 'unmeasured';
+}
+
+export type NationalParcelStateCoverage = NationalParcelOperatorStateCoverage | NationalParcelCustomerStateCoverage;
+
+export interface NationalParcelCustomerCoverageSummary extends Pick<NationalParcelOperatorCoverageSummary,
+  'state_count' | 'measured_state_count' | 'states_with_nearby_candidates' | 'states_with_verified_available_parcels'
+  | 'stored_parcel_records' | 'geocoded_parcel_records' | 'nearby_candidate_parcels'
+  | 'verified_available_parcels' | 'nearby_verified_available_parcels'> {
+  unmeasured_state_count: number;
+}
+
+interface NationalParcelCoverageBase {
   measured_at: string;
   record_type: 'parcel';
   scope: string;
   coverage_claim: string;
-  summary: NationalParcelCoverageSummary;
-  states: NationalParcelStateCoverage[];
-  next_connector_targets: NationalParcelStateCoverage[];
   warnings: string[];
 }
+
+export interface NationalParcelOperatorCoverage extends NationalParcelCoverageBase {
+  summary: NationalParcelOperatorCoverageSummary;
+  states: NationalParcelOperatorStateCoverage[];
+  next_connector_targets: NationalParcelOperatorStateCoverage[];
+}
+
+export interface NationalParcelCustomerCoverage extends NationalParcelCoverageBase {
+  summary: NationalParcelCustomerCoverageSummary;
+  states: NationalParcelCustomerStateCoverage[];
+}
+
+export type NationalParcelCoverage = NationalParcelOperatorCoverage | NationalParcelCustomerCoverage;

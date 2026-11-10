@@ -11,9 +11,9 @@ function SessionCache({ children }: { children: ReactNode }) {
 }
 
 export function SessionQueryProvider({ children }: { children: ReactNode }) {
-  const { user, organizationId, role } = useAuth();
+  const { user, organizationId, role, isInternalOperator } = useAuth();
   // Remount consumers as well as the cache. Late responses and local component
   // state from a previous identity must not enter the next identity's UI.
-  const scope = JSON.stringify([user?.id ?? null, organizationId, role]);
+  const scope = JSON.stringify([user?.id ?? null, organizationId, role, isInternalOperator === true]);
   return <SessionCache key={scope}>{children}</SessionCache>;
 }

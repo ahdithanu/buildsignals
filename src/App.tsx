@@ -7,6 +7,7 @@ import { SessionQueryProvider } from "@/components/auth/SessionQueryProvider";
 import {
   RedirectIfAuthenticated,
   RequireAuth,
+  RequireInternalOperator,
 } from "@/components/auth/RequireAuth";
 import Dashboard from "./pages/Dashboard";
 import DealInbox from "./pages/DealInbox";
@@ -90,7 +91,7 @@ const App = () => (
             {/* Authenticated routes */}
             <Route path="/demo" element={<RequireAuth><DemoWorkspace /></RequireAuth>} />
             <Route path="/admin/evals" element={<RequireAuth><Evaluations /></RequireAuth>} />
-            <Route path="/admin/observability" element={<RequireAuth><Observability /></RequireAuth>} />
+            <Route path="/admin/observability" element={<RequireInternalOperator><Observability /></RequireInternalOperator>} />
             <Route path="/admin/prompts" element={<RequireAuth><PromptRegistry /></RequireAuth>} />
             <Route
               path="/"
@@ -191,25 +192,25 @@ const App = () => (
             <Route
               path="/source-health"
               element={
-                <RequireAuth>
+                <RequireInternalOperator>
                   <IngestionOperations />
-                </RequireAuth>
+                </RequireInternalOperator>
               }
             />
             <Route
               path="/source-health/sources/:sourceId"
               element={
-                <RequireAuth>
+                <RequireInternalOperator>
                   <IngestionSourceDetail />
-                </RequireAuth>
+                </RequireInternalOperator>
               }
             />
             <Route
               path="/source-health/candidates/:candidateKey"
               element={
-                <RequireAuth>
+                <RequireInternalOperator>
                   <IngestionCandidateDetail />
-                </RequireAuth>
+                </RequireInternalOperator>
               }
             />
             <Route

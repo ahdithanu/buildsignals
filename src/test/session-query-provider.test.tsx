@@ -8,6 +8,7 @@ const auth = vi.hoisted(() => ({
   user: { id: 'user-a' } as { id: string } | null,
   organizationId: 'org-a' as string | null,
   role: 'admin' as string | null,
+  isInternalOperator: true,
 }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 
@@ -23,10 +24,11 @@ beforeEach(() => {
   auth.user = { id: 'user-a' };
   auth.organizationId = 'org-a';
   auth.role = 'admin';
+  auth.isInternalOperator = true;
 });
 
 describe('SessionQueryProvider', () => {
-  it.each(['user', 'organization', 'role', 'logout'])('isolates caches and local state on %s changes', async change => {
+  it.each(['user', 'organization', 'role', 'operator', 'logout'])('isolates caches and local state on %s changes', async change => {
     const fetchData = vi.fn().mockResolvedValue('Account A');
     const view = render(<SessionQueryProvider><Consumer fetchData={fetchData} /></SessionQueryProvider>);
     await screen.findByText('Account A');
@@ -37,6 +39,7 @@ describe('SessionQueryProvider', () => {
     if (change === 'user') auth.user = { id: 'user-b' };
     if (change === 'organization') auth.organizationId = 'org-b';
     if (change === 'role') auth.role = 'viewer';
+    if (change === 'operator') auth.isInternalOperator = false;
     if (change === 'logout') {
       auth.user = null;
       auth.organizationId = null;

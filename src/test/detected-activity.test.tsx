@@ -80,7 +80,7 @@ describe('Detected activity', () => {
     expect(agenda.getByText('Stage: scheduled hearing')).toBeInTheDocument();
     expect(agenda.getByText(/Meeting:/)).toHaveTextContent('Sep 8, 2026');
     expect(agenda.getByText('Hearing on a proposed commercial use.')).toBeInTheDocument();
-    expect(agenda.getByRole('link', { name: 'Source details' })).toHaveAttribute('href', '/source-health/sources/planning-source');
+    expect(agenda.queryByRole('link', { name: 'Source details' })).not.toBeInTheDocument();
     expect(agenda.getByRole('link', { name: 'Source evidence' })).toHaveAttribute('href', 'https://example.gov/agendas/4');
     expect(screen.getByText('Incoming source records, separate from saved analyst assessments.')).toBeInTheDocument();
     expect(screen.getByText('Activity may include alterations or signage; company matches do not verify a new opening.')).toBeInTheDocument();
