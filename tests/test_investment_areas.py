@@ -13,7 +13,9 @@ from app.utils.org_scope import (
 
 def snapshot():
     return {"year": 2025, "captured_at": "2026-11-10T07:00:00+00:00", "snapshot_id": "a"*64,
-        "provenance": [], "metros": [{"cbsa": code, "name": f"Synthetic {code}",
+        "provenance": [{"url": "https://www.fhfa.gov/private-file.csv", "sha256": "b"*64,
+                        "period": "2025", "captured_at": "2026-11-10T07:00:00+00:00"}],
+        "metros": [{"cbsa": code, "name": f"Synthetic {code}",
             "hpi": {2023: 100, 2025: 110},
             "units": {2022: 100, 2023: 100, 2024: 100, 2025: 110}}
             for code in ["36100", "45300"] + [f"{10000+i}" for i in range(18)]]}
@@ -62,6 +64,14 @@ def test_http_model_uses_public_snapshot_and_only_request_tenant_evidence(client
     assert outputs[0]["status"] == "research"
     assert outputs[0]["investment_quality"]["status"] == "insufficient_data"
     assert "rent_yield" in outputs[0]["investment_quality"]["missing"]
+    assert outputs[0]["input_mode"] == "release_reference"
+    assert outputs[0]["provenance"] == [{"label": "Public records", "period": "2025",
+                                        "captured_at": "2026-11-10T07:00:00+00:00"}]
+    for output in outputs:
+        import json
+        body = json.dumps(output)
+        for internal in ("fhfa.gov", "private-file.csv", "ocala_fl_gis_new_building_projects", "Synthetic Ocala context"):
+            assert internal not in body
 
 
 def test_http_requires_login_and_valid_geography(client, monkeypatch):
@@ -110,26 +120,44 @@ def test_known_metro_without_aligned_hpi_returns_demand_context_not_fabricated_r
         reset_current_context(token)
 
 
-def test_public_cache_has_single_refresh_and_does_not_serve_expired_data(monkeypatch):
-    from app.services import investment_inputs
+def test_immutable_public_reference_is_loaded_once_without_web_refresh(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.services import investment_inputs, investment_reference
 
     calls = []
     now = [0.0]
     monkeypatch.setattr(areas, "monotonic", lambda: now[0])
     monkeypatch.setattr(areas, "_public_cache", None)
-    monkeypatch.setattr(areas, "_cache_until", 0)
     monkeypatch.setattr(areas, "_retry_after", 0)
-    monkeypatch.setattr(investment_inputs, "get_snapshot", lambda: calls.append(1) or snapshot())
-    assert areas.current_snapshot() == areas.current_snapshot()
+    def no_network(*args, **kwargs):
+        raise AssertionError("Immutable reference must not perform web fetches")
+    monkeypatch.setattr(investment_inputs, "get_snapshot", no_network)
+    monkeypatch.setattr(investment_reference, "load_reference_snapshot", lambda: calls.append(1) or snapshot())
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda _: areas.current_snapshot(), range(4)))
+    assert all(value == results[0] for value in results)
     assert len(calls) == 1
     now[0] = 3601
+    assert areas.current_snapshot() == results[0]
+    assert len(calls) == 1
+
+
+def test_reference_failure_has_cooldown_and_sanitized_logging(monkeypatch, caplog):
+    from app.services import investment_reference
+
+    calls = []
+    monkeypatch.setattr(areas, "_public_cache", None)
+    monkeypatch.setattr(areas, "_retry_after", 0)
 
     def fail():
         calls.append(1)
-        raise ValueError("untrusted upstream body")
-    monkeypatch.setattr(investment_inputs, "get_snapshot", fail)
+        raise ValueError("sensitive internal path or upstream body")
+    monkeypatch.setattr(investment_reference, "load_reference_snapshot", fail)
     import pytest
     for _ in range(2):
         with pytest.raises(RuntimeError, match="unavailable"):
             areas.current_snapshot()
-    assert len(calls) == 2
+    assert len(calls) == 1
+    assert "category=ValueError" in caplog.text
+    assert "sensitive internal" not in caplog.text

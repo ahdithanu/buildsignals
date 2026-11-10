@@ -2,6 +2,7 @@ import { apiClient } from './client';
 
 export interface InvestmentAreaResponse {
   model_version: 'metro-research-v0.3';
+  input_mode: 'release_reference';
   status: 'research' | 'insufficient_data';
   year: number;
   captured_at: string;
@@ -22,7 +23,7 @@ export interface InvestmentAreaResponse {
     records: number;
     geocoded: number;
     sources: {
-      key: string;
+      id: string;
       name: string;
       records: number;
       context_only: boolean;
@@ -36,8 +37,7 @@ export interface InvestmentAreaResponse {
     missing: string[];
   };
   provenance: {
-    url: string;
-    sha256: string;
+    label: 'Public records';
     captured_at: string;
     period: string;
   }[];

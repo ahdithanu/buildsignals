@@ -9,16 +9,16 @@ let auth = { organizationId: 'org-a', user: { id: 'user-a' }, role: 'viewer', is
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 
 const fixture: InvestmentAreaResponse = {
-  model_version: 'metro-research-v0.3', status: 'research', year: 2025,
+  model_version: 'metro-research-v0.3', input_mode: 'release_reference', status: 'research', year: 2025,
   captured_at: '2026-11-09T12:00:00Z', snapshot_id: 'test-snapshot', cohort_size: 50,
   market: { cbsa: '36100', name: 'Ocala', score: 0.7, momentum_percentile: 0.8,
     supply_percentile: 0.6, price_momentum_2yr: 0.04, supply_surge: 0.1,
     population_growth_1yr: null, net_migration_per_1000: null },
   local_evidence: { records: 2, geocoded: 1,
-    sources: [{ key: 'local', name: 'Local permits', records: 2, context_only: true, last_collected_at: null }],
+    sources: [{ id: 'local', name: 'Public local records', records: 2, context_only: true, last_collected_at: null }],
     geography_match: 'declared_source_scope', is_complete_metro_inventory: false },
   investment_quality: { status: 'insufficient_data', missing: ['rent_yield', 'vacancy'] },
-  provenance: [{ url: 'https://www.census.gov/data.html', sha256: 'test-hash', captured_at: '2026-11-09T12:00:00Z', period: '2025' }],
+  provenance: [{ label: 'Public records', captured_at: '2026-11-09T12:00:00Z', period: '2025' }],
   limitations: ['Research snapshot; no expected-return validation.'],
 };
 
@@ -56,8 +56,10 @@ it('renders research, null metrics, source dates and primary evidence without re
   expect(screen.getByText(/Collected Unknown/)).toBeInTheDocument();
   expect(screen.getByText(/Context only/)).toBeInTheDocument();
   expect(screen.getByText(/Not a complete metro inventory/)).toBeInTheDocument();
-  fireEvent.click(screen.getByText('Primary sources and limitations'));
-  expect(screen.getByRole('link')).toHaveAttribute('href', fixture.provenance[0].url);
+  fireEvent.click(screen.getByText('Data and limitations'));
+  expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  expect(screen.getByText('Public records')).toBeInTheDocument();
+  expect(screen.getByText(/Newer releases are not checked here/)).toBeInTheDocument();
   expect(screen.getByText(/Period: 2025/)).toBeInTheDocument();
   expect(screen.getByRole('meter', { name: 'Research score' })).toHaveAttribute('value', '0.7');
 });

@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { investmentAreasApi } from '@/api/investmentAreas';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,15 +17,6 @@ function dateLabel(value: string | null) {
   if (!value) return 'Unknown';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Unknown' : date.toLocaleDateString('en-US', { timeZone: 'UTC' });
-}
-
-function primarySourceUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function Metric({ label, value, percent = false }: { label: string; value: number | null; percent?: boolean }) {
@@ -87,7 +78,8 @@ export function InvestmentAreaPanel() {
             : data ? <div className="mt-4 space-y-4">
               <div>
                 <h3 className="text-sm font-semibold">{data.market.name} <span className="font-normal text-muted-foreground">Metro / CBSA {data.market.cbsa}</span></h3>
-                <p className="mt-1 text-xs text-muted-foreground">Research | {data.year} | Captured {dateLabel(data.captured_at)} | {data.model_version}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Annual reference | {data.year} | Captured {dateLabel(data.captured_at)} | {data.model_version}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Public records. Newer releases are not checked here; local evidence is queried from your workspace.</p>
               </div>
               <ResearchRank score={data.market.score} cohortSize={data.cohort_size} />
               <dl className="grid grid-cols-2 gap-4 md:grid-cols-3">
@@ -107,22 +99,18 @@ export function InvestmentAreaPanel() {
                 <p className="mt-1 text-xs">{metric(data.local_evidence.records)} records | {metric(data.local_evidence.geocoded)} geocoded</p>
                 <p className="mt-1 text-xs text-muted-foreground">{data.local_evidence.geography_match === 'declared_source_scope' ? 'Geography matched by declared source scope.' : 'Geography unmapped.'} Not a complete metro inventory. Source counts may overlap.</p>
                 {data.local_evidence.sources.length === 0 ? <p className="mt-3 text-xs text-muted-foreground">No local source evidence available.</p>
-                  : <ul className="mt-2 divide-y">{data.local_evidence.sources.map(source => <li key={source.key} className="flex flex-wrap justify-between gap-2 py-2 text-xs">
+                  : <ul className="mt-2 divide-y">{data.local_evidence.sources.map(source => <li key={source.id} className="flex flex-wrap justify-between gap-2 py-2 text-xs">
                     <div className="min-w-0 break-words"><span className="font-medium">{source.name}</span>{source.context_only && <span className="text-muted-foreground"> | Context only</span>}</div>
                     <span className="text-muted-foreground">{metric(source.records)} records | Collected {dateLabel(source.last_collected_at)}</span>
                   </li>)}</ul>}
               </div>
               <details className="text-xs text-muted-foreground">
-                <summary className="cursor-pointer font-medium text-foreground">Primary sources and limitations</summary>
-                <p className="mt-2 break-all">Snapshot: {data.snapshot_id}</p>
-                <ul className="mt-2 space-y-3">{data.provenance.map((source, index) => {
-                  const href = primarySourceUrl(source.url);
-                  return <li key={`${source.sha256}-${index}`} className="min-w-0">
-                    {href ? <a href={href} target="_blank" rel="noopener noreferrer" className="break-all text-primary underline underline-offset-4">{source.url}<ExternalLink aria-hidden="true" className="ml-1 inline h-3 w-3" /></a> : <span>Source link unavailable</span>}
+                <summary className="cursor-pointer font-medium text-foreground">Data and limitations</summary>
+                <ul className="mt-2 space-y-3">{data.provenance.map((source, index) =>
+                  <li key={`${source.period}-${index}`} className="min-w-0">
+                    <span>{source.label}</span>
                     <p className="mt-1">Period: {source.period} | Captured {dateLabel(source.captured_at)}</p>
-                    <p className="mt-1 break-all">SHA-256: {source.sha256}</p>
-                  </li>;
-                })}</ul>
+                  </li>)}</ul>
                 <ul className="mt-3 list-disc space-y-1 pl-4">{data.limitations.map((limitation, index) => <li key={index}>{limitation}</li>)}</ul>
               </details>
             </div> : null}
