@@ -34,6 +34,15 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
+Investment Areas (November 10): the authenticated read-only API/panel uses
+current-vintage 2025 FHFA/Census metro research plus separately tenant-scoped
+local evidence. See `docs/releases/2026-11-10-investment-areas.md` for exact
+verification/release state. It is not investment quality, expected returns or a
+validated retail/parcel forecast; missing factors remain explicit. Public input
+cache must never contain tenant evidence. No new-source or migration approval is
+implied. NPR's public GIS lead is zoning/land use, not a verified filing feed;
+City inquiries stay drafts. Concurrent root research is excluded from this release.
+
 BuildSignals connects public planning/permit evidence, companies, locations and
 parcels to help investors investigate development and acquisition opportunities.
 The immediate workflow is signal -> source evidence -> project timeline ->

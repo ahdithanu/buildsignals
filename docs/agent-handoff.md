@@ -1,5 +1,21 @@
 # Current Agent Handoff
 
+## November 10: Scoped Investment Areas Release
+
+Branch `codex/investment-area-live` starts at `origin/main` 2307b92 so newer
+parcel/discovery/CSP work is preserved. Root research work is not deployed or
+overwritten. Owner explicitly approved publishing the authenticated, read-only
+Investment Areas API/panel after checks, with no migrations, paid models or new
+sources. See `docs/releases/2026-11-10-investment-areas.md` for implementation,
+live public/tenant read-only verification and final deployment receipts. Final
+backend suite passed 2,134 / 69 PostgreSQL-dependent skips; frontend376/typecheck/
+build and real-input desktop/mobile browser checks passed. Production rollout
+and post-release browser verification remain pending until appended there.
+API/public input/model + frontend panel/tests are new files; app/main.py and
+MarketSignals.tsx each change by two lines. Concurrent frontier research is not
+included. NPR is blocked on a supported permit feed/export; City inquiries remain
+drafts. No permit-count-only investment recommendation is claimed.
+
 ## Session 2026-11-09: nationwide value surfaced on the primary dashboard
 
 The 50-state parcel coverage service and evidence-aware nearby-parcel workflow
