@@ -22,6 +22,7 @@ from app.services.ingestion.normalization import (
     prepare_mapped_record,
 )
 from app.services.ingestion.rollout import build_production_rollout_manifest
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 from tests.xlsx_builder import build_xlsx
 
 SOURCE_KEY = "ercot_tx_interconnection_queue"
@@ -123,7 +124,7 @@ def test_catalog_probe_normalizes_real_connector_records(synthetic_http):
 
 
 def test_supported_ingestion_persists_interconnection_evidence_and_is_idempotent(
-    client, db, synthetic_http,
+    client, internal_operator, db, synthetic_http,
 ):
     candidate = _candidate()
     payload = {

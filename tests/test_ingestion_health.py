@@ -26,6 +26,7 @@ from app.services.ingestion.health import (
     resolve_resume_checkpoint,
     validate_source_canary,
 )
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 class FakeConnector:
@@ -545,7 +546,7 @@ def test_resume_checkpoint_does_not_reuse_partial_after_full_completion(db):
     assert resolve_resume_checkpoint(db, source.id) is None
 
 
-def test_source_health_endpoint_is_tenant_scoped_and_serializable(client, db):
+def test_source_health_endpoint_is_tenant_scoped_and_serializable(client, internal_operator, db):
     source = _source(db)
     source.settings = {
         **source.settings,
@@ -574,7 +575,7 @@ def test_source_health_endpoint_is_tenant_scoped_and_serializable(client, db):
     assert response.json()["status"] == "unknown"
 
 
-def test_source_health_endpoint_filters_by_state(client, db):
+def test_source_health_endpoint_filters_by_state(client, internal_operator, db):
     _source(db)
     db.commit()
     response = client.get("/ingestion/health?state=Texas")
@@ -586,7 +587,7 @@ def test_source_health_endpoint_filters_by_state(client, db):
     assert any(row["source_key"] == "canary_source" for row in body)
 
 
-def test_reliability_watchlist_includes_unknown_source_without_run_evidence(client, db):
+def test_reliability_watchlist_includes_unknown_source_without_run_evidence(client, internal_operator, db):
     source = _source(db, key="unobserved_source", name="Unobserved source")
     db.commit()
     response = client.get("/ingestion/reliability-summary")
@@ -597,7 +598,7 @@ def test_reliability_watchlist_includes_unknown_source_without_run_evidence(clie
                for row in body["watchlist_sources"])
 
 
-def test_reliability_summary_endpoint_surfaces_watchlist_and_canary_failures(client, db):
+def test_reliability_summary_endpoint_surfaces_watchlist_and_canary_failures(client, internal_operator, db):
     now = datetime.now(timezone.utc)
     healthy_source = _source(db, key="healthy_source", name="Healthy source")
     db.add(IngestionRun(
@@ -1038,7 +1039,7 @@ def test_health_keeps_latest_failure_critical(db):
     assert any("Run failure rate" in reason for reason in health.reasons)
 
 
-def test_ingestion_candidates_endpoint_returns_structured_queue(client):
+def test_ingestion_candidates_endpoint_returns_structured_queue(client, internal_operator):
     response = client.get("/ingestion/candidates")
 
     assert response.status_code == 200, response.text
@@ -1106,7 +1107,7 @@ def test_ingestion_candidates_endpoint_returns_structured_queue(client):
     assert savannah["catalog_backed"] is True
 
 
-def test_ingestion_candidates_endpoint_filters_by_state(client):
+def test_ingestion_candidates_endpoint_filters_by_state(client, internal_operator):
     response = client.get("/ingestion/candidates?state=Oregon")
 
     assert response.status_code == 200, response.text
@@ -1119,7 +1120,7 @@ def test_ingestion_candidates_endpoint_filters_by_state(client):
     assert all(row["catalog_backed"] for row in body)
 
 
-def test_candidate_canary_endpoint_runs_retry_probe(client, monkeypatch):
+def test_candidate_canary_endpoint_runs_retry_probe(client, internal_operator, monkeypatch):
     candidate = _install_retry_candidate(monkeypatch)
     monkeypatch.setattr(
         "app.routes.ingestion.validate_candidate_source_canary",
@@ -1156,7 +1157,7 @@ def test_candidate_canary_endpoint_runs_retry_probe(client, monkeypatch):
     assert rows[0]["ok"] is True
 
 
-def test_candidate_canary_endpoint_rejects_unrunnable_candidates(client):
+def test_candidate_canary_endpoint_rejects_unrunnable_candidates(client, internal_operator):
     response = client.post(
         "/ingestion/candidates/orlando_fl_planning_applications/canary",
         json={"sample_size": 1},
@@ -1166,7 +1167,7 @@ def test_candidate_canary_endpoint_rejects_unrunnable_candidates(client):
     assert "operational_retry" in response.json()["detail"]
 
 
-def test_ingestion_candidates_endpoint_includes_latest_canary_summary(client, monkeypatch):
+def test_ingestion_candidates_endpoint_includes_latest_canary_summary(client, internal_operator, monkeypatch):
     candidate = _install_retry_candidate(monkeypatch)
     monkeypatch.setattr(
         "app.routes.ingestion.validate_candidate_source_canary",
@@ -1198,7 +1199,7 @@ def test_ingestion_candidates_endpoint_includes_latest_canary_summary(client, mo
     assert bend["last_canary_at"] is not None
 
 
-def test_ingestion_candidates_endpoint_uses_most_recent_canary_attempt(client, monkeypatch):
+def test_ingestion_candidates_endpoint_uses_most_recent_canary_attempt(client, internal_operator, monkeypatch):
     candidate = _install_retry_candidate(monkeypatch)
     outcomes = iter([False, True])
 
@@ -1236,7 +1237,7 @@ def test_ingestion_candidates_endpoint_uses_most_recent_canary_attempt(client, m
     assert bend["last_canary_records_failed"] == 0
 
 
-def test_ingestion_coverage_endpoint_reports_active_catalog_footprint(client, db):
+def test_ingestion_coverage_endpoint_reports_active_catalog_footprint(client, internal_operator, db):
     sync_catalog(db, load_catalog())
     db.commit()
     response = client.get("/ingestion/coverage")
@@ -1326,7 +1327,7 @@ def test_ingestion_coverage_prioritizes_activation_queue_by_readiness(monkeypatc
     assert summary.activation_queue[0].candidate_status_counts == {"queued": 2}
 
 
-def test_ingestion_candidate_promotion_requires_reviewed_catalog_manifest(client, monkeypatch):
+def test_ingestion_candidate_promotion_requires_reviewed_catalog_manifest(client, internal_operator, monkeypatch):
     candidate = _install_retry_candidate(monkeypatch)
     coverage_before = client.get("/ingestion/coverage").json()
     monkeypatch.setattr(
@@ -1362,7 +1363,7 @@ def test_ingestion_candidate_promotion_requires_reviewed_catalog_manifest(client
     assert coverage_after["candidate_count"] == coverage_before["candidate_count"]
 
 
-def test_ingestion_candidate_promotion_syncs_reviewed_catalog_source(client, monkeypatch):
+def test_ingestion_candidate_promotion_syncs_reviewed_catalog_source(client, internal_operator, monkeypatch):
     candidate = _install_retry_candidate(monkeypatch)
     reviewed = _reviewed_source(candidate)
     monkeypatch.setattr("app.routes.ingestion.load_catalog", lambda: [reviewed])
@@ -1415,7 +1416,7 @@ def test_ingestion_candidate_promotion_syncs_reviewed_catalog_source(client, mon
     assert repeated.json()["id"] == body["id"]
 
 
-def test_ingestion_candidate_promotion_requires_successful_canary(client, monkeypatch):
+def test_ingestion_candidate_promotion_requires_successful_canary(client, internal_operator, monkeypatch):
     candidate = _install_retry_candidate(monkeypatch)
 
     response = client.post(f"/ingestion/candidates/{candidate.key}/promote")
@@ -1425,7 +1426,7 @@ def test_ingestion_candidate_promotion_requires_successful_canary(client, monkey
 
 
 def test_ingestion_candidate_promotion_rejects_stale_successful_canary(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     candidate = _install_retry_candidate(monkeypatch)
     db.add(

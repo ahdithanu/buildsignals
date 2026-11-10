@@ -10,6 +10,7 @@ from app.services.ingestion.scheduling import (
     source_schedule_policy,
     source_shard,
 )
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 NOW = datetime(2026, 8, 11, 12, tzinfo=timezone.utc)
 
@@ -297,7 +298,7 @@ def test_policy_rejects_invalid_overrides(db, settings, message):
 
 
 def test_schedule_plan_endpoint_filters_state_and_catalog_boundary(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     texas = _source(db, "texas_source")
     texas.jurisdiction = "Austin, TX"
@@ -343,7 +344,7 @@ def test_schedule_plan_endpoint_filters_state_and_catalog_boundary(
     assert [item["source_key"] for item in body["items"]] == ["texas_source"]
 
 
-def test_schedule_plan_endpoint_rejects_out_of_range_shard(client):
+def test_schedule_plan_endpoint_rejects_out_of_range_shard(client, internal_operator):
     response = client.get(
         "/ingestion/schedule-plan",
         params={"shard_count": 2, "shard_index": 2},
@@ -352,14 +353,14 @@ def test_schedule_plan_endpoint_rejects_out_of_range_shard(client):
     assert response.status_code == 422
 
 
-def test_schedule_plan_endpoint_rejects_invalid_state(client):
+def test_schedule_plan_endpoint_rejects_invalid_state(client, internal_operator):
     response = client.get("/ingestion/schedule-plan", params={"state": "not-a-state"})
 
     assert response.status_code == 422
 
 
 def test_schedule_plan_endpoint_reports_unsynced_catalog_sources(
-    client, monkeypatch
+    client, internal_operator, monkeypatch
 ):
     monkeypatch.setattr(
         "app.routes.ingestion.load_catalog",

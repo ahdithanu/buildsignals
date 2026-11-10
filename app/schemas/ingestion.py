@@ -79,6 +79,20 @@ class IngestionSourceResponse(BaseModel):
     field_mappings: list[FieldMappingResponse] = Field(default_factory=list)
 
 
+class CustomerSourceOption(BaseModel):
+    id: str
+    name: Literal["Public records"] = "Public records"
+    record_type: str
+    is_active: Literal[True] = True
+
+
+class CustomerCoverageSummary(BaseModel):
+    measured_at: datetime
+    record_type: Literal["parcel", "permit", "planning"]
+    stored_records: int
+    geocoded_records: int
+
+
 class IngestionRunRequest(BaseModel):
     max_pages: int = Field(default=1, ge=1, le=100)
     checkpoint: Optional[dict[str, Any]] = None

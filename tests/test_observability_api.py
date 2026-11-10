@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
+from app import config
 from app.models.evaluation import EvalCase, EvalDataset, EvalResult, EvalRun
 from app.models.ingestion import IngestionRun, IngestionSource
 from app.models.organization_membership import MemberRole, OrganizationMembership
@@ -24,7 +25,7 @@ def _id():
     return str(uuid4())
 
 
-def _register(client, suffix):
+def _register_operator(client, monkeypatch, suffix):
     response = client.post("/v1/auth/register", json={
         "email": f"observability-{suffix}@example.com",
         "password": "CorrectHorseBattery42",
@@ -32,7 +33,10 @@ def _register(client, suffix):
         "organization_name": f"Observability {suffix}",
     })
     assert response.status_code == 201, response.text
-    return response.json()
+    registration = response.json()
+    monkeypatch.setattr(config, "INTERNAL_OPERATIONS_USER_IDS",
+                        config.INTERNAL_OPERATIONS_USER_IDS | {registration["user_id"]})
+    return registration
 
 
 def _headers(user):
@@ -137,9 +141,9 @@ def _strict_auth(monkeypatch):
     limiter.clear()
 
 
-def test_overview_requires_admin_and_valid_window(client):
+def test_overview_requires_internal_operator_and_valid_window(client, monkeypatch):
     assert client.get("/v1/observability/overview").status_code == 401
-    admin = _register(client, "auth")
+    admin = _register_operator(client, monkeypatch, "auth")
     assert client.get("/v1/observability/overview?days=2", headers=_headers(admin)).status_code == 422
     empty = client.get("/v1/observability/overview", headers=_headers(admin))
     assert empty.status_code == 200
@@ -157,17 +161,17 @@ def test_overview_requires_admin_and_valid_window(client):
 
 
 @pytest.mark.parametrize("role", [MemberRole.editor, MemberRole.viewer])
-def test_membership_role_overrides_admin_token(client, db, role):
-    user = _register(client, f"role-{role.value}")
+def test_membership_role_overrides_admin_token(client, db, role, monkeypatch):
+    user = _register_operator(client, monkeypatch, f"role-{role.value}")
     membership = db.query(OrganizationMembership).filter_by(user_id=user["user_id"]).one()
     membership.role = role
     db.commit()
     assert client.get("/v1/observability/overview", headers=_headers(user)).status_code == 403
 
 
-def test_overview_is_tenant_scoped_and_unknown_is_not_zero(client, db):
-    first = _register(client, "first")
-    second = _register(client, "second")
+def test_overview_is_tenant_scoped_and_unknown_is_not_zero(client, db, monkeypatch):
+    first = _register_operator(client, monkeypatch, "first")
+    second = _register_operator(client, monkeypatch, "second")
     now = datetime.now(timezone.utc)
     _seed(db, first["organization_id"], now)
     _seed(db, first["organization_id"], now, old=True)

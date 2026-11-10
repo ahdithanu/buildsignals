@@ -5,11 +5,12 @@ from app.models.graph import GraphEntity, GraphEntityLink, GraphEntityType
 from app.models.ingestion import RawSourceRecord
 from app.models.planning import PlanningRecord
 from app.models.temporal import TemporalEvent, TemporalObservation
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 from tests.test_permit_ingestion import _source_payload, _write_csv
 from tests.test_planning_intelligence import _planning_source
 
 
-def test_same_run_reversion_and_methodology_change_keep_event_identity(client, db, tmp_path):
+def test_same_run_reversion_and_methodology_change_keep_event_identity(client, internal_operator, db, tmp_path):
     from app.models.ingestion import PermitRecord
     from app.services.ingestion.temporal_projection import project_record_observations
 
@@ -65,7 +66,7 @@ def test_same_run_reversion_and_methodology_change_keep_event_identity(client, d
     assert all(window["observed_records"] == 0 for window in baseline["sources"][0]["windows"])
 
 
-def test_permit_projection_captures_changes_reversions_and_missing_dates(client, db, tmp_path):
+def test_permit_projection_captures_changes_reversions_and_missing_dates(client, internal_operator, db, tmp_path):
     path = tmp_path / "permits.csv"
     _write_csv(path, status="Submitted", approval_stage="pre_approval")
     source = client.post("/ingestion/sources", json=_source_payload(str(path))).json()
@@ -101,7 +102,7 @@ def test_permit_projection_captures_changes_reversions_and_missing_dates(client,
     assert filed.recorded_at >= filed.first_observed_at
 
 
-def test_planning_reversion_restores_canonical_state_and_retains_timeline(client, db, tmp_path):
+def test_planning_reversion_restores_canonical_state_and_retains_timeline(client, internal_operator, db, tmp_path):
     path = tmp_path / "planning.csv"
 
     def write(stage):

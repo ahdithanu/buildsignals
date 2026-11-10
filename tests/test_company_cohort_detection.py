@@ -7,6 +7,7 @@ import pytest
 from app.models.brand import BrandAlias, BrandProfile, PermitBrandMatch
 from app.services.graph_service import normalize_name
 from app.utils.org_scope import get_org_id
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 def _add_company(db, *, key: str, name: str, cohort: str | None) -> BrandProfile:
@@ -130,7 +131,7 @@ def _ingest(
     return {"source_id": source_id, "csv_path": csv_path}
 
 
-def test_major_builder_matches_direct_developer_and_is_idempotent(client, db, tmp_path):
+def test_major_builder_matches_direct_developer_and_is_idempotent(client, internal_operator, db, tmp_path):
     _add_company(db, key="toll_brothers", name="Toll Brothers", cohort="major_builder")
     ingested = _ingest(
         client,
@@ -153,7 +154,7 @@ def test_major_builder_matches_direct_developer_and_is_idempotent(client, db, tm
     assert db.query(PermitBrandMatch).one().id == match_id
 
 
-def test_major_builder_matches_description_with_residential_context(client, db, tmp_path):
+def test_major_builder_matches_description_with_residential_context(client, internal_operator, db, tmp_path):
     _add_company(db, key="toll_brothers", name="Toll Brothers", cohort="major_builder")
     _ingest(
         client,
@@ -168,7 +169,7 @@ def test_major_builder_matches_description_with_residential_context(client, db, 
     assert match.confidence == 0.92
 
 
-def test_major_builder_keeps_approved_development_signals(client, db, tmp_path):
+def test_major_builder_keeps_approved_development_signals(client, internal_operator, db, tmp_path):
     _add_company(db, key="toll_brothers", name="Toll Brothers", cohort="major_builder")
     _ingest(
         client,
@@ -185,7 +186,7 @@ def test_major_builder_keeps_approved_development_signals(client, db, tmp_path):
     assert match.permit.approval_stage == "approved"
 
 
-def test_major_builder_rejects_generic_grading_context(client, db, tmp_path):
+def test_major_builder_rejects_generic_grading_context(client, internal_operator, db, tmp_path):
     _add_company(db, key="toll_brothers", name="Toll Brothers", cohort="major_builder")
     _ingest(
         client,
@@ -199,7 +200,7 @@ def test_major_builder_rejects_generic_grading_context(client, db, tmp_path):
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_major_builder_rejects_alias_without_development_context(client, db, tmp_path):
+def test_major_builder_rejects_alias_without_development_context(client, internal_operator, db, tmp_path):
     _add_company(db, key="toll_brothers", name="Toll Brothers", cohort="major_builder")
     _ingest(
         client,
@@ -220,7 +221,7 @@ def test_major_builder_rejects_alias_without_development_context(client, db, tmp
         "Residential subdivision competitor to Toll Brothers",
     ],
 )
-def test_major_builder_rejects_negative_reference(client, db, tmp_path, description):
+def test_major_builder_rejects_negative_reference(client, internal_operator, db, tmp_path, description):
     _add_company(db, key="toll_brothers", name="Toll Brothers", cohort="major_builder")
     _ingest(
         client,
@@ -233,7 +234,7 @@ def test_major_builder_rejects_negative_reference(client, db, tmp_path, descript
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_catalog_entry_without_cohort_retains_national_retail_detection(client, db, tmp_path):
+def test_catalog_entry_without_cohort_retains_national_retail_detection(client, internal_operator, db, tmp_path):
     _add_company(db, key="starbucks", name="Starbucks", cohort=None)
     _ingest(
         client,

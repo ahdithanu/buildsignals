@@ -34,6 +34,7 @@ from app.services.parcel_ingestion import ParcelFactInput, upsert_parcel_snapsho
 from app.services.parcel_proximity import find_nearby_parcels, haversine_miles
 from app.services.parcel_ranking import rank_developer_candidate, rank_parcel_candidate
 from app.services.security import create_access_token, hash_password
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 class _StaticConnector:
@@ -240,10 +241,19 @@ def _role_headers(db, role: MemberRole = MemberRole.admin) -> dict[str, str]:
 
 
 def _admin_headers(db) -> dict[str, str]:
+    from app import config
+
+    operator = db.query(OrganizationMembership).filter(
+        OrganizationMembership.organization_id == "default-org",
+        OrganizationMembership.user_id.in_(config.INTERNAL_OPERATIONS_USER_IDS),
+        OrganizationMembership.role == MemberRole.admin,
+    ).first()
+    if operator:
+        return {"Authorization": "Bearer " + create_access_token(user_id=operator.user_id, org_id=operator.organization_id)}
     return _role_headers(db, MemberRole.admin)
 
 
-def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, db, tmp_path):
+def test_confirmed_signal_creates_ranked_reviewable_parcel_search(client, internal_operator, db, tmp_path):
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
     raw = db.query(RawSourceRecord).one()
@@ -412,7 +422,7 @@ def test_planning_record_creates_ranked_reviewable_parcel_search(client, db):
 
 
 def test_nearby_parcel_export_is_policy_gated_safe_and_audited(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     headers = _admin_headers(db)
     deal, source_data, match = _setup_confirmed_signal(
@@ -479,7 +489,7 @@ def test_nearby_parcel_export_is_policy_gated_safe_and_audited(
 
 
 def test_nearby_parcel_export_fails_closed_without_reviewed_policy(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     headers = _admin_headers(db)
     deal, source_data, match = _setup_confirmed_signal(
@@ -519,7 +529,7 @@ def test_nearby_parcel_export_fails_closed_without_reviewed_policy(
 
 
 def test_nearby_parcel_export_rejects_malformed_policy_and_inactive_source(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     headers = _admin_headers(db)
     deal, source_data, match = _setup_confirmed_signal(
@@ -581,7 +591,7 @@ def test_nearby_parcel_export_requires_editor_or_admin(client, db):
 
 
 def test_parcel_acquisition_case_tracks_provenance_status_and_outreach(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     headers = _admin_headers(db)
     deal, source_data, match = _setup_confirmed_signal(
@@ -710,7 +720,7 @@ def test_parcel_acquisition_case_tracks_provenance_status_and_outreach(
 
 
 def test_acquisition_radar_deduplicates_and_prioritizes_cross_opportunity_parcels(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
@@ -850,7 +860,9 @@ def test_acquisition_radar_rejects_invalid_shared_filter_values(client):
         assert response.status_code == 422, url
 
 
-def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path):
+def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path, monkeypatch):
+    from app import config
+
     org = Organization(id="default-org", name="Default Org", slug="default-org", is_active=True)
     db.add(org)
     admin_user = User(
@@ -885,6 +897,7 @@ def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path)
     ))
     db.commit()
     headers = {"Authorization": f"Bearer {create_access_token(user_id=admin_user.id, org_id=org.id)}"}
+    monkeypatch.setattr(config, "INTERNAL_OPERATIONS_USER_IDS", frozenset({admin_user.id}))
 
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path, headers=headers)
     source = db.get(IngestionSource, source_data["id"])
@@ -944,7 +957,9 @@ def test_shortlisted_candidate_can_be_assigned_to_a_member(client, db, tmp_path)
     assert radar.json()["summary"]["due_follow_up_parcels"] == 0
 
 
-def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_path):
+def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_path, monkeypatch):
+    from app import config
+
     org = Organization(id="default-org", name="Default Org", slug="default-org", is_active=True)
     db.add(org)
     admin_user = User(
@@ -964,6 +979,7 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     ))
     db.commit()
     headers = {"Authorization": f"Bearer {create_access_token(user_id=admin_user.id, org_id=org.id)}"}
+    monkeypatch.setattr(config, "INTERNAL_OPERATIONS_USER_IDS", frozenset({admin_user.id}))
 
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path, headers=headers)
     # Exercise the analyst's evidence and lifecycle reads before selecting land.
@@ -1074,7 +1090,7 @@ def test_shortlisted_candidate_promotes_into_a_live_opportunity(client, db, tmp_
     assert db.query(AuditLog).filter_by(entity_id=saved_id, action="acquisition_screen_export").count() == 1
 
 
-def test_search_requires_confirmation_and_enforces_radius(client, db, tmp_path):
+def test_search_requires_confirmation_and_enforces_radius(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     deal, _source, match = _setup_confirmed_signal(client, db, tmp_path, confirm=False)
@@ -1102,7 +1118,7 @@ def test_search_requires_confirmation_and_enforces_radius(client, db, tmp_path):
     assert widest_valid.status_code == 201, widest_valid.text
 
 
-def test_preapproval_signal_can_seed_nearby_parcel_context(client, db, tmp_path):
+def test_preapproval_signal_can_seed_nearby_parcel_context(client, internal_operator, db, tmp_path):
     deal, source_data, match = _setup_confirmed_signal(
         client,
         db,
@@ -1135,7 +1151,7 @@ def test_preapproval_signal_can_seed_nearby_parcel_context(client, db, tmp_path)
     assert [row["parcel"]["external_parcel_id"] for row in body["candidates"]] == ["P-PREAPPROVAL-NEAR"]
 
 
-def test_nearby_parcel_search_applies_filters(client, db, tmp_path):
+def test_nearby_parcel_search_applies_filters(client, internal_operator, db, tmp_path):
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
     raw = db.query(RawSourceRecord).one()
@@ -1184,7 +1200,7 @@ def test_nearby_parcel_search_applies_filters(client, db, tmp_path):
     ]
 
 
-def test_creating_opportunity_from_geocoded_signal_auto_seeds_parcel_context(client, db, tmp_path):
+def test_creating_opportunity_from_geocoded_signal_auto_seeds_parcel_context(client, internal_operator, db, tmp_path):
     source_data, match = _setup_unlinked_geocoded_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
     raw = db.query(RawSourceRecord).one()
@@ -1238,7 +1254,7 @@ def test_creating_opportunity_from_geocoded_signal_auto_seeds_parcel_context(cli
     assert broker_search.json()["ranker_version"] == "broker-v2"
 
 
-def test_approved_signals_also_seed_nearby_parcel_context(client, db, tmp_path):
+def test_approved_signals_also_seed_nearby_parcel_context(client, internal_operator, db, tmp_path):
     source_data, match = _setup_unlinked_geocoded_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
     raw = db.query(RawSourceRecord).one()
@@ -1288,7 +1304,7 @@ def test_haversine_and_missing_data_ranking_are_deterministic():
     assert not any("favorable" in reason for reason in ranked.explanation["reasons"])
 
 
-def test_physical_parcel_grouping_collapses_condo_tax_accounts(client, db, tmp_path):
+def test_physical_parcel_grouping_collapses_condo_tax_accounts(client, internal_operator, db, tmp_path):
     _deal, source_data, _match = _setup_confirmed_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
     raw = db.query(RawSourceRecord).one()
@@ -1368,7 +1384,7 @@ def test_market_ranker_uses_sale_tenure_without_inferring_intent():
     assert valuation["weight"] == 25
 
 
-def test_parcel_ingestion_versions_fact_evidence(client, db, tmp_path):
+def test_parcel_ingestion_versions_fact_evidence(client, internal_operator, db, tmp_path):
     _deal, source_data, _match = _setup_confirmed_signal(client, db, tmp_path)
     source = db.get(IngestionSource, source_data["id"])
     first_raw = db.query(RawSourceRecord).one()
@@ -1500,7 +1516,7 @@ def test_parcel_snapshot_geometry_surfaces_as_boundary_geometry(db):
     assert len(parcel.boundary_geometry["coordinates"][0]) == 5
 
 
-def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
+def test_parcel_source_runs_through_snapshot_ingestion(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "assessor.csv"
     csv_path.write_text(
         "parcel,address,city,state,lat,lon,acres,improvement_area,land_value,"
@@ -1704,7 +1720,7 @@ def test_parcel_source_runs_through_snapshot_ingestion(client, db, tmp_path):
     assert db.get(GraphRelationship, owner_relationship.id).is_current is True
 
 
-def test_parcel_snapshot_rejects_unsafe_mass_retirement(client, db, tmp_path):
+def test_parcel_snapshot_rejects_unsafe_mass_retirement(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "guarded-assessor.csv"
     header = "parcel,address,lat,lon\n"
     csv_path.write_text(
@@ -1747,7 +1763,7 @@ def test_parcel_snapshot_rejects_unsafe_mass_retirement(client, db, tmp_path):
 
 
 def test_cook_county_catalog_run_persists_geometry_context_without_owner_relationship(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     monkeypatch.setattr(
         ingestion_service,

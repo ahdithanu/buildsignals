@@ -20,6 +20,7 @@ from app.services.parcel_lineage import (
     reconcile_lineage_participants,
     upsert_lineage_from_snapshot,
 )
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 def _raw(db, source, run, external_id, content_hash, received_at):
@@ -127,7 +128,7 @@ def test_normalize_parcel_preserves_generic_lineage_fields():
     )
 
 
-def test_csv_parcel_ingestion_persists_lineage_and_graph(client, db, tmp_path):
+def test_csv_parcel_ingestion_persists_lineage_and_graph(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "parcel-lineage.csv"
     csv_path.write_text(
         "parcel,address,lat,lon,lineage_id,lineage_type,parents,lineage_date,confidence,evidence\n"

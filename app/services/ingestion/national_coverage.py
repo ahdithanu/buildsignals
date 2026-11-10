@@ -8,6 +8,12 @@ from sqlalchemy import and_, distinct, exists, func, or_
 from sqlalchemy.orm import Session
 
 from app.models.parcel import NearbyParcelCandidate, ParcelFact, ParcelRecord
+from app.schemas.national_coverage import (
+    CustomerNationalParcelCoverageResponse,
+    CustomerNationalParcelCoverageSummary,
+    CustomerNationalParcelStateCoverage,
+    NationalParcelCoverageResponse,
+)
 from app.services.ingestion.catalog import (
     US_STATE_CODES,
     extract_state_code,
@@ -185,6 +191,30 @@ def _next_action(posture: str, counts: dict[str, int]) -> tuple[str, int, str]:
     if counts["nearby_candidate_parcels"]:
         return "attach_availability_evidence", 55, "Nearby parcel candidates exist without verified availability"
     return "run_nearby_parcel_search", 70, "Measured parcel inventory exists but no nearby candidates are saved"
+
+
+def customer_national_parcel_coverage(report: NationalParcelCoverageResponse) -> CustomerNationalParcelCoverageResponse:
+    """Allowlist aggregate geography, never connector enrollment or operations."""
+    state_fields = set(CustomerNationalParcelStateCoverage.model_fields) - {"posture"}
+    summary_fields = set(CustomerNationalParcelCoverageSummary.model_fields) - {"unmeasured_state_count"}
+    return CustomerNationalParcelCoverageResponse(
+        measured_at=report.measured_at,
+        record_type=report.record_type,
+        scope="Authenticated organization; stored public-record parcel aggregates only",
+        coverage_claim="Measured states have stored parcel records; unmeasured states have no measured parcel inventory. Neither indicates statewide completeness.",
+        summary=CustomerNationalParcelCoverageSummary(
+            **report.summary.model_dump(include=summary_fields),
+            unmeasured_state_count=report.summary.state_count - report.summary.measured_state_count,
+        ),
+        states=[CustomerNationalParcelStateCoverage(
+            **row.model_dump(include=state_fields),
+            posture="measured" if row.stored_parcel_records > 0 else "unmeasured",
+        ) for row in report.states],
+        warnings=[
+            "Nearby candidates are not for-sale evidence; availability requires source-backed listing, broker, owner, or auction evidence.",
+            "Measurement time does not establish filing freshness, geographic completeness, or availability for sale.",
+        ],
+    )
 
 
 def national_parcel_coverage(db: Session, *, now: datetime | None = None) -> dict:

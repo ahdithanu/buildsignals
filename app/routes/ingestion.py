@@ -23,6 +23,8 @@ from app.schemas.graph import (
 from app.schemas.ingestion import (
     CandidateCanaryAttemptResponse,
     CandidateCanaryResponse,
+    CustomerCoverageSummary,
+    CustomerSourceOption,
     IngestionCandidateResponse,
     IngestionCoverageResponse,
     IngestionHostPolicyResponse,
@@ -41,7 +43,10 @@ from app.schemas.ingestion import (
     SourceSchedulePlanResponse,
 )
 from app.schemas.measured_coverage import MeasuredCoverageResponse
-from app.schemas.national_coverage import NationalParcelCoverageResponse
+from app.schemas.national_coverage import (
+    CustomerNationalParcelCoverageResponse,
+    NationalParcelCoverageResponse,
+)
 from app.schemas.parcel_reference import (
     ParcelReconciliation,
     ParcelReferenceAcceptance,
@@ -67,7 +72,10 @@ from app.services.ingestion.health import (
     validate_source_canary,
 )
 from app.services.ingestion.host_policy import audit_ingestion_hosts
-from app.services.ingestion.national_coverage import national_parcel_coverage
+from app.services.ingestion.national_coverage import (
+    customer_national_parcel_coverage,
+    national_parcel_coverage,
+)
 from app.services.ingestion.scheduling import build_schedule_plan, source_schedule_policy
 from app.services.ingestion.service import (
     ActiveRunConflict,
@@ -78,7 +86,12 @@ from app.services.ingestion.service import (
     list_sources,
     update_source,
 )
-from app.utils.auth_deps import get_current_user, require_role, require_role_strict
+from app.utils.auth_deps import (
+    get_current_user,
+    is_internal_operator,
+    require_internal_operator,
+    require_role_strict,
+)
 from app.utils.org_scope import active_query
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
@@ -108,7 +121,7 @@ def accept_permit_parcel(
 
 @router.get(
     "/sources/{source_id}/parcel-reference-audit", response_model=ParcelReferenceAudit,
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(require_internal_operator)],
 )
 def get_parcel_reference_audit(
     source_id: str, response: Response,
@@ -128,7 +141,7 @@ def get_parcel_reference_audit(
 
 @router.get(
     "/sources/{source_id}/parcel-reconciliation", response_model=ParcelReconciliation,
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(require_internal_operator)],
 )
 def get_parcel_reconciliation(
     source_id: str,
@@ -172,7 +185,7 @@ def get_permit_parcel_candidates(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/coverage/measured", response_model=MeasuredCoverageResponse, dependencies=[Depends(get_current_user)])
+@router.get("/coverage/measured", response_model=MeasuredCoverageResponse, dependencies=[Depends(require_internal_operator)])
 def get_measured_coverage(
     response: Response,
     record_type: str = Query(default="parcel", pattern="^(parcel|permit|planning)$"),
@@ -192,13 +205,19 @@ def get_measured_coverage(
 
 @router.get(
     "/coverage/national-parcels",
-    response_model=NationalParcelCoverageResponse,
-    dependencies=[Depends(get_current_user)],
+    response_model=NationalParcelCoverageResponse | CustomerNationalParcelCoverageResponse,
 )
-def get_national_parcel_coverage(response: Response, db: Session = Depends(get_db)):
+def get_national_parcel_coverage(
+    response: Response,
+    principal: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Return a measured 50-state parcel gap report without changing intake state."""
     response.headers["Cache-Control"] = "no-store"
-    return national_parcel_coverage(db)
+    report = NationalParcelCoverageResponse.model_validate(national_parcel_coverage(db))
+    if is_internal_operator(principal["user_id"], principal["role"], is_demo=principal.get("is_demo", False)):
+        return report
+    return customer_national_parcel_coverage(report)
 
 
 def _normalize_state_filter(state: str | None) -> str | None:
@@ -208,12 +227,36 @@ def _normalize_state_filter(state: str | None) -> str | None:
     return state_code
 
 
-@router.get("/sources", response_model=list[IngestionSourceResponse])
+@router.get("/source-options", response_model=list[CustomerSourceOption], dependencies=[Depends(get_current_user)])
+def get_customer_source_options(response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    return [CustomerSourceOption(id=source.id, record_type=source.record_type)
+            for source in list_sources(db) if source.is_active]
+
+
+@router.get("/coverage/summary", response_model=CustomerCoverageSummary, dependencies=[Depends(get_current_user)])
+def get_customer_coverage_summary(
+    response: Response,
+    record_type: str = Query(default="parcel", pattern="^(parcel|permit|planning)$"),
+    db: Session = Depends(get_db),
+):
+    from app.services.ingestion.measured_coverage import measured_coverage
+
+    response.headers["Cache-Control"] = "no-store"
+    measured = measured_coverage(db, record_type=record_type, limit=1)
+    return CustomerCoverageSummary(
+        measured_at=measured["measured_at"], record_type=record_type,
+        stored_records=measured["readiness"]["stored_records"],
+        geocoded_records=measured["readiness"]["geocoded_records"],
+    )
+
+
+@router.get("/sources", response_model=list[IngestionSourceResponse], dependencies=[Depends(require_internal_operator)])
 def get_sources(db: Session = Depends(get_db)):
     return list_sources(db)
 
 
-@router.get("/health", response_model=list[SourceHealthResponse])
+@router.get("/health", response_model=list[SourceHealthResponse], dependencies=[Depends(require_internal_operator)])
 def get_ingestion_health(
     state: str | None = Query(default=None, max_length=50),
     db: Session = Depends(get_db),
@@ -225,7 +268,7 @@ def get_ingestion_health(
     return [evaluate_source_health(db, source) for source in sources]
 
 
-@router.get("/reliability-summary", response_model=IngestionReliabilitySummaryResponse)
+@router.get("/reliability-summary", response_model=IngestionReliabilitySummaryResponse, dependencies=[Depends(require_internal_operator)])
 def get_ingestion_reliability_summary(db: Session = Depends(get_db)):
     return IngestionReliabilitySummaryResponse.model_validate(
         asdict(summarize_ingestion_reliability(db))
@@ -235,11 +278,7 @@ def get_ingestion_reliability_summary(db: Session = Depends(get_db)):
 @router.get(
     "/schedule-plan",
     response_model=SourceSchedulePlanResponse,
-    dependencies=[Depends(require_role(
-        MemberRole.admin,
-        MemberRole.editor,
-        MemberRole.viewer,
-    ))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def get_ingestion_schedule_plan(
     state: str | None = Query(default=None, max_length=50),
@@ -284,11 +323,7 @@ def get_ingestion_schedule_plan(
 @router.get(
     "/host-policy",
     response_model=IngestionHostPolicyResponse,
-    dependencies=[Depends(require_role(
-        MemberRole.admin,
-        MemberRole.editor,
-        MemberRole.viewer,
-    ))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def get_ingestion_host_policy():
     report = audit_ingestion_hosts(load_catalog())
@@ -308,7 +343,7 @@ def get_ingestion_host_policy():
     return IngestionHostPolicyResponse.model_validate(payload)
 
 
-@router.get("/candidates", response_model=list[IngestionCandidateResponse])
+@router.get("/candidates", response_model=list[IngestionCandidateResponse], dependencies=[Depends(require_internal_operator)])
 def get_ingestion_candidates(
     state: str | None = Query(default=None, max_length=50),
     db: Session = Depends(get_db),
@@ -350,7 +385,7 @@ def get_ingestion_candidates(
     return response
 
 
-@router.get("/coverage", response_model=IngestionCoverageResponse)
+@router.get("/coverage", response_model=IngestionCoverageResponse, dependencies=[Depends(require_internal_operator)])
 def get_ingestion_coverage(db: Session = Depends(get_db)):
     return IngestionCoverageResponse.model_validate(
         asdict(summarize_coverage(live_sources=list_sources(db)))
@@ -360,7 +395,7 @@ def get_ingestion_coverage(db: Session = Depends(get_db)):
 @router.post(
     "/candidates/{candidate_key}/canary",
     response_model=CandidateCanaryResponse,
-    dependencies=[Depends(require_role(MemberRole.admin))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def canary_candidate(
     candidate_key: str,
@@ -393,7 +428,7 @@ def canary_candidate(
 @router.get(
     "/candidates/{candidate_key}/canary-history",
     response_model=list[CandidateCanaryAttemptResponse],
-    dependencies=[Depends(require_role(MemberRole.admin))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def get_candidate_canary_history(
     candidate_key: str,
@@ -413,7 +448,7 @@ def get_candidate_canary_history(
     return list_candidate_canary_attempts(db, candidate_key, limit=limit)
 
 
-@router.get("/sources/{source_id}/health", response_model=SourceHealthResponse)
+@router.get("/sources/{source_id}/health", response_model=SourceHealthResponse, dependencies=[Depends(require_internal_operator)])
 def get_source_health(source_id: str, db: Session = Depends(get_db)):
     source = get_source(db, source_id)
     if source is None:
@@ -425,7 +460,7 @@ def get_source_health(source_id: str, db: Session = Depends(get_db)):
     "/sources",
     response_model=IngestionSourceResponse,
     status_code=201,
-    dependencies=[Depends(require_role(MemberRole.admin))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def add_source(payload: IngestionSourceCreate, db: Session = Depends(get_db)):
     try:
@@ -441,7 +476,7 @@ def add_source(payload: IngestionSourceCreate, db: Session = Depends(get_db)):
     "/candidates/{candidate_key}/promote",
     response_model=IngestionSourceResponse,
     status_code=201,
-    dependencies=[Depends(require_role(MemberRole.admin))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def promote_candidate(candidate_key: str, db: Session = Depends(get_db)):
     candidate = next(
@@ -499,7 +534,7 @@ def promote_candidate(candidate_key: str, db: Session = Depends(get_db)):
 @router.patch(
     "/sources/{source_id}",
     response_model=IngestionSourceResponse,
-    dependencies=[Depends(require_role(MemberRole.admin))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def patch_source(source_id: str, payload: IngestionSourceUpdate, db: Session = Depends(get_db)):
     source = get_source(db, source_id)
@@ -514,7 +549,7 @@ def patch_source(source_id: str, payload: IngestionSourceUpdate, db: Session = D
     "/sources/{source_id}/runs",
     response_model=IngestionRunResponse,
     status_code=201,
-    dependencies=[Depends(require_role(MemberRole.admin))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def run_source(source_id: str, payload: IngestionRunRequest, db: Session = Depends(get_db)):
     source = get_source(db, source_id)
@@ -539,7 +574,7 @@ def run_source(source_id: str, payload: IngestionRunRequest, db: Session = Depen
 @router.post(
     "/sources/{source_id}/canary",
     response_model=SourceCanaryResponse,
-    dependencies=[Depends(require_role(MemberRole.admin))],
+    dependencies=[Depends(require_internal_operator)],
 )
 def canary_source(
     source_id: str,
@@ -555,7 +590,7 @@ def canary_source(
         raise HTTPException(status_code=502, detail=f"Source canary failed: {exc}") from exc
 
 
-@router.get("/runs", response_model=list[IngestionRunResponse])
+@router.get("/runs", response_model=list[IngestionRunResponse], dependencies=[Depends(require_internal_operator)])
 def get_runs(
     source_id: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),

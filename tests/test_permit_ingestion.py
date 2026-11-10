@@ -17,6 +17,7 @@ from app.models.ingestion import (
 from app.services.brand_intelligence import load_brand_catalog, sync_brand_catalog
 from app.services.ingestion.connectors import FetchEnvelope
 from app.services.ingestion.service import _claim_source_run, execute_source_run
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 def _source_payload(csv_path: str) -> dict:
@@ -73,7 +74,7 @@ def _raise_graph_failure(*_args, **_kwargs):
     raise RuntimeError("graph failed")
 
 
-def test_register_source_and_reject_embedded_secret(client, tmp_path):
+def test_register_source_and_reject_embedded_secret(client, internal_operator, tmp_path):
     payload = _source_payload(str(tmp_path / "permits.csv"))
     response = client.post("/ingestion/sources", json=payload)
     assert response.status_code == 201, response.text
@@ -86,7 +87,7 @@ def test_register_source_and_reject_embedded_secret(client, tmp_path):
     assert response.status_code == 422
 
 
-def test_csv_run_is_idempotent_and_versions_corrections(client, db, tmp_path):
+def test_csv_run_is_idempotent_and_versions_corrections(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "permits.csv"
     _write_csv(csv_path)
     source = client.post("/ingestion/sources", json=_source_payload(str(csv_path))).json()
@@ -135,7 +136,7 @@ def test_csv_run_is_idempotent_and_versions_corrections(client, db, tmp_path):
     assert db.query(PermitRecord).one().status == "Issued"
 
 
-def test_raw_source_record_rejects_orm_mutation(client, db, tmp_path):
+def test_raw_source_record_rejects_orm_mutation(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "permits.csv"
     _write_csv(csv_path)
     source = client.post(
@@ -173,7 +174,7 @@ def test_raw_source_record_rejects_orm_mutation(client, db, tmp_path):
     assert db.query(RawSourceRecord).count() == 2
 
 
-def test_source_record_filters_skip_out_of_scope_rows(client, db, tmp_path):
+def test_source_record_filters_skip_out_of_scope_rows(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "permits.csv"
     csv_path.write_text(
         "id,application_no,permit_no,approval_stage,type,status,description,address,city,state,zip,parcel,owner,developer,contractor,architect,engineer,valuation,filed\n"
@@ -196,7 +197,7 @@ def test_source_record_filters_skip_out_of_scope_rows(client, db, tmp_path):
     assert db.query(RawSourceRecord).count() == 1
 
 
-def test_interrupted_run_is_finalized_as_failed(client, db, tmp_path, monkeypatch):
+def test_interrupted_run_is_finalized_as_failed(client, internal_operator, db, tmp_path, monkeypatch):
     csv_path = tmp_path / "permits.csv"
     _write_csv(csv_path)
     source_payload = client.post(
@@ -219,7 +220,7 @@ def test_interrupted_run_is_finalized_as_failed(client, db, tmp_path, monkeypatc
     assert run.error_message == "Interrupted by operator"
 
 
-def test_ingested_permit_projects_evidence_backed_opportunity_context(client, db, tmp_path):
+def test_ingested_permit_projects_evidence_backed_opportunity_context(client, internal_operator, db, tmp_path):
     deal = client.post("/deals", json={
         "name": "Riverside Tower",
         "address": "100 Main Street",
@@ -252,7 +253,7 @@ def test_ingested_permit_projects_evidence_backed_opportunity_context(client, db
     assert db.query(GraphEntity).filter(GraphEntity.entity_type == "permit").count() == 1
 
 
-def test_bad_record_rolls_back_and_reports_committed_counts(client, db, tmp_path):
+def test_bad_record_rolls_back_and_reports_committed_counts(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "bad.csv"
     csv_path.write_text("id,address\n,100 Main St\n")
     payload = _source_payload(str(csv_path))
@@ -275,7 +276,7 @@ def test_bad_record_rolls_back_and_reports_committed_counts(client, db, tmp_path
 
 
 def test_downstream_failure_rolls_back_new_raw_observation(
-    client, db, tmp_path, monkeypatch
+    client, internal_operator, db, tmp_path, monkeypatch
 ):
     csv_path = tmp_path / "downstream-new.csv"
     _write_csv(csv_path)
@@ -295,7 +296,7 @@ def test_downstream_failure_rolls_back_new_raw_observation(
 
 
 def test_downstream_failure_does_not_advance_existing_observation(
-    client, db, tmp_path, monkeypatch
+    client, internal_operator, db, tmp_path, monkeypatch
 ):
     csv_path = tmp_path / "downstream-existing.csv"
     _write_csv(csv_path)
@@ -329,7 +330,7 @@ def test_downstream_failure_does_not_advance_existing_observation(
     assert db.query(RawSourceRecordObservation).one().last_observed_at == observed_at
 
 
-def test_mapping_change_reprocesses_raw_and_expires_removed_relationship(client, db, tmp_path):
+def test_mapping_change_reprocesses_raw_and_expires_removed_relationship(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "permits.csv"
     _write_csv(csv_path)
     payload = _source_payload(str(csv_path))
@@ -367,7 +368,7 @@ def test_mapping_change_reprocesses_raw_and_expires_removed_relationship(client,
 
 
 def test_pre_approval_filing_advances_to_approved_without_duplicate_graph_node(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     csv_path = tmp_path / "lifecycle.csv"
     _write_csv(csv_path, status="Under Review", approval_stage="pre_approval")
@@ -400,7 +401,7 @@ def test_pre_approval_filing_advances_to_approved_without_duplicate_graph_node(
     assert [row["permit_number"] for row in approved.json()] == ["BP-1001"]
 
 
-def test_permit_detail_exposes_lifecycle_brand_matches_and_graph_context(client, db, tmp_path):
+def test_permit_detail_exposes_lifecycle_brand_matches_and_graph_context(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "starbucks.csv"
@@ -431,7 +432,7 @@ def test_permit_detail_exposes_lifecycle_brand_matches_and_graph_context(client,
 
 
 def test_completed_keyset_run_preserves_final_resume_checkpoint(
-    client, db, tmp_path, monkeypatch
+    client, internal_operator, db, tmp_path, monkeypatch
 ):
     calls = []
 
@@ -478,7 +479,7 @@ def test_completed_keyset_run_preserves_final_resume_checkpoint(
     assert db.query(RawSourceRecord).one().source_updated_at is not None
 
 
-def test_runtime_rejects_repeated_checkpoint(client, tmp_path, monkeypatch):
+def test_runtime_rejects_repeated_checkpoint(client, internal_operator, tmp_path, monkeypatch):
     class StalledConnector:
         def fetch_page(self, checkpoint=None):
             return FetchEnvelope(
@@ -506,7 +507,7 @@ def test_runtime_rejects_repeated_checkpoint(client, tmp_path, monkeypatch):
     assert "repeated checkpoint" in response.json()["error_message"]
 
 
-def test_fresh_run_lease_returns_conflict(client, db, tmp_path):
+def test_fresh_run_lease_returns_conflict(client, internal_operator, db, tmp_path):
     source = client.post(
         "/ingestion/sources", json=_source_payload(str(tmp_path / "unused.csv"))
     ).json()
@@ -527,7 +528,7 @@ def test_fresh_run_lease_returns_conflict(client, db, tmp_path):
     assert "running job" in response.json()["detail"]
 
 
-def test_run_rejects_invalid_stale_lease_setting(client, tmp_path):
+def test_run_rejects_invalid_stale_lease_setting(client, internal_operator, tmp_path):
     payload = _source_payload(str(tmp_path / "unused.csv"))
     payload["settings"]["stale_run_after_seconds"] = 0
     source = client.post("/ingestion/sources", json=payload).json()
@@ -540,7 +541,7 @@ def test_run_rejects_invalid_stale_lease_setting(client, tmp_path):
     assert "stale_run_after_seconds must be positive" in response.json()["detail"]
 
 
-def test_stale_run_lease_is_reclaimed(db, client, tmp_path):
+def test_stale_run_lease_is_reclaimed(db, client, internal_operator, tmp_path):
     source = client.post(
         "/ingestion/sources", json=_source_payload(str(tmp_path / "unused.csv"))
     ).json()
@@ -571,7 +572,7 @@ def test_stale_run_lease_is_reclaimed(db, client, tmp_path):
     ).one().error_message
 
 
-def test_slow_fetch_renews_heartbeat(client, db, tmp_path, monkeypatch):
+def test_slow_fetch_renews_heartbeat(client, internal_operator, db, tmp_path, monkeypatch):
     class SlowConnector:
         def fetch_page(self, checkpoint=None):
             time.sleep(0.04)
@@ -598,7 +599,7 @@ def test_slow_fetch_renews_heartbeat(client, db, tmp_path, monkeypatch):
     assert run.heartbeat_at >= run.started_at
 
 
-def test_committed_page_survives_next_fetch_failure(client, db, tmp_path, monkeypatch):
+def test_committed_page_survives_next_fetch_failure(client, internal_operator, db, tmp_path, monkeypatch):
     class FailingSecondPageConnector:
         calls = 0
 
@@ -635,7 +636,7 @@ def test_committed_page_survives_next_fetch_failure(client, db, tmp_path, monkey
 
 
 def test_full_snapshot_resume_retires_missing_records_only_after_completion(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     csv_path = tmp_path / "snapshot.csv"
     csv_path.write_text(
@@ -690,7 +691,7 @@ def test_full_snapshot_resume_retires_missing_records_only_after_completion(
 
 
 def test_partial_snapshot_never_retires_and_reappearance_reactivates(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     csv_path = tmp_path / "reactivation.csv"
     csv_path.write_text(
@@ -730,7 +731,7 @@ def test_partial_snapshot_never_retires_and_reappearance_reactivates(
     ).count() > 0
 
 
-def test_snapshot_guard_blocks_unexpected_empty_source(client, db, tmp_path):
+def test_snapshot_guard_blocks_unexpected_empty_source(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "guarded.csv"
     csv_path.write_text("id,address\n1,100 Main St\n2,200 Main St\n")
     payload = _source_payload(str(csv_path))

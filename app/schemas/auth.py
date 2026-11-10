@@ -34,6 +34,7 @@ class DeleteAccountRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     is_demo: bool = False
+    is_internal_operator: bool = False
     access_token: str
     token_type: str = "bearer"
     user_id: str
@@ -54,6 +55,7 @@ class UserResponse(BaseModel):
 
 class MeResponse(BaseModel):
     is_demo: bool = False
+    is_internal_operator: bool = False
     user: UserResponse
     organization_id: str
     role: str

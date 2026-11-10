@@ -6,9 +6,15 @@ from types import SimpleNamespace
 import pytest
 
 from app.main import app
-from app.schemas.national_coverage import NationalParcelCoverageResponse
+from app.schemas.national_coverage import (
+    CustomerNationalParcelCoverageResponse,
+    NationalParcelCoverageResponse,
+)
 from app.services.ingestion.catalog import US_STATE_CODES
-from app.services.ingestion.national_coverage import national_parcel_coverage
+from app.services.ingestion.national_coverage import (
+    customer_national_parcel_coverage,
+    national_parcel_coverage,
+)
 from app.utils.auth_deps import get_current_user
 
 
@@ -157,7 +163,7 @@ def test_national_parcel_coverage_endpoint_returns_typed_report(client, monkeypa
             "warnings": [],
         },
     )
-    app.dependency_overrides[get_current_user] = lambda: {"user_id": "test", "org_id": "default-org"}
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "test", "org_id": "default-org", "role": "viewer"}
     try:
         response = client.get("/ingestion/coverage/national-parcels")
     finally:
@@ -246,3 +252,31 @@ def test_national_parcel_schema_rejects_inconsistent_summary_and_targets():
     ]
     with pytest.raises(ValueError, match="connector targets"):
         NationalParcelCoverageResponse.model_validate(payload)
+
+
+@pytest.mark.parametrize("location", ["root", "state", "summary"])
+def test_customer_national_schema_rejects_operational_fields(db, location):
+    report = NationalParcelCoverageResponse.model_validate(national_parcel_coverage(db))
+    payload = customer_national_parcel_coverage(report).model_dump()
+    if location == "root":
+        payload["next_connector_targets"] = []
+    elif location == "state":
+        payload["states"][0]["candidate_status_counts"] = {"legal_hold": 1}
+    else:
+        payload["summary"]["candidate_only_state_count"] = 1
+    with pytest.raises(ValueError, match="Extra inputs"):
+        CustomerNationalParcelCoverageResponse.model_validate(payload)
+
+
+@pytest.mark.parametrize("mismatch", ["matrix", "summary", "posture"])
+def test_customer_national_schema_rejects_inconsistent_aggregates(db, mismatch):
+    report = NationalParcelCoverageResponse.model_validate(national_parcel_coverage(db))
+    payload = customer_national_parcel_coverage(report).model_dump()
+    if mismatch == "matrix":
+        payload["states"].pop()
+    elif mismatch == "summary":
+        payload["summary"]["stored_parcel_records"] += 1
+    else:
+        payload["states"][0]["posture"] = "measured"
+    with pytest.raises(ValueError):
+        CustomerNationalParcelCoverageResponse.model_validate(payload)

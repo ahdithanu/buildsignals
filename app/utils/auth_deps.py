@@ -6,10 +6,11 @@ from typing import Optional
 from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app import config
 from app.db import get_db
 from app.models.organization_membership import MemberRole, OrganizationMembership
 from app.models.user import User
-from app.services.demo_access import is_demo_identity, valid_demo_claims
+from app.services.demo_access import DEMO_USER_ID, is_demo_identity, valid_demo_claims
 from app.services.security import decode_access_token
 from app.utils.org_scope import RequestContext
 
@@ -136,6 +137,25 @@ def require_role_strict(*allowed: MemberRole):
         return principal
 
     return _checker
+
+
+def is_internal_operator(user_id: str, role: str, *, is_demo: bool = False) -> bool:
+    """Evaluate server-owned access using a database-resolved membership role."""
+    return (
+        not is_demo
+        and user_id != DEMO_USER_ID
+        and role == MemberRole.admin.value
+        and user_id in config.INTERNAL_OPERATIONS_USER_IDS
+    )
+
+
+def require_internal_operator(principal: dict = Depends(get_current_user)) -> dict:
+    """Require real authentication, current admin membership and explicit trust."""
+    if not is_internal_operator(
+        principal["user_id"], principal["role"], is_demo=principal.get("is_demo", False),
+    ):
+        raise HTTPException(status_code=403, detail="Internal operations access required")
+    return principal
 
 
 def require_role_of(

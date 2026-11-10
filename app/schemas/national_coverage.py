@@ -3,7 +3,71 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
+
+
+class CustomerNationalParcelStateCoverage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state: str
+    posture: Literal["measured", "unmeasured"]
+    stored_parcel_records: int
+    geocoded_parcel_records: int
+    recently_seen_parcel_records: int
+    nearby_candidate_parcels: int
+    verified_available_parcels: int
+    nearby_verified_available_parcels: int
+    latest_verified_availability_at: datetime | None = None
+
+
+class CustomerNationalParcelCoverageSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state_count: int
+    measured_state_count: int
+    unmeasured_state_count: int
+    states_with_nearby_candidates: int
+    states_with_verified_available_parcels: int
+    stored_parcel_records: int
+    geocoded_parcel_records: int
+    nearby_candidate_parcels: int
+    verified_available_parcels: int
+    nearby_verified_available_parcels: int
+
+
+class CustomerNationalParcelCoverageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    measured_at: datetime
+    record_type: Literal["parcel"]
+    scope: str
+    coverage_claim: str
+    summary: CustomerNationalParcelCoverageSummary
+    states: list[CustomerNationalParcelStateCoverage]
+    warnings: list[str]
+
+    @model_validator(mode="after")
+    def require_consistent_geographic_aggregates(self):
+        from app.services.ingestion.catalog import US_STATE_CODES
+
+        if {row.state for row in self.states} != set(US_STATE_CODES) or len(self.states) != len(US_STATE_CODES):
+            raise ValueError("National parcel coverage must include exactly one row for every US state")
+        measured = sum(row.stored_parcel_records > 0 for row in self.states)
+        expected = {
+            "state_count": len(self.states),
+            "measured_state_count": measured,
+            "unmeasured_state_count": len(self.states) - measured,
+            "states_with_nearby_candidates": sum(row.nearby_candidate_parcels > 0 for row in self.states),
+            "states_with_verified_available_parcels": sum(row.verified_available_parcels > 0 for row in self.states),
+        }
+        for field in ("stored_parcel_records", "geocoded_parcel_records", "nearby_candidate_parcels",
+                      "verified_available_parcels", "nearby_verified_available_parcels"):
+            expected[field] = sum(getattr(row, field) for row in self.states)
+        if any(getattr(self.summary, field) != count for field, count in expected.items()):
+            raise ValueError("National parcel coverage summary mismatch")
+        if any(row.posture != ("measured" if row.stored_parcel_records > 0 else "unmeasured") for row in self.states):
+            raise ValueError("National parcel coverage posture does not match measured records")
+        return self
 
 
 class NationalParcelStateCoverage(BaseModel):

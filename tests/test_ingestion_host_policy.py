@@ -14,6 +14,7 @@ from app.services.ingestion.host_policy import (
     configured_ingestion_hosts,
     effective_source_url,
 )
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 def _source(
@@ -251,7 +252,7 @@ def test_plan_policy_is_not_enforced_in_development(monkeypatch):
     ])
 
 
-def test_host_policy_endpoint_reports_blocked_catalog(client, monkeypatch):
+def test_host_policy_endpoint_reports_blocked_catalog(client, internal_operator, monkeypatch):
     monkeypatch.setattr(
         "app.routes.ingestion.load_catalog",
         lambda: [_source("seattle", "https://data.seattle.gov/data")],
@@ -266,7 +267,7 @@ def test_host_policy_endpoint_reports_blocked_catalog(client, monkeypatch):
     assert response.json()["missing_hosts"] == ["data.seattle.gov"]
 
 
-def test_host_policy_endpoint_requires_named_executor_attestation(client, monkeypatch):
+def test_host_policy_endpoint_requires_named_executor_attestation(client, internal_operator, monkeypatch):
     source = _source("seattle", "https://data.seattle.gov/data")
     monkeypatch.setattr(
         "app.routes.ingestion.load_catalog",

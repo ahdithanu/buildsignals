@@ -127,3 +127,22 @@ def test_staging_imports_clean_and_fail_closed_by_default():
     # defaults to no anonymous access.
     r = _import_config({"ENVIRONMENT": "staging"})
     assert r.returncode == 0, r.stderr
+
+
+def test_internal_operator_allowlist_defaults_to_empty():
+    r = subprocess.run(
+        [sys.executable, "-c", "from app.config import INTERNAL_OPERATIONS_USER_IDS; assert INTERNAL_OPERATIONS_USER_IDS == frozenset()"],
+        env={"PATH": __import__("os").environ.get("PATH", "")},
+        capture_output=True, text=True, timeout=30,
+    )
+    assert r.returncode == 0, r.stderr
+
+
+def test_internal_operator_allowlist_parses_csv_without_blank_entries():
+    r = subprocess.run(
+        [sys.executable, "-c", "from app.config import INTERNAL_OPERATIONS_USER_IDS; assert INTERNAL_OPERATIONS_USER_IDS == frozenset({'operator-a', 'operator-b'})"],
+        env={"PATH": __import__("os").environ.get("PATH", ""),
+             "INTERNAL_OPERATIONS_USER_IDS": " operator-a, ,operator-b,operator-a, "},
+        capture_output=True, text=True, timeout=30,
+    )
+    assert r.returncode == 0, r.stderr

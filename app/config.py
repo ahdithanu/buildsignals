@@ -138,6 +138,13 @@ ALLOW_ANONYMOUS: bool = _parse_bool(
     default=not IS_DEPLOYED,
 )
 
+# Server-owned account allowlist, never inferred from customer admin membership.
+INTERNAL_OPERATIONS_USER_IDS: frozenset[str] = frozenset(
+    user_id.strip()
+    for user_id in os.environ.get("INTERNAL_OPERATIONS_USER_IDS", "").split(",")
+    if user_id.strip()
+)
+
 if IS_DEPLOYED and ALLOW_ANONYMOUS:
     raise RuntimeError(
         f"ALLOW_ANONYMOUS=true is not permitted when ENVIRONMENT={ENVIRONMENT!r} "
