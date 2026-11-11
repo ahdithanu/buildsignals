@@ -5,66 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ingestionApi } from '@/api/ingestion';
 import { ImportedDataEmptyState } from '@/components/ImportedDataEmptyState';
 import type { InventoryRecordTypes } from '@/hooks/useImportedRecordAvailability';
-import type { MeasuredCoverage, MeasuredCoverageParams } from '@/types/ingestion';
 
-const auth = vi.hoisted(() => ({ organizationId: 'org-a' as string | null, isAuthenticated: true }));
+const auth = vi.hoisted(() => ({ organizationId: 'org-a' as string | null, isAuthenticated: true, role: 'admin', isInternalOperator: false }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
-vi.mock('@/api/ingestion', () => ({ ingestionApi: { measuredCoverage: vi.fn() } }));
+vi.mock('@/api/ingestion', () => ({ ingestionApi: { coverageSummary: vi.fn(), measuredCoverage: vi.fn() } }));
 
-function report(params: MeasuredCoverageParams, stored = 0, hasMore = false): MeasuredCoverage {
-  return {
-    ...params, measured_at: '2026-09-11T12:00:00Z', has_more: hasMore,
-    scope: 'Stored records for this organization.', count_semantics: 'Source-local counts.', warnings: [],
-    page_totals: {
-      source_count: 1,
-      stored_records: stored,
-      geocoded_records: 0,
-      recently_seen_records: 0,
-      unknown_source_date_records: 0,
-      future_source_date_records: 0,
-      recent_source_date_records: 0,
-      observed_state_count: 0,
-      observed_jurisdiction_count: 0,
-    },
-    readiness: {
-      total_source_count: 1,
-      active_source_count: 0,
-      disabled_source_count: 1,
-      sources_with_records: stored > 0 ? 1 : 0,
-      empty_source_count: stored > 0 ? 0 : 1,
-      sources_with_recent_collection: 0,
-      sources_with_recent_source_date: 0,
-      sources_with_unknown_source_dates: 0,
-      sources_with_future_source_dates: 0,
-      sources_with_geocoded_records: 0,
-      stale_collection_source_count: stored > 0 ? 1 : 0,
-      stale_source_date_source_count: stored > 0 ? 1 : 0,
-      stored_records: stored,
-      geocoded_records: 0,
-      recently_seen_records: 0,
-      recent_source_date_records: 0,
-      observed_state_count: 0,
-      observed_jurisdiction_count: 0,
-    },
-    readiness_status_counts: {
-      fresh: 0,
-      empty: stored > 0 ? 0 : 1,
-      disabled: stored > 0 ? 1 : 0,
-      stale_collection: 0,
-      stale_source_date: 0,
-      unknown_source_date: 0,
-    },
-    readiness_states: [],
-    readiness_jurisdictions: [],
-    sources: [{
-      source_id: `${params.record_type}-${params.offset}`, source_key: 'public_records',
-      configured_active: false, configured_jurisdiction: 'TX', stored_records: stored,
-      readiness_status: stored > 0 ? 'disabled' : 'empty',
-      readiness_reasons: ['collection disabled'],
-      observed_states: [],
-    }],
-  };
-}
+const summary = (record_type: InventoryRecordTypes[number], stored_records = 0) => ({
+  measured_at: '2026-11-10T12:00:00Z', record_type, stored_records, geocoded_records: 0,
+});
 
 function setup(recordTypes: InventoryRecordTypes = ['permit', 'planning']) {
   const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } });
@@ -73,101 +21,58 @@ function setup(recordTypes: InventoryRecordTypes = ['permit', 'planning']) {
       title="No matching signals" description="No matching signals in this organization's imported records." />
   </MemoryRouter></QueryClientProvider>;
   const view = render(app());
-  return { ...view, client, renderAgain: () => view.rerender(app()) };
+  return { ...view, renderAgain: () => view.rerender(app()) };
 }
 
 beforeEach(() => {
-  auth.organizationId = 'org-a';
-  auth.isAuthenticated = true;
-  vi.mocked(ingestionApi.measuredCoverage).mockReset().mockImplementation(async params => report(params));
+  vi.resetAllMocks();
+  Object.assign(auth, { organizationId: 'org-a', isAuthenticated: true, isInternalOperator: false });
+  vi.mocked(ingestionApi.coverageSummary).mockImplementation(async recordType => summary(recordType));
 });
 
-describe('Imported data empty states', () => {
-  it('checks every relevant record type before reporting missing imports, not source activity', async () => {
+describe('ImportedDataEmptyState', () => {
+  it('uses aggregate inventory without fetching connector operations for customer admins', async () => {
     setup();
+    await screen.findByText('No imported records available');
+    expect(ingestionApi.coverageSummary).toHaveBeenCalledTimes(2);
+    expect(ingestionApi.measuredCoverage).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'View dashboard' })).toHaveAttribute('href', '/');
+    expect(screen.queryByRole('link', { name: 'Open Source Health' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Missing inventory does not establish an absence/)).toBeInTheDocument();
+  });
+
+  it.each(['permit', 'parcel', 'planning'] as const)('keeps internal %s inventory actions available only to operators', async recordType => {
+    auth.isInternalOperator = true;
+    setup([recordType]);
+    await screen.findByText('No imported records available');
+    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', recordType === 'permit' ? '/source-health' : `/source-health?record_type=${recordType}`);
+  });
+
+  it('distinguishes empty filters from empty inventory, including planning-only imports', async () => {
+    vi.mocked(ingestionApi.coverageSummary).mockImplementation(async recordType => summary(recordType, recordType === 'planning' ? 2 : 0));
+    setup();
+    await screen.findByText('No matching signals');
+    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
+  });
+
+  it('does not claim missing imports before every requested record type is measured', async () => {
+    let finish!: (value: ReturnType<typeof summary>) => void;
+    vi.mocked(ingestionApi.coverageSummary).mockImplementation(recordType => recordType === 'permit'
+      ? Promise.resolve(summary(recordType)) : new Promise(resolve => { finish = resolve; }));
+    setup();
+    await waitFor(() => expect(ingestionApi.coverageSummary).toHaveBeenCalledTimes(2));
     expect(screen.getByText('Checking imported records...')).toBeInTheDocument();
-    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
-    await screen.findByText('No imported records available');
-    expect(screen.getByText(/No stored permit or planning records were measured for this organization/)).toBeInTheDocument();
-    expect(ingestionApi.measuredCoverage).toHaveBeenNthCalledWith(1, { record_type: 'permit', freshness_hours: 72, limit: 100, offset: 0 });
-    expect(ingestionApi.measuredCoverage).toHaveBeenNthCalledWith(2, { record_type: 'planning', freshness_hours: 72, limit: 100, offset: 0 });
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health');
-    expect(screen.queryByText(/No matching signals/)).not.toBeInTheDocument();
+    await act(async () => finish(summary('planning', 1)));
+    await screen.findByText('No matching signals');
   });
 
-  it('links single-record empty states to the matching measured inventory tab', async () => {
-    setup(['parcel']);
-    await screen.findByText('No imported records available');
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=parcel');
-  });
-
-  it('links planning-only empty states to planning measured inventory', async () => {
-    setup(['planning']);
-    await screen.findByText('No imported records available');
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=planning');
-  });
-
-  it('handles an organization with no configured sources', async () => {
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => ({ ...report(params), sources: [] }));
+  it('leaves inventory unknown on errors and supports retry without exposing operations', async () => {
+    vi.mocked(ingestionApi.coverageSummary).mockRejectedValue(new Error('Offline'));
     setup();
-    await screen.findByText('No imported records available');
-    expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(2);
-  });
-
-  it('does not classify a zero first source page as empty while later pages are unmeasured', async () => {
-    let finish!: (value: MeasuredCoverage) => void;
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(params => params.offset === 0
-      ? Promise.resolve(report(params, 0, true))
-      : new Promise(resolve => { finish = resolve; }));
-    setup(['planning']);
-    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(2));
-    expect(screen.getByText('Checking imported records...')).toBeInTheDocument();
-    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
-    await act(async () => finish(report({ record_type: 'planning', freshness_hours: 72, limit: 100, offset: 100 }, 1)));
-    await screen.findByText('No matching signals');
-    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
-    expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'planning', freshness_hours: 72, limit: 100, offset: 100 });
-  });
-
-  it('only confirms missing imports after all source pages are empty', async () => {
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => report(params, 0, params.offset < 200));
-    setup(['planning']);
-    await screen.findByText('No imported records available');
-    expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(3);
-    expect(ingestionApi.measuredCoverage).toHaveBeenLastCalledWith({ record_type: 'planning', freshness_hours: 72, limit: 100, offset: 200 });
-  });
-
-  it('recognizes planning-only imports and stops once any relevant stored records are confirmed', async () => {
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => report(params, params.record_type === 'planning' ? 1 : 0, params.record_type === 'planning'));
-    setup();
-    await screen.findByText('No matching signals');
-    expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(2);
-    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
-  });
-
-  it('uses server page totals instead of client-side source row aggregation', async () => {
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => {
-      const response = report(params, 0);
-      response.page_totals.stored_records = 3;
-      response.sources = [];
-      return response;
-    });
-    setup(['parcel']);
-    await screen.findByText('No matching signals');
-    expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
-  });
-
-  it('leaves availability unknown when a later page fails and supports retry', async () => {
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => {
-      if (params.offset > 0) throw new Error('Offline');
-      return report(params, 0, true);
-    });
-    setup(['planning']);
     await screen.findByText('Imported data availability unknown');
     expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
-    expect(screen.queryByText('No matching signals')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toBeInTheDocument();
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => report(params, 1));
+    expect(screen.getByText(/An empty result does not establish an absence/)).toBeInTheDocument();
+    vi.mocked(ingestionApi.coverageSummary).mockImplementation(async recordType => summary(recordType, 1));
     fireEvent.click(screen.getByRole('button', { name: 'Retry inventory check' }));
     await screen.findByText('No matching signals');
   });
@@ -175,40 +80,37 @@ describe('Imported data empty states', () => {
   it('does not retain a confirmed empty state after a failed refresh', async () => {
     setup();
     await screen.findByText('No imported records available');
-    vi.mocked(ingestionApi.measuredCoverage).mockRejectedValue(new Error('Offline'));
+    vi.mocked(ingestionApi.coverageSummary).mockRejectedValue(new Error('Offline'));
     fireEvent.click(screen.getByRole('button', { name: 'Refresh inventory' }));
     await screen.findByText('Imported data availability unknown');
     expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
   });
 
-  it('does not reuse another organization inventory or request it anonymously', async () => {
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => report(params, 1));
+  it('isolates organization inventory and never requests it anonymously', async () => {
+    vi.mocked(ingestionApi.coverageSummary).mockImplementation(async recordType => summary(recordType, 1));
     const view = setup();
     await screen.findByText('No matching signals');
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => report(params));
     auth.organizationId = 'org-b';
+    vi.mocked(ingestionApi.coverageSummary).mockImplementation(async recordType => summary(recordType));
     view.renderAgain();
-    expect(screen.queryByText('No matching signals')).not.toBeInTheDocument();
     await screen.findByText('No imported records available');
-    expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(3);
-    auth.organizationId = null;
-    auth.isAuthenticated = false;
+    expect(ingestionApi.coverageSummary).toHaveBeenCalledTimes(3);
+    auth.organizationId = null; auth.isAuthenticated = false;
     view.renderAgain();
     expect(screen.queryByText('No imported records available')).not.toBeInTheDocument();
-    expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(3);
+    expect(ingestionApi.coverageSummary).toHaveBeenCalledTimes(3);
   });
 
-  it('stops an old organization scan before requesting another source page', async () => {
-    let finish!: (value: MeasuredCoverage) => void;
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
-    const view = setup(['planning']);
-    await waitFor(() => expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(1));
+  it('stops a previous organization check before requesting another record type', async () => {
+    let finish!: (value: ReturnType<typeof summary>) => void;
+    vi.mocked(ingestionApi.coverageSummary).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const view = setup();
+    await waitFor(() => expect(ingestionApi.coverageSummary).toHaveBeenCalledTimes(1));
     auth.organizationId = 'org-b';
-    vi.mocked(ingestionApi.measuredCoverage).mockImplementation(async params => report(params, 1));
+    vi.mocked(ingestionApi.coverageSummary).mockImplementation(async recordType => summary(recordType, 1));
     view.renderAgain();
     await screen.findByText('No matching signals');
-    await act(async () => finish(report({ record_type: 'planning', freshness_hours: 72, limit: 100, offset: 0 }, 0, true)));
-    expect(ingestionApi.measuredCoverage).toHaveBeenCalledTimes(2);
-    expect(screen.getByText('No matching signals')).toBeInTheDocument();
+    await act(async () => finish(summary('permit')));
+    expect(ingestionApi.coverageSummary).toHaveBeenCalledTimes(2);
   });
 });

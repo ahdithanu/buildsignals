@@ -5,11 +5,11 @@ import { queryKeys } from '@/lib/queryKeys';
 import type { MeasuredCoverageParams } from '@/types/ingestion';
 
 export function useMeasuredCoverage(params: MeasuredCoverageParams) {
-  const { organizationId, isAuthenticated } = useAuth();
+  const { organizationId, isAuthenticated, isInternalOperator } = useAuth();
   return useQuery({
     queryKey: queryKeys.ingestion.measuredCoverage(organizationId, { ...params }),
     queryFn: () => ingestionApi.measuredCoverage(params),
-    enabled: isAuthenticated && !!organizationId,
+    enabled: isInternalOperator === true && isAuthenticated && !!organizationId,
     staleTime: 60_000,
     retry: 1,
   });

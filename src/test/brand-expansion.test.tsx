@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import BrandExpansion from '@/pages/BrandExpansion';
 
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ role: 'admin', isInternalOperator: false }) }));
+
 const useBrandExpansionMock = vi.fn();
 const useImportedRecordAvailabilityMock = vi.fn();
 
@@ -117,7 +119,7 @@ describe('<BrandExpansion>', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Major builders' }));
     fireEvent.click(screen.getByRole('button', { name: '90d' }));
     expect(screen.getByText(/No stored permit or planning records were measured for this organization/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health');
+    expect(screen.getByRole('link', { name: 'View dashboard' })).toHaveAttribute('href', '/');
     expect(screen.queryByText(/activity was observed|No major builder activity|No retail expansion signals/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open permit review' })).not.toBeInTheDocument();
   });

@@ -45,7 +45,7 @@ const navItems = [
   { title: "Account", url: "/account", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },
   { title: "AI Evaluations", url: "/admin/evals", icon: ShieldCheck, adminOnly: true },
-  { title: "Observability", url: "/admin/observability", icon: MonitorCheck, adminOnly: true },
+  { title: "Observability", url: "/admin/observability", icon: MonitorCheck, operatorOnly: true },
 ];
 
 function initials(name: string | null | undefined): string {
@@ -61,7 +61,7 @@ function initials(name: string | null | undefined): string {
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { user, role } = useAuth();
+  const { user, role, isInternalOperator } = useAuth();
   const location = useLocation();
 
   return (
@@ -86,7 +86,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.filter((item) => (!item.adminOnly || role === "admin") && (!item.reviewOnly || role === "admin" || role === "editor")).map((item) => (
+              {navItems.filter((item) => (!item.operatorOnly || isInternalOperator === true) && (!item.adminOnly || role === "admin") && (!item.reviewOnly || role === "admin" || role === "editor")).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="default">
                     <NavLink

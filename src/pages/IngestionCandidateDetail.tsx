@@ -27,8 +27,8 @@ export default function IngestionCandidateDetail() {
   const { candidateKey } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { role } = useAuth();
-  const canManage = role === 'admin';
+  const { isInternalOperator } = useAuth();
+  const canManage = isInternalOperator === true;
   const promoteCandidate = usePromoteIngestionCandidate();
   const { data, isLoading, error, refetch, candidateCanary } = useIngestionHealth();
   const { data: history } = useCandidateCanaryHistory(candidateKey, true);

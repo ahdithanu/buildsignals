@@ -10,6 +10,7 @@ export interface User {
 }
 
 export interface TokenResponse {
+  is_internal_operator?: boolean;
   is_demo?: boolean;
   access_token: string;
   token_type: string;
@@ -19,6 +20,7 @@ export interface TokenResponse {
 }
 
 export interface MeResponse {
+  is_internal_operator?: boolean;
   is_demo?: boolean;
   user: User;
   organization_id: string;

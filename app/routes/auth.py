@@ -52,7 +52,7 @@ from app.services.security import (
     hash_password,
     verify_password,
 )
-from app.utils.auth_deps import get_current_user
+from app.utils.auth_deps import get_current_user, is_internal_operator
 from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
 
 
@@ -286,6 +286,7 @@ def register(
         user_id=user.id,
         organization_id=org.id,
         role=role.value,
+        is_internal_operator=is_internal_operator(user.id, role.value),
     )
 
 
@@ -401,6 +402,7 @@ def login(
         user_id=user.id,
         organization_id=membership.organization_id,
         role=membership.role.value,
+        is_internal_operator=is_internal_operator(user.id, membership.role.value),
     )
 
 
@@ -478,6 +480,7 @@ def refresh(
         user_id=user_id,
         organization_id=org_id,
         role=membership.role.value,
+        is_internal_operator=is_internal_operator(user_id, membership.role.value),
     )
 
 
@@ -531,6 +534,9 @@ def me(principal: dict = Depends(get_current_user)):
         user=UserResponse.model_validate(principal["user"]),
         organization_id=principal["org_id"],
         role=principal["role"],
+        is_internal_operator=is_internal_operator(
+            principal["user_id"], principal["role"], is_demo=principal.get("is_demo", False),
+        ),
     )
 
 

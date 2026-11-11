@@ -12,6 +12,7 @@ from app.services.brand_intelligence import load_brand_catalog, sync_brand_catal
 from app.services.ingestion.catalog import load_catalog
 from app.services.ingestion.connectors import FetchEnvelope
 from app.services.ingestion.service import _project_permit_to_graph
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 class _StaticConnector:
@@ -122,7 +123,7 @@ def test_brand_catalog_sync_is_idempotent(db):
     assert db.query(BrandAlias).count() == alias_count == expected_aliases
 
 
-def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, db, tmp_path):
+def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     deal = client.post("/deals", json={
@@ -185,7 +186,7 @@ def test_preapproval_brand_match_is_evidence_backed_and_reviewable(client, db, t
     ).one().is_current is False
 
 
-def test_review_queue_ranks_recent_source_activity_before_confidence(client, db, tmp_path):
+def test_review_queue_ranks_recent_source_activity_before_confidence(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     old_path = tmp_path / "old-brand.csv"
@@ -229,7 +230,7 @@ def test_review_queue_ranks_recent_source_activity_before_confidence(client, db,
     assert not future_row["freshness_date"].startswith("2099-")
 
 
-def test_brand_expansion_ranks_active_signals_by_stage_and_market(client, db, tmp_path):
+def test_brand_expansion_ranks_active_signals_by_stage_and_market(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     for key in ("starbucks_early", "starbucks_approved", "starbucks_dismissed"):
@@ -301,7 +302,7 @@ def test_brand_expansion_ranks_active_signals_by_stage_and_market(client, db, tm
     assert invalid_response.status_code == 422
 
 
-def test_applicant_company_alias_is_high_confidence_direct_evidence(client, db, tmp_path):
+def test_applicant_company_alias_is_high_confidence_direct_evidence(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "applicant-brand.csv"
@@ -337,7 +338,7 @@ def test_applicant_company_alias_is_high_confidence_direct_evidence(client, db, 
     assert evidence.json()["latest_evidence"]["payload_excerpt"]["applicant"] == "Starbucks Coffee Company"
 
 
-def test_applicant_alias_in_negative_context_does_not_create_candidate(client, db, tmp_path):
+def test_applicant_alias_in_negative_context_does_not_create_candidate(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "former-applicant-brand.csv"
@@ -353,7 +354,7 @@ def test_applicant_alias_in_negative_context_does_not_create_candidate(client, d
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_person_semantic_suppresses_applicant_brand_match(client, db, tmp_path):
+def test_person_semantic_suppresses_applicant_brand_match(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "person-applicant-brand.csv"
@@ -376,7 +377,7 @@ def test_person_semantic_suppresses_applicant_brand_match(client, db, tmp_path):
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_unknown_applicant_semantic_is_supporting_only(client, db, tmp_path):
+def test_unknown_applicant_semantic_is_supporting_only(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "mixed-applicant-brand.csv"
@@ -399,7 +400,7 @@ def test_unknown_applicant_semantic_is_supporting_only(client, db, tmp_path):
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_applicant_semantic_reclassification_retracts_stale_candidate(client, db, tmp_path):
+def test_applicant_semantic_reclassification_retracts_stale_candidate(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "reclassified-applicant-brand.csv"
@@ -434,7 +435,7 @@ def test_applicant_semantic_reclassification_retracts_stale_candidate(client, db
     assert db.query(PermitBrandMatch).one().review_status == "retracted"
 
 
-def test_business_dba_semantic_is_highest_applicant_evidence(client, db, tmp_path):
+def test_business_dba_semantic_is_highest_applicant_evidence(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "dba-applicant-brand.csv"
@@ -460,7 +461,7 @@ def test_business_dba_semantic_is_highest_applicant_evidence(client, db, tmp_pat
     assert response.json()[0]["signal_quality"] == "applicant_dba"
 
 
-def test_applicant_alias_must_be_the_business_identity(client, db, tmp_path):
+def test_applicant_alias_must_be_the_business_identity(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "applicant-incidental-brand.csv"
@@ -476,7 +477,7 @@ def test_applicant_alias_must_be_the_business_identity(client, db, tmp_path):
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_confirmed_party_history_detects_unnamed_stealth_retailer(client, db, tmp_path):
+def test_confirmed_party_history_detects_unnamed_stealth_retailer(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
 
@@ -540,7 +541,7 @@ def test_confirmed_party_history_detects_unnamed_stealth_retailer(client, db, tm
     assert all(len(row["source_match_ids"]) == 2 for row in history)
 
 
-def test_single_historical_party_never_surfaces_prediction(client, db, tmp_path):
+def test_single_historical_party_never_surfaces_prediction(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     brand = db.query(BrandProfile).filter(BrandProfile.key == "starbucks").one()
@@ -568,7 +569,7 @@ def test_single_historical_party_never_surfaces_prediction(client, db, tmp_path)
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_expanded_catalog_detects_named_preapproval_retailers(client, db, tmp_path):
+def test_expanded_catalog_detects_named_preapproval_retailers(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
 
@@ -595,7 +596,7 @@ def test_expanded_catalog_detects_named_preapproval_retailers(client, db, tmp_pa
     assert all(match.matched_field == "description" for match in matches)
 
 
-def test_telecom_retail_brands_require_storefront_context(client, db, tmp_path):
+def test_telecom_retail_brands_require_storefront_context(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
 
@@ -613,7 +614,7 @@ def test_telecom_retail_brands_require_storefront_context(client, db, tmp_path):
 
 
 def test_los_angeles_catalog_run_creates_preapproval_brand_candidate(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -667,7 +668,7 @@ def test_los_angeles_catalog_run_creates_preapproval_brand_candidate(
 
 
 def test_hartford_catalog_run_creates_preapproval_chain_candidate(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -720,7 +721,7 @@ def test_hartford_catalog_run_creates_preapproval_chain_candidate(
 
 
 def test_nyc_dob_now_job_run_creates_preapproval_signage_brand_candidate(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -781,7 +782,7 @@ def test_nyc_dob_now_job_run_creates_preapproval_signage_brand_candidate(
 
 
 def test_nyc_dohmh_catalog_run_creates_preinspection_dba_brand_candidate(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -865,7 +866,7 @@ def test_nyc_dohmh_catalog_run_creates_preinspection_dba_brand_candidate(
 
 
 def test_new_york_sla_pending_license_creates_preopening_brand_candidate(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -919,7 +920,7 @@ def test_new_york_sla_pending_license_creates_preopening_brand_candidate(
 
 
 def test_texas_sales_tax_future_first_sale_creates_retailer_opening_candidate(
-    client, db, monkeypatch
+    client, internal_operator, db, monkeypatch
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -970,7 +971,7 @@ def test_texas_sales_tax_future_first_sale_creates_retailer_opening_candidate(
 
 
 def test_preapproval_future_first_sale_also_creates_retailer_opening_candidate(
-    client, db, monkeypatch, tmp_path
+    client, internal_operator, db, monkeypatch, tmp_path
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -1020,7 +1021,7 @@ def test_preapproval_future_first_sale_also_creates_retailer_opening_candidate(
     assert "future_first_sale_date" in match.rule_ids
 
 
-def test_owner_only_and_approved_records_do_not_create_candidates(client, db, tmp_path):
+def test_owner_only_and_approved_records_do_not_create_candidates(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
 
@@ -1040,7 +1041,7 @@ def test_owner_only_and_approved_records_do_not_create_candidates(client, db, tm
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_terminal_preapproval_record_does_not_create_candidate(client, db, tmp_path):
+def test_terminal_preapproval_record_does_not_create_candidate(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     withdrawn = tmp_path / "withdrawn.csv"
@@ -1058,7 +1059,7 @@ def test_terminal_preapproval_record_does_not_create_candidate(client, db, tmp_p
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_ambiguous_and_negative_context_controls(client, db, tmp_path):
+def test_ambiguous_and_negative_context_controls(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
 
@@ -1090,7 +1091,7 @@ def test_ambiguous_and_negative_context_controls(client, db, tmp_path):
     assert db.query(PermitBrandMatch).count() == 0
 
 
-def test_correction_retracts_candidate_without_deleting_evidence(client, db, tmp_path):
+def test_correction_retracts_candidate_without_deleting_evidence(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "corrected.csv"
@@ -1121,7 +1122,7 @@ def test_correction_retracts_candidate_without_deleting_evidence(client, db, tmp
 
 
 def test_snapshot_retirement_retracts_brand_signal_and_reappearance_restores_candidate(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -1154,7 +1155,7 @@ def test_snapshot_retirement_retracts_brand_signal_and_reappearance_restores_can
 
 
 def test_snapshot_retirement_preserves_confirmed_match_for_reverification(
-    client, db, tmp_path
+    client, internal_operator, db, tmp_path
 ):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
@@ -1225,7 +1226,7 @@ def test_snapshot_retirement_preserves_confirmed_match_for_reverification(
     assert relisted.json()[0]["needs_reverification"] is False
 
 
-def test_brand_match_can_create_evidence_backed_opportunity(client, db, tmp_path):
+def test_brand_match_can_create_evidence_backed_opportunity(client, internal_operator, db, tmp_path):
     sync_brand_catalog(db, load_brand_catalog())
     db.commit()
     csv_path = tmp_path / "chipotle.csv"

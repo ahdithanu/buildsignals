@@ -34,7 +34,7 @@ const discoveryLabels: Record<string, string> = {
 };
 
 export function MapReadiness() {
-  const { organizationId } = useAuth();
+  const { organizationId, isInternalOperator } = useAuth();
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['map-readiness', organizationId],
     enabled: !!organizationId,
@@ -61,6 +61,8 @@ export function MapReadiness() {
         : !data.saved_searches
           ? { label: 'Open permit review', href: '/permit-review' }
           : { label: 'Open acquisition radar', href: '/acquisition-radar' };
+  const action = isInternalOperator !== true && primaryAction.href.startsWith('/source-health')
+    ? { label: 'View dashboard coverage', href: '/' } : primaryAction;
   const readiness = [
     ['Geocoded filings', data.has_geocoded_signals ?? data.geocoded_permits > 0],
     ['Mapped parcels', data.has_geocoded_parcels ?? data.geocoded_parcels > 0],
@@ -89,6 +91,6 @@ export function MapReadiness() {
     <p className="mt-4 text-sm font-semibold">{discoveryLabels[data.discovery_stage ?? ''] ?? 'Discovery readiness not classified'}</p>
     <p className="mt-1 text-sm text-muted-foreground">{data.discovery_next_action}</p>
     <p className="my-4 text-sm text-muted-foreground">Workspace counts do not establish local coverage, match quality, or availability for sale.</p>
-    <Link className="underline" to={primaryAction.href}>{primaryAction.label}</Link>
+    <Link className="underline" to={action.href}>{action.label}</Link>
   </section>;
 }

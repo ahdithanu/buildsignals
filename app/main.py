@@ -47,6 +47,7 @@ from app.routes.graph import router as graph_router
 from app.routes.health import router as health_router
 from app.routes.ingestion import router as ingestion_router
 from app.routes.ingestion_onboarding import router as ingestion_onboarding_router
+from app.routes.investment_areas import router as investment_areas_router
 from app.routes.memos import router as memos_router
 from app.routes.observability import router as observability_router
 from app.routes.organizations import router as organizations_router
@@ -119,6 +120,7 @@ app.include_router(health_router)
 # so existing clients keep working during the deprecation window.
 app.include_router(deals_router, prefix=CURRENT_API_PREFIX)
 app.include_router(intelligence_router, prefix=CURRENT_API_PREFIX)
+app.include_router(investment_areas_router, prefix=CURRENT_API_PREFIX)
 app.include_router(assumptions_router, prefix=CURRENT_API_PREFIX)
 app.include_router(contacts_router, prefix=CURRENT_API_PREFIX)
 app.include_router(activities_router, prefix=CURRENT_API_PREFIX)

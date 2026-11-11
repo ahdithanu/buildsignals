@@ -56,7 +56,7 @@ from app.services.webhook_service import (
     summarize_webhook_queue,
     update_subscription,
 )
-from app.utils.auth_deps import get_current_user, require_role_of
+from app.utils.auth_deps import get_current_user, is_internal_operator, require_role_of
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -739,4 +739,7 @@ def switch_org(
         user_id=principal["user_id"],
         organization_id=payload.organization_id,
         role=membership.role.value,
+        is_internal_operator=is_internal_operator(
+            principal["user_id"], membership.role.value, is_demo=principal.get("is_demo", False),
+        ),
     )

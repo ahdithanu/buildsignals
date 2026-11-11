@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import {
   RedirectIfAuthenticated,
   RequireAuth,
+  RequireInternalOperator,
 } from "@/components/auth/RequireAuth";
 
 /**
@@ -50,6 +51,21 @@ function renderAt(path: string, ui: React.ReactElement) {
 }
 
 describe("<RequireAuth>", () => {
+  it.each([false, undefined])("redirects customer admins without an explicit operator flag (%s)", (flag) => {
+    mockAuth({ isAuthenticated: true, role: 'admin', isInternalOperator: flag });
+    const child = vi.fn(() => <div>INTERNAL_CONTENT</div>);
+    const Child = child;
+    renderAt('/secret', <RequireInternalOperator><Child /></RequireInternalOperator>);
+    expect(screen.getByText('HOME')).toBeInTheDocument();
+    expect(child).not.toHaveBeenCalled();
+  });
+
+  it('allows an explicitly authorized internal operator', () => {
+    mockAuth({ isAuthenticated: true, role: 'admin', isInternalOperator: true });
+    renderAt('/secret', <RequireInternalOperator><div>INTERNAL_CONTENT</div></RequireInternalOperator>);
+    expect(screen.getByText('INTERNAL_CONTENT')).toBeInTheDocument();
+  });
+
   it("shows a loading placeholder while auth is hydrating", () => {
     mockAuth({ isLoading: true });
     renderAt(

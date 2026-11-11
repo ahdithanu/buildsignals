@@ -156,6 +156,19 @@ def test_strict_mode_rejects_invalid_bearer(strict_client):
 # ── Production config guard ───────────────────────────────────────────────
 
 
+@pytest.fixture(autouse=True)
+def restore_imported_config():
+    import app
+
+    original = sys.modules["app.config"]
+    try:
+        yield
+    finally:
+        # Keep the package attribute and existing API dependency imports aligned.
+        sys.modules["app.config"] = original
+        app.config = original
+
+
 def test_production_rejects_allow_anonymous_true(monkeypatch):
     sys.modules.pop("app.config", None)
     monkeypatch.setenv("ENVIRONMENT", "production")

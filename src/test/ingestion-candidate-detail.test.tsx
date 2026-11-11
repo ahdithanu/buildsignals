@@ -10,7 +10,7 @@ vi.mock("@/hooks/useIngestionHealth", () => ({
   usePromoteIngestionCandidate: vi.fn(),
 }));
 vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({ role: "admin" }),
+  useAuth: () => ({ role: "admin", isInternalOperator: true }),
 }));
 vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),

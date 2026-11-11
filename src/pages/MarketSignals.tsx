@@ -7,6 +7,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { DetectedActivity } from '@/components/DetectedActivity';
 import { SignalAssessmentPanel } from '@/components/SignalAssessmentPanel';
 import { OpportunityGraphPanel } from '@/components/OpportunityGraphPanel';
+import { InvestmentAreaPanel } from '@/components/InvestmentAreaPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { signalsApi } from '@/api/signals';
 import { cn } from '@/lib/utils';
@@ -38,6 +39,7 @@ export default function MarketSignals() {
   const hasFilters = !!(query.trim() || type);
   return <Layout>
     <div className="flex min-h-[calc(100vh-48px)] flex-col">
+      <div className="border-b border-border px-4"><InvestmentAreaPanel /></div>
       <header className="flex flex-wrap items-center gap-3 border-b-2 border-foreground px-4 py-3">
         <h1 className="text-lg font-semibold">Market signals</h1>
         <label className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-0"><Search size={16} className="shrink-0" /><input aria-label="Search loaded signals" placeholder="Search loaded signals" className="h-9 min-w-0 w-full bg-transparent text-sm" value={query} onChange={event => setQuery(event.target.value)} /></label>

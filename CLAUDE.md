@@ -2,6 +2,16 @@
 
 @AGENTS.md
 
+November 10 Investment Areas: read the release receipt in
+`docs/releases/2026-11-10-investment-areas.md` before making live/model claims.
+The first production web-fetch attempt failed (VPC egress); its frontend was
+rolled back. The corrected annual reference and owner-only operations gate are
+now production-verified, with61Ocala context rows and denied demo operations.
+Use the receipt for exact image, frontend, tests and remaining gates; never
+commit the real owner allowlist or infer that other API internet egress is fixed.
+Current-vintage metro ranking is research, not investment-quality or parcel
+returns. Keep public caching separate from tenant evidence. NPR is not live.
+
 Read `docs/agent-handoff.md` before taking the next task. Use
 `docs/agent-onboarding.md` for setup. Update the shared handoff when stopping;
 keep durable project instructions in AGENTS.md rather than duplicating them here.

@@ -15,6 +15,7 @@ from app.models.graph import (
 from app.models.ingestion import IngestionSource, PermitRecord, RecordExternalReference
 from app.models.planning import PlanningCompanyMatch, PlanningRecord
 from app.services.ingestion.service import backfill_external_references_batch
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 def _planning_source(csv_path: str) -> dict:
@@ -54,7 +55,7 @@ def _planning_source(csv_path: str) -> dict:
     }
 
 
-def test_planning_ingestion_detects_company_data_center_and_graph_evidence(client, db, tmp_path):
+def test_planning_ingestion_detects_company_data_center_and_graph_evidence(client, internal_operator, db, tmp_path):
     brand = BrandProfile(
         organization_id="default-org",
         key="microsoft",
@@ -138,7 +139,7 @@ def test_planning_ingestion_detects_company_data_center_and_graph_evidence(clien
     assert body[0]["company_matches"][0]["brand"]["name"] == "Microsoft"
 
 
-def test_planning_company_appears_in_expansion_before_permit(client, db, tmp_path):
+def test_planning_company_appears_in_expansion_before_permit(client, internal_operator, db, tmp_path):
     brand = BrandProfile(
         organization_id="default-org",
         key="early_retailer",
@@ -195,7 +196,7 @@ def test_planning_company_appears_in_expansion_before_permit(client, db, tmp_pat
     assert unrelated.json() == []
 
 
-def test_planning_ingestion_requires_title(client, db, tmp_path):
+def test_planning_ingestion_requires_title(client, internal_operator, db, tmp_path):
     csv_path = tmp_path / "planning.csv"
     csv_path.write_text(
         "id,reference,type,stage,title,summary,excerpt,item,meeting,body,project,address,city,state,parcel,applicant,meeting_at,published_at,url\n"
@@ -212,7 +213,7 @@ def test_planning_ingestion_requires_title(client, db, tmp_path):
 @pytest.mark.parametrize("title_length", [255, 256, 1000])
 @pytest.mark.parametrize("prefix", ["Planning application ", "Planning & zoning "])
 def test_planning_graph_bounds_label_preserving_title_evidence_and_identity(
-    client, db, tmp_path, title_length, prefix
+    client, internal_operator, db, tmp_path, title_length, prefix
 ):
     title = prefix + "x" * (title_length - len(prefix))
     csv_path = tmp_path / "long-planning-titles.csv"
@@ -370,7 +371,7 @@ def test_reference_scope_indexes_match_model_metadata():
     } <= permit_indexes
 
 
-def test_planning_first_links_later_permit_with_provenance(client, db, tmp_path):
+def test_planning_first_links_later_permit_with_provenance(client, internal_operator, db, tmp_path):
     _ingest_reference_pair(
         client,
         tmp_path,
@@ -405,7 +406,7 @@ def test_planning_first_links_later_permit_with_provenance(client, db, tmp_path)
     assert evidence.payload["received_at"]
 
 
-def test_permit_first_links_later_planning_idempotently(client, db, tmp_path):
+def test_permit_first_links_later_planning_idempotently(client, internal_operator, db, tmp_path):
     source_ids = _ingest_reference_pair(
         client,
         tmp_path,
@@ -428,7 +429,7 @@ def test_permit_first_links_later_planning_idempotently(client, db, tmp_path):
     assert [(row.id, row.evidence[0].id) for row in repeated] == [(relationship_id, evidence_id)]
 
 
-def test_exact_reference_does_not_link_across_cities(client, db, tmp_path):
+def test_exact_reference_does_not_link_across_cities(client, internal_operator, db, tmp_path):
     _ingest_reference_pair(
         client,
         tmp_path,
@@ -503,7 +504,7 @@ def _external_reference_relationships(db):
     ]
 
 
-def test_planning_first_links_project_by_configured_official_reference(client, db, tmp_path):
+def test_planning_first_links_project_by_configured_official_reference(client, internal_operator, db, tmp_path):
     _ingest_external_reference_pair(client, tmp_path, order="planning-permit")
 
     references = db.query(RecordExternalReference).all()
@@ -525,7 +526,7 @@ def test_planning_first_links_project_by_configured_official_reference(client, d
     assert evidence.payload["permit_reference_raw_record_id"]
 
 
-def test_permit_first_external_reference_join_is_idempotent(client, db, tmp_path):
+def test_permit_first_external_reference_join_is_idempotent(client, internal_operator, db, tmp_path):
     source_ids = _ingest_external_reference_pair(client, tmp_path, order="permit-planning")
     first = _external_reference_relationships(db)
     assert len(first) == 1
@@ -542,7 +543,7 @@ def test_permit_first_external_reference_join_is_idempotent(client, db, tmp_path
     assert [(row.id, row.evidence[0].id) for row in repeated] == [(relationship_id, evidence_id)]
 
 
-def test_corrected_external_reference_retires_stale_graph_link(client, db, tmp_path):
+def test_corrected_external_reference_retires_stale_graph_link(client, internal_operator, db, tmp_path):
     source_ids = _ingest_external_reference_pair(client, tmp_path, order="planning-permit")
     relationship = _external_reference_relationships(db)[0]
     assert relationship.is_current is True
@@ -568,7 +569,7 @@ def test_corrected_external_reference_retires_stale_graph_link(client, db, tmp_p
     assert stale.valid_to is not None
 
 
-def test_bounded_backfill_indexes_existing_records_without_refetching(client, db, tmp_path):
+def test_bounded_backfill_indexes_existing_records_without_refetching(client, internal_operator, db, tmp_path):
     source_ids = _ingest_external_reference_pair(
         client,
         tmp_path,

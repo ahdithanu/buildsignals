@@ -42,6 +42,7 @@ export interface ParcelReconciliationResult {
 }
 
 export const parcelReferencesApi = {
+  sourceOptions: () => apiClient.get<Array<{ id: string; name: string; record_type: string; is_active: boolean }>>('/ingestion/source-options'),
   sources: () => apiClient.get<Array<{ id: string; name: string; record_type: string; is_active: boolean }>>('/ingestion/sources'),
   candidates: (permitId: string, sourceId: string) => apiClient.get<ParcelCandidateResult>(
     `/ingestion/permits/${encodeURIComponent(permitId)}/parcel-candidates`, { parcel_source_id: sourceId },

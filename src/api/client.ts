@@ -1,3 +1,5 @@
+import type { TokenResponse } from '@/types/auth';
+
 const LOCAL_API_BASE_URL = 'http://localhost:8000';
 
 interface ApiBaseUrlOptions {
@@ -92,6 +94,11 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
+let sessionRefreshHandler: ((response: TokenResponse) => boolean) | null = null;
+export function setSessionRefreshHandler(handler: ((response: TokenResponse) => boolean) | null): void {
+  sessionRefreshHandler = handler;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -173,9 +180,11 @@ async function attemptRefresh(baseUrl: string, session: number): Promise<string 
           signal,
         });
         if (!res.ok) return null;
-        return await res.json() as { access_token?: string };
+        return await res.json() as TokenResponse;
       });
       if (!body?.access_token || session !== authSession) return null;
+      if (sessionRefreshHandler?.(body) === false) return null;
+      if (session !== authSession) return null;
       accessTokenMemory = body.access_token;
       return body.access_token;
     } catch {

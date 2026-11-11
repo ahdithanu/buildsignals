@@ -8,7 +8,7 @@ import { ApiError } from '@/api/client';
 
 const auth = vi.hoisted(() => ({ organizationId: 'org-a', isAuthenticated: true, role: 'editor' }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
-vi.mock('@/api/parcelReferences', () => ({ parcelReferencesApi: { sources: vi.fn(), candidates: vi.fn(), accept: vi.fn() } }));
+vi.mock('@/api/parcelReferences', () => ({ parcelReferencesApi: { sourceOptions: vi.fn(), sources: vi.fn(), candidates: vi.fn(), accept: vi.fn() } }));
 const candidate = {
   permit_raw_source_record_id: 'permit-raw', status: 'candidate_requires_review', truncated: false,
   candidates: [{ parcel_id: 'parcel', external_parcel_id: '001', raw_source_record_id: 'parcel-raw',
@@ -20,18 +20,20 @@ function setup() {
   return render(<QueryClientProvider client={client}><MemoryRouter><PermitParcelReview permitId="permit" /></MemoryRouter></QueryClientProvider>);
 }
 async function selectSource() {
-  await screen.findByRole('option', { name: 'Assessor' });
+  await screen.findByRole('option', { name: 'Public records' });
   fireEvent.change(screen.getByLabelText('Parcel source'), { target: { value: 'source' } });
   await screen.findByRole('link', { name: '001' });
 }
 beforeEach(() => {
   vi.resetAllMocks(); auth.role = 'editor';
-  vi.mocked(parcelReferencesApi.sources).mockResolvedValue([{ id: 'source', name: 'Assessor', record_type: 'parcel', is_active: true }]);
+  vi.mocked(parcelReferencesApi.sourceOptions).mockResolvedValue([{ id: 'source', name: 'Public records', record_type: 'parcel', is_active: true }]);
   vi.mocked(parcelReferencesApi.candidates).mockResolvedValue(candidate);
   vi.mocked(parcelReferencesApi.accept).mockResolvedValue({ id: 'relationship' });
 });
 it('requires explicit review inputs and submits both evidence versions', async () => {
   setup(); await selectSource();
+  expect(parcelReferencesApi.sourceOptions).toHaveBeenCalledTimes(1);
+  expect(parcelReferencesApi.sources).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Accept parcel identity' })).toBeDisabled();
   fireEvent.change(screen.getByLabelText('Review rationale'), { target: { value: 'Reviewed both original source records.' } });
   fireEvent.change(screen.getByLabelText(/Analyst confidence/), { target: { value: '0.9' } });
@@ -52,7 +54,7 @@ it('does not offer acceptance for ambiguous matches', async () => {
   expect(screen.queryByRole('button', { name: 'Accept parcel identity' })).not.toBeInTheDocument();
 });
 it('distinguishes missing active sources', async () => {
-  vi.mocked(parcelReferencesApi.sources).mockResolvedValue([]);
+  vi.mocked(parcelReferencesApi.sourceOptions).mockResolvedValue([]);
   setup(); expect(await screen.findByText('No active parcel sources.')).toBeInTheDocument();
   expect(parcelReferencesApi.candidates).not.toHaveBeenCalled();
 });

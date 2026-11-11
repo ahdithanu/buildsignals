@@ -155,9 +155,12 @@ def test_route_requires_authentication_even_in_demo_mode(client):
     assert client.get("/v1/ingestion/coverage/measured").status_code == 401
 
 
-def test_authenticated_route_returns_only_the_callers_sources(client, db):
+def test_internal_operator_route_returns_only_the_callers_sources(client, db, monkeypatch):
+    from app import config
+
     body = client.post("/auth/register", json={"email": "coverage@example.com", "password": "CorrectHorseBattery42",
                                               "full_name": "Coverage", "organization_name": "Coverage"}).json()
+    monkeypatch.setattr(config, "INTERNAL_OPERATIONS_USER_IDS", frozenset({body["user_id"]}))
     seed(db, body["organization_id"], "mine", now=datetime.now(timezone.utc))
     seed(db, "another-org", "not-mine", now=datetime.now(timezone.utc))
     headers = {"Authorization": f"Bearer {body['access_token']}"}

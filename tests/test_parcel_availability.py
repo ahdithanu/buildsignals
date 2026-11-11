@@ -4,6 +4,7 @@ from app.models.audit_log import AuditLog
 from app.models.ingestion import IngestionRun, IngestionSource, RawSourceRecord
 from app.models.parcel import ParcelFact, ParcelRecord
 from app.services.zip3_heatmap import zip3_heatmap
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 from tests.test_nearby_parcels import _add_parcel, _admin_headers, _setup_confirmed_signal
 
 
@@ -228,7 +229,7 @@ def test_bulk_availability_import_matches_only_source_and_external_id(client, db
     assert fact.value["status"] == "for_sale"
 
 
-def test_availability_evidence_import_flows_into_zip3_heatmap(client, db, tmp_path):
+def test_availability_evidence_import_flows_into_zip3_heatmap(client, internal_operator, db, tmp_path):
     headers = _admin_headers(db)
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path, headers=headers)
     raw = db.query(RawSourceRecord).one()

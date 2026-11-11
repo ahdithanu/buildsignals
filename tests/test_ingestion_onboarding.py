@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from app import config
 from app.models.audit_log import AuditLog
 from app.models.ingestion import IngestionSource
 from app.models.ingestion_onboarding import (
@@ -26,7 +27,7 @@ def _reset_rate_limiter():
     limiter.clear()
 
 
-def _register(client, *, email: str, organization_name: str) -> dict:
+def _register_operator(client, monkeypatch, *, email: str, organization_name: str) -> dict:
     response = client.post(
         "/auth/register",
         json={
@@ -37,7 +38,10 @@ def _register(client, *, email: str, organization_name: str) -> dict:
         },
     )
     assert response.status_code == 201, response.text
-    return response.json()
+    registration = response.json()
+    monkeypatch.setattr(config, "INTERNAL_OPERATIONS_USER_IDS",
+                        config.INTERNAL_OPERATIONS_USER_IDS | {registration["user_id"]})
+    return registration
 
 
 def _headers(token: str) -> dict[str, str]:
@@ -91,9 +95,9 @@ def test_nationwide_plan_reports_reviewed_coverage_and_gaps():
     assert plan.manual_source_count == 1
 
 
-def test_plan_requires_authentication_and_allows_read_roles(client, db):
-    registration = _register(
-        client,
+def test_plan_requires_authenticated_internal_operator(client, monkeypatch, db):
+    registration = _register_operator(
+        client, monkeypatch,
         email="onboarding-admin@example.com",
         organization_name="Onboarding Admin",
     )
@@ -111,6 +115,11 @@ def test_plan_requires_authentication_and_allows_read_roles(client, db):
         headers=_headers(viewer_token),
     )
 
+    assert response.status_code == 403
+    response = client.post(
+        "/ingestion/onboarding/plan", json=payload,
+        headers=_headers(registration["access_token"]),
+    )
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["requested_regions"] == ["GA", "TX"]
@@ -118,9 +127,9 @@ def test_plan_requires_authentication_and_allows_read_roles(client, db):
     assert {source["region"] for source in body["sources"]} == {"GA", "TX"}
 
 
-def test_only_admin_can_activate_ingestion(client, db):
-    registration = _register(
-        client,
+def test_only_admin_can_activate_ingestion(client, monkeypatch, db):
+    registration = _register_operator(
+        client, monkeypatch,
         email="activation-admin@example.com",
         organization_name="Activation Admin",
     )
@@ -162,9 +171,9 @@ def test_only_admin_can_activate_ingestion(client, db):
     assert response.json()["enrollment_sources_created"] > 0
 
 
-def test_activation_is_idempotent_audited_and_preserves_custom_source(client, db):
-    registration = _register(
-        client,
+def test_activation_is_idempotent_audited_and_preserves_custom_source(client, monkeypatch, db):
+    registration = _register_operator(
+        client, monkeypatch,
         email="idempotent-admin@example.com",
         organization_name="Idempotent Org",
     )
@@ -227,9 +236,9 @@ def test_activation_is_idempotent_audited_and_preserves_custom_source(client, db
     )
 
 
-def test_scope_narrowing_removes_unselected_enrollment_sources(client, db):
-    registration = _register(
-        client,
+def test_scope_narrowing_removes_unselected_enrollment_sources(client, monkeypatch, db):
+    registration = _register_operator(
+        client, monkeypatch,
         email="narrow-admin@example.com",
         organization_name="Narrow Scope Org",
     )
@@ -257,14 +266,14 @@ def test_scope_narrowing_removes_unselected_enrollment_sources(client, db):
     )
 
 
-def test_enrollment_read_is_isolated_to_active_organization(client):
-    org_a = _register(
-        client,
+def test_enrollment_read_is_isolated_to_active_organization(client, monkeypatch):
+    org_a = _register_operator(
+        client, monkeypatch,
         email="org-a-admin@example.com",
         organization_name="Onboarding Org A",
     )
-    org_b = _register(
-        client,
+    org_b = _register_operator(
+        client, monkeypatch,
         email="org-b-admin@example.com",
         organization_name="Onboarding Org B",
     )
@@ -289,9 +298,9 @@ def test_enrollment_read_is_isolated_to_active_organization(client):
     assert other.status_code == 404
 
 
-def test_selected_states_validation_rejects_empty_scope(client):
-    registration = _register(
-        client,
+def test_selected_states_validation_rejects_empty_scope(client, monkeypatch):
+    registration = _register_operator(
+        client, monkeypatch,
         email="validation-admin@example.com",
         organization_name="Validation Org",
     )
@@ -303,9 +312,9 @@ def test_selected_states_validation_rejects_empty_scope(client):
     assert response.status_code == 422
 
 
-def test_activation_persists_one_enrollment_per_organization(client, db):
-    registration = _register(
-        client,
+def test_activation_persists_one_enrollment_per_organization(client, monkeypatch, db):
+    registration = _register_operator(
+        client, monkeypatch,
         email="single-admin@example.com",
         organization_name="Single Enrollment Org",
     )

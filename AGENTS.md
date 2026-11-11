@@ -34,6 +34,25 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
+Investment Areas (November 10): the first web-fetch release returned production
+503s; its frontend was rolled back. App Runner's VPC connector lacks NAT internet
+egress. The correction uses a dated, hash-bound annual release-reference artifact,
+not web-time downloads or a silent stale fallback; local tenant evidence stays
+live. The corrected API/private-operations image and e1b6e30 frontend are now
+production-verified in the November10 receipt: owner console works, demo/anonymous
+operations are denied, and Ocala shows61live context rows with the annual reference.
+Only the owner's verified account is allowlisted; an organization-admin role
+alone is not an operator. Never commit the real allowlist value. Required
+attribution stays; public repo/history URLs are not made secret by UI controls.
+The authenticated read-only API/panel uses
+current-vintage 2025 FHFA/Census metro research plus separately tenant-scoped
+local evidence. See `docs/releases/2026-11-10-investment-areas.md` for exact
+verification/release state. It is not investment quality, expected returns or a
+validated retail/parcel forecast; missing factors remain explicit. Public input
+cache must never contain tenant evidence. No new-source or migration approval is
+implied. NPR's public GIS lead is zoning/land use, not a verified filing feed;
+City inquiries stay drafts. Concurrent root research is excluded from this release.
+
 BuildSignals connects public planning/permit evidence, companies, locations and
 parcels to help investors investigate development and acquisition opportunities.
 The immediate workflow is signal -> source evidence -> project timeline ->

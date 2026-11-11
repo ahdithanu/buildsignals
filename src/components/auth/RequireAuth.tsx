@@ -47,6 +47,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+export function RequireInternalOperator({ children }: { children: ReactNode }) {
+  const { isInternalOperator } = useAuth();
+  return <RequireAuth>{isInternalOperator === true ? children : <Navigate to="/" replace />}</RequireAuth>;
+}
+
 /**
  * Inverse gate: bounces *authenticated* users away from /login and
  * /register so a signed-in user reloading those URLs lands on the app.

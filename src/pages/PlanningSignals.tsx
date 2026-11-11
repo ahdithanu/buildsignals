@@ -123,7 +123,7 @@ export default function PlanningSignals() {
             title="No planning signals found"
             description={hasFilters
               ? 'Planning records are available for this organization, but none match the active filters.'
-              : 'No planning signals were returned for this organization. Review source health for collection status.'}
+              : 'No planning signals were returned for this organization. This does not establish an absence of activity or complete coverage.'}
           />
         )}
 

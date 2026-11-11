@@ -1,9 +1,11 @@
 import { ArrowRight, MapPinned } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { NationalParcelCoverage, NationalParcelPosture, NationalParcelStateCoverage } from '@/types/ingestion';
+import { useAuth } from '@/contexts/AuthContext';
+import type { NationalParcelCoverage, NationalParcelOperatorStateCoverage, NationalParcelPosture, NationalParcelStateCoverage } from '@/types/ingestion';
 
 const postureStyles: Record<NationalParcelPosture, string> = {
   measured: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  unmeasured: 'border-border bg-secondary text-muted-foreground',
   configured_only: 'border-amber-200 bg-amber-50 text-amber-800',
   candidate_only: 'border-sky-200 bg-sky-50 text-sky-800',
   uncovered: 'border-red-200 bg-red-50 text-red-700',
@@ -27,7 +29,7 @@ function StateCell({ state }: { state: NationalParcelStateCoverage }) {
   return (
     <span
       className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-1.5 text-[11px] font-semibold uppercase ${postureStyles[state.posture]}`}
-      title={`${state.state}: ${postureLabel(state.posture)} · ${state.stored_parcel_records.toLocaleString()} stored parcels`}
+      title={`${state.state}: ${postureLabel(state.posture)} · ${state.stored_parcel_records.toLocaleString()} stored parcels · Availability evidence: ${dateLabel(state.latest_verified_availability_at)}`}
     >
       {state.state}
     </span>
@@ -41,6 +43,7 @@ export function NationalParcelGapPanel({
   coverage?: NationalParcelCoverage | null;
   error?: boolean;
 }) {
+  const { isInternalOperator } = useAuth();
   if (!coverage && !error) return null;
   if (!coverage) {
     return (
@@ -53,7 +56,8 @@ export function NationalParcelGapPanel({
     );
   }
   const { summary } = coverage;
-  const targets = coverage.next_connector_targets.slice(0, 8);
+  const operatorCoverage = isInternalOperator === true && 'next_connector_targets' in coverage ? coverage : null;
+  const targets = operatorCoverage?.next_connector_targets.slice(0, 8) ?? [];
 
   return (
     <section className="rounded-md border bg-card p-4 card-shadow" aria-label="National parcel coverage gap">
@@ -74,11 +78,13 @@ export function NationalParcelGapPanel({
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className={`mt-4 grid grid-cols-2 gap-3 ${operatorCoverage ? 'md:grid-cols-5' : 'md:grid-cols-3'}`}>
         <Metric label="Measured states" value={summary.measured_state_count} />
-        <Metric label="Configured only" value={summary.configured_only_state_count} />
-        <Metric label="Candidate only" value={summary.candidate_only_state_count} />
-        <Metric label="Uncovered" value={summary.uncovered_state_count} />
+        {operatorCoverage ? <>
+          <Metric label="Configured only" value={operatorCoverage.summary.configured_only_state_count} />
+          <Metric label="Candidate only" value={operatorCoverage.summary.candidate_only_state_count} />
+          <Metric label="Uncovered" value={operatorCoverage.summary.uncovered_state_count} />
+        </> : <Metric label="Unmeasured states" value={'unmeasured_state_count' in summary ? summary.unmeasured_state_count : undefined} />}
         <Metric label="Nearby verified" value={summary.nearby_verified_available_parcels} />
       </div>
 
@@ -95,7 +101,7 @@ export function NationalParcelGapPanel({
         </div>
       </div>
 
-      <div className="mt-4 rounded-md border bg-background px-3 py-3">
+      {operatorCoverage && <div className="mt-4 rounded-md border bg-background px-3 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-xs font-medium text-foreground">Next connector targets</p>
@@ -108,14 +114,16 @@ export function NationalParcelGapPanel({
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           {targets.map((target) => <TargetRow key={target.state} target={target} />)}
         </div>
-      </div>
+      </div>}
 
       <p className="mt-3 text-[11px] text-muted-foreground">{coverage.coverage_claim}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">Inventory measured {dateLabel(coverage.measured_at)}. Measurement time does not establish source freshness or availability for sale.</p>
+      {coverage.warnings.map(warning => <p key={warning} className="mt-1 text-[11px] text-muted-foreground">{warning}</p>)}
     </section>
   );
 }
 
-function TargetRow({ target }: { target: NationalParcelStateCoverage }) {
+function TargetRow({ target }: { target: NationalParcelOperatorStateCoverage }) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-md border bg-secondary/20 px-3 py-2">
       <div className="min-w-0">
@@ -138,11 +146,11 @@ function TargetRow({ target }: { target: NationalParcelStateCoverage }) {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: { label: string; value: number | undefined }) {
   return (
     <div className="rounded-md bg-secondary/35 px-3 py-3">
       <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">{compact(value)}</p>
+      <p className="mt-1 text-lg font-semibold text-foreground tabular-nums">{value === undefined ? 'Not reported' : compact(value)}</p>
     </div>
   );
 }

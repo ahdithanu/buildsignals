@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.organization_membership import MemberRole
 from app.schemas.ingestion_onboarding import (
     IngestionEnrollmentResponse,
     IngestionEnrollmentSourceResponse,
@@ -21,7 +20,7 @@ from app.services.ingestion.onboarding import (
     get_ingestion_enrollment,
     list_ingestion_enrollment_sources,
 )
-from app.utils.auth_deps import require_role_strict
+from app.utils.auth_deps import require_internal_operator
 
 router = APIRouter(prefix="/ingestion/onboarding", tags=["ingestion-onboarding"])
 
@@ -42,13 +41,7 @@ def _enrollment_payload(db: Session, enrollment) -> dict:
 )
 def plan_ingestion_onboarding(
     payload: IngestionOnboardingRequest,
-    _principal: dict = Depends(
-        require_role_strict(
-            MemberRole.admin,
-            MemberRole.editor,
-            MemberRole.viewer,
-        )
-    ),
+    _principal: dict = Depends(require_internal_operator),
 ):
     try:
         return IngestionOnboardingPlanResponse.model_validate(
@@ -71,13 +64,7 @@ def plan_ingestion_onboarding(
     response_model=IngestionEnrollmentResponse,
 )
 def get_current_ingestion_enrollment(
-    _principal: dict = Depends(
-        require_role_strict(
-            MemberRole.admin,
-            MemberRole.editor,
-            MemberRole.viewer,
-        )
-    ),
+    _principal: dict = Depends(require_internal_operator),
     db: Session = Depends(get_db),
 ):
     enrollment = get_ingestion_enrollment(db)
@@ -92,7 +79,7 @@ def get_current_ingestion_enrollment(
 )
 def put_ingestion_enrollment(
     payload: IngestionOnboardingRequest,
-    principal: dict = Depends(require_role_strict(MemberRole.admin)),
+    principal: dict = Depends(require_internal_operator),
     db: Session = Depends(get_db),
 ):
     try:

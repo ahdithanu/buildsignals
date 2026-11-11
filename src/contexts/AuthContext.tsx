@@ -11,6 +11,7 @@ import {
 import { authApi } from '@/api/auth';
 import {
   setAccessToken,
+  setSessionRefreshHandler,
   setUnauthorizedHandler,
 } from '@/api/client';
 import type { LoginRequest, MemberRole, RegisterRequest, TokenResponse, User } from '@/types/auth';
@@ -21,6 +22,7 @@ interface AuthState {
   role: MemberRole | null;
   isAuthenticated: boolean;
   isDemo: boolean;
+  isInternalOperator: boolean;
   isLoading: boolean;
   /** Login + persist token. Returns the resolved user. */
   login: (data: LoginRequest) => Promise<User>;
@@ -41,30 +43,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [role, setRole] = useState<MemberRole | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [isInternalOperator, setIsInternalOperator] = useState(false);
   // Start loading — we need to attempt a silent refresh before we know
   // whether the user is authenticated.
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const authOperation = useRef(0);
+  const authenticatedIdentity = useRef<Pick<TokenResponse, 'user_id' | 'organization_id' | 'role'> | null>(null);
+  // Older /auth/me responses cannot restore a grant revoked by token rotation.
+  const authorizationRevision = useRef(0);
+  const refreshedOperator = useRef(false);
 
   const reset = useCallback(() => {
     authOperation.current += 1;
+    authorizationRevision.current += 1;
+    refreshedOperator.current = false;
+    authenticatedIdentity.current = null;
     setAccessToken(null);
     setUser(null);
     setOrganizationId(null);
     setRole(null);
     setIsDemo(false);
+    setIsInternalOperator(false);
     setIsLoading(false);
   }, []);
 
   const hydrate = useCallback(async () => {
     const operation = ++authOperation.current;
+    const revision = authorizationRevision.current;
     try {
       const me = await authApi.me();
       if (operation !== authOperation.current) return;
+      authenticatedIdentity.current = { user_id: me.user.id, organization_id: me.organization_id, role: me.role };
       setUser(me.user);
       setOrganizationId(me.organization_id);
       setRole(me.role);
       setIsDemo(me.is_demo === true);
+      setIsInternalOperator(me.is_internal_operator === true && me.is_demo !== true
+        && (revision === authorizationRevision.current || refreshedOperator.current));
     } catch {
       // /auth/me failed even after the client tried a silent refresh.
       // We're really logged out.
@@ -74,9 +89,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [reset]);
 
-  // On mount, try to re-establish a session using the refresh cookie.
-  // The apiClient itself does silent refresh on 401, so we can just call
-  // /auth/me directly and let the client handle the first 401 under the hood.
+  useEffect(() => {
+    setSessionRefreshHandler(response => {
+      const identity = authenticatedIdentity.current;
+      // Refresh cookies are shared across tabs; never rotate into another scope.
+      if (identity && (response.user_id !== identity.user_id
+        || response.organization_id !== identity.organization_id || response.role !== identity.role)) {
+        reset();
+        return false;
+      }
+      authorizationRevision.current += 1;
+      refreshedOperator.current = response.is_internal_operator === true && response.is_demo !== true;
+      setIsInternalOperator(refreshedOperator.current);
+      return true;
+    });
+    return () => setSessionRefreshHandler(null);
+  }, [reset]);
+
+  // The client can silently refresh the initial /auth/me request on 401.
   useEffect(() => {
     hydrate();
     return () => { authOperation.current += 1; };
@@ -106,12 +136,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await request();
         assertCurrent();
         setAccessToken(res.access_token);
+        const revision = authorizationRevision.current;
         const me = await authApi.me();
         assertCurrent();
+        authenticatedIdentity.current = { user_id: me.user.id, organization_id: me.organization_id, role: me.role };
         setUser(me.user);
         setOrganizationId(me.organization_id);
         setRole(me.role);
         setIsDemo(me.is_demo === true);
+        setIsInternalOperator(me.is_internal_operator === true && me.is_demo !== true
+          && (revision === authorizationRevision.current || refreshedOperator.current));
         return me.user;
       } catch (error) {
         if (operation === authOperation.current) reset();
@@ -155,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role,
       isAuthenticated: user !== null,
       isDemo,
+      isInternalOperator,
       isLoading,
       login,
       demoLogin,
@@ -162,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refresh,
     }),
-    [user, organizationId, role, isDemo, demoLogin, isLoading, login, register, logout, refresh],
+    [user, organizationId, role, isDemo, isInternalOperator, demoLogin, isLoading, login, register, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import PlanningSignals from '@/pages/PlanningSignals';
 
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ role: 'admin', isInternalOperator: false }) }));
+
 const usePlanningSignalsMock = vi.fn();
 const useImportedRecordAvailabilityMock = vi.fn();
 
@@ -132,7 +134,7 @@ describe('<PlanningSignals>', () => {
     expect(screen.getByText('No imported records available')).toBeInTheDocument();
     expect(screen.getByText(/No stored planning records were measured for this organization/)).toBeInTheDocument();
     expect(useImportedRecordAvailabilityMock).toHaveBeenCalledWith(['planning']);
-    expect(screen.getByRole('link', { name: 'Open Source Health' })).toHaveAttribute('href', '/source-health?record_type=planning');
+    expect(screen.getByRole('link', { name: 'View dashboard' })).toHaveAttribute('href', '/');
     expect(screen.queryByText(/Adjust the active filters|none match the active filters/)).not.toBeInTheDocument();
   });
 
@@ -148,7 +150,7 @@ describe('<PlanningSignals>', () => {
     usePlanningSignalsMock.mockReturnValue({ ...planningResult, data: [] });
     useImportedRecordAvailabilityMock.mockReturnValue({ data: true, isPending: false, error: null, refetch: vi.fn() });
     render(<MemoryRouter><PlanningSignals /></MemoryRouter>);
-    expect(screen.getByText('No planning signals were returned for this organization. Review source health for collection status.')).toBeInTheDocument();
+    expect(screen.getByText('No planning signals were returned for this organization. This does not establish an absence of activity or complete coverage.')).toBeInTheDocument();
     expect(screen.queryByText(/active filters/)).not.toBeInTheDocument();
   });
 

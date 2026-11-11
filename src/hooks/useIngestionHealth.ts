@@ -4,9 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { queryKeys } from '@/lib/queryKeys';
 
 export function useIngestionHealth(state?: string | null) {
+  const { isInternalOperator } = useAuth();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: queryKeys.ingestion.health(state),
+    enabled: isInternalOperator === true,
     queryFn: async () => {
       const [sources, candidates, coverage, reliability] = await Promise.all([
         ingestionApi.health(state),
@@ -50,8 +52,10 @@ export function useIngestionHealth(state?: string | null) {
 }
 
 export function useIngestionCoverage() {
+  const { isInternalOperator } = useAuth();
   return useQuery({
     queryKey: queryKeys.ingestion.coverage,
+    enabled: isInternalOperator === true,
     queryFn: () => ingestionApi.coverage(),
     retry: 1,
     staleTime: 60_000,
@@ -70,8 +74,10 @@ export function useNationalParcelCoverage() {
 }
 
 export function useIngestionSchedulePlan(state?: string | null) {
+  const { isInternalOperator } = useAuth();
   return useQuery({
     queryKey: queryKeys.ingestion.schedulePlan(state),
+    enabled: isInternalOperator === true,
     queryFn: () => ingestionApi.schedulePlan(state),
     retry: 1,
     staleTime: 30_000,
@@ -80,8 +86,10 @@ export function useIngestionSchedulePlan(state?: string | null) {
 }
 
 export function useIngestionHostPolicy() {
+  const { isInternalOperator } = useAuth();
   return useQuery({
     queryKey: queryKeys.ingestion.hostPolicy,
+    enabled: isInternalOperator === true,
     queryFn: () => ingestionApi.hostPolicy(),
     retry: 1,
     staleTime: 60_000,
@@ -90,10 +98,11 @@ export function useIngestionHostPolicy() {
 }
 
 export function useCandidateCanaryHistory(candidateKey: string | undefined, enabled: boolean) {
+  const { isInternalOperator } = useAuth();
   return useQuery({
     queryKey: candidateKey ? queryKeys.ingestion.candidateCanaryHistory(candidateKey) : ['ingestion', 'candidate-canary-history', 'disabled'],
     queryFn: () => ingestionApi.candidateCanaryHistory(candidateKey!),
-    enabled: enabled && !!candidateKey,
+    enabled: isInternalOperator === true && enabled && !!candidateKey,
     staleTime: 30_000,
   });
 }

@@ -15,6 +15,19 @@ import sys
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def restore_imported_config():
+    import app
+
+    original = sys.modules["app.config"]
+    try:
+        yield
+    finally:
+        # Other app modules retain this object; do not strand them on a stale config.
+        sys.modules["app.config"] = original
+        app.config = original
+
+
 def _reload_config_and_main(monkeypatch, **env):
     """Reload app.config and app.main with the given env, return the fresh app module."""
     for k, v in env.items():

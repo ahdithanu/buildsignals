@@ -34,11 +34,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function Observability() {
-  const { user, organizationId, role, isLoading, isAuthenticated } = useAuth();
+  const { user, organizationId, role, isLoading, isAuthenticated, isInternalOperator } = useAuth();
   const scope = JSON.stringify([user?.id ?? null, organizationId, role]);
   return <Layout><div className="mx-auto max-w-[1400px] space-y-6 p-4 md:p-6">
     <header><p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Workspace controls / Operations</p><h1 className="mt-1 font-display text-2xl font-semibold">Observability</h1><p className="mt-1 text-sm text-muted-foreground">Persisted workspace activity, evaluation quality, and ingestion reliability.</p></header>
-    {isLoading ? <LoadingState message="Checking access..." /> : !isAuthenticated || role !== 'admin' || !organizationId ? <ErrorState message="Administrator access is required to view observability." /> : <Overview key={scope} scope={scope} />}
+    {isLoading ? <LoadingState message="Checking access..." /> : !isAuthenticated || isInternalOperator !== true || !organizationId ? <ErrorState message="Internal operator access is required to view observability." /> : <Overview key={scope} scope={scope} />}
   </div></Layout>;
 }
 

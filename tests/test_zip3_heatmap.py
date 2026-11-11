@@ -3,10 +3,11 @@ from datetime import datetime, timezone
 from app.models.ingestion import PermitRecord, RawSourceRecord
 from app.models.parcel import ParcelFact, ParcelRecord
 from app.services.zip3_heatmap import zip3_heatmap
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 from tests.test_nearby_parcels import _add_parcel, _admin_headers, _setup_confirmed_signal
 
 
-def test_zip3_heatmap_separates_candidates_from_verified_for_sale(client, db, tmp_path):
+def test_zip3_heatmap_separates_candidates_from_verified_for_sale(client, internal_operator, db, tmp_path):
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
     permit = db.query(PermitRecord).one()
     permit.postal_code = "78701"
@@ -44,8 +45,8 @@ def test_zip3_heatmap_separates_candidates_from_verified_for_sale(client, db, tm
     assert result["for_sale_semantics"]["verified_for_sale"].startswith("Requires listing")
 
 
-def test_zip3_heatmap_endpoint_auth_state_and_limit(client, db, tmp_path):
-    assert client.get("/acquisition-map/zip3-heatmap").status_code == 401
+def test_zip3_heatmap_endpoint_auth_state_and_limit(client, internal_operator, db, tmp_path):
+    assert client.get("/acquisition-map/zip3-heatmap", headers={"Authorization": ""}).status_code == 401
     headers = _admin_headers(db)
     _setup_confirmed_signal(client, db, tmp_path, headers=headers)
     permit = db.query(PermitRecord).one()
@@ -61,7 +62,7 @@ def test_zip3_heatmap_endpoint_auth_state_and_limit(client, db, tmp_path):
     assert client.get("/acquisition-map/zip3-heatmap", headers=headers, params={"state": "OH"}).json()["items"] == []
 
 
-def test_zip3_heatmap_counts_only_source_backed_availability_as_verified(client, db, tmp_path):
+def test_zip3_heatmap_counts_only_source_backed_availability_as_verified(client, internal_operator, db, tmp_path):
     deal, source_data, match = _setup_confirmed_signal(client, db, tmp_path)
     permit = db.query(PermitRecord).one()
     permit.postal_code = "78701"

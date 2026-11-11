@@ -7,7 +7,7 @@ import Observability from '@/pages/Observability';
 import { observabilityApi } from '@/api/observability';
 import type { ObservabilityOverview } from '@/types/observability';
 
-const auth = vi.hoisted(() => ({ user: { id: 'admin-a' }, organizationId: 'org-a', role: 'admin', isLoading: false, isAuthenticated: true }));
+const auth = vi.hoisted(() => ({ user: { id: 'admin-a' }, organizationId: 'org-a', role: 'admin', isLoading: false, isAuthenticated: true, isInternalOperator: true }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/components/Layout', () => ({ Layout: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
 
@@ -49,15 +49,15 @@ function mount() {
   return { ...view, rerenderPage: () => view.rerender(<QueryClientProvider client={client}><MemoryRouter><Observability /></MemoryRouter></QueryClientProvider>) };
 }
 beforeEach(() => {
-  Object.assign(auth, { user: { id: 'admin-a' }, organizationId: 'org-a', role: 'admin', isLoading: false, isAuthenticated: true });
+  Object.assign(auth, { user: { id: 'admin-a' }, organizationId: 'org-a', role: 'admin', isLoading: false, isAuthenticated: true, isInternalOperator: true });
   vi.spyOn(observabilityApi, 'overview').mockResolvedValue(overview);
 });
 afterEach(() => { cleanup(); client?.clear(); vi.restoreAllMocks(); });
 
 describe('Observability', () => {
-  it('does not request private data before admin access is confirmed', () => {
-    auth.role = 'member'; mount();
-    expect(screen.getByText('Administrator access is required to view observability.')).toBeInTheDocument();
+  it('does not request private data for customer admins without operator access', () => {
+    auth.isInternalOperator = false; mount();
+    expect(screen.getByText('Internal operator access is required to view observability.')).toBeInTheDocument();
     expect(observabilityApi.overview).not.toHaveBeenCalled();
   });
   it('waits for authentication', () => {
