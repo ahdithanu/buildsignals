@@ -1032,9 +1032,9 @@
     "adapter": "socrata",
     "record_type": "permit",
     "jurisdiction": "San Francisco, CA",
-    "base_url": "https://data.sfgov.org/resource/i98e-djp9.json",
+    "base_url": "https://data.sf.gov/resource/i98e-djp9.json",
     "settings": {
-      "official_landing_page": "https://data.sfgov.org/d/i98e-djp9",
+      "official_landing_page": "https://data.sf.gov/d/i98e-djp9",
       "license": "Open Data Commons Public Domain Dedication and License",
       "refresh_frequency": "daily",
       "collection_interval_minutes": 1440,
@@ -1062,7 +1062,7 @@
       "defaults": {
         "city": "San Francisco",
         "state": "CA",
-        "source_url": "https://data.sfgov.org/d/i98e-djp9"
+        "source_url": "https://data.sf.gov/d/i98e-djp9"
       }
     },
     "field_mappings": [
@@ -1094,9 +1094,9 @@
     "adapter": "socrata",
     "record_type": "permit",
     "jurisdiction": "San Francisco, CA",
-    "base_url": "https://data.sfgov.org/resource/y673-d69b.json",
+    "base_url": "https://data.sf.gov/resource/y673-d69b.json",
     "settings": {
-      "official_landing_page": "https://data.sfgov.org/d/y673-d69b",
+      "official_landing_page": "https://data.sf.gov/d/y673-d69b",
       "license": "Public Domain U.S. Government",
       "license_url": "https://www.usa.gov/government-works",
       "rights_basis": "San Francisco Planning Department publishes this Accela-derived non-project and child-record dataset as Public Domain U.S. Government work with Planning Department attribution. The source is updated nightly and covers supplemental planning applications required to review development projects. Narrow production admission keeps entitlement/review record identity, type, status, project/address text, parcel block/lot, open/close dates, applicant organization, and PIM evidence URL for derived pre-approval retailer/development intelligence, with attribution, currentness/no-endorsement/no-warranty caveats, and no raw source-replacement resale.",
@@ -1156,7 +1156,7 @@
         "state": "CA",
         "jurisdiction": "San Francisco Planning Department",
         "permit_type": "Planning entitlement / review record",
-        "source_url": "https://data.sfgov.org/d/y673-d69b"
+        "source_url": "https://data.sf.gov/d/y673-d69b"
       }
     },
     "field_mappings": [
@@ -5483,15 +5483,16 @@
       "signal_stage": "parcel_context",
       "max_snapshot_retirement_fraction": 0.02,
       "export_policy": "derived_nearby_parcel_context_only_no_raw_polygon_or_source_replacement_export",
+      "enforce_field_allowlist": true,
       "field_allowlist": [
         "OBJECTID", "PAMS_PIN", "PIN_NODUP", "PCL_MUN",
         "PCLBLOCK", "PCLLOT", "PCLQCODE", "COUNTY", "MUN_NAME",
-        "PROP_CLASS", "PROP_LOC", "ST_ADDRESS", "CITY_STATE",
-        "ZIP5", "LAND_DESC", "CALC_ACRE", "PCLLASTUPD",
+        "PROP_CLASS", "PROP_LOC", "LAND_DESC", "CALC_ACRE", "PCLLASTUPD",
         "PCL_PBDATE", "PCL_GUID", "geometry"
       ],
       "suppressed_fields": [
-        "OWNER_NAME", "LAND_VAL", "IMPRVT_VAL", "NET_VALUE",
+        "OWNER_NAME", "ST_ADDRESS", "CITY_STATE", "ZIP_CODE", "ZIP5", "ZIP_PLUS4",
+        "LAND_VAL", "IMPRVT_VAL", "NET_VALUE",
         "LAST_YR_TX", "DEED_BOOK", "DEED_PAGE", "DEED_DATE",
         "SALES_CODE", "SALE_PRICE", "GIS_PIN", "OLD_PROPID",
         "SHAPE", "SHAPE_Length", "SHAPE_Area", "raw_geometry_export",
@@ -5500,7 +5501,7 @@
       "connector": {
         "page_size": 500,
         "where": "PIN_NODUP IS NOT NULL AND PIN_NODUP <> 'XXXNLL'",
-        "out_fields": "OBJECTID,PAMS_PIN,PIN_NODUP,PCL_MUN,PCLBLOCK,PCLLOT,PCLQCODE,COUNTY,MUN_NAME,PROP_CLASS,PROP_LOC,ST_ADDRESS,CITY_STATE,ZIP5,LAND_DESC,CALC_ACRE,PCLLASTUPD,PCL_PBDATE,PCL_GUID",
+        "out_fields": "OBJECTID,PAMS_PIN,PIN_NODUP,PCL_MUN,PCLBLOCK,PCLLOT,PCLQCODE,COUNTY,MUN_NAME,PROP_CLASS,PROP_LOC,LAND_DESC,CALC_ACRE,PCLLASTUPD,PCL_PBDATE,PCL_GUID",
         "order_by_fields": "OBJECTID ASC",
         "keyset_field": "OBJECTID",
         "include_geometry": true,
@@ -5515,15 +5516,13 @@
     "field_mappings": [
       {"source_field": "PIN_NODUP", "canonical_field": "source_record_id", "is_required": true},
       {"source_field": "__parcel_group_id", "canonical_field": "parcel_group_id", "transform": "first_nonempty", "transform_options": {"fields": ["PAMS_PIN", "PIN_NODUP", "PCL_GUID"]}},
-      {"source_field": "__address", "canonical_field": "address", "transform": "first_nonempty", "transform_options": {"fields": ["ST_ADDRESS", "PROP_LOC"]}},
+      {"source_field": "PROP_LOC", "canonical_field": "address"},
       {"source_field": "MUN_NAME", "canonical_field": "city"},
       {"source_field": "COUNTY", "canonical_field": "county"},
-      {"source_field": "ZIP5", "canonical_field": "postal_code"},
       {"source_field": "geometry", "canonical_field": "latitude", "transform": "arcgis_polygon_centroid", "transform_options": {"axis": "y"}},
       {"source_field": "__longitude", "canonical_field": "longitude", "transform": "arcgis_polygon_centroid", "transform_options": {"source_field": "geometry", "axis": "x"}},
       {"source_field": "CALC_ACRE", "canonical_field": "land_area_sq_ft", "transform": "multiply", "transform_options": {"factor": 43560}},
       {"source_field": "__land_use", "canonical_field": "land_use", "transform": "join_fields", "transform_options": {"fields": ["PROP_CLASS", "LAND_DESC"], "separator": " | "}},
-      {"source_field": "PCL_MUN", "canonical_field": "zoning_code"},
       {"source_field": "PCL_PBDATE", "canonical_field": "observed_at", "transform": "unix_milliseconds"}
     ]
   },

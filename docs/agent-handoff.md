@@ -1,5 +1,48 @@
 # Current Agent Handoff
 
+## November 11 Requested-Market Integration (Local Checkpoint)
+
+Branch `codex/requested-market-release`, base 5ff111f. This integration retains
+the newer owner-only API/source projections, auth/session/cache behavior and
+packaged investment reference. Final source is root3d8c7fd (including ac34876
+SF/NJ changes, NJ privacy guards and quarter-mile follow-up), confirmed by the
+parent. Local commit is authorized after checks; the enclosing Git commit is
+the exact integration checkpoint. No publishing, PR, merge or deployment.
+
+SF/NJ catalog and explicit SF changed-row profile are integrated; operational
+worker preserves deployed Ocala context guard/unique mappings/1,000-row ceiling,
+100k regional chunking/reconciliation/quarantine and wave-2 profiles. NJ helper
+is inactive/manual, 0.25..3 miles/2,000 rows, PROP_LOC-only address and unknown
+postal. Shared service/health only add opt-in field projection validation, enabled
+for NJ; poisoned pages persist no source raw/canonical rows. Root candidate/PDF,
+frontier/research, application replacements and conftest are excluded.
+
+Destination owner-authorized NJ replay/map/tenant and checkpoint regressions are
+adapted to internal_operator. Added explicit main/stage/freshness poison and
+pre-transport invalid-config tests. Focused runs: 268 passed (initial profiles),
+then 398 passed including catalog/rollout/connectors/privacy/internal operations.
+Scoped Ruff and manifest freshness/whitespace pass. Full destination backend
+suite on frozen code: 2,472 passed, 69 skipped in 301.65s.
+No new PostgreSQL/RLS or browser acceptance, network/source/model calls, production
+writes, schedules, activation, migration, push/merge/deploy occurred.
+
+Read `docs/releases/2026-11-11-requested-market-release.md` for exact commands,
+files, imported evidence and limits. Parent reports a 161-row reconciled public
+quarter-mile check; that is not live inventory or a production-qualified anchor.
+Protected privacy/auth/frontend/schema/conftest/candidate files are unchanged;
+catalog, service/health guards, worker and helper match the confirmed3d8c7fd source.
+Final focused diff review found no remaining critical issue. The final NJ receipt,
+architecture and
+onboarding ledger corrections are included. Root final suite2,453passed/70skipped
+in293.59s is separate from this destination's2,472passed/69skipped in301.65s.
+The different bases/test sets explain why counts must not be merged or treated
+as skipped-case passes. Next: parent reviews this local checkpoint before any
+publishing approval request. Existing production sources/schedules and root
+unrelated dirty files remain untouched.
+Parent review approved the local commit only. July25,2023 is the historical
+engineering-review date for case22-P-0043, not a known application filing date or
+evidence of current retail expansion. No push/PR/merge/deploy/activation approved.
+
 ## November 10 Final Production Acceptance
 
 The correction supersedes the pending/failed-attempt notes below. API operation

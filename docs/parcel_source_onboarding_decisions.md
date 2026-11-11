@@ -138,6 +138,22 @@ Endpoint:
 
 ## New Jersey NJGIN Statewide Parcels Joined With MOD-IV
 
+November 11 local privacy correction: the parent reports official MOD-IV manual
+confirmation that ST_ADDRESS and CITY_STATE are mailing data; ZIP5 is unverified
+as situs postal data. The corrected catalog/profile uses PROP_LOC alone for site
+address and leaves postal code unknown, suppressing all mailing/postal fields.
+NJ enables a strict whole-page raw-field allowlist before persistence and in
+every canary probe. Source checkpoint 3d8c7fd includes the corrected source
+contract; no stored rows/settings are automatically repaired. Direct November 10
+JSON metadata confirmed optional PCL_GUID is present despite an earlier web
+extraction omission; keep PIN_NODUP canonical and PCL_MUN distinct from zoning.
+The narrow scoped helper remains inactive/manual with
+0.25..3-mile and 2,000-row bounds. This is local implementation, not source
+activation, historical stored-data repair or production inventory acceptance.
+See `source-qualification/2026-11-11-nj-retail-radius.md` for the final source
+receipt and `releases/2026-11-11-requested-market-release.md` for the integrated-tree
+verification and pending gates. Older admission/canary notes below are history.
+
 **Decision: admitted narrowly to production for derived Phase 2 nearby-parcel
 context.**
 
@@ -156,11 +172,12 @@ context.**
   lists no access constraints, and use constraints are attribution plus
   currentness/accuracy/non-survey disclaimers. Preserve those notices and avoid
   raw source-replacement exports.
-- Suppressed fields include owner name, land/improvement/net values, taxes,
+- Suppressed fields include owner name, ST_ADDRESS, CITY_STATE, ZIP_CODE, ZIP5,
+  ZIP_PLUS4, land/improvement/net values, taxes,
   deed book/page/date, sale code/price, GIS/old IDs that could bypass
   redaction policy, shape metrics, raw polygon export, and raw source export.
 - The admitted slice keeps PAMS/PIN identity, municipality/county, property
-  class, situs address, ZIP, land-description text, acreage-derived land area,
+  class, PROP_LOC situs address (no postal mapping), land-description text, acreage-derived land area,
   publication/update dates, GUID, and derived centroid.
 - Live canary on July 18, 2026 fetched 35 rows with 35 valid, 0 failed, and 35
   `parcel_snapshot` records.

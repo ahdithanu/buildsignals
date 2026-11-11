@@ -179,6 +179,19 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def validate_source_projection(records: Iterable[dict[str, Any]], settings: dict[str, Any]) -> None:
+    """Opt-in field boundary shared by canaries and pre-persistence validation."""
+    if settings.get("enforce_field_allowlist") is not True:
+        return
+    fields = settings.get("field_allowlist")
+    if (not isinstance(fields, list) or not fields
+            or any(not isinstance(field, str) or not field.strip() for field in fields)):
+        raise ValueError("Strict source projection requires a nonempty field allowlist")
+    allowed = frozenset(fields)
+    if any(set(record) - allowed for record in records):
+        raise ConnectorResponseError("Source response exceeds reviewed field scope")
+
+
 def _record_matches_filters(record: dict[str, Any], filters: Any) -> bool:
     if not filters:
         return True
@@ -292,6 +305,7 @@ def execute_source_run(
         raise ValueError(f"No normalizer registered for record type: {source.record_type}")
 
     settings = dict(source.settings or {})
+    validate_source_projection((), settings)
     connector_checkpoint, snapshot_id = _snapshot_context(settings, checkpoint)
     connector_config = resolve_connector_config_dates(dict(settings.get("connector") or {}))
     if source.base_url:
@@ -332,6 +346,8 @@ def execute_source_run(
                 raise ConnectorResponseError(
                     "connector returned a repeated checkpoint while more pages remain"
             )
+            # Validate the entire page before any untrusted row reaches raw storage.
+            validate_source_projection(envelope.records, settings)
             for record in envelope.records:
                 records_seen += 1
                 if not _record_matches_filters(record, settings.get("record_filters")):
