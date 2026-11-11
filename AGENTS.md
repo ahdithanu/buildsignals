@@ -48,8 +48,11 @@ its pre-persistence guard/1,000-row cap and the regional 100k/chunk/quarantine
 contracts. Destination source operations remain owner-only; use internal_operator
 for disposable API tests. Root research, candidate/PDF changes and root conftest
 are excluded. Final source checkpoint3d8c7fd is confirmed and local integration
-commit is authorized after checks. No publishing, schedule, activation, migration
-or deployment approval is implied; parent reviews the local checkpoint first.
+checkpoint is86c8ee1. The user approved PR-only publication after checks:
+[PR #272](https://github.com/ahdithanu/buildsignals/pull/272) is open, stacked on
+the still-open privacy PR #271. No merge, schedule, activation, migration or
+production deployment is approved. Read current GitHub checks before claiming
+hosted acceptance; local destination receipt is2,472passed/69skipped.
 
 Investment Areas (November 10): the first web-fetch release returned production
 503s; its frontend was rolled back. App Runner's VPC connector lacks NAT internet

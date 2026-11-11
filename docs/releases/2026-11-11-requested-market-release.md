@@ -1,6 +1,22 @@
-# Requested-Market Release Integration (Local Only)
+# Requested-Market Release Integration
 
-## State
+## Publication Update
+
+November 11: after explicit user approval for PR-only publication, branch
+`codex/requested-market-release` was pushed and
+[PR #272](https://github.com/ahdithanu/buildsignals/pull/272) opened, stacked on
+the still-open [privacy PR #271](https://github.com/ahdithanu/buildsignals/pull/271).
+The verified runtime commit is86c8ee1; this follow-up changes documentation only.
+Initial hosted checks started, with gitleaks and pre-commit successful; backend,
+E2E and preview were still running at observation. The PR is the source of truth
+for current check results and documentation-only head changes.
+
+No merge, production deploy, source activation, schedule/environment change,
+production audit/repair, migration or paid/model call is authorized by this
+publication. Production behavior and inventory are unchanged. Keep the parent
+privacy dependency intact and require separate release approval.
+
+## State at Local Freeze
 
 November 11, 2026, America/Los_Angeles. Worktree
 `/Users/ahdithebomb/Desktop/DealSignal/.worktrees/requested-market-release`,

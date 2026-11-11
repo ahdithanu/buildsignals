@@ -9,8 +9,10 @@ manual changed-row profile, not new coverage. NJ keeps PROP_LOC-only situs, unkn
 postal, strict opt-in field guards and inactive 0.25..3-mile/2,000-row scopes.
 Keep deployed Ocala context and 100k/wave-2 worker safeguards. No frontier, PDF
 candidate, source activation or production operation is authorized. Parent
-confirmed root3d8c7fd and authorized the tested local integration commit only;
-publishing/PR/merge/deploy require further approval.
+confirmed root3d8c7fd. User-approved PR-only publication is complete:
+[PR #272](https://github.com/ahdithanu/buildsignals/pull/272), stacked on #271,
+with tested runtime checkpoint86c8ee1. Merge/deploy/source activation still need
+separate approval; use the PR for live CI status, not historical local counts.
 
 November 10 Investment Areas: read the release receipt in
 `docs/releases/2026-11-10-investment-areas.md` before making live/model claims.

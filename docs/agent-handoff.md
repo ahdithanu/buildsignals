@@ -1,5 +1,22 @@
 # Current Agent Handoff
 
+## November 11 PR-Only Publication
+
+The user explicitly approved publishing after checks. Branch
+`codex/requested-market-release` was pushed and
+[PR #272](https://github.com/ahdithanu/buildsignals/pull/272) opened against
+`codex/investment-area-live`; parent privacy PR #271 is still open at5ff111f.
+Tested runtime checkpoint86c8ee1 is unchanged. Local destination results remain
+2,472passed/69skipped and398targeted. Initial hosted checks started; gitleaks and
+pre-commit passed on86c8ee1, while backend/E2E/preview were running at observation.
+Check the PR for the latest head and hosted results; these are dated receipts.
+
+This publication follow-up is documentation only. No merge, production deployment,
+source/schedule activation, migration, production data audit/repair or paid-service
+change was approved or performed. Preserve the #271 privacy dependency. Root
+research and concurrent dirty work remain excluded. Next: review hosted checks
+and PR feedback, then obtain separate approval before release or activation.
+
 ## November 11 Requested-Market Integration (Local Checkpoint)
 
 Branch `codex/requested-market-release`, base 5ff111f. This integration retains
