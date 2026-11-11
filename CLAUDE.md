@@ -2,6 +2,15 @@
 
 @AGENTS.md
 
+November11 staged release: PR271/272 merged, SF exact-image preflight passed,
+SF daily schedule added. Actual scheduled/replay collection passed6,711rows;
+replay zero inserts/updates, read-only audit6,711evidence/graphlinks,0coordinates
+and map points. Geocoding/parcel joining remains separate; see
+`docs/releases/2026-11-11-sf-recurring-ingestion.md`. Other22 jobs unchanged;
+API image unchanged, no migrations, paid upgrades or NJ activation.
+Older local/publication status below is historical; the release receipt takes
+precedence for current deployment and acceptance.
+
 November 11 requested-market integration: this worktree starts at privacy release
 5ff111f and preserves its owner-only operations, auth/session behavior and packaged
 reference. Read `docs/releases/2026-11-11-requested-market-release.md`. SF is a

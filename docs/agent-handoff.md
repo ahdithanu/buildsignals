@@ -1,5 +1,32 @@
 # Current Agent Handoff
 
+## November 11 Approved Staged SF Release
+
+User approved merge271then272, reviewed worker release and gated SF activation.
+Merged271at9980e06 and272at24d3c97; main tree equals tested2a8153c. Hosted
+2,541backendpassed/91.29%coverage,18E2Epassed. Built worker-specific immutable
+imagebcfa42013f6c22a706660f7dbab3ee573da49693f3ae4acbc8aa24df7a78452a;
+no latest rewrite or migration/API workflow. API auto-deployfalse/imageunchanged.
+Fresh public and exact-image worker-network verification:6,711count,13validations,
+zero failed. Explicit tenant READ ONLY preflight task656d96f3be4f4a8eb979769e29e6c8fa
+STOPPED/exit0:zero matching SF key/dataset registrations, no matching legacy
+migration needed. This was not a comprehensive historical SF-data audit.
+Only SF schedule added,23enabled. Actual Scheduler task0b76fbc5dc1841b3bc61f03dc4fb5d3d
+STOPPED/exit0:run e0664b5d-b68b-423e-9ec7-44bae8214cb8 reconciled6,711before/seen/after,
+inserted6,711/updated0/failed0. Separate manual replayae876c1bdf284bd0b437ee934dcb4b00
+STOPPED/exit0:run e833b1a4-a655-4965-82e9-86cf5058e0db reconciled6,711/zero inserts,
+updates or failures. This is not a second Scheduler invocation.
+Read-only auditff1945d7f9d2408fa20e4c1e74608325:6,711distinct/evidence-linked/raw
+snapshots/permitgraphentities/graphlinkedrecords;0coordinates and0SFmaprows.
+Collection+graph accepted; SFmap/parcelworkflow NOT accepted. Existing geocoder
+is Columbus/demo-only; separate bounded production geocoding/map work needed.
+Registered image/worker/host and allregionalIAMgrants verified;23schedulesenabled.
+No NJ, paid upgrade, migration or recovery of four failed feeds. See
+`docs/releases/2026-11-11-sf-recurring-ingestion.md` for exact resources/rollback.
+Receipt follow-up is on codex/sf-release-receipts based on merged main; root
+research/concurrent files remain untouched.
+Older local/publication statuses below are superseded by this accepted release.
+
 ## November 11 PR-Only Publication
 
 The user explicitly approved publishing after checks. Branch

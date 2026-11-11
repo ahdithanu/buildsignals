@@ -34,6 +34,17 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
+November11 staged release authorized: PR271/272 merged; fresh SF public and
+exact-image/tenant-read-only preflight passed. Only SF's daily schedule was added;
+all23 schedules enabled. Actual scheduled collection/manual replay each reconciled
+6,711rows with zero failures; replay zero inserts/updates. Read-only audit verifies
+6,711 distinct evidence- and graph-linked records. SF coordinates/map points are0;
+geocoding/parcel joining remains separate, not accepted map coverage.
+See `docs/releases/2026-11-11-sf-recurring-ingestion.md`. API image unchanged;
+no migration/paid upgrade/NJ activation or failed-source recovery authorized.
+Preparation/publication notes below are historical and superseded by this release
+receipt where their status differs.
+
 November 11 requested-market integration is local on
 `codex/requested-market-release`, based on privacy release 5ff111f. Read
 `docs/releases/2026-11-11-requested-market-release.md` before changing this slice.
