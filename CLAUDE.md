@@ -2,6 +2,18 @@
 
 @AGENTS.md
 
+November 11 requested-market integration: this worktree starts at privacy release
+5ff111f and preserves its owner-only operations, auth/session behavior and packaged
+reference. Read `docs/releases/2026-11-11-requested-market-release.md`. SF is a
+manual changed-row profile, not new coverage. NJ keeps PROP_LOC-only situs, unknown
+postal, strict opt-in field guards and inactive 0.25..3-mile/2,000-row scopes.
+Keep deployed Ocala context and 100k/wave-2 worker safeguards. No frontier, PDF
+candidate, source activation or production operation is authorized. Parent
+confirmed root3d8c7fd. User-approved PR-only publication is complete:
+[PR #272](https://github.com/ahdithanu/buildsignals/pull/272), stacked on #271,
+with tested runtime checkpoint86c8ee1. Merge/deploy/source activation still need
+separate approval; use the PR for live CI status, not historical local counts.
+
 November 10 Investment Areas: read the release receipt in
 `docs/releases/2026-11-10-investment-areas.md` before making live/model claims.
 The first production web-fetch attempt failed (VPC egress); its frontend was

@@ -25,7 +25,11 @@ from app.services.ingestion.normalization import (
     parse_source_datetime,
     prepare_mapped_record,
 )
-from app.services.ingestion.service import _record_matches_filters, resolve_stale_run_after
+from app.services.ingestion.service import (
+    _record_matches_filters,
+    resolve_stale_run_after,
+    validate_source_projection,
+)
 from app.utils.org_scope import active_query, get_org_id
 
 
@@ -453,6 +457,7 @@ def validate_source_canary(
         raise ValueError("sample_size must be between 1 and 100")
     now = _as_utc(now or datetime.now(timezone.utc))
     settings = dict(source.settings or {})
+    validate_source_projection((), settings)
     connector_config = resolve_connector_config_dates(
         dict(settings.get("connector") or {}),
         now=now,
@@ -469,6 +474,7 @@ def validate_source_canary(
     if isinstance(freshness_field, str) and freshness_field:
         extra_required_fields.add(freshness_field)
     envelope = connector.fetch_page()
+    validate_source_projection(envelope.records, settings)
 
     fetched = len(envelope.records)
     valid = 0
@@ -529,6 +535,7 @@ def validate_source_canary(
         )
         probe_connector = build_connector(source.adapter, probe_config)
         probe_envelope = probe_connector.fetch_page()
+        validate_source_projection(probe_envelope.records, settings)
         fetched += len(probe_envelope.records)
         probe_result = _validate_canary_records(
             source,
@@ -580,6 +587,7 @@ def validate_source_canary(
         )
         freshness_connector = build_connector(source.adapter, freshness_config)
         freshness_envelope = freshness_connector.fetch_page()
+        validate_source_projection(freshness_envelope.records, settings)
         fetched += len(freshness_envelope.records)
         freshness_result = _validate_canary_records(
             source,

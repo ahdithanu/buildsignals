@@ -24,6 +24,23 @@ and the source-health view opens into individual filings for troubleshooting.
 The current flow is still mostly record-centric: each source lands as a permit
 or signal first, then downstream jobs enrich it.
 
+## Reviewed Field Boundary
+
+Sources may explicitly set `settings.enforce_field_allowlist=true` with a
+nonempty string list in `settings.field_allowlist`. This opt-in boundary is
+checked before fetching for configuration validity, on every canary/probe page,
+and on each complete ingestion page before any raw row is persisted. A page
+containing an unexpected field is rejected, not silently trimmed or stored in
+an error record. Errors do not include payload values. Earlier completed pages
+can remain committed; this is not a whole-run atomic rollback or retroactive
+redaction of old raw evidence. Unflagged sources retain existing behavior.
+
+NJGIN enables this boundary to keep owner-mail fields out of the narrow derived
+parcel scope. `PROP_LOC` is situs; `ST_ADDRESS`/`CITY_STATE` are owner mail and
+ZIP variants are not verified property postal codes. See the November 11 NJ
+qualification receipt. Catalog code changes do not automatically update an
+existing tenant source or repair its historical data.
+
 ## Proposed Direction
 
 ```mermaid

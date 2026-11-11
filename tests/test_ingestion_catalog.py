@@ -456,7 +456,7 @@ def test_san_francisco_building_permits_use_current_primary_address_feed():
         if entry.key == "san_francisco_ca_building_permits_primary_address"
     )
 
-    assert source.base_url == "https://data.sfgov.org/resource/i98e-djp9.json"
+    assert source.base_url == "https://data.sf.gov/resource/i98e-djp9.json"
     assert source.settings["connector"]["query"] == {
         "$where": "primary_address_flag = 'Y'"
     }
@@ -464,6 +464,20 @@ def test_san_francisco_building_permits_use_current_primary_address_feed():
         "keyset_fields": None,
         "order_by": "data_loaded_at DESC, record_id DESC",
     }
+
+
+def test_san_francisco_sources_use_canonical_host_without_changing_dataset_identity():
+    datasets = {
+        "san_francisco_ca_building_permits_primary_address": "i98e-djp9",
+        "san_francisco_ca_planning_department_non_project_records": "y673-d69b",
+    }
+    for source in load_catalog():
+        if source.key not in datasets:
+            continue
+        dataset = datasets[source.key]
+        assert source.base_url == f"https://data.sf.gov/resource/{dataset}.json"
+        assert source.settings["official_landing_page"] == f"https://data.sf.gov/d/{dataset}"
+        assert source.settings["defaults"]["source_url"] == f"https://data.sf.gov/d/{dataset}"
 
 
 def test_savannah_production_source_preserves_distinct_minimized_lifecycle_rows():
@@ -4706,6 +4720,11 @@ def test_new_jersey_njgin_parcels_are_derived_proximity_context():
     assert entry.settings["reconciliation_mode"] == "guarded_full_snapshot"
     assert "owner redaction" in entry.settings["license"]
     assert "PIN_NODUP <> 'XXXNLL'" in entry.settings["connector"]["where"]
+    assert "PCL_MUN" in out_fields  # Municipality identity, not zoning.
+    assert {"ST_ADDRESS", "CITY_STATE", "ZIP5", "ZIP_CODE", "ZIP_PLUS4"} <= suppressed
+    assert not {"ST_ADDRESS", "CITY_STATE", "ZIP5", "ZIP_CODE", "ZIP_PLUS4"} & out_fields
+    assert entry.settings["enforce_field_allowlist"] is True
+    assert not any(mapping.canonical_field == "zoning_code" for mapping in entry.field_mappings)
     assert "OWNER_NAME" not in out_fields
     assert "SALE_PRICE" not in out_fields
     assert "DEED_BOOK" not in out_fields
@@ -4755,15 +4774,19 @@ def test_new_jersey_njgin_parcels_are_derived_proximity_context():
     assert normalized.values["address"] == "35 HILLSIDE AVE"
     assert normalized.values["city"] == "CALDWELL BORO TWP"
     assert normalized.values["county"] == "ESSEX"
-    assert normalized.values["postal_code"] == "07006"
+    assert not normalized.values.get("postal_code")
     assert normalized.values["land_area_sq_ft"] == Decimal("15002.064")
     assert normalized.values["land_use"] == "2 | 75X200"
-    assert normalized.values["zoning_code"] == "0703"
+    assert not normalized.values.get("zoning_code")
     assert normalized.values["observed_at"].isoformat() == "2023-09-20T00:00:00+00:00"
     assert normalized.values["latitude"].quantize(Decimal("0.000001")) == Decimal("40.840479")
     assert normalized.values["longitude"].quantize(Decimal("0.000001")) == Decimal("-74.269058")
     assert "owner_name" not in normalized.values
     assert "last_sale_price" not in normalized.values
+    record["PROP_LOC"] = None
+    prepared, field_mapping = prepare_mapped_record(record, mappings)
+    missing_situs = normalize_parcel(prepared, field_mapping, defaults=entry.settings["defaults"])
+    assert not missing_situs.values.get("address")
 
 
 def test_florida_fdor_statewide_cadastral_parcels_are_statewide_proximity_spine():

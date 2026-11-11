@@ -34,6 +34,26 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
+November 11 requested-market integration is local on
+`codex/requested-market-release`, based on privacy release 5ff111f. Read
+`docs/releases/2026-11-11-requested-market-release.md` before changing this slice.
+SF building uses the canonical data.sf.gov changed-row profile; LA and SF planning
+remain outside the recurring worker. NJ scopes remain inactive/manual, 0.25..3
+miles and at most 2,000 rows. PROP_LOC alone is situs; mailing ST_ADDRESS/CITY_STATE
+and unverified ZIP5 are suppressed, postal code unknown. NJ alone opts into the
+shared whole-page and every-canary field allowlist guard. Never activate the
+older mailing-field profile or confuse public counts with tenant inventory.
+Preserve the complete newer operational worker, especially Ocala layer19 context,
+its pre-persistence guard/1,000-row cap and the regional 100k/chunk/quarantine
+contracts. Destination source operations remain owner-only; use internal_operator
+for disposable API tests. Root research, candidate/PDF changes and root conftest
+are excluded. Final source checkpoint3d8c7fd is confirmed and local integration
+checkpoint is86c8ee1. The user approved PR-only publication after checks:
+[PR #272](https://github.com/ahdithanu/buildsignals/pull/272) is open, stacked on
+the still-open privacy PR #271. No merge, schedule, activation, migration or
+production deployment is approved. Read current GitHub checks before claiming
+hosted acceptance; local destination receipt is2,472passed/69skipped.
+
 Investment Areas (November 10): the first web-fetch release returned production
 503s; its frontend was rolled back. App Runner's VPC connector lacks NAT internet
 egress. The correction uses a dated, hash-bound annual release-reference artifact,
