@@ -2,19 +2,17 @@
 
 @AGENTS.md
 
-SF geocode/map qualification is local on `codex/sf-map-qualification`; read
-`docs/sf-derived-locations.md`. Separate derived evidence, strict stale-address
-and tenant checks, plan-first bounded worker and default-off map fallback.
-User approved20publicaddresses/1,000filings and bounded qualification/backfill plus
-merge/map release after checks. Local2,625backend/428frontend/21browserpassed;
-no migration needed. Do not replace live zero-coordinate receipts without audit.
-Production effective-isolation gate failed; user approved scoped runtime-role
-remediation. Standard encrypted credential prepared; role and staged rollout
-pending. Backfill now fails closed without effective RLS;59focusedtests pass.
-Restricted-role preflight subsequently passed;23worker targets revised, API
-credential cutover pending. Provisioner helper prevents admin-ref restoration;
-19tests/78combinedpassed. SF boundedbatch20addresses/9filingslocated,partial;
-map/audit acceptance pending. Read docs/runbooks/runtime-database-role.md.
+Current local work: `codex/retail-catalog-repair`, isolated from root research.
+Read `docs/company-catalog-replay.md` and the latest handoff. Direct workers now
+initialize company definitions before ingestion; a separate bounded stored replay
+is needed for unchanged records. Do not weaken matching to produce cards. Keep
+source evidence, reviewed decisions, tenant isolation and demo read-only behavior.
+User approved staged release after checks and one bounded production repair;
+local tests do not establish production acceptance. No new sources, provider/model
+calls, migrations or paid upgrades. Operational receipts stay internal, not public.
+PR #273 is merged and its final acceptance is recorded internally; older pending
+SF status below is historical. Do not repeat the exhausted geocoding batch or
+restore administrative credentials to runtime services.
 
 November11 staged release: PR271/272 merged, SF exact-image preflight passed,
 SF daily schedule added. Actual scheduled/replay collection passed6,711rows;

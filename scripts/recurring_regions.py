@@ -17,6 +17,7 @@ from app.models.ingestion import IngestionRun, IngestionSource, PermitRecord
 from app.models.organization import Organization
 from app.models.planning import PlanningRecord
 from app.schemas.ingestion import FieldMappingCreate, IngestionSourceCreate, IngestionSourceUpdate
+from app.services.company_catalog import ensure_company_catalog
 from app.services.demo_access import DEMO_ORG_ID
 from app.services.ingestion.catalog import load_catalog
 from app.services.ingestion.connectors.base import RetryingHttpClient
@@ -345,6 +346,7 @@ def refresh(key: str, organization_id: str):
                     raise RuntimeError("Source refresh already running")
                 source = None
                 try:
+                    ensure_company_catalog(db, organization_id)
                     source = db.query(IngestionSource).filter_by(organization_id=organization_id, key=key).one_or_none()
                     if source:
                         ensure_reactivatable(source, entry)

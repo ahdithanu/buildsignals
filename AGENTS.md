@@ -34,24 +34,22 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
-SF map work is local on `codex/sf-map-qualification` in its isolated worktree.
-Read `docs/sf-derived-locations.md` before continuing. Strict tenant/source-scoped
-geocoding stores separate evidence; bounded worker defaults to plan/no requests
-or writes. Map fallback is default-off; demo-Columbus guards stay unchanged.
-Local full verification:2,625backend/428frontend/21browser passed; PostgreSQL
-drift check needs no migration. User approved20publicaddresses/1,000filings,
-bounded qualification/backfill and merge/map release after checks. No larger
-backfill, migration, paid upgrade or NJ activation. Live receipts remain separate.
-Production effective-isolation preflight failed, so backfill/release are held.
-User approved scoped runtime-role remediation; encrypted Standard parameter is
-prepared, role/API/worker acceptance pending. New fail-closed worker guard has
-59core/worker regression passes. Keep admin credentials out of runtime access.
-Restricted-role production preflight now passes; all23worker schedule targets
-have credential-only revisions, states/times/images preserved. API credential
-operation still pending; read docs/runbooks/runtime-database-role.md. Provisioners
-now replace migration-base DB refs;19tests/78combinedtargetedpassed. One approved
-SF batch:20addresses attempted/9filings located,partial at limit. No more batches
-authorized; map release/post-backfill audit and API acceptance remain pending.
+Current repair is isolated in `.worktrees/retail-catalog-repair`, branch
+`codex/retail-catalog-repair`, based on merged main a0e8f4d. Direct recurring
+workers must initialize the tenant company catalog before ingestion. Unchanged
+stored filings require a separate bounded replay; catalog sync is not replay.
+Read `docs/company-catalog-replay.md` and the latest handoff. Preserve detector
+eligibility, review decisions and source timestamps. Local implementation is not
+production acceptance. User approved staged publication/release after checks and
+one repair capped at 25,000 stored permits plus 100 planning rows; no new sources,
+external/model calls, migrations or paid upgrades. Detailed operational receipts
+remain internal and must not be added to public branches or PR comments.
+
+PR #273 is merged; earlier pending SF release/credential notes below are
+historical. Final SF map and runtime-isolation acceptance were recorded internally.
+No more address-geocoder requests are authorized by the exhausted bounded batch.
+Keep restricted runtime access and existing schedules intact. Nearby parcel
+search still requires qualified source locations; derived points are not parcels.
 
 November11 staged release authorized: PR271/272 merged; fresh SF public and
 exact-image/tenant-read-only preflight passed. Only SF's daily schedule was added;

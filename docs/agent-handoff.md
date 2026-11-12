@@ -1,5 +1,38 @@
 # Current Agent Handoff
 
+## Retail Catalog Repair (Local, Not Released)
+
+Worktree `.worktrees/retail-catalog-repair`, branch `codex/retail-catalog-repair`,
+base origin/main a0e8f4d. Root research and internal receipt branches are excluded.
+The read-only diagnosis identified missing tenant company definitions/matches;
+this is not proof of no filings or no development. Detailed observations remain
+internal by explicit user choice and must not be published with the code.
+
+Implementing a serialized tenant catalog prerequisite in both direct recurring
+workers, bounded stored permit/planning replay, new-planning-match relationship
+initialization, and the `status=all` review deep-link correction. Existing detector
+eligibility, human confirmed/dismissed decisions, raw evidence and source dates
+are retained. No provider/model calls or source activation in the repair.
+
+Focused backend and restricted-role PostgreSQL catalog/replay tests passed;
+frontend 430 passed, typecheck/build/Ruff passed, all 22 browser workflows passed.
+Initial backend: 2,671 passed/9 schema-setting skips; all nine were subsequently
+run successfully. Final frozen full suite with every database setting is running.
+Independent review corrections: guard only OrgMixin tenant tables, validate all
+cursors before writes, disabled streams are skipped, and planning replay retires
+obsolete current named-company edges while preserving history/evidence.
+The first browser run used alternate ports: five existing hard-coded-port tests
+failed; default free-port reruns passed without weakening those tests.
+
+Next: finish full verification and independent review, record exact receipts,
+checkpoint locally. Publishing/merge/release plus bounded production repair
+were explicitly approved after checks: at most 25,000 stored permits plus 100
+planning records, with no new sources, external/model calls, migrations, paid
+upgrades or public operational receipts. No migration or paid
+change is needed. See `docs/company-catalog-replay.md` for operator semantics.
+Earlier SF pending notes below are superseded by merged #273 and internal final
+acceptance, not authorization for any new operation.
+
 ## SF Derived-Location Release In Progress
 
 Latest role progress: restricted login provisioned/verified by taskdf035cda...exit0,

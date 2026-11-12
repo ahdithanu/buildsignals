@@ -14,6 +14,65 @@ SF_VIEWER_ID = "44444444-4444-4444-8444-444444444444"
 SF_ORG_ID = "55555555-5555-4555-8555-555555555555"
 SF_SOURCE_ID = "66666666-6666-4666-8666-666666666666"
 SF_PERMIT_ID = "88888888-8888-4888-8888-888888888888"
+RETAIL_ORG_ID = "99999999-9999-4999-8999-999999999999"
+
+
+def _seed_retail_replay_fixture(db, directory):
+    import csv
+    from datetime import datetime, timezone
+
+    from app.models.brand import BrandProfile, PermitBrandMatch
+    from app.models.ingestion import PermitRecord
+    from app.models.organization import Organization
+    from app.models.organization_membership import MemberRole, OrganizationMembership
+    from app.models.user import User
+    from app.schemas.ingestion import IngestionSourceCreate
+    from app.services.brand_intelligence import backfill_brand_matches_batch
+    from app.services.company_catalog import ensure_company_catalog
+    from app.services.ingestion.service import create_source, execute_source_run
+    from app.services.security import hash_password
+    from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
+
+    user = User(email="synthetic-retail-viewer@example.com", full_name="Synthetic retail viewer",
+                password_hash=hash_password("E2eRetailViewerOnly42!"), is_active=True)
+    db.add_all([user, Organization(id=RETAIL_ORG_ID, slug="synthetic-retail-replay",
+                                  name="SYNTHETIC retail replay workspace")])
+    db.flush()
+    db.add(OrganizationMembership(organization_id=RETAIL_ORG_ID, user_id=user.id,
+                                  role=MemberRole.viewer, is_default=True))
+    db.commit()
+    path = Path(directory) / "synthetic-retail.csv"
+    row = {"id": "SYNTHETIC-RETAIL-001", "stage": "pre_approval", "status": "Under Review",
+           "project": "Synthetic Starbucks tenant improvement", "description": "Retail build-out for Starbucks Coffee",
+           "address": "100 Main St", "city": "Austin", "state": "TX",
+           "filed": datetime.now(timezone.utc).isoformat()}
+    with path.open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(row))
+        writer.writeheader()
+        writer.writerow(row)
+    mappings = dict(id="source_record_id", stage="approval_stage", status="status", project="project_name",
+                    description="description", address="address", city="city", state="state", filed="filed_at")
+    token = set_current_context(RequestContext(RETAIL_ORG_ID, user.id))
+    try:
+        source = create_source(db, IngestionSourceCreate(
+            key="synthetic-retail-replay", name="SYNTHETIC local CSV fixture", adapter="csv",
+            record_type="permit", base_url=str(path), jurisdiction="Austin, TX",
+            field_mappings=[{"source_field": key, "canonical_field": value} for key, value in mappings.items()],
+        ))
+        db.commit()
+        ingestion = execute_source_run(db, source, max_pages=1)
+        assert ingestion.records_inserted == 1 and ingestion.records_failed == 0
+        assert db.query(BrandProfile).filter_by(organization_id=RETAIL_ORG_ID).count() == 0
+        assert db.query(PermitBrandMatch).filter_by(organization_id=RETAIL_ORG_ID).count() == 0
+        permit = db.query(PermitRecord).filter_by(organization_id=RETAIL_ORG_ID).one()
+        evidence_id, filed_at = permit.latest_raw_record_id, permit.filed_at
+        ensure_company_catalog(db, RETAIL_ORG_ID)
+        result = backfill_brand_matches_batch(db, batch_size=1)
+        db.commit()
+        assert result.matches_created == 1
+        assert (permit.latest_raw_record_id, permit.filed_at) == (evidence_id, filed_at)
+    finally:
+        reset_current_context(token)
 
 
 def _deny_external_sockets():
@@ -196,6 +255,7 @@ def main():
                                 settings={"synthetic_e2e_fixture": True, "schedule": {"enabled": False}}),
             ])
             db.commit()
+            _seed_retail_replay_fixture(db, directory)
             if sf_map_enabled:
                 _seed_sf_map_fixture(db)
 

@@ -27,6 +27,65 @@ function LocationProbe() {
 }
 
 describe("<PermitBrandReview>", () => {
+  it("honors status=all expansion links and preserves their scope when filters change", async () => {
+    const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
+    hook.mockReturnValue({
+      data: [], isLoading: false, error: null, isFetching: false, refetch: vi.fn(),
+      review: { isPending: false, mutate: vi.fn(), variables: undefined },
+      createOpportunity: { isPending: false, mutate: vi.fn(), variables: undefined },
+    });
+    render(
+      <MemoryRouter initialEntries={["/permit-review?status=all&cohort=national_retail&brand_id=brand-1&stage=approved&freshness=active&detection_method=historical_party&limit=250"]}>
+        <Routes>
+          <Route path="/permit-review" element={<><LocationProbe /><PermitBrandReview /></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({
+      review_status: undefined, cohort: "national_retail", brand_id: "brand-1",
+      approval_stage: "approved", freshness: "active", detection_method: "historical_party",
+      sort_by: "freshness", limit: 250,
+    });
+    expect(screen.getByText("No matches found")).toBeInTheDocument();
+    expect(screen.queryByText("Review queue is clear")).not.toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole("group", { name: "Detection method" }))
+      .getByRole("button", { name: "Direct" }));
+    await waitFor(() => {
+      const params = new URLSearchParams(screen.getByTestId("location-probe").textContent ?? "");
+      expect(Object.fromEntries(params)).toEqual({
+        status: "all", cohort: "national_retail", brand_id: "brand-1", stage: "approved",
+        freshness: "active", detection_method: "direct_alias", limit: "250",
+      });
+    });
+    expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({
+      review_status: undefined, detection_method: "direct_alias", cohort: "national_retail",
+      brand_id: "brand-1", approval_stage: "approved", freshness: "active", limit: 250,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Confirmed$/ }));
+    await waitFor(() => expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({ review_status: "confirmed" }));
+    const statusGroup = screen.getByRole("button", { name: "Needs review" }).parentElement!;
+    fireEvent.click(within(statusGroup).getByRole("button", { name: /^All$/ }));
+    await waitFor(() => {
+      expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({ review_status: undefined });
+      expect(new URLSearchParams(screen.getByTestId("location-probe").textContent ?? "").get("status")).toBe("all");
+    });
+  });
+
+  it("keeps an invalid status URL on the default candidate queue", () => {
+    const hook = usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>;
+    hook.mockReturnValue({
+      data: [], isLoading: false, error: null, isFetching: false, refetch: vi.fn(),
+      review: { isPending: false, mutate: vi.fn(), variables: undefined },
+      createOpportunity: { isPending: false, mutate: vi.fn(), variables: undefined },
+    });
+    render(<MemoryRouter initialEntries={["/permit-review?status=invalid"]}><PermitBrandReview /></MemoryRouter>);
+    expect(hook.mock.calls[hook.mock.calls.length - 1]?.[0]).toMatchObject({ review_status: "candidate" });
+    expect(screen.getByText("Review queue is clear")).toBeInTheDocument();
+  });
+
   it("shows both pre-approval and approved counts in the review summary", () => {
     (usePermitBrandMatchQueue as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [
