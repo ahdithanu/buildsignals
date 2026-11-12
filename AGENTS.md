@@ -34,6 +34,15 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
+SF map work is local on `codex/sf-map-qualification` in its isolated worktree.
+Read `docs/sf-derived-locations.md` before continuing. Strict tenant/source-scoped
+geocoding stores separate evidence; bounded worker defaults to plan/no requests
+or writes. Map fallback is default-off; demo-Columbus guards stay unchanged.
+Local full verification:2,625backend/428frontend/21browser passed; PostgreSQL
+drift check needs no migration. User approved20publicaddresses/1,000filings,
+bounded qualification/backfill and merge/map release after checks. No larger
+backfill, migration, paid upgrade or NJ activation. Live receipts remain separate.
+
 November11 staged release authorized: PR271/272 merged; fresh SF public and
 exact-image/tenant-read-only preflight passed. Only SF's daily schedule was added;
 all23 schedules enabled. Actual scheduled collection/manual replay each reconciled

@@ -2,6 +2,13 @@
 
 @AGENTS.md
 
+SF geocode/map qualification is local on `codex/sf-map-qualification`; read
+`docs/sf-derived-locations.md`. Separate derived evidence, strict stale-address
+and tenant checks, plan-first bounded worker and default-off map fallback.
+User approved20publicaddresses/1,000filings and bounded qualification/backfill plus
+merge/map release after checks. Local2,625backend/428frontend/21browserpassed;
+no migration needed. Do not replace live zero-coordinate receipts without audit.
+
 November11 staged release: PR271/272 merged, SF exact-image preflight passed,
 SF daily schedule added. Actual scheduled/replay collection passed6,711rows;
 replay zero inserts/updates, read-only audit6,711evidence/graphlinks,0coordinates

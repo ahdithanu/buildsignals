@@ -1,5 +1,35 @@
 # Current Agent Handoff
 
+## SF Derived-Location Release In Progress
+
+After the user asked to continue, created `.worktrees/sf-map-qualification`, branch
+`codex/sf-map-qualification`, from verified receipt6e8af66 (merged-main runtime).
+Root research/dirty work remains untouched. Parent owns strict SF geocode core,
+bounded plan-first worker/config/tests; agents own disjoint map/readiness and UI/
+browser tests. Existing demo restrictions and raw/native coordinates are preserved.
+
+Implemented source-scoped current-address hash/provenance/age checks, native point
+precedence and before-pagination filtering behind SF_DERIVED_LOCATIONS_ENABLED
+(default false). Worker caps address queries/scanned rows, deduplicates literal
+requests, rechecks in-flight changes and redacts errors. No geocoder endpoint or
+response metadata is exposed in the map payload. Existing citations retained.
+51core/worker tests,7restricted-role disposable PostgreSQL hash/map/RLS tests,
+2,625fullbackend(no skips)/428frontend/21real-APIChromium tests passed.
+Typecheck/build/Ruff/whitespace pass. PostgreSQL drift check:no new upgrades.
+Build has existing warnings. SF screenshot markers inspected at1440/390;
+external tiles blocked intentionally, not live basemap acceptance. Nearby search
+still requires source coordinates and a confirmed retailer; UI labels estimates.
+
+User approved20publicaddresses/1000filings qualification/backfill and merge/map
+release after checks. No production geocoder requests/writes or API/map release
+occurred yet. No migration/paid upgrade/NJ activation. See `docs/sf-derived-locations.md` for exact scope, commands, primary docs,
+precision/benchmark limits and next parcel-source qualification dependency.
+Live SF ingestion remains6,711evidence/graphlinked,zero coordinates at last audit.
+Next:publish reviewed branch, wait hosted checks, exact-image read-only production
+schema/RLS check and bounded provider qualification, then merge and staged release.
+Do not invoke deploy-aws.yml (it includes migrations/latest rewrites). Preserve
+investment-private-3a814ee rollback, all current secrets/settings and23schedules.
+
 ## November 11 Approved Staged SF Release
 
 User approved merge271then272, reviewed worker release and gated SF activation.
