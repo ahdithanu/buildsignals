@@ -7,6 +7,9 @@ Git/code state take precedence over stale notes.
 
 ## Operating Mode
 
+- For every browser task, open a fresh normal Chrome window and a new tab using
+  the browser-management window API. Leave all existing windows/tabs untouched.
+
 - November 12: the standing checklist automation was recreated ACTIVE every30m
   as `buildsignals-implementation-loop` after the old entry was found absent.
   Avoid overlapping writers; local work needs the computer/app running. Preserve
@@ -66,8 +69,14 @@ state retain focus trapping and dismiss the menu before the dialog. No dependenc
 change. Final Node22.23.5:436unit/26browser tests passed, zero retries; typecheck,
 build and lint passed (existing warnings). Full accessibility/production acceptance
 remain separate. See e2e/README.md for the exact offline fixture/command.
-Parent serializes the approved green-only merges and frontend-only release;
-this recovery integration preserves the merged UI files without modifying them.
+Parent verified the frontend-only production release of UI PR275: merged a82b3cc
+is tree-equal to tested a80d4df, and Vercel is READY at the exact merged SHA on
+production domains. Fresh owner Chrome checks passed trigger focus and layered
+Escape for both Add Deal select menus, without Save or a write. Null-NOI behavior
+is covered synthetically, not by the empty live Inbox. API/workers are unchanged.
+Parent serializes remaining approved green-only merges; this recovery sidecar
+preserves UI files and must not release anything. Private audits stay internal;
+source activation and other production/paid gates remain unchanged.
 The retail repair was released and its one-shot replay consumed; older notes are
 historical. Actual next scheduled-cycle verification remains in the active chat.
 

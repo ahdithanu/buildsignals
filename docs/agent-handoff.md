@@ -2,6 +2,17 @@
 
 ## November 12: Recovery PR276 Integrates Merged UI PR275
 
+Latest parent-verified frontend state: PR275 is production-verified. Merged
+a82b3cc is tree-equal to tested a80d4df; Vercel is READY at the exact merged SHA
+on production domains. Actual fresh owner Chrome checks passed trigger focus
+and layered Escape for both Add Deal select menus, without Save or any write.
+The live Inbox was empty: null-NOI behavior remains synthetic-test coverage, not
+a live-data claim. API/workers are unchanged. For every browser task, use the
+browser-management window API to open a fresh normal Chrome window/new tab;
+leave existing windows/tabs untouched. Detailed audits remain private; no source
+activation, API/worker change, migration, paid upgrade or additional release is
+authorized by this status update.
+
 User approved staged publication/green-only merges and frontend-only release.
 Parent merged UI PR275 at reviewed head a80d4dfaef3494cccced07d45b0e588a45a7376f;
 origin/main is a82b3ccf337c58bef3a9ef4908b8710035b43758. The recovery worktree was
@@ -84,8 +95,9 @@ Actual production scheduled-cycle verification is a separate internal task.
 Recovery CLI hardening is integrated above. Prior repair approval below is
 historical and its replay consumed; it does not authorize these new releases.
 Publication/staged frontend release was subsequently approved. UI PR275 is merged
-at the reviewed a80d4df head; parent owns frontend release after checks. This
-recovery sidecar has no release authority.
+at the reviewed a80d4df head; parent subsequently verified the frontend-only
+production release as recorded above. This recovery sidecar has no release
+authority.
 Keep detailed operational/security receipts internal. Full axe/WCAG/screen-reader
 and live browser acceptance are unverified; no absent header bell is claimed tested.
 

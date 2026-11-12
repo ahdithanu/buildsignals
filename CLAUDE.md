@@ -2,6 +2,9 @@
 
 @AGENTS.md
 
+Every browser task must use a fresh normal Chrome window/new tab through the
+browser-management window API; leave existing windows/tabs untouched.
+
 November12current local task: `codex/recovery-preflight-hardening`, based on
 main8cd7d96, integrating main a82b3cc after UI PR275 merged. Require source
 DATABASE_URL and separate RESTORE_DATABASE_URL
@@ -17,14 +20,19 @@ actual scheduled cycle is watched separately in the active chat. Standing
 Merged UI context: `codex/acquisition-keyboard-acceptance` at a80d4df/PR275, synthetic
 desktop/mobile keyboard acceptance for existing Inbox/Add Deal/Top Opportunities
 flows. One writer owns the new E2E spec, parent owns docs. No source/model/
-production calls in its tests. Actual scheduled-cycle
-watch are separate; avoid overlapping writers. Standing30mcontinuation ACTIVE.
+production calls in its tests. Actual scheduled-cycle verification remains
+separate; avoid overlapping writers. Standing30mcontinuation ACTIVE.
 PR274 was released; earlier pending repair notes below do not authorize replay.
 The new tests reproduced a null-NOI preview crash and nested Radix focus/Escape
 conflicts. Metric guards, dialog-contained portals and controlled menu dismissal
 are locally verified on clean locked dependencies/Node22.23.5:436unit and26browser
-passed, no retries. No dependency change. Parent owns the approved staged
-green-only merges and frontend-only release; this integration preserves UI code.
+passed, no retries. No dependency change. Parent verified frontend production at
+merged a82b3cc (tree-equal to tested a80d4df), Vercel READY at the exact merged SHA
+on production domains. Fresh owner Chrome checks passed both Add Deal select
+menus' trigger focus/layered Escape, without Save/write. Null-NOI coverage remains
+synthetic, not live empty-Inbox coverage. API/workers are unchanged. Parent owns
+remaining green-only merges; this recovery sidecar does not release. Source,
+paid and other production gates remain; private audit details are not published.
 
 Current local work: `codex/retail-catalog-repair`, isolated from root research.
 Read `docs/company-catalog-replay.md` and the latest handoff. Direct workers now
