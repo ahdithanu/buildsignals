@@ -7,6 +7,11 @@ Git/code state take precedence over stale notes.
 
 ## Operating Mode
 
+- November12standing checklist continuation is ACTIVE every30minutes as
+  `buildsignals-implementation-loop`; avoid overlapping writers/collectors.
+  Local runs require the computer/app running. No new production/release/source
+  or paid authority is conveyed by continuation. Keep detailed receipts internal.
+
 - **Build with multiple agents by default.** Fan independent work out into parallel
   subagents (or a Workflow at scale) so there is no single point of failure or
   single-threaded bottleneck. Keep exactly one writer per set of files and
@@ -33,6 +38,23 @@ Git/code state take precedence over stale notes.
    material tradeoffs, missing credentials/rights, or actions outside authorization.
 
 ## Product and Architecture
+
+Current isolated local task: `codex/acquisition-keyboard-acceptance`, based on
+mergedmain8cd7d96. Add synthetic local desktop/mobile keyboard acceptance for
+Deal Inbox/Add Deal and Dashboard Top Opportunities (VALIDATION CR-1/H-5/H-7).
+Use deterministic local scoring and existing external-request guards; do not
+call models/sources/production or change product logic without a reproduced bug.
+Keyboard tests reproduced a null-NOI preview crash and nested Radix focus/Escape
+conflicts under clean locked dependencies. Scoped metric guards preserve unknown,
+zero and negative values. Dialog-contained select portals plus controlled menu
+state retain focus trapping and dismiss the menu before the dialog. No dependency
+change. Final Node22.23.5:436unit/26browser tests passed, zero retries; typecheck,
+build and lint passed (existing warnings). Full accessibility/production acceptance
+remain separate. See e2e/README.md for the exact offline fixture/command.
+Parent owns docs; one agent owns the new E2E file. Recovery CLI hardening is on a
+different branch/worktree; do not copy or modify it here. The retail repair was
+released and its one-shot replay consumed; older pending repair notes below are
+historical. Actual next scheduled-cycle verification remains in the active chat.
 
 Current repair is isolated in `.worktrees/retail-catalog-repair`, branch
 `codex/retail-catalog-repair`, based on merged main a0e8f4d. Direct recurring

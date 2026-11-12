@@ -1,5 +1,15 @@
 # Validation checklist — frontend release gate
 
+November12local follow-up on `codex/acquisition-keyboard-acceptance` passed
+436unit and26browser tests on Node22.23.5 with locked dependencies and zero browser
+retries. CR-1 and current H-5/H-7 controls have scoped desktop/mobile keyboard
+coverage; preview null handling and Add Deal focus/Escape defects were fixed.
+See e2e/README.md for the command, boundaries and remaining manual audit. This
+does not establish full accessibility or production browser acceptance. Numeric
+counts and Render-only deployment examples below are historical baseline notes,
+not current suite or hosting measurements. Read docs/agent-handoff.md for current
+scope and verification rather than reusing these historical counts.
+
 Automated gates (§1) are **green** on Node 20 as of the enterprise-readiness
 PR. Manual browser QA (§2) remains the release sign-off for accessibility
 and UX audit fixes.

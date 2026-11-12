@@ -2,6 +2,17 @@
 
 @AGENTS.md
 
+November12current local task: `codex/acquisition-keyboard-acceptance`, synthetic
+desktop/mobile keyboard acceptance for existing Inbox/Add Deal/Top Opportunities
+flows. One writer owns the new E2E spec, parent owns docs. No source/model/
+production calls or release. Other recovery hardening and actual scheduled-cycle
+watch are separate; avoid overlapping writers. Standing30mcontinuation ACTIVE.
+PR274 was released; earlier pending repair notes below do not authorize replay.
+The new tests reproduced a null-NOI preview crash and nested Radix focus/Escape
+conflicts. Metric guards, dialog-contained portals and controlled menu dismissal
+are locally verified on clean locked dependencies/Node22.23.5:436unit and26browser
+passed, no retries. No dependency change or production release; approvals pending.
+
 Current local work: `codex/retail-catalog-repair`, isolated from root research.
 Read `docs/company-catalog-replay.md` and the latest handoff. Direct workers now
 initialize company definitions before ingestion; a separate bounded stored replay
