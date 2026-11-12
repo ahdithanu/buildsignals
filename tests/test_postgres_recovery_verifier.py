@@ -31,6 +31,7 @@ def cli(monkeypatch):
     "postgresql://localhost/restored?dbname=production",
 ])
 def test_invalid_target_refused_before_engine_creation(cli, url):
+    cli.os.environ["DATABASE_URL"] = "postgresql://localhost/app"
     if url is not None:
         cli.os.environ["RESTORE_DATABASE_URL"] = url
     with pytest.raises(SystemExit) as exc:
@@ -40,9 +41,65 @@ def test_invalid_target_refused_before_engine_creation(cli, url):
     cli.verify_restored_postgres.assert_not_called()
 
 
+@pytest.mark.parametrize("source", [
+    pytest.param(None, id="missing"),
+    pytest.param("", id="empty"),
+    pytest.param("   ", id="blank"),
+    pytest.param("not-a-url-private-source-password", id="malformed"),
+    pytest.param("sqlite:///:memory:", id="sqlite"),
+    pytest.param(
+        "mysql://private-source-user:private-source-password@private-source.example/app",
+        id="mysql",
+    ),
+    pytest.param(
+        "postgresql://private-source-user:private-source-password@/app",
+        id="hostless",
+    ),
+    pytest.param(
+        "postgresql://private-source-user:private-source-password@private-source.example",
+        id="missing-database",
+    ),
+    pytest.param(
+        "postgresql://private-source-user:private-source-password@private-source.example:invalid/app",
+        id="invalid-port",
+    ),
+    *[
+        pytest.param(
+            "postgresql://private-source-user:private-source-password@private-source.example/app?"
+            + query,
+            id="routing-" + name,
+        )
+        for name, query in (
+            ("host", "host=private-route.example"),
+            ("hostaddr", "hostaddr=192.0.2.77"),
+            ("port", "port=5433"),
+            ("dbname", "dbname=private-route-database"),
+            ("service", "service=private-route-service"),
+        )
+    ],
+])
+def test_invalid_source_refused_before_engine_creation_without_disclosure(cli, source, capsys):
+    cli.os.environ["RESTORE_DATABASE_URL"] = (
+        "postgresql://private-target-user:private-target-password@private-target.example/restored"
+    )
+    if source is not None:
+        cli.os.environ["DATABASE_URL"] = source
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+    assert exc.value.code == 2
+    cli.create_engine.assert_not_called()
+    cli.verify_restored_postgres.assert_not_called()
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert not any(private in captured.err for private in (
+        "private-source", "private-target", "private-route", "192.0.2.77",
+    ))
+
+
 def test_acknowledgment_is_required(cli):
     cli.sys.argv = ["verify_postgres_recovery.py"]
-    cli.os.environ["RESTORE_DATABASE_URL"] = "postgresql://localhost/restored"
+    cli.os.environ.update(DATABASE_URL="postgresql://localhost/app",
+                          RESTORE_DATABASE_URL="postgresql://localhost/restored")
     with pytest.raises(SystemExit) as exc:
         cli.main()
     assert exc.value.code == 2
@@ -83,7 +140,8 @@ def test_only_explicit_boolean_pass_is_accepted(cli, capsys, passed, exit_code):
 
 @pytest.mark.parametrize("stage", ["engine", "probe"])
 def test_failures_are_redacted_and_created_engine_is_disposed(cli, capsys, stage):
-    cli.os.environ["RESTORE_DATABASE_URL"] = "postgresql://user:private-password@localhost/restored"
+    cli.os.environ.update(DATABASE_URL="postgresql://localhost/app",
+                          RESTORE_DATABASE_URL="postgresql://user:private-password@localhost/restored")
     engine = Mock()
     failure = RuntimeError("private-password connection details")
     if stage == "engine":
@@ -105,7 +163,8 @@ def test_failures_are_redacted_and_created_engine_is_disposed(cli, capsys, stage
 
 @pytest.mark.parametrize("report", [{}, None, [], {"passed": "true"}])
 def test_missing_or_malformed_acceptance_fails_closed(cli, report):
-    cli.os.environ["RESTORE_DATABASE_URL"] = "postgresql://localhost/restored"
+    cli.os.environ.update(DATABASE_URL="postgresql://localhost/app",
+                          RESTORE_DATABASE_URL="postgresql://localhost/restored")
     engine = Mock()
     cli.create_engine.side_effect = None
     cli.create_engine.return_value = engine

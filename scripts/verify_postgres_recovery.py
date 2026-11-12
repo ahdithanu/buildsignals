@@ -28,12 +28,12 @@ def main():
     parser.add_argument("--isolated-restored-copy", action="store_true", required=True)
     args = parser.parse_args()
     url = os.environ.get("RESTORE_DATABASE_URL")
-    if not args.isolated_restored_copy or not url or url == os.environ.get("DATABASE_URL"):
-        parser.error("Set RESTORE_DATABASE_URL to a separate restored copy; never the production database")
+    source = os.environ.get("DATABASE_URL")
+    if not args.isolated_restored_copy or not url or not source or url == source:
+        parser.error("Set DATABASE_URL and a separate RESTORE_DATABASE_URL; never probe the production database")
     try:
         target = _database_identity(url)
-        source = os.environ.get("DATABASE_URL")
-        if source and target == _database_identity(source):
+        if target == _database_identity(source):
             raise ValueError("Same database")
     except (ArgumentError, ValueError, TypeError):
         parser.error("Use an explicit PostgreSQL host/database distinct from DATABASE_URL; no routing overrides")

@@ -7,6 +7,12 @@ Git/code state take precedence over stale notes.
 
 ## Operating Mode
 
+- November 12: the standing checklist automation was recreated ACTIVE every30m
+  as `buildsignals-implementation-loop` after the old entry was found absent.
+  Avoid overlapping writers; local work needs the computer/app running. Preserve
+  production, release and source-use gates; this is not an app-open trigger or a
+  replacement automation for the current chat's actual scheduled-cycle watch.
+
 - **Build with multiple agents by default.** Fan independent work out into parallel
   subagents (or a Workflow at scale) so there is no single point of failure or
   single-threaded bottleneck. Keep exactly one writer per set of files and
@@ -33,6 +39,15 @@ Git/code state take precedence over stale notes.
    material tradeoffs, missing credentials/rights, or actions outside authorization.
 
 ## Product and Architecture
+
+Current local work is `codex/recovery-preflight-hardening` in its own worktree,
+based on merged main8cd7d96. Recovery CLI now requires valid explicit source and
+restored-target database identities before engine creation. Only offline tests
+and a disposable localhost regression database are authorized for this slice;
+no real restore, production connection, migration, push or release. Read the
+latest handoff. Earlier pending retail repair notes below are superseded:
+PR274 was released, its bounded replay is consumed, and actual next scheduled
+runs remain pending before Nov12Pacific1:46PM. Detailed receipts stay internal.
 
 Current repair is isolated in `.worktrees/retail-catalog-repair`, branch
 `codex/retail-catalog-repair`, based on merged main a0e8f4d. Direct recurring

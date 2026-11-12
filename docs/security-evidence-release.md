@@ -103,7 +103,9 @@ inventory pagination and filters, and unavailable/retry states at three widths.
 
 Restore an approved provider backup to an isolated database first. Set
 `RESTORE_DATABASE_URL` securely to that copy using its restricted application
-role, then run:
+role, and supply the actual source `DATABASE_URL` for identity comparison. Both
+must identify an explicit PostgreSQL host and database; the CLI refuses missing
+or invalid identities before creating an engine. Never print either URL. Then run:
 
 ```sh
 python scripts/verify_postgres_recovery.py --isolated-restored-copy

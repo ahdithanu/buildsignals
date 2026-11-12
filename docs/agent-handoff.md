@@ -1,5 +1,36 @@
 # Current Agent Handoff
 
+## November 12: Fail-Closed Recovery Preflight (Local Only)
+
+Current branch `codex/recovery-preflight-hardening`, isolated worktree of that
+name, based on origin/main8cd7d96. Independent backlog audit found missing/empty
+source DATABASE_URL skipped source/target identity comparison and reached engine
+creation. Test writer reproduced2failures/41passes in the focused file. Minimal
+CLI fix now requires both identities, parses both and rejects equivalent targets
+before any engine creation.14invalid-source cases cover missing/empty/blank,
+malformed, non-PostgreSQL, hostless/databaseless, invalid port and routing
+overrides, with no connection details disclosed. Existing target/path tests now
+explicitly supply a valid source. Focused43passed; full backend regression with
+all three PostgreSQL settings passed2,700tests/zero skips in344.49s, with3existing
+geography-reflection warnings. Whole backend Ruff and whitespace checks passed.
+Independent review found no defects in this slice. No app/src logic, schema or
+dependencies changed. A separate ambient-libpq-routing finding will be addressed
+in the next local commit; do not treat this first guard as complete target proof.
+No source/model/production calls, actual restore, push, merge or release in this
+slice. The probe still cannot establish snapshot provenance, detect DNS aliases
+or independently validate a supplied restored-copy claim. Real restore/RPO/RTO
+acceptance remains gated. Next: deny ambient routing overrides with offline tests,
+then re-run the regression gate; keep actual scheduled-cycle watch separate.
+
+Current product state supersedes older pending notes below: PR274/8cd7d96 was
+released; bounded catalog repair is consumed. Current-chat next actual23job
+verification remains pending before firstdueNov12Pacific1:46PM; private collector
+state belongs to the parent and must not be reset or concurrently modified.
+The standing implementation automation was recreated ACTIVE every30m after its
+old app entry was absent. It advances other existing unblocked checklist items,
+not duplicate writers or an automation to track this specific scheduled cycle.
+Production/release/source/paid gates remain unchanged. Receipts remain internal.
+
 ## Retail Catalog Repair (Local, Not Released)
 
 Worktree `.worktrees/retail-catalog-repair`, branch `codex/retail-catalog-repair`,

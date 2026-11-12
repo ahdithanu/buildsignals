@@ -43,8 +43,9 @@ complete geographic coverage, parcel matches or for-sale availability.
 
 `scripts/verify_postgres_recovery.py` must run only against an independently
 identified isolated restored copy using the restricted application role. Set
-`RESTORE_DATABASE_URL` securely; keep the actual source `DATABASE_URL` available
-for identity comparison. Never print either value.
+`RESTORE_DATABASE_URL` securely; the actual source `DATABASE_URL` is also required
+for identity comparison. Missing, blank, malformed or unsupported identities on
+either side are rejected before engine creation. Never print either value.
 
 ```sh
 .venv/bin/python scripts/verify_postgres_recovery.py --isolated-restored-copy

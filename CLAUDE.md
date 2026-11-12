@@ -2,6 +2,15 @@
 
 @AGENTS.md
 
+November12current local task: `codex/recovery-preflight-hardening`, based on
+mergedmain8cd7d96. Require source DATABASE_URL and separate RESTORE_DATABASE_URL
+identities before engine creation; tests use mocks/disposable localhost only.
+No production restore, source activation, push, merge or deployment authorized.
+PR274 retail repair was released and its one-shot replay is consumed; older
+pending repair notes below are historical, not authority to repeat it. The next
+actual scheduled cycle is watched separately in the active chat. Standing
+30-minute checklist continuation was recreated; avoid overlapping writers.
+
 Current local work: `codex/retail-catalog-repair`, isolated from root research.
 Read `docs/company-catalog-replay.md` and the latest handoff. Direct workers now
 initialize company definitions before ingestion; a separate bounded stored replay
