@@ -47,7 +47,7 @@ const methodFilters: Array<{ value: MethodFilter; label: string }> = [
 ];
 
 function parseStatusFilter(value: string | null): StatusFilter {
-  return value === 'candidate' || value === 'confirmed' || value === 'dismissed' || value === 'retracted'
+  return value === 'all' || value === 'candidate' || value === 'confirmed' || value === 'dismissed' || value === 'retracted'
     ? value
     : 'candidate';
 }
