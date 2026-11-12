@@ -99,7 +99,7 @@ at the reviewed a80d4df head; parent subsequently verified the frontend-only
 production release as recorded above. This recovery sidecar has no release
 authority.
 Keep detailed operational/security receipts internal. Full axe/WCAG/screen-reader
-and live browser acceptance are unverified; no absent header bell is claimed tested.
+and broader live workflows remain unverified; no absent header bell is claimed tested.
 
 ## Retail Catalog Repair (Local, Not Released)
 
