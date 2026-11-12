@@ -20,11 +20,16 @@ const EMPTY_FORM = { name: '', address: '', market: '', assetClass: '', askingPr
 
 export function AddDealModal({ open, onOpenChange, onAdd, submitting = false }: AddDealModalProps) {
   const [form, setForm] = useState(EMPTY_FORM);
+  const [selectContainer, setSelectContainer] = useState<HTMLDivElement | null>(null);
+  const [openSelect, setOpenSelect] = useState<'asset' | 'market' | null>(null);
 
   // Reset when the modal closes so a reopen starts clean — and so input isn't
   // lost mid-flight (the parent closes only on success).
   useEffect(() => {
-    if (!open) setForm(EMPTY_FORM);
+    if (!open) {
+      setForm(EMPTY_FORM);
+      setOpenSelect(null);
+    }
   }, [open]);
 
   const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
@@ -40,7 +45,17 @@ export function AddDealModal({ open, onOpenChange, onAdd, submitting = false }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        ref={setSelectContainer}
+        className="sm:max-w-md"
+        onEscapeKeyDown={event => {
+          // Dismiss the active select before its enclosing dialog.
+          if (openSelect) {
+            event.preventDefault();
+            setOpenSelect(null);
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="font-display">Add New Deal</DialogTitle>
         </DialogHeader>
@@ -56,18 +71,18 @@ export function AddDealModal({ open, onOpenChange, onAdd, submitting = false }: 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="deal-asset-type">Asset Type *</Label>
-              <Select value={form.assetClass} onValueChange={v => update('assetClass', v)}>
+              <Select value={form.assetClass} onValueChange={v => update('assetClass', v)} open={openSelect === 'asset'} onOpenChange={isOpen => setOpenSelect(isOpen ? 'asset' : null)}>
                 <SelectTrigger id="deal-asset-type" aria-label="Asset Type"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent container={selectContainer}>
                   {assetTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="deal-market">Market *</Label>
-              <Select value={form.market} onValueChange={v => update('market', v)}>
+              <Select value={form.market} onValueChange={v => update('market', v)} open={openSelect === 'market'} onOpenChange={isOpen => setOpenSelect(isOpen ? 'market' : null)}>
                 <SelectTrigger id="deal-market" aria-label="Market"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent container={selectContainer}>
                   {marketOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                 </SelectContent>
               </Select>

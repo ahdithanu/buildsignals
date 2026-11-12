@@ -6,6 +6,42 @@ screening, and AI evaluations.
 
 ## Verification status
 
+### Keyboard Acquisition Journeys (November 12, 2026)
+
+`tests/keyboard-accessibility.spec.ts` exercises Inbox preview and Dashboard Top
+Opportunities at 1440x1000 and 390x844 against a newly migrated disposable API.
+All deals are explicitly synthetic. Setup/scoring requests are localhost-only,
+disable redirects and require deterministic scoring. Browser external HTTP and
+WebSocket requests are blocked, service workers disabled, and traces/videos off.
+The existing SF opt-in also activates the backend external-socket guard.
+
+The four journeys verify bounded real Tab navigation; Enter/Space activation;
+visible nontransparent, positive-size focus rings; modal focus containment;
+named form/search/filter controls; contained, unobscured option menus; Escape
+returning focus to each trigger; menu/dialog reopening and form reset; and exact
+saved-deal navigation. Two real defects were reproduced before the fixes: null
+financials crashed preview, and independently scoped Radix portals interfered
+with focus/Escape. Shared default body-portal behavior remains unchanged for
+callers that do not opt into the dialog container. No dependency upgrade.
+
+After confirming both default ports are free:
+
+```sh
+env -u DEMO_TEST_SNAPSHOT_DIR OPENROUTER_API_KEY= SCORING_MODE=deterministic \
+  RUN_SF_MAP_E2E=1 RUN_LIVE_INVESTMENT_AREAS=1 \
+  E2E_API_PORT=8000 E2E_WEB_PORT=8080 PYTHON=/path/to/project/.venv/bin/python \
+  npm run e2e -- --workers=1 --retries=0 --trace=off
+```
+
+Frozen local result on Node22.23.5: **26 passed**, zero skipped/retries, including
+all four new cases. `npm test`: **436 passed**; typecheck/build/lint also passed.
+Existing lint/build warnings remain. Screenshots were inspected; per-run outputs
+are ignored local artifacts, not committed data. This uses the default synthetic
+demo fixture, not an acquisition/coverage claim for the 2,049-row historical demo.
+No full axe/WCAG audit, screen-reader or production acceptance is claimed. The
+current header has no notification bell; that historical checklist item is not
+presented as a tested control.
+
 On 2026-09-20 the acquisition screening spec passed at desktop (1440x1000)
 and mobile (390x844) sizes with real local API responses in disposable SQLite.
 It exercises registration, fixture deal creation, profile switching, market
