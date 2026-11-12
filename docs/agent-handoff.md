@@ -2,6 +2,16 @@
 
 ## SF Derived-Location Release In Progress
 
+Production effective-isolation gate FAILED on the existing credential. No
+geocoder requests/derived writes/merge/rollout followed it. User approved scoped
+runtime-role remediation, staged API/workers and actual isolation verification,
+no migrations/paid upgrade. Separate Standard encrypted runtime parameter prepared;
+administrative secret preserved. Role provisioning is in progress. New worker
+guard checks effective RLS plus metadata/role flags before fetch/write;59targeted
+core/worker tests passed. Frozen334d629 hosted CI passed2,625tests/91.31%coverage,
+frontend/E2E/pre-commit/gitleaks/preview green; guard follow-up needs hosted checks.
+Do not infer remediation acceptance or live maps until new receipts pass.
+
 After the user asked to continue, created `.worktrees/sf-map-qualification`, branch
 `codex/sf-map-qualification`, from verified receipt6e8af66 (merged-main runtime).
 Root research/dirty work remains untouched. Parent owns strict SF geocode core,

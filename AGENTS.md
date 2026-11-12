@@ -42,6 +42,10 @@ Local full verification:2,625backend/428frontend/21browser passed; PostgreSQL
 drift check needs no migration. User approved20publicaddresses/1,000filings,
 bounded qualification/backfill and merge/map release after checks. No larger
 backfill, migration, paid upgrade or NJ activation. Live receipts remain separate.
+Production effective-isolation preflight failed, so backfill/release are held.
+User approved scoped runtime-role remediation; encrypted Standard parameter is
+prepared, role/API/worker acceptance pending. New fail-closed worker guard has
+59core/worker regression passes. Keep admin credentials out of runtime access.
 
 November11 staged release authorized: PR271/272 merged; fresh SF public and
 exact-image/tenant-read-only preflight passed. Only SF's daily schedule was added;

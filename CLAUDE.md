@@ -8,6 +8,9 @@ and tenant checks, plan-first bounded worker and default-off map fallback.
 User approved20publicaddresses/1,000filings and bounded qualification/backfill plus
 merge/map release after checks. Local2,625backend/428frontend/21browserpassed;
 no migration needed. Do not replace live zero-coordinate receipts without audit.
+Production effective-isolation gate failed; user approved scoped runtime-role
+remediation. Standard encrypted credential prepared; role and staged rollout
+pending. Backfill now fails closed without effective RLS;59focusedtests pass.
 
 November11 staged release: PR271/272 merged, SF exact-image preflight passed,
 SF daily schedule added. Actual scheduled/replay collection passed6,711rows;

@@ -5,6 +5,8 @@ import argparse
 import json
 import time
 
+from sqlalchemy import text
+
 from app.db import SessionLocal
 from app.models.ingestion import IngestionSource, PermitRecord
 from app.models.organization import Organization
@@ -23,6 +25,22 @@ from app.utils.org_scope import RequestContext, reset_current_context, set_curre
 
 MAX_LIMIT = 200
 MAX_SCAN = 5000
+
+
+def _require_runtime_rls(db):
+    if db.get_bind().dialect.name != "postgresql":
+        return
+    with db.no_autoflush:
+        checks = db.execute(text("""
+            SELECT pg_catalog.row_security_active('public.permit_geocodes'::regclass),
+                   NOT r.rolsuper, NOT r.rolbypassrls,
+                   c.relrowsecurity, c.relforcerowsecurity
+            FROM pg_catalog.pg_class AS c
+            JOIN pg_catalog.pg_roles AS r ON r.rolname = current_user
+            WHERE c.oid = 'public.permit_geocodes'::regclass
+        """)).one()
+    if len(checks) != 5 or any(value is not True for value in checks):
+        raise PermissionError("SF geocoding requires effective tenant RLS on permit_geocodes")
 
 
 def _fetch(url):
@@ -50,6 +68,7 @@ def run(organization_id: str, *, limit=20, scan_limit=1000, after_permit_id=None
         "next_after_permit_id": None}
     try:
         with session_factory() as db:
+            _require_runtime_rls(db)
             org = db.get(Organization, organization_id)
             source = db.query(IngestionSource).filter_by(organization_id=organization_id,
                 key=SOURCE_KEY, base_url=SOURCE_URL, is_active=True).one_or_none()
@@ -85,6 +104,7 @@ def run(organization_id: str, *, limit=20, scan_limit=1000, after_permit_id=None
                 if url not in cache:
                     result["addresses_planned"] += 1
                     if execute:
+                        _require_runtime_rls(db)
                         result["addresses_attempted"] += 1
                         try:
                             cache[url] = fetch(url)
@@ -97,6 +117,7 @@ def run(organization_id: str, *, limit=20, scan_limit=1000, after_permit_id=None
                     else:
                         cache[url] = None
                 if execute:
+                    _require_runtime_rls(db)
                     db.refresh(permit)
                     try:
                         saved = save_match(db, permit, cache[url], url)

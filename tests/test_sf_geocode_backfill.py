@@ -1,4 +1,5 @@
 from copy import deepcopy
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -20,6 +21,67 @@ def factory(db):
         def __exit__(self, *_):
             pass
     return Borrowed
+
+
+def postgres_guard_session(db, flags):
+    class GuardSession:
+        def get_bind(self):
+            return SimpleNamespace(dialect=SimpleNamespace(name="postgresql"))
+
+        def execute(self, statement):
+            sql = str(statement)
+            assert "pg_catalog.row_security_active('public.permit_geocodes'::regclass)" in sql
+            assert "pg_catalog.pg_roles" in sql and "current_user" in sql
+            assert "pg_catalog.pg_class" in sql and "relforcerowsecurity" in sql
+            return SimpleNamespace(one=lambda: tuple(flags))
+
+        def __getattr__(self, name):
+            return getattr(db, name)
+
+    return GuardSession()
+
+
+@pytest.mark.parametrize("flags", [
+    [False, True, True, True, True],  # Metadata/role flags pass; effective RLS does not.
+    [True, False, True, True, True],
+    [True, True, False, True, True],
+    [True, True, True, False, True],
+    [True, True, True, True, False],
+    [None, True, True, True, True],
+])
+def test_postgres_runtime_guard_rejects_before_fetch_or_write(db, monkeypatch, flags, capsys, caplog):
+    _, _, response = stored(db)
+    fetch = Mock(return_value=response)
+    save = Mock(side_effect=AssertionError("write must not be reached"))
+    monkeypatch.setattr(worker, "save_match", save)
+    with pytest.raises(PermissionError, match="effective tenant RLS"):
+        run("default-org", execute=True, fetch=fetch, sleep=lambda _: None,
+            session_factory=factory(postgres_guard_session(db, flags)))
+    assert not fetch.called and not save.called
+    assert db.query(PermitGeocode).count() == 0
+    output = capsys.readouterr()
+    assert not output.out and not output.err and not caplog.text
+
+
+def test_postgres_runtime_guard_accepts_effective_restricted_role(db):
+    _, _, response = stored(db)
+    fetch = Mock(return_value=response)
+    result = run("default-org", execute=True, fetch=fetch, sleep=lambda _: None,
+        session_factory=factory(postgres_guard_session(db, [True] * 5)))
+    assert fetch.call_count == result["filings_located"] == 1
+    assert db.query(PermitGeocode).count() == 1
+
+
+def test_postgres_runtime_guard_rechecks_after_response_before_write(db):
+    _, _, response = stored(db)
+    flags = [True] * 5
+    def fetch(_):
+        flags[0] = False
+        return response
+    with pytest.raises(PermissionError, match="effective tenant RLS"):
+        run("default-org", execute=True, fetch=fetch, sleep=lambda _: None,
+            session_factory=factory(postgres_guard_session(db, flags)))
+    assert db.query(PermitGeocode).count() == 0
 
 
 def duplicate(db, permit, suffix, *, address=None):

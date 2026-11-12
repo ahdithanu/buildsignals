@@ -14,6 +14,25 @@ paid-service upgrade or NJ activation. Existing recurring ingestion stays enable
 Production qualification and release receipts must be recorded separately below;
 local verification is not live map acceptance.
 
+## Production Gate Follow-Up
+
+The first exact-image production preflight failed the behavioral isolation gate.
+Role/table metadata alone was insufficient; do not treat local RLS tests or
+enabled production policies as proof of effective production isolation. No
+geocoder transmission, derived-data write, merge or rollout followed that failure.
+The user separately approved scoped runtime database-role remediation with
+staged API/worker credential changes, no schema migration or paid upgrade.
+The administrative secret is retained separately; a Standard encrypted runtime
+parameter was prepared. Role provisioning and effective isolation acceptance are
+still pending. Existing schedules remain enabled. Record final receipts before
+claiming this gate fixed.
+
+The operator worker now checks effective PostgreSQL RLS, forced/enabled metadata
+and non-super/non-bypass role flags before fetching and before writes. All must
+be true; unknowns fail closed. SQLite remains offline-test-only. The updated
+core/worker regression suite passed 59 tests; these simulated guard tests do not
+substitute for the pending actual restricted-role production probe.
+
 ## Contract
 
 - `app/services/sf_geocoding.py` validates one unambiguous Census match for the
