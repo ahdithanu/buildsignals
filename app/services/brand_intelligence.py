@@ -468,7 +468,9 @@ def backfill_brand_matches_batch(
     )
     if after_id:
         query = query.filter(PermitRecord.id > after_id)
-    rows = query.order_by(PermitRecord.id).limit(batch_size + 1).all()
+    rows = query.order_by(PermitRecord.id).limit(batch_size + 1).with_for_update(
+        of=PermitRecord,
+    ).populate_existing().all()
     permits = rows[:batch_size]
     if not permits:
         return BrandMatchBackfillBatchResult(0, 0, 0, 0, after_id, False)
@@ -481,7 +483,7 @@ def backfill_brand_matches_batch(
     for permit in permits:
         existing = active_query(db.query(PermitBrandMatch), PermitBrandMatch).filter(
             PermitBrandMatch.permit_id == permit.id
-        ).all()
+        ).with_for_update().populate_existing().all()
         previous_status = {match.id: match.review_status for match in existing}
         detected = detect_permit_brands(
             db,

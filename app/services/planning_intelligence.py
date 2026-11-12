@@ -135,6 +135,7 @@ def enrich_planning_record(
                 organization_id=get_org_id(),
                 planning_record_id=planning_record.id,
                 brand_id=alias.brand_id,
+                brand=alias.brand,
                 raw_record_id=raw_record.id,
                 confidence=confidence,
                 matched_alias=alias.alias,
