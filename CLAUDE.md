@@ -11,6 +11,10 @@ no migration needed. Do not replace live zero-coordinate receipts without audit.
 Production effective-isolation gate failed; user approved scoped runtime-role
 remediation. Standard encrypted credential prepared; role and staged rollout
 pending. Backfill now fails closed without effective RLS;59focusedtests pass.
+Restricted-role preflight subsequently passed;23worker targets revised, API
+credential cutover pending. Provisioner helper prevents admin-ref restoration;
+19tests/78combinedpassed. SF boundedbatch20addresses/9filingslocated,partial;
+map/audit acceptance pending. Read docs/runbooks/runtime-database-role.md.
 
 November11 staged release: PR271/272 merged, SF exact-image preflight passed,
 SF daily schedule added. Actual scheduled/replay collection passed6,711rows;

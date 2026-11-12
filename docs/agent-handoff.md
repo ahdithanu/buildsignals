@@ -2,6 +2,18 @@
 
 ## SF Derived-Location Release In Progress
 
+Latest role progress: restricted login provisioned/verified by taskdf035cda...exit0,
+71appmodeltable grants/no schema or row writes. Restricted READONLY preflight
+1f8a8a42...exit0:6,711SFreadable/foreigngeocodes0. All23existing scheduled targets
+have credential-only revisions; states/times/images/commands/IAMoldgrants preserved.
+API credential-only operationf7baa815...pending; old APIimageunchanged. See
+docs/runbooks/runtime-database-role.md. New provisioner helper pins runtime SSM
+reference instead of inheriting migration-admin reference;19tests/78combined pass.
+Approved SF batchaabd9cce...exit0:28scanned/20addressattempts/9matches/9filingslocated,
+19held,statuspartial(cursor retained internally). Do not continue beyond20addresses.
+Post-backfill restricted audit pending; no map rollout/merge yet. Final API
+acceptance and removal of API admin-secret access remain required.
+
 Production effective-isolation gate FAILED on the existing credential. No
 geocoder requests/derived writes/merge/rollout followed it. User approved scoped
 runtime-role remediation, staged API/workers and actual isolation verification,

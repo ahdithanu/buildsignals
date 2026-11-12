@@ -46,6 +46,12 @@ Production effective-isolation preflight failed, so backfill/release are held.
 User approved scoped runtime-role remediation; encrypted Standard parameter is
 prepared, role/API/worker acceptance pending. New fail-closed worker guard has
 59core/worker regression passes. Keep admin credentials out of runtime access.
+Restricted-role production preflight now passes; all23worker schedule targets
+have credential-only revisions, states/times/images preserved. API credential
+operation still pending; read docs/runbooks/runtime-database-role.md. Provisioners
+now replace migration-base DB refs;19tests/78combinedtargetedpassed. One approved
+SF batch:20addresses attempted/9filings located,partial at limit. No more batches
+authorized; map release/post-backfill audit and API acceptance remain pending.
 
 November11 staged release authorized: PR271/272 merged; fresh SF public and
 exact-image/tenant-read-only preflight passed. Only SF's daily schedule was added;

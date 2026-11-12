@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import time
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -20,6 +21,7 @@ from scripts.configure_recurring_columbus import (
     REGION,
     aws,
     exists_or_create,
+    runtime_container,
 )
 from scripts.recurring_regions import SOURCES, regional_entry
 
@@ -70,6 +72,7 @@ def configure(org, image, report_path):
     if aws("sts", "get-caller-identity")["Account"] != ACCOUNT:
         raise ValueError("Unexpected AWS account")
     base = aws("ecs", "describe-task-definition", "--task-definition", "dealsignal-migrate:2")["taskDefinition"]
+    runtime_base = runtime_container(base["containerDefinitions"][0])
     code = Path(__file__).with_name("recurring_regions.py").read_text()
     trust = {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Principal": {"Service": "scheduler.amazonaws.com"},
         "Action": "sts:AssumeRole", "Condition": {"StringEquals": {"aws:SourceAccount": ACCOUNT},
@@ -80,7 +83,7 @@ def configure(org, image, report_path):
     tasks = {}
     for key in keys:
         entry = regional_entry(key)
-        container = dict(base["containerDefinitions"][0])
+        container = deepcopy(runtime_base)
         container.update(name="worker", image=image, command=["python", "-c", code, "--organization-id", org, "--source-key", key])
         host = urlparse(entry.base_url).hostname
         container["environment"] = [row for row in container.get("environment", []) if row["name"] != "INGESTION_ALLOWED_HOSTS"] + [{"name": "INGESTION_ALLOWED_HOSTS", "value": host}]
