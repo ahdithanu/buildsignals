@@ -48,8 +48,8 @@ from invalidating that comparison. Only offline tests
 and a disposable localhost regression database are authorized for this slice;
 no real restore, production connection, migration, push or release. Read the
 latest handoff. Earlier pending retail repair notes below are superseded:
-PR274 was released, its bounded replay is consumed, and actual next scheduled
-runs remain pending before Nov12Pacific1:46PM. Detailed receipts stay internal.
+PR274 was released and its bounded replay is consumed. Live scheduled-run
+acceptance is a separate internal task; detailed receipts stay internal.
 
 Current repair is isolated in `.worktrees/retail-catalog-repair`, branch
 `codex/retail-catalog-repair`, based on merged main a0e8f4d. Direct recurring

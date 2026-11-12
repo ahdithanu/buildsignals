@@ -24,13 +24,13 @@ No app/src logic, schema, dependency or production configuration changed. No
 source/model/production calls, actual restore, push, merge or release. The probe
 still cannot establish snapshot provenance, detect DNS aliases/tunnels or verify
 an operator's restored-copy claim. Real restore/RPO/RTO acceptance remains gated.
-Next: local checkpoint this second slice; publication needs separate approval.
+Both slices are locally checkpointed; publication needs separate approval.
 Continue keyboard acceptance and the actual scheduled-cycle watch separately.
 
 Current product state supersedes older pending notes below: PR274/8cd7d96 was
-released; bounded catalog repair is consumed. Current-chat next actual23job
-verification remains pending before firstdueNov12Pacific1:46PM; private collector
-state belongs to the parent and must not be reset or concurrently modified.
+released; bounded catalog repair is consumed. Live scheduled-run acceptance and
+its private collector state remain a separate internal task. Do not reset or
+concurrently modify that collector or publish its operational receipts.
 The standing implementation automation was recreated ACTIVE every30m after its
 old app entry was absent. It advances other existing unblocked checklist items,
 not duplicate writers or an automation to track this specific scheduled cycle.
