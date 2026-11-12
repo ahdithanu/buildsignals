@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 interface Readiness {
   permits: number;
   geocoded_permits: number;
+  source_geocoded_permits?: number;
+  derived_geocoded_permits?: number;
   planning_records?: number;
   geocoded_planning_records?: number;
   signals?: number;
@@ -86,7 +88,16 @@ export function MapReadiness() {
         'Saved searches': data.saved_searches, 'Nearby candidates': data.nearby_candidate_parcels ?? 0,
         'Verified available nearby': data.nearby_verified_available_parcels ?? 0,
         'Verified available workspace-wide': data.verified_available_parcels ?? 0,
-      }).map(([label, count]) => <div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="font-semibold">{count.toLocaleString()}</dd></div>)}
+      }).map(([label, count]) => <div key={label}>
+        <dt className="text-sm text-muted-foreground">{label}</dt>
+        <dd>
+          <span className="font-semibold">{count.toLocaleString()}</span>
+          {label === 'Permits with coordinates' && data.source_geocoded_permits != null && data.derived_geocoded_permits != null
+            && <span className="mt-1 block text-xs text-muted-foreground">
+              {data.source_geocoded_permits.toLocaleString()} source-provided; {data.derived_geocoded_permits.toLocaleString()} street-range estimates
+            </span>}
+        </dd>
+      </div>)}
     </dl>
     <p className="mt-4 text-sm font-semibold">{discoveryLabels[data.discovery_stage ?? ''] ?? 'Discovery readiness not classified'}</p>
     <p className="mt-1 text-sm text-muted-foreground">{data.discovery_next_action}</p>

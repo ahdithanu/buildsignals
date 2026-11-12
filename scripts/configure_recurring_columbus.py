@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 import subprocess
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -12,6 +13,9 @@ from app.services.demo_access import DEMO_ORG_ID
 
 REGION = "us-east-1"
 ACCOUNT = "159667575905"
+RUNTIME_DATABASE_URL_PARAMETER_ARN = (
+    f"arn:aws:ssm:{REGION}:{ACCOUNT}:parameter/buildsignals/production/runtime-database-url-v1"
+)
 GROUP = "buildsignals-ingestion"
 CLUSTER = f"arn:aws:ecs:{REGION}:{ACCOUNT}:cluster/dealsignal-cicd"
 ROLE = "buildsignals-ingestion-scheduler"
@@ -36,6 +40,18 @@ def exists_or_create(service, describe, create, **kwargs):
         return aws(service, create, *kwargs["create_args"])
 
 
+def runtime_container(base_container):
+    """Copy the migration container without carrying its admin DB reference."""
+    container = deepcopy(base_container)
+    if any(row.get("name") == "DATABASE_URL" for row in container.get("environment", [])):
+        raise ValueError("Plaintext DATABASE_URL environment entries are not permitted")
+    references = [row for row in container.get("secrets", []) if row.get("name") == "DATABASE_URL"]
+    if len(references) != 1:
+        raise ValueError("Exactly one DATABASE_URL secret reference is required")
+    references[0]["valueFrom"] = RUNTIME_DATABASE_URL_PARAMETER_ARN
+    return container
+
+
 def configure(organization_id: str, image: str):
     reviewed_image = rf"{ACCOUNT}\.dkr\.ecr\.{REGION}\.amazonaws\.com/dealsignal-api@sha256:[a-f0-9]{{64}}"
     if not organization_id or organization_id == DEMO_ORG_ID or not re.fullmatch(reviewed_image, image):
@@ -43,6 +59,7 @@ def configure(organization_id: str, image: str):
     if aws("sts", "get-caller-identity")["Account"] != ACCOUNT:
         raise ValueError("Refusing to provision in an unexpected AWS account")
     base = aws("ecs", "describe-task-definition", "--task-definition", "dealsignal-migrate:2")["taskDefinition"]
+    runtime_base = runtime_container(base["containerDefinitions"][0])
     code = Path(__file__).with_name("recurring_columbus.py").read_text()
     exists_or_create("scheduler", "get-schedule-group", "create-schedule-group",
                      describe_args=["--name", GROUP], create_args=["--name", GROUP])
@@ -61,7 +78,7 @@ def configure(organization_id: str, image: str):
     aws("iam", "update-assume-role-policy", "--role-name", ROLE, "--policy-document", json.dumps(trust))
     definitions = {}
     for mode, org in [("production", organization_id), ("demo", DEMO_ORG_ID)]:
-        container = dict(base["containerDefinitions"][0])
+        container = deepcopy(runtime_base)
         container.update(name="worker", image=image, command=["python", "-c", code, "--organization-id", org] + (["--demo"] if mode == "demo" else []))
         container["environment"] = [row for row in container.get("environment", []) if row["name"] != "INGESTION_ALLOWED_HOSTS"] + [{"name": "INGESTION_ALLOWED_HOSTS", "value": "maps2.columbus.gov"}]
         container["logConfiguration"] = {"logDriver": "awslogs", "options": {

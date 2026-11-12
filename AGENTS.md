@@ -34,6 +34,36 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
+SF map work is local on `codex/sf-map-qualification` in its isolated worktree.
+Read `docs/sf-derived-locations.md` before continuing. Strict tenant/source-scoped
+geocoding stores separate evidence; bounded worker defaults to plan/no requests
+or writes. Map fallback is default-off; demo-Columbus guards stay unchanged.
+Local full verification:2,625backend/428frontend/21browser passed; PostgreSQL
+drift check needs no migration. User approved20publicaddresses/1,000filings,
+bounded qualification/backfill and merge/map release after checks. No larger
+backfill, migration, paid upgrade or NJ activation. Live receipts remain separate.
+Production effective-isolation preflight failed, so backfill/release are held.
+User approved scoped runtime-role remediation; encrypted Standard parameter is
+prepared, role/API/worker acceptance pending. New fail-closed worker guard has
+59core/worker regression passes. Keep admin credentials out of runtime access.
+Restricted-role production preflight now passes; all23worker schedule targets
+have credential-only revisions, states/times/images preserved. API credential
+operation still pending; read docs/runbooks/runtime-database-role.md. Provisioners
+now replace migration-base DB refs;19tests/78combinedtargetedpassed. One approved
+SF batch:20addresses attempted/9filings located,partial at limit. No more batches
+authorized; map release/post-backfill audit and API acceptance remain pending.
+
+November11 staged release authorized: PR271/272 merged; fresh SF public and
+exact-image/tenant-read-only preflight passed. Only SF's daily schedule was added;
+all23 schedules enabled. Actual scheduled collection/manual replay each reconciled
+6,711rows with zero failures; replay zero inserts/updates. Read-only audit verifies
+6,711 distinct evidence- and graph-linked records. SF coordinates/map points are0;
+geocoding/parcel joining remains separate, not accepted map coverage.
+See `docs/releases/2026-11-11-sf-recurring-ingestion.md`. API image unchanged;
+no migration/paid upgrade/NJ activation or failed-source recovery authorized.
+Preparation/publication notes below are historical and superseded by this release
+receipt where their status differs.
+
 November 11 requested-market integration is local on
 `codex/requested-market-release`, based on privacy release 5ff111f. Read
 `docs/releases/2026-11-11-requested-market-release.md` before changing this slice.

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,6 +16,37 @@ function show() {
 
 describe('map diagnostics', () => {
   beforeEach(() => vi.clearAllMocks());
+  it('breaks down native and eligible derived permits without changing parcel availability', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      permits: 10, geocoded_permits: 8, source_geocoded_permits: 3, derived_geocoded_permits: 5,
+      parcels: 0, geocoded_parcels: 0, saved_searches: 0,
+      verified_available_parcels: 0, nearby_verified_available_parcels: 0,
+    });
+    show();
+    expect(await screen.findByText('No active parcel records in this workspace.')).toBeInTheDocument();
+    const permitCounts = screen.getByText('Permits with coordinates').parentElement!;
+    expect(within(permitCounts).getByText('8')).toBeInTheDocument();
+    expect(within(permitCounts).getByText('3 source-provided; 5 street-range estimates')).toBeInTheDocument();
+    expect(screen.getByLabelText('Map readiness prerequisites')).toHaveTextContent('Mapped parcels: missing');
+    expect(screen.getByText(/Workspace counts do not establish local coverage, match quality, or availability for sale/)).toBeInTheDocument();
+  });
+  it('shows zero eligible estimates when the backend excludes derived locations', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      permits: 10, geocoded_permits: 3, source_geocoded_permits: 3, derived_geocoded_permits: 0,
+      parcels: 0, geocoded_parcels: 0, saved_searches: 0,
+    });
+    show();
+    expect(await screen.findByText('3 source-provided; 0 street-range estimates')).toBeInTheDocument();
+  });
+  it('accepts older readiness payloads without inventing a precision breakdown', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      permits: 10, geocoded_permits: 8, parcels: 0, geocoded_parcels: 0, saved_searches: 0,
+    });
+    show();
+    await screen.findByText('Permits with coordinates');
+    expect(within(screen.getByText('Permits with coordinates').parentElement!).getByText('8')).toBeInTheDocument();
+    expect(screen.queryByText(/street-range estimates/)).not.toBeInTheDocument();
+  });
   it('separates missing parcel inventory from missing signals', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       permits: 10,

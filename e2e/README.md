@@ -243,6 +243,65 @@ contract, but has not yet been rerun. Final combined acceptance is pending the
 mobile Operations entry, silent-refresh flag/cache revocation and customer
 national-coverage sanitization freeze. No test servers remain running.
 
+## SF Derived Map (Opt-In, Synthetic)
+
+`tests/sf-derived-map.spec.ts` uses the real login UI, local API and migrated
+temporary SQLite database. It is skipped unless `RUN_SF_MAP_E2E=1`. The backend
+forces `SF_DERIVED_LOCATIONS_ENABLED=false` otherwise, regardless of an inherited
+flag, and creates no SF fixture. With the opt-in, it enables the flag only in
+the disposable backend and adds a separate, non-operator viewer and workspace:
+
+- User: `44444444-4444-4444-8444-444444444444`
+- Organization: `55555555-5555-4555-8555-555555555555`
+- Email/password: `synthetic-sf-viewer@example.com` / `E2eSfViewerOnly42!`
+- Permit: `88888888-8888-4888-8888-888888888888`
+
+These are deliberately public **test-only credentials**. Existing operator
+allowlisting, its one disabled source/empty inventory and the historical demo
+fixture are unchanged. The SF source uses the reviewed canonical key/URL so the
+real eligibility predicate is exercised, but is manual and unscheduled. Its
+single completed manual run, raw record and permit are synthetic fixture rows,
+not evidence of acquisition or an actual ingestion execution. `save_match`
+validates a constructed synthetic Census-shaped response locally and writes one
+`PermitGeocode`; no provider request is made. The address and coordinates are
+test inputs, not a verified filing or geocoding observation.
+
+The backend explicitly clears `OPENROUTER_API_KEY` along with existing service
+credentials. In this opt-in mode, a process-local Python audit hook denies
+external DNS/socket connections. The browser aborts every HTTP request outside
+the selected local web/API origins. Optional fonts, analytics and map tiles are
+counted and blocked; unexpected external hosts and downloads fail acceptance.
+No API responses or tiles are mocked. With tiles blocked, acceptance checks the
+rendered amber Leaflet SVG marker and its bounds, not a downloaded basemap.
+
+The actual application route is `/map?state=CA`; `/acquisition-map/signals` and
+`/acquisition-map/readiness` are its API paths. At 1440x1000 and 390x844, the spec
+checks the estimated-location label, marker selection, internal evidence link,
+readiness's zero native/one derived count, honest absent parcels/searches,
+horizontal overflow and unchanged native permit coordinates. Public-record
+evidence URLs/attribution remain permitted; geocoder URLs, raw match data,
+address/response hashes and benchmark metadata must not reach the map API/DOM.
+A second test checks anonymous denial, cross-tenant 404/empty map results,
+unchanged operator fixture counts and the existing demo map gate.
+
+Choose **two free ports** before running; do not stop unrelated services or reuse
+an existing backend. For example, after confirming 8103/8183 are free:
+
+```bash
+RUN_SF_MAP_E2E=1 E2E_API_PORT=8103 E2E_WEB_PORT=8183 \
+PYTHON=/Users/ahdithebomb/Desktop/DealSignal/.venv/bin/python \
+OPENROUTER_API_KEY= \
+npx playwright test -c e2e/playwright.config.ts sf-derived-map.spec.ts
+```
+
+The spec disables retries. `testInfo.outputPath()` writes desktop/mobile map and
+marker screenshots, aggregate layout/readiness receipts and browser/boundary
+check receipts under `test-results/`. It never saves auth responses, tokens,
+raw permit/provider responses or provider URL query strings. This is local
+synthetic acceptance, not live SF coverage, provider access/accuracy, PostgreSQL
+RLS or production activation. Browser execution and screenshot inspection are
+pending the parent's free-port run; static checks are not browser acceptance.
+
 ## CI And Artifacts
 
 The browser workflow is `.github/workflows/e2e.yml`; consult that file for its
@@ -267,4 +326,5 @@ e2e/
     evaluations.spec.ts        # real synthetic replay and comparison journey
     investment-areas.spec.ts   # release-reference research, desktop/mobile
     internal-operations.spec.ts # synthetic operator/customer/demo boundaries
+    sf-derived-map.spec.ts     # opt-in synthetic SF estimates, desktop/mobile
 ```

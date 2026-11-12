@@ -4,14 +4,52 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { SignalMapExplorer } from '@/components/SignalMapExplorer';
 import { apiClient } from '@/api/client';
+import type { GeographicPoint } from '@/components/GeographicMap';
+
+const mapRender = vi.hoisted(() => vi.fn());
 
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ organizationId: 'org-a' }) }));
 vi.mock('@/api/client', () => ({ apiClient: { get: vi.fn() } }));
-vi.mock('@/components/GeographicMap', () => ({ default: () => <div>Geographic map</div> }));
+vi.mock('@/components/GeographicMap', () => ({ default: (props: { points: GeographicPoint[] }) => {
+  mapRender(props);
+  return <div>Geographic map</div>;
+} }));
 function show(node = <SignalMapExplorer />) {
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter>{node}</MemoryRouter></QueryClientProvider>);
 }
 describe('independent signal map', () => {
+  it('labels derived precision and passes its method to the map without exposing geocoder details', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      items: [{ id: 'sf1', kind: 'permit', title: 'SF filing', latitude: 37.77, longitude: -122.42,
+        raw_record_id: 'raw-sf1', location_method: 'census_address_range_estimate', source_url: null }],
+      truncated_layers: [], limit_per_layer: 100,
+    });
+    show();
+    await screen.findByText('Geographic map');
+    expect(mapRender).toHaveBeenLastCalledWith(expect.objectContaining({
+      points: [expect.objectContaining({ id: 'permit:sf1', location_method: 'census_address_range_estimate' })],
+    }));
+    fireEvent.change(screen.getByLabelText('Source record'), { target: { value: 'permit:sf1' } });
+    expect(screen.getByText('Estimated street-range location; not a verified parcel.')).toBeInTheDocument();
+    expect(screen.queryByText('Source-provided location.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Original source' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review permit evidence' })).toHaveAttribute('href', '/permits/sf1');
+  });
+  it.each(['source_coordinate', undefined] as const)('retains native labels and map styling for method %s', async (method) => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      items: [{ id: 'native1', kind: 'permit', title: 'Native filing', latitude: 40, longitude: -83,
+        raw_record_id: 'raw-native', ...(method ? { location_method: method } : {}) }],
+      truncated_layers: [], limit_per_layer: 100,
+    });
+    show();
+    await screen.findByText('Geographic map');
+    expect(mapRender).toHaveBeenLastCalledWith(expect.objectContaining({
+      points: [expect.objectContaining({ id: 'permit:native1', location_method: 'source_coordinate' })],
+    }));
+    fireEvent.change(screen.getByLabelText('Source record'), { target: { value: 'permit:native1' } });
+    expect(screen.getByText('Source-provided location.')).toBeInTheDocument();
+    expect(screen.queryByText(/Estimated street-range location/)).not.toBeInTheDocument();
+  });
   it('deep-links the selected planning evidence instead of the general first page', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ items: [{ id: 'hearing-42', kind: 'planning', title: 'Planning hearing', latitude: 40, longitude: -83, raw_record_id: 'raw42' }], truncated_layers: [], limit_per_layer: 100 });
     show();

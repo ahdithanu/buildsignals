@@ -11,11 +11,12 @@ from sqlalchemy.orm import Session
 from app.models.ingestion import PermitRecord
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
 from app.models.planning import PlanningRecord
+from app.services.map_signals import native_coordinate_predicate, permit_location_query
 from app.utils.org_scope import active_query
 
 
 def _active_count_and_located(db: Session, model) -> tuple[int, int]:
-    valid = model.latitude.between(-90, 90) & model.longitude.between(-180, 180)
+    valid = native_coordinate_predicate(model)
     query = active_query(
         db.query(func.count(model.id), func.sum(case((valid, 1), else_=0))),
         model,
@@ -56,8 +57,19 @@ def _verified_availability_exists(parcel_id_column, organization_id_column):
 
 def map_readiness(db: Session) -> dict:
     counts = {}
-    for label, model in (("permits", PermitRecord), ("parcels", ParcelRecord)):
-        counts[label], counts[f"geocoded_{label}"] = _active_count_and_located(db, model)
+    query, native, derived = permit_location_query(db)
+    total, source_located, derived_located = query.with_entities(
+        func.count(PermitRecord.id),
+        func.sum(case((native, 1), else_=0)),
+        func.sum(case((derived, 1), else_=0)),
+    ).one()
+    counts["permits"] = int(total)
+    counts["source_geocoded_permits"] = int(source_located or 0)
+    counts["derived_geocoded_permits"] = int(derived_located or 0)
+    counts["geocoded_permits"] = (
+        counts["source_geocoded_permits"] + counts["derived_geocoded_permits"]
+    )
+    counts["parcels"], counts["geocoded_parcels"] = _active_count_and_located(db, ParcelRecord)
     planning_total, geocoded_planning = _active_count_and_located(db, PlanningRecord)
     counts["planning_records"] = planning_total
     counts["geocoded_planning_records"] = geocoded_planning

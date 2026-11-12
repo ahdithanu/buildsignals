@@ -3,20 +3,24 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AcquisitionMap from '@/pages/AcquisitionMap';
+import type { GeographicPoint } from '@/components/GeographicMap';
 
 const refetch = vi.fn();
+const mapRender = vi.hoisted(() => vi.fn());
 let radarState: Record<string, unknown>;
 let heatmapState: Record<string, unknown>;
 vi.mock('@/components/SignalMapExplorer', () => ({
   SignalMapExplorer: ({ state, onStateChange, onRecordSelect }: {
     state?: string;
     onStateChange?: (state: string) => void;
-    onRecordSelect?: (record: { id: string; kind: 'permit' | 'planning'; title: string; latitude: number; longitude: number; city?: string; state?: string }) => void;
+    onRecordSelect?: (record: { id: string; kind: 'permit' | 'planning'; title: string; latitude: number; longitude: number; city?: string; state?: string; location_method?: GeographicPoint['location_method'] }) => void;
   }) => (
     <div>
       <p>Signal geography</p>
       <button type="button" onClick={() => onStateChange?.('TX')}>Set signal geography state</button>
       <button type="button" onClick={() => onRecordSelect?.({ id: 'permit:permit-787', kind: 'permit', title: 'Retail source permit', latitude: 30.2672, longitude: -97.7431 })}>Select source permit</button>
+      <button type="button" onClick={() => onRecordSelect?.({ id: 'permit:sf-estimate', kind: 'permit', title: 'Estimated SF filing', latitude: 37.79, longitude: -122.4, location_method: 'census_address_range_estimate' })}>Select estimated permit</button>
+      <button type="button" onClick={() => onRecordSelect?.({ id: 'permit:permit-787', kind: 'permit', title: 'Retail source permit', latitude: 30.2672, longitude: -97.7431, location_method: 'source_coordinate' })}>Select native permit</button>
       <button type="button" onClick={() => onRecordSelect?.({ id: 'planning:plan-787', kind: 'planning', title: 'Austin planning hearing', latitude: 30.2672, longitude: -97.7431, city: 'Austin', state: 'TX' })}>Select planning source</button>
       <span>Signal state {state || 'all'}</span>
     </div>
@@ -26,14 +30,17 @@ vi.mock('@/components/SignalMapExplorer', () => ({
 vi.mock('@/components/MapReadiness', () => ({ MapReadiness: () => <div>Workspace diagnostics</div> }));
 
 vi.mock('@/components/GeographicMap', () => ({
-  default: ({ points, onSelect }: { points: Array<{ id: string; title: string }>; onSelect: (id: string) => void }) => (
+  default: ({ points, onSelect }: { points: GeographicPoint[]; onSelect: (id: string) => void }) => {
+    mapRender(points);
+    return (
     <div>
       <p>Acquisition geography map</p>
       {points.map((point) => (
         <button key={point.id} type="button" onClick={() => onSelect(point.id)}>{point.title}</button>
       ))}
     </div>
-  ),
+    );
+  },
 }));
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({
@@ -48,6 +55,28 @@ vi.mock('@/contexts/AuthContext', () => ({
     logout: vi.fn(),
   }),
 }));
+
+function populateRadar(anchorPermitId: string) {
+  radarState = {
+    data: {
+      items: [{
+        parcel: { id: 'saved-parcel', external_parcel_id: 'SAVED-1', state: 'CA', city: 'San Francisco',
+          address: '100 Market St', postal_code: '94103', latitude: 37.79, longitude: -122.4 },
+        candidate_id: 'saved-candidate', radar_score: 70, best_candidate_score: 70,
+        score_confidence: 0.75, appearance_count: 1, opportunity_count: 1,
+        personas: ['developer'], review_status: 'candidate', reasons: ['Saved search evidence'],
+        cautions: [], facts: [], latest_signal_at: '2026-11-11T00:00:00Z',
+        signals: [{ candidate_id: 'saved-candidate', search_id: 'saved-search', deal_id: 'saved-deal',
+          deal_name: 'Saved opportunity', anchor_permit_id: anchorPermitId, persona: 'developer',
+          approval_stage: 'pre_approval', signal_confidence: 0.75, distance_miles: 0.4,
+          candidate_score: 70, created_at: '2026-11-11T00:00:00Z' }],
+      }],
+      total: 1, limit: 100, offset: 0,
+    },
+    isLoading: false, error: null, refetch,
+    exportSearch: { mutate: vi.fn(), isPending: false },
+  };
+}
 
 describe('<AcquisitionMap> states', () => {
   beforeEach(() => {
@@ -91,6 +120,59 @@ describe('<AcquisitionMap> states', () => {
 
     expect(screen.getByText('No ranked parcels yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open permit review' })).toHaveAttribute('href', '/permit-review');
+  });
+
+  it('gates an estimated selection even when the parcel radar is empty', () => {
+    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Select estimated permit' }));
+    expect(screen.getByText('Estimated location only')).toBeInTheDocument();
+    expect(screen.getByText(/Street-range estimate; not a verified parcel. Nearby search requires source-provided coordinates/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review source evidence' })).toHaveAttribute('href', '/permits/sf-estimate');
+    expect(screen.queryByText(/Run a nearby-parcel search from a geocoded opportunity/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open permit review' })).not.toBeInTheDocument();
+  });
+
+  it('does not imply a new search is available for a derived point in a populated radar', async () => {
+    populateRadar('unrelated-permit');
+    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Select estimated permit' }));
+    expect(screen.getByText('Estimated location only')).toBeInTheDocument();
+    expect(screen.getByText('No saved parcel candidates are linked to this filing.')).toBeInTheDocument();
+    expect(screen.getByText('None')).toBeInTheDocument();
+    expect(screen.queryByText('Direct')).not.toBeInTheDocument();
+    expect(screen.queryByText('Permit-to-parcel workflow ready')).not.toBeInTheDocument();
+    expect(screen.queryByText(/run the bounded nearby-parcel workflow/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review source evidence' })).toHaveAttribute('href', '/permits/sf-estimate');
+    await screen.findByRole('button', { name: 'Selected permit: Estimated SF filing' });
+    expect(mapRender).toHaveBeenLastCalledWith(expect.arrayContaining([
+      expect.objectContaining({ id: 'source:permit:sf-estimate', location_method: 'census_address_range_estimate' }),
+    ]));
+  });
+
+  it('preserves existing linked candidates without declaring an estimated anchor search-ready', async () => {
+    populateRadar('sf-estimate');
+    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Select estimated permit' }));
+    expect(screen.getByText('Estimated location only')).toBeInTheDocument();
+    expect(screen.getByText('Existing saved parcel candidates remain available for evidence review; this estimate cannot anchor a new search.')).toBeInTheDocument();
+    expect(screen.getByText('Direct')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open filtered parcel queue' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Review parcel evidence' })).toHaveAttribute('href', '/parcels/saved-parcel');
+    expect(screen.queryByText('Permit-to-parcel workflow ready')).not.toBeInTheDocument();
+    expect(screen.queryByText(/run the bounded nearby-parcel workflow/)).not.toBeInTheDocument();
+  });
+
+  it('preserves the native search workflow and selected-point method', async () => {
+    populateRadar('unrelated-permit');
+    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Select native permit' }));
+    expect(screen.getByText('Permit has no saved nearby-parcel search yet')).toBeInTheDocument();
+    expect(screen.getByText(/run the bounded nearby-parcel workflow/)).toBeInTheDocument();
+    expect(screen.queryByText('Estimated location only')).not.toBeInTheDocument();
+    await screen.findByRole('button', { name: 'Selected permit: Retail source permit' });
+    expect(mapRender).toHaveBeenLastCalledWith(expect.arrayContaining([
+      expect.objectContaining({ id: 'source:permit:permit-787', location_method: 'source_coordinate' }),
+    ]));
   });
 
   it('offers a retry when the live acquisition feed fails', () => {
@@ -242,7 +324,7 @@ describe('<AcquisitionMap> states', () => {
     expect(screen.getByText('Signal state all')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Select source permit' }));
     expect(screen.getByText(/Source-linked parcels:/)).toBeInTheDocument();
-    expect(screen.getByText(/Retail source permit/)).toBeInTheDocument();
+    expect(screen.getByText('Retail source permit')).toBeInTheDocument();
     expect(screen.getByText('Permit-to-parcel workflow ready')).toBeInTheDocument();
     expect(screen.getByText(/ranked nearby parcel.*geocoded filing/)).toBeInTheDocument();
     expect(screen.getByText('direct candidates')).toBeInTheDocument();

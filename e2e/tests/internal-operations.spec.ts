@@ -147,7 +147,8 @@ test('ordinary customer admin keeps coverage and map access but cannot use opera
     const readiness = page.getByRole('region', { name: 'Map readiness', exact: true });
     await expect(readiness).toBeVisible();
     await expect(readiness.getByText('No active permit or planning records in this workspace.', { exact: true })).toBeVisible();
-    await expect(readiness.locator('dd')).toHaveText(Array(11).fill('0'));
+    await expect(readiness.locator('dd > span.font-semibold')).toHaveText(Array(11).fill('0'));
+    await expect(readiness.getByText('0 source-provided; 0 street-range estimates', { exact: true })).toBeVisible();
     await expect(readiness.getByRole('link', { name: 'View dashboard coverage' })).toHaveAttribute('href', '/');
     await expect(page.locator('a[href^="/source-health"]')).toHaveCount(0);
     await captureLayout(page, testInfo, 'customer-map', viewport.width);

@@ -63,6 +63,15 @@ function sourceWorkflowCopy({
   const visibleNoun = `parcel candidate${visibleCount === 1 ? '' : 's'}`;
   const visibleVerb = visibleCount === 1 ? 'matches' : 'match';
   if (source.kind === 'permit') {
+    if (source.location_method === 'census_address_range_estimate') {
+      return {
+        title: 'Estimated location only',
+        description: 'Street-range estimate; not a verified parcel. Nearby search requires source-provided coordinates.',
+        action: directCount > 0
+          ? 'Existing saved parcel candidates remain available for evidence review; this estimate cannot anchor a new search.'
+          : 'No saved parcel candidates are linked to this filing.',
+      };
+    }
     return directCount > 0
       ? {
         title: 'Permit-to-parcel workflow ready',
@@ -154,6 +163,8 @@ export default function AcquisitionMap() {
     directCount: directSourceItemCount,
     visibleCount: connectedItems.length,
   });
+  const derivedPermitWorkflow = selectedSourceRecord?.kind === 'permit'
+    && selectedSourceRecord.location_method === 'census_address_range_estimate' ? sourceWorkflow : null;
   const heatItems = heatmap?.items ?? [];
   const topHeatScore = Math.max(...heatItems.map((item) => item.score), 1);
   const visibleItems = connectedItems.filter((item) => {
@@ -178,6 +189,7 @@ export default function AcquisitionMap() {
       latitude: selectedSourceRecord.latitude,
       longitude: selectedSourceRecord.longitude,
       kind: selectedSourceRecord.kind,
+      location_method: selectedSourceRecord.location_method,
     } as const
     : null;
   const selectedParcel = visibleItems.find((item) => item.parcel.id === selectedParcelId) || visibleItems[0];
@@ -265,9 +277,13 @@ export default function AcquisitionMap() {
       <Layout>
         {signalMap}
         <EmptyState
-          title="No ranked parcels yet"
-          description="Run a nearby-parcel search from a geocoded opportunity to populate this workspace."
-          action={<Link to="/permit-review" className="border-2 border-foreground px-3 py-2 text-xs font-semibold">Open permit review</Link>}
+          title={derivedPermitWorkflow?.title ?? 'No ranked parcels yet'}
+          description={derivedPermitWorkflow
+            ? `${derivedPermitWorkflow.description} ${derivedPermitWorkflow.action}`
+            : 'Run a nearby-parcel search from a geocoded opportunity to populate this workspace.'}
+          action={derivedPermitWorkflow
+            ? <Link to={`/permits/${selectedSourcePermitId}`} className="border-2 border-foreground px-3 py-2 text-xs font-semibold">Review source evidence</Link>
+            : <Link to="/permit-review" className="border-2 border-foreground px-3 py-2 text-xs font-semibold">Open permit review</Link>}
         />
         <MapReadiness />
       </Layout>
@@ -425,7 +441,7 @@ export default function AcquisitionMap() {
               )}
               {selectedSourcePermitId && (
                 <div className="border border-foreground bg-card px-3 py-2 text-[10px]">
-                  <span className="font-semibold">Source-linked parcels:</span>{' '}
+                  <span className="font-semibold">{directSourceItemCount ? 'Source-linked parcels:' : 'Selected filing:'}</span>{' '}
                   {selectedSourceRecord?.title || selectedSourcePermitId}
                   <button type="button" className="ml-2 font-semibold underline" onClick={() => setSelectedSourceRecord(null)}>Clear source</button>
                 </div>
@@ -458,7 +474,7 @@ export default function AcquisitionMap() {
                       <p className="mt-1 text-[9px] text-muted-foreground">shown after filters</p>
                     </div>
                     <div className="border border-border p-2">
-                      <p className="text-base font-semibold">{selectedSourceRecord.kind === 'planning' && !directSourceItemCount ? 'Market' : 'Direct'}</p>
+                      <p className="text-base font-semibold">{directSourceItemCount ? 'Direct' : selectedSourceRecord.kind === 'planning' ? 'Market' : 'None'}</p>
                       <p className="mt-1 text-[9px] text-muted-foreground">link type</p>
                     </div>
                   </div>

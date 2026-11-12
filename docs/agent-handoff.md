@@ -1,5 +1,84 @@
 # Current Agent Handoff
 
+## SF Derived-Location Release In Progress
+
+Latest role progress: restricted login provisioned/verified by taskdf035cda...exit0,
+71appmodeltable grants/no schema or row writes. Restricted READONLY preflight
+1f8a8a42...exit0:6,711SFreadable/foreigngeocodes0. All23existing scheduled targets
+have credential-only revisions; states/times/images/commands/IAMoldgrants preserved.
+API credential-only operationf7baa815...pending; old APIimageunchanged. See
+docs/runbooks/runtime-database-role.md. New provisioner helper pins runtime SSM
+reference instead of inheriting migration-admin reference;19tests/78combined pass.
+Approved SF batchaabd9cce...exit0:28scanned/20addressattempts/9matches/9filingslocated,
+19held,statuspartial(cursor retained internally). Do not continue beyond20addresses.
+Post-backfill restricted audit pending; no map rollout/merge yet. Final API
+acceptance and removal of API admin-secret access remain required.
+
+Production effective-isolation gate FAILED on the existing credential. No
+geocoder requests/derived writes/merge/rollout followed it. User approved scoped
+runtime-role remediation, staged API/workers and actual isolation verification,
+no migrations/paid upgrade. Separate Standard encrypted runtime parameter prepared;
+administrative secret preserved. Role provisioning is in progress. New worker
+guard checks effective RLS plus metadata/role flags before fetch/write;59targeted
+core/worker tests passed. Frozen334d629 hosted CI passed2,625tests/91.31%coverage,
+frontend/E2E/pre-commit/gitleaks/preview green; guard follow-up needs hosted checks.
+Do not infer remediation acceptance or live maps until new receipts pass.
+
+After the user asked to continue, created `.worktrees/sf-map-qualification`, branch
+`codex/sf-map-qualification`, from verified receipt6e8af66 (merged-main runtime).
+Root research/dirty work remains untouched. Parent owns strict SF geocode core,
+bounded plan-first worker/config/tests; agents own disjoint map/readiness and UI/
+browser tests. Existing demo restrictions and raw/native coordinates are preserved.
+
+Implemented source-scoped current-address hash/provenance/age checks, native point
+precedence and before-pagination filtering behind SF_DERIVED_LOCATIONS_ENABLED
+(default false). Worker caps address queries/scanned rows, deduplicates literal
+requests, rechecks in-flight changes and redacts errors. No geocoder endpoint or
+response metadata is exposed in the map payload. Existing citations retained.
+51core/worker tests,7restricted-role disposable PostgreSQL hash/map/RLS tests,
+2,625fullbackend(no skips)/428frontend/21real-APIChromium tests passed.
+Typecheck/build/Ruff/whitespace pass. PostgreSQL drift check:no new upgrades.
+Build has existing warnings. SF screenshot markers inspected at1440/390;
+external tiles blocked intentionally, not live basemap acceptance. Nearby search
+still requires source coordinates and a confirmed retailer; UI labels estimates.
+
+User approved20publicaddresses/1000filings qualification/backfill and merge/map
+release after checks. No production geocoder requests/writes or API/map release
+occurred yet. No migration/paid upgrade/NJ activation. See `docs/sf-derived-locations.md` for exact scope, commands, primary docs,
+precision/benchmark limits and next parcel-source qualification dependency.
+Live SF ingestion remains6,711evidence/graphlinked,zero coordinates at last audit.
+Next:publish reviewed branch, wait hosted checks, exact-image read-only production
+schema/RLS check and bounded provider qualification, then merge and staged release.
+Do not invoke deploy-aws.yml (it includes migrations/latest rewrites). Preserve
+investment-private-3a814ee rollback, all current secrets/settings and23schedules.
+
+## November 11 Approved Staged SF Release
+
+User approved merge271then272, reviewed worker release and gated SF activation.
+Merged271at9980e06 and272at24d3c97; main tree equals tested2a8153c. Hosted
+2,541backendpassed/91.29%coverage,18E2Epassed. Built worker-specific immutable
+imagebcfa42013f6c22a706660f7dbab3ee573da49693f3ae4acbc8aa24df7a78452a;
+no latest rewrite or migration/API workflow. API auto-deployfalse/imageunchanged.
+Fresh public and exact-image worker-network verification:6,711count,13validations,
+zero failed. Explicit tenant READ ONLY preflight task656d96f3be4f4a8eb979769e29e6c8fa
+STOPPED/exit0:zero matching SF key/dataset registrations, no matching legacy
+migration needed. This was not a comprehensive historical SF-data audit.
+Only SF schedule added,23enabled. Actual Scheduler task0b76fbc5dc1841b3bc61f03dc4fb5d3d
+STOPPED/exit0:run e0664b5d-b68b-423e-9ec7-44bae8214cb8 reconciled6,711before/seen/after,
+inserted6,711/updated0/failed0. Separate manual replayae876c1bdf284bd0b437ee934dcb4b00
+STOPPED/exit0:run e833b1a4-a655-4965-82e9-86cf5058e0db reconciled6,711/zero inserts,
+updates or failures. This is not a second Scheduler invocation.
+Read-only auditff1945d7f9d2408fa20e4c1e74608325:6,711distinct/evidence-linked/raw
+snapshots/permitgraphentities/graphlinkedrecords;0coordinates and0SFmaprows.
+Collection+graph accepted; SFmap/parcelworkflow NOT accepted. Existing geocoder
+is Columbus/demo-only; separate bounded production geocoding/map work needed.
+Registered image/worker/host and allregionalIAMgrants verified;23schedulesenabled.
+No NJ, paid upgrade, migration or recovery of four failed feeds. See
+`docs/releases/2026-11-11-sf-recurring-ingestion.md` for exact resources/rollback.
+Receipt follow-up is on codex/sf-release-receipts based on merged main; root
+research/concurrent files remain untouched.
+Older local/publication statuses below are superseded by this accepted release.
+
 ## November 11 PR-Only Publication
 
 The user explicitly approved publishing after checks. Branch

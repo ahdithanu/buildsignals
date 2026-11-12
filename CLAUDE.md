@@ -2,6 +2,29 @@
 
 @AGENTS.md
 
+SF geocode/map qualification is local on `codex/sf-map-qualification`; read
+`docs/sf-derived-locations.md`. Separate derived evidence, strict stale-address
+and tenant checks, plan-first bounded worker and default-off map fallback.
+User approved20publicaddresses/1,000filings and bounded qualification/backfill plus
+merge/map release after checks. Local2,625backend/428frontend/21browserpassed;
+no migration needed. Do not replace live zero-coordinate receipts without audit.
+Production effective-isolation gate failed; user approved scoped runtime-role
+remediation. Standard encrypted credential prepared; role and staged rollout
+pending. Backfill now fails closed without effective RLS;59focusedtests pass.
+Restricted-role preflight subsequently passed;23worker targets revised, API
+credential cutover pending. Provisioner helper prevents admin-ref restoration;
+19tests/78combinedpassed. SF boundedbatch20addresses/9filingslocated,partial;
+map/audit acceptance pending. Read docs/runbooks/runtime-database-role.md.
+
+November11 staged release: PR271/272 merged, SF exact-image preflight passed,
+SF daily schedule added. Actual scheduled/replay collection passed6,711rows;
+replay zero inserts/updates, read-only audit6,711evidence/graphlinks,0coordinates
+and map points. Geocoding/parcel joining remains separate; see
+`docs/releases/2026-11-11-sf-recurring-ingestion.md`. Other22 jobs unchanged;
+API image unchanged, no migrations, paid upgrades or NJ activation.
+Older local/publication status below is historical; the release receipt takes
+precedence for current deployment and acceptance.
+
 November 11 requested-market integration: this worktree starts at privacy release
 5ff111f and preserves its owner-only operations, auth/session behavior and packaged
 reference. Read `docs/releases/2026-11-11-requested-market-release.md`. SF is a

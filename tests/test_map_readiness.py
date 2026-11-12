@@ -14,6 +14,8 @@ def test_inventory_coordinates_and_retirement(db):
     result = map_readiness(db)
     assert result == dict(
         permits=1,
+        source_geocoded_permits=1,
+        derived_geocoded_permits=0,
         geocoded_permits=1,
         planning_records=0,
         geocoded_planning_records=0,
@@ -37,6 +39,8 @@ def test_inventory_coordinates_and_retirement(db):
     db.flush()
     assert map_readiness(db) == dict(
         permits=0,
+        source_geocoded_permits=0,
+        derived_geocoded_permits=0,
         geocoded_permits=0,
         planning_records=0,
         geocoded_planning_records=0,
@@ -66,6 +70,24 @@ def test_inventory_is_tenant_scoped(db):
         assert map_readiness(db)["parcels"] == 0
     finally:
         reset_current_context(token)
+
+
+def test_readiness_uses_map_latitude_bounds(db):
+    source, _, _, parcel, permit = fixture_records(db)
+    permit.latitude, permit.longitude = 86, -83
+    parcel.latitude, parcel.longitude = -86, -83
+    db.add(PlanningRecord(
+        organization_id='default-org', source_id=source.id,
+        latest_raw_record_id=permit.latest_raw_record_id,
+        external_record_id='polar-planning', normalization_hash='d' * 64,
+        title='Outside map bounds', event_type='hearing', latitude=86, longitude=-83,
+    ))
+    db.flush()
+    result = map_readiness(db)
+    assert result['geocoded_permits'] == 0
+    assert result['geocoded_parcels'] == 0
+    assert result['geocoded_planning_records'] == 0
+    assert result['has_geocoded_signals'] is False
 
 
 def test_inventory_requires_authentication(client):
