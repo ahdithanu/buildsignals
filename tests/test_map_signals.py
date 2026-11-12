@@ -18,6 +18,7 @@ def test_signals_do_not_require_saved_searches(db):
     db.flush()
     result = list_map_signals(db, state='oh')
     assert {item['kind'] for item in result['items']} == {'permit', 'planning'}
+    assert {item['location_method'] for item in result['items']} == {'source_coordinate'}
     assert all(item['raw_record_id'] == permit.latest_raw_record_id for item in result['items'])
     assert list_map_signals(db, state='TX')['items'] == []
     permit.is_active = False

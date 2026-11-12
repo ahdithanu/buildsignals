@@ -53,7 +53,7 @@ export function SignalMapExplorer({
     queryFn: () => apiClient.get<MapResponse>('/acquisition-map/signals', { limit: 100, offset, state: stateFilter || undefined }),
   });
   const points = useMemo(() => (data?.items ?? []).filter(p => layer === 'all' || p.kind === layer)
-    .map(p => ({ ...p, id: `${p.kind}:${p.id}` })), [data, layer]);
+    .map(p => ({ ...p, id: `${p.kind}:${p.id}`, location_method: p.location_method ?? 'source_coordinate' })), [data, layer]);
   const shownPermitCount = points.filter((point) => point.kind === 'permit').length;
   const shownPlanningCount = points.filter((point) => point.kind === 'planning').length;
   const record = points.find(p => p.id === selected);
@@ -109,6 +109,9 @@ export function SignalMapExplorer({
         </select></label>
         {record && <div className="space-y-2 break-words py-2 text-sm">
           <h2 className="font-semibold">{record.title}</h2><p>{[record.address, record.city, record.state].filter(Boolean).join(', ')}</p>
+          <p className="text-muted-foreground">{record.location_method === 'census_address_range_estimate'
+            ? 'Estimated street-range location; not a verified parcel.'
+            : 'Source-provided location.'}</p>
           <p>Stage: {record.stage || 'Unknown'}</p><p>Evidence record: {record.raw_record_id}</p>
           <Link className="underline" to={record.kind === 'permit' ? `/permits/${record.id.slice(7)}` : `/planning?record_id=${encodeURIComponent(record.id.slice(9))}`}>Review {record.kind} evidence</Link>
           {record.source_url && /^https?:\/\//i.test(record.source_url) && <a className="ml-4 underline" target="_blank" rel="noopener noreferrer" href={record.source_url}>Original source</a>}
