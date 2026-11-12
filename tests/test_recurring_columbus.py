@@ -48,7 +48,11 @@ def test_demo_refresh_always_returns_source_to_inactive(db, monkeypatch, fail):
     monkeypatch.setattr(job, "provider_count", lambda *args: 0)
 
     def execute(session, source, **kwargs):
+        from app.models.brand import BrandAlias, BrandProfile
+
         assert source.organization_id == DEMO_ORG_ID
+        assert session.query(BrandProfile).filter_by(organization_id=DEMO_ORG_ID).count() > 0
+        assert session.query(BrandAlias).filter_by(organization_id=DEMO_ORG_ID).count() > 0
         assert source.is_active
         assert kwargs == {"max_pages": 4, "trigger": "scheduled"}
         if fail:

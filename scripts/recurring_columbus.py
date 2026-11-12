@@ -11,6 +11,7 @@ from app.db import SessionLocal
 from app.models.ingestion import IngestionSource, PermitRecord
 from app.models.organization import Organization
 from app.schemas.ingestion import IngestionSourceUpdate
+from app.services.company_catalog import ensure_company_catalog
 from app.services.demo_access import DEMO_ORG_ID, DEMO_USER_ID
 from app.services.demo_seed import seed_identity
 from app.services.ingestion.catalog import load_catalog
@@ -73,6 +74,7 @@ def refresh(organization_id: str, *, demo: bool, session_factory=SessionLocal) -
                     before = provider_count(entry, client)
                     if not 0 <= before <= 1000:
                         raise ValueError("Provider count exceeds the 1000-record request budget")
+                    ensure_company_catalog(db, organization_id)
                     legacy = LEGACY_DEMO if demo else LEGACY_PRODUCTION
                     candidates = db.query(IngestionSource).filter(
                         IngestionSource.organization_id == organization_id,
