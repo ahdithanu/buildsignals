@@ -5,6 +5,8 @@
 November12current local task: `codex/recovery-preflight-hardening`, based on
 mergedmain8cd7d96. Require source DATABASE_URL and separate RESTORE_DATABASE_URL
 identities before engine creation; tests use mocks/disposable localhost only.
+Nonempty PGHOSTADDR/PGPORT/PGSERVICE are refused before connection to prevent
+ambient libpq routing from invalidating the URL comparison.
 No production restore, source activation, push, merge or deployment authorized.
 PR274 retail repair was released and its one-shot replay is consumed; older
 pending repair notes below are historical, not authority to repeat it. The next

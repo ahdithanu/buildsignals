@@ -31,6 +31,8 @@ def main():
     source = os.environ.get("DATABASE_URL")
     if not args.isolated_restored_copy or not url or not source or url == source:
         parser.error("Set DATABASE_URL and a separate RESTORE_DATABASE_URL; never probe the production database")
+    if any(os.environ.get(key) for key in ("PGHOSTADDR", "PGPORT", "PGSERVICE")):
+        parser.error("Unset PGHOSTADDR, PGPORT and PGSERVICE; use explicit PostgreSQL URLs")
     try:
         target = _database_identity(url)
         if target == _database_identity(source):

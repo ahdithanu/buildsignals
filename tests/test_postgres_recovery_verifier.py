@@ -96,6 +96,71 @@ def test_invalid_source_refused_before_engine_creation_without_disclosure(cli, s
     ))
 
 
+@pytest.mark.parametrize("name,value", [
+    pytest.param("PGHOSTADDR", "192.0.2.77", id="hostaddr-ipv4"),
+    pytest.param("PGHOSTADDR", "2001:db8::77", id="hostaddr-ipv6"),
+    pytest.param("PGHOSTADDR", "private-route.example", id="hostaddr-name"),
+    pytest.param("PGHOSTADDR", " \t ", id="hostaddr-whitespace"),
+    pytest.param("PGPORT", "65499", id="port-number"),
+    pytest.param("PGPORT", "private-route-port", id="port-malformed"),
+    pytest.param("PGPORT", " \t ", id="port-whitespace"),
+    pytest.param("PGSERVICE", "private-route-service", id="service-name"),
+    pytest.param("PGSERVICE", " \t ", id="service-whitespace"),
+])
+def test_ambient_routing_refused_before_engine_creation_without_disclosure(cli, name, value, capsys):
+    cli.os.environ.update(
+        DATABASE_URL="postgresql://private-source-user:private-source-password@private-source.example/app",
+        RESTORE_DATABASE_URL=(
+            "postgresql://private-target-user:private-target-password@private-target.example/restored"
+        ),
+    )
+    cli.os.environ[name] = value
+    with pytest.raises(SystemExit) as exc:
+        cli.main()
+    assert exc.value.code == 2
+    cli.create_engine.assert_not_called()
+    cli.verify_restored_postgres.assert_not_called()
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert value not in captured.err
+    assert not any(private in captured.err for private in (
+        "private-source", "private-target", "private-route",
+    ))
+
+
+@pytest.mark.parametrize("environment", [
+    pytest.param({"PGHOSTADDR": ""}, id="empty-hostaddr"),
+    pytest.param({"PGPORT": ""}, id="empty-port"),
+    pytest.param({"PGSERVICE": ""}, id="empty-service"),
+    pytest.param({"PGHOSTADDR": "", "PGPORT": "", "PGSERVICE": ""}, id="all-routing-empty"),
+    pytest.param({"PGSERVICEFILE": "/synthetic/not-read/private-service.conf"}, id="inactive-service-file"),
+    pytest.param({"PGSSLMODE": "verify-full"}, id="ssl-mode"),
+    pytest.param({"PGAPPNAME": "private-recovery-app"}, id="application-name"),
+    pytest.param({
+        "PGSERVICE": "", "PGSERVICEFILE": "/synthetic/not-read/private-service.conf",
+        "PGSSLMODE": "verify-full", "PGAPPNAME": "private-recovery-app",
+    }, id="non-routing-combination"),
+])
+def test_empty_routing_and_nonrouting_environment_reach_mocked_probe(cli, environment, capsys):
+    target = "postgresql://localhost/restored"
+    cli.os.environ.update(DATABASE_URL="postgresql://localhost/app", RESTORE_DATABASE_URL=target)
+    cli.os.environ.update(environment)
+    engine = Mock()
+    cli.create_engine.side_effect = None
+    cli.create_engine.return_value = engine
+    report = {"passed": True, "scope": "synthetic offline report"}
+    cli.verify_restored_postgres.side_effect = None
+    cli.verify_restored_postgres.return_value = report
+    assert cli.main() == 0
+    cli.create_engine.assert_called_once_with(target, pool_pre_ping=True)
+    cli.verify_restored_postgres.assert_called_once_with(engine)
+    engine.dispose.assert_called_once_with()
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == report
+    assert captured.err == ""
+    assert not any(value and value in captured.out for value in environment.values())
+
+
 def test_acknowledgment_is_required(cli):
     cli.sys.argv = ["verify_postgres_recovery.py"]
     cli.os.environ.update(DATABASE_URL="postgresql://localhost/app",

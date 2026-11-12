@@ -53,7 +53,14 @@ either side are rejected before engine creation. Never print either value.
 
 The guard requires an explicit PostgreSQL host/database, rejects source-target
 identity equivalence despite credential, driver, default-port or host-case
-differences, and refuses libpq routing overrides. It cannot detect DNS aliases,
+differences, and refuses URL routing overrides. Nonempty `PGHOSTADDR`, `PGPORT`
+and `PGSERVICE` environment settings are also refused before engine creation;
+unset them and specify the reviewed connection destination in the URL. A
+`PGSERVICEFILE` without an active service does not select a service. SSL and
+application-name defaults are not routing overrides. See PostgreSQL's
+[environment defaults](https://www.postgresql.org/docs/current/libpq-envars.html)
+and [host/hostaddr rules](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS).
+The guard cannot detect DNS aliases,
 tunnels or infrastructure mistakes. Explicit operator verification is mandatory.
 
 The existing probe uses rollback-only transactions to check restricted-role,

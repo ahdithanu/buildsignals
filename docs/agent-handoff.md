@@ -2,25 +2,30 @@
 
 ## November 12: Fail-Closed Recovery Preflight (Local Only)
 
-Current branch `codex/recovery-preflight-hardening`, isolated worktree of that
-name, based on origin/main8cd7d96. Independent backlog audit found missing/empty
-source DATABASE_URL skipped source/target identity comparison and reached engine
-creation. Test writer reproduced2failures/41passes in the focused file. Minimal
-CLI fix now requires both identities, parses both and rejects equivalent targets
-before any engine creation.14invalid-source cases cover missing/empty/blank,
-malformed, non-PostgreSQL, hostless/databaseless, invalid port and routing
-overrides, with no connection details disclosed. Existing target/path tests now
-explicitly supply a valid source. Focused43passed; full backend regression with
-all three PostgreSQL settings passed2,700tests/zero skips in344.49s, with3existing
-geography-reflection warnings. Whole backend Ruff and whitespace checks passed.
-Independent review found no defects in this slice. No app/src logic, schema or
-dependencies changed. A separate ambient-libpq-routing finding will be addressed
-in the next local commit; do not treat this first guard as complete target proof.
-No source/model/production calls, actual restore, push, merge or release in this
-slice. The probe still cannot establish snapshot provenance, detect DNS aliases
-or independently validate a supplied restored-copy claim. Real restore/RPO/RTO
-acceptance remains gated. Next: deny ambient routing overrides with offline tests,
-then re-run the regression gate; keep actual scheduled-cycle watch separate.
+Branch `codex/recovery-preflight-hardening` in its isolated worktree, based on
+origin/main `8cd7d96`. First checkpoint `ad11f94` requires both explicit source
+and restored-target identities before engine creation. The new regression first
+failed for missing/empty source identity (2 failed, 41 passed), then all 43 focused
+tests passed. Full backend suite: 2,700 passed, zero skipped, 344.49s.
+
+Second slice rejects nonempty `PGHOSTADDR`, `PGPORT` and `PGSERVICE` before engine
+creation. Official PostgreSQL docs and an offline driver/default inspection
+confirm these can route outside the compared URL. The new slice first produced
+9 failed / 51 passed; after the two-line guard all 60 focused tests passed.
+Seventeen added cases cover routing rejection, redaction and allowed empty,
+inactive-service-file, SSL and application-name settings. Full backend suite
+with all three PostgreSQL test settings: 2,717 passed, zero skipped, 353.06s.
+Both full runs had only three existing geography-reflection warnings. Backend
+Ruff and whitespace checks passed. Independent code/test review found no defect.
+The fresh disposable localhost PostGIS container was stopped/removed afterward;
+no existing project database was touched. CLI tests mock engine/probe calls.
+
+No app/src logic, schema, dependency or production configuration changed. No
+source/model/production calls, actual restore, push, merge or release. The probe
+still cannot establish snapshot provenance, detect DNS aliases/tunnels or verify
+an operator's restored-copy claim. Real restore/RPO/RTO acceptance remains gated.
+Next: local checkpoint this second slice; publication needs separate approval.
+Continue keyboard acceptance and the actual scheduled-cycle watch separately.
 
 Current product state supersedes older pending notes below: PR274/8cd7d96 was
 released; bounded catalog repair is consumed. Current-chat next actual23job

@@ -42,7 +42,9 @@ Git/code state take precedence over stale notes.
 
 Current local work is `codex/recovery-preflight-hardening` in its own worktree,
 based on merged main8cd7d96. Recovery CLI now requires valid explicit source and
-restored-target database identities before engine creation. Only offline tests
+restored-target database identities before engine creation. Nonempty
+PGHOSTADDR/PGPORT/PGSERVICE are rejected to prevent ambient routing
+from invalidating that comparison. Only offline tests
 and a disposable localhost regression database are authorized for this slice;
 no real restore, production connection, migration, push or release. Read the
 latest handoff. Earlier pending retail repair notes below are superseded:
