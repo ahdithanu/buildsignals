@@ -311,9 +311,9 @@ export default function DealInbox() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div><p className="text-xs text-muted-foreground">Asking Price</p><p className="text-sm font-semibold mt-0.5">{formatCurrency(selectedDeal.askingPrice)}</p></div>
-                    <div><p className="text-xs text-muted-foreground">NOI</p><p className="text-sm font-semibold mt-0.5">{formatCurrency(selectedDeal.noi)}</p></div>
-                    <div><p className="text-xs text-muted-foreground">Projected IRR</p><p className="text-sm font-semibold mt-0.5">{selectedDeal.projectedIrr}%</p></div>
-                    <div><p className="text-xs text-muted-foreground">Equity Multiple</p><p className="text-sm font-semibold mt-0.5">{selectedDeal.equityMultiple}x</p></div>
+                    <div><p className="text-xs text-muted-foreground">NOI</p><p className="text-sm font-semibold mt-0.5">{selectedDeal.noi == null ? 'Not calculated' : formatCurrency(selectedDeal.noi)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Projected IRR</p><p className="text-sm font-semibold mt-0.5">{selectedDeal.projectedIrr == null ? 'Not calculated' : `${selectedDeal.projectedIrr}%`}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Equity Multiple</p><p className="text-sm font-semibold mt-0.5">{selectedDeal.equityMultiple == null ? 'Not calculated' : `${selectedDeal.equityMultiple}x`}</p></div>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1.5">Summary</p>

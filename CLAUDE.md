@@ -3,15 +3,28 @@
 @AGENTS.md
 
 November12current local task: `codex/recovery-preflight-hardening`, based on
-mergedmain8cd7d96. Require source DATABASE_URL and separate RESTORE_DATABASE_URL
+main8cd7d96, integrating main a82b3cc after UI PR275 merged. Require source
+DATABASE_URL and separate RESTORE_DATABASE_URL
 identities before engine creation; tests use mocks/disposable localhost only.
 Nonempty PGHOSTADDR/PGPORT/PGSERVICE are refused before connection to prevent
 ambient libpq routing from invalidating the URL comparison.
-No production restore, source activation, push, merge or deployment authorized.
+Recovery PR276 publication/main integration are approved; this sidecar must not
+merge/release. No production restore, source activation, API/worker or migration.
 PR274 retail repair was released and its one-shot replay is consumed; older
 pending repair notes below are historical, not authority to repeat it. The next
 actual scheduled cycle is watched separately in the active chat. Standing
 30-minute checklist continuation was recreated; avoid overlapping writers.
+Merged UI context: `codex/acquisition-keyboard-acceptance` at a80d4df/PR275, synthetic
+desktop/mobile keyboard acceptance for existing Inbox/Add Deal/Top Opportunities
+flows. One writer owns the new E2E spec, parent owns docs. No source/model/
+production calls in its tests. Actual scheduled-cycle
+watch are separate; avoid overlapping writers. Standing30mcontinuation ACTIVE.
+PR274 was released; earlier pending repair notes below do not authorize replay.
+The new tests reproduced a null-NOI preview crash and nested Radix focus/Escape
+conflicts. Metric guards, dialog-contained portals and controlled menu dismissal
+are locally verified on clean locked dependencies/Node22.23.5:436unit and26browser
+passed, no retries. No dependency change. Parent owns the approved staged
+green-only merges and frontend-only release; this integration preserves UI code.
 
 Current local work: `codex/retail-catalog-repair`, isolated from root research.
 Read `docs/company-catalog-replay.md` and the latest handoff. Direct workers now

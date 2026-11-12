@@ -41,15 +41,35 @@ Git/code state take precedence over stale notes.
 ## Product and Architecture
 
 Current local work is `codex/recovery-preflight-hardening` in its own worktree,
-based on merged main8cd7d96. Recovery CLI now requires valid explicit source and
+originally based on main8cd7d96, now integrating main a82b3cc after UI PR275 merged.
+Recovery CLI now requires valid explicit source and
 restored-target database identities before engine creation. Nonempty
 PGHOSTADDR/PGPORT/PGSERVICE are rejected to prevent ambient routing
 from invalidating that comparison. Only offline tests
-and a disposable localhost regression database are authorized for this slice;
-no real restore, production connection, migration, push or release. Read the
+and a disposable localhost regression database were used for this slice.
+Publication of recovery PR276 and its non-rewriting main integration are approved;
+this sidecar must not merge the PR or release anything. No real restore,
+production connection, API/worker change or migration is authorized. Read the
 latest handoff. Earlier pending retail repair notes below are superseded:
 PR274 was released and its bounded replay is consumed. Live scheduled-run
 acceptance is a separate internal task; detailed receipts stay internal.
+
+UI PR275 merged the reviewed `codex/acquisition-keyboard-acceptance` head a80d4df,
+originally based on main8cd7d96. It adds synthetic local keyboard acceptance for
+Deal Inbox/Add Deal and Dashboard Top Opportunities (VALIDATION CR-1/H-5/H-7).
+Use deterministic local scoring and existing external-request guards; do not
+call models/sources/production or change product logic without a reproduced bug.
+Keyboard tests reproduced a null-NOI preview crash and nested Radix focus/Escape
+conflicts under clean locked dependencies. Scoped metric guards preserve unknown,
+zero and negative values. Dialog-contained select portals plus controlled menu
+state retain focus trapping and dismiss the menu before the dialog. No dependency
+change. Final Node22.23.5:436unit/26browser tests passed, zero retries; typecheck,
+build and lint passed (existing warnings). Full accessibility/production acceptance
+remain separate. See e2e/README.md for the exact offline fixture/command.
+Parent serializes the approved green-only merges and frontend-only release;
+this recovery integration preserves the merged UI files without modifying them.
+The retail repair was released and its one-shot replay consumed; older notes are
+historical. Actual next scheduled-cycle verification remains in the active chat.
 
 Current repair is isolated in `.worktrees/retail-catalog-repair`, branch
 `codex/retail-catalog-repair`, based on merged main a0e8f4d. Direct recurring

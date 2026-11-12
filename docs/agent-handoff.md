@@ -1,6 +1,19 @@
 # Current Agent Handoff
 
-## November 12: Fail-Closed Recovery Preflight (Local Only)
+## November 12: Recovery PR276 Integrates Merged UI PR275
+
+User approved staged publication/green-only merges and frontend-only release.
+Parent merged UI PR275 at reviewed head a80d4dfaef3494cccced07d45b0e588a45a7376f;
+origin/main is a82b3ccf337c58bef3a9ef4908b8710035b43758. The recovery worktree was
+clean before fetching and merging main without rewriting history. Only these
+three shared context files required conflict resolution; both contexts below
+are retained and merged UI code/tests are unchanged. Recovery source/tests are
+also unchanged. Post-integration offline CLI tests: 60 passed in 0.20s; scoped
+Ruff and whitespace checks passed. New hosted CI is still required before parent
+considers PR276. This sidecar may commit/push its integration, but must
+not merge/release, change API/workers, run migrations or perform a real restore.
+
+## November 12: Fail-Closed Recovery Preflight
 
 Branch `codex/recovery-preflight-hardening` in its isolated worktree, based on
 origin/main `8cd7d96`. First checkpoint `ad11f94` requires both explicit source
@@ -20,12 +33,16 @@ Ruff and whitespace checks passed. Independent code/test review found no defect.
 The fresh disposable localhost PostGIS container was stopped/removed afterward;
 no existing project database was touched. CLI tests mock engine/probe calls.
 
-No app/src logic, schema, dependency or production configuration changed. No
-source/model/production calls, actual restore, push, merge or release. The probe
+The recovery change adds no app/src logic, schema, dependency or production
+configuration changes. No source/model/production calls or actual restore were
+performed. PR276 was published at b63cee1916c5bc83958f713b0c72149d3abb9cfc;
+hosted CI passed 2,717 tests with 91.42% coverage (621 warnings), plus pre-commit,
+gitleaks and preview checks. Fresh offline CLI verification passed all 60 tests.
+Those receipts precede this main integration; hosted CI must rerun. The probe
 still cannot establish snapshot provenance, detect DNS aliases/tunnels or verify
 an operator's restored-copy claim. Real restore/RPO/RTO acceptance remains gated.
-Both slices are locally checkpointed; publication needs separate approval.
-Continue keyboard acceptance and the actual scheduled-cycle watch separately.
+Both slices are checkpointed and published under explicit approval. Parent owns
+the staged merge/release; continue the actual scheduled-cycle watch separately.
 
 Current product state supersedes older pending notes below: PR274/8cd7d96 was
 released; bounded catalog repair is consumed. Live scheduled-run acceptance and
@@ -35,6 +52,42 @@ The standing implementation automation was recreated ACTIVE every30m after its
 old app entry was absent. It advances other existing unblocked checklist items,
 not duplicate writers or an automation to track this specific scheduled cycle.
 Production/release/source/paid gates remain unchanged. Receipts remain internal.
+
+## November 12: Merged Acquisition Keyboard Acceptance
+
+Branch `codex/acquisition-keyboard-acceptance`, based on origin/main `8cd7d96`.
+Two test writers reproduced the null-NOI preview crash (4 failed, 2 passed) and
+the nested Radix focus/Escape failures under clean locked dependencies (2 browser
+cases passed, 2 failed). The preview now labels missing NOI/IRR/equity outputs
+Not calculated without losing real zeros/negative values. Dialog-contained
+select portals and controlled menu state preserve the focus trap, keep Escape
+local to the open menu and reset form/menu state on dialog close.
+
+Final frozen local verification with Node 22.23.5: 436 unit tests / 74 files,
+26 Chromium workflows with zero skips/retries, typecheck, build and lint passed.
+Lint retains 20 existing warnings; build retains Zod annotation and large-chunk
+warnings. New browser cases cover 1440x1000 and 390x844, real Tab/Enter/Space,
+nontransparent positive-size focus rings, named controls, modal focus containment,
+both menu Escape/focus-return/reopen sequences, closed-menu dialog dismissal,
+form reset and exact saved-deal navigation. Menu screenshots were inspected.
+No API responses mocked in the new browser journeys; fixture data is synthetic,
+not production inventory or a real acquisition outcome. See e2e/README.md.
+
+The system Homebrew Node22 executable failed due to a missing dylib. Verification
+used an official temporary Node22.23.5 archive matched to its published SHA-256,
+without changing system software. A dedupe dry run proposed unrelated package
+updates and no useful Radix deduplication; it was not applied. Manifests unchanged.
+Initial ancestor-dependency runs are historical diagnostics, not final acceptance.
+
+No model/provider/production calls or schema/permission changes in this UI work.
+Actual production scheduled-cycle verification is a separate internal task.
+Recovery CLI hardening is integrated above. Prior repair approval below is
+historical and its replay consumed; it does not authorize these new releases.
+Publication/staged frontend release was subsequently approved. UI PR275 is merged
+at the reviewed a80d4df head; parent owns frontend release after checks. This
+recovery sidecar has no release authority.
+Keep detailed operational/security receipts internal. Full axe/WCAG/screen-reader
+and live browser acceptance are unverified; no absent header bell is claimed tested.
 
 ## Retail Catalog Repair (Local, Not Released)
 
