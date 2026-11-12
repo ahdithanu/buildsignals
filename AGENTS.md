@@ -7,10 +7,14 @@ Git/code state take precedence over stale notes.
 
 ## Operating Mode
 
-- November12standing checklist continuation is ACTIVE every30minutes as
-  `buildsignals-implementation-loop`; avoid overlapping writers/collectors.
-  Local runs require the computer/app running. No new production/release/source
-  or paid authority is conveyed by continuation. Keep detailed receipts internal.
+- For every browser task, open a fresh normal Chrome window and a new tab using
+  the browser-management window API. Leave all existing windows/tabs untouched.
+
+- November 12: the standing checklist automation was recreated ACTIVE every30m
+  as `buildsignals-implementation-loop` after the old entry was found absent.
+  Avoid overlapping writers; local work needs the computer/app running. Preserve
+  production, release and source-use gates; this is not an app-open trigger or a
+  replacement automation for the current chat's actual scheduled-cycle watch.
 
 - **Build with multiple agents by default.** Fan independent work out into parallel
   subagents (or a Workflow at scale) so there is no single point of failure or
@@ -39,8 +43,22 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
-Current isolated local task: `codex/acquisition-keyboard-acceptance`, based on
-mergedmain8cd7d96. Add synthetic local desktop/mobile keyboard acceptance for
+Current local work is `codex/recovery-preflight-hardening` in its own worktree,
+originally based on main8cd7d96, now integrating main a82b3cc after UI PR275 merged.
+Recovery CLI now requires valid explicit source and
+restored-target database identities before engine creation. Nonempty
+PGHOSTADDR/PGPORT/PGSERVICE are rejected to prevent ambient routing
+from invalidating that comparison. Only offline tests
+and a disposable localhost regression database were used for this slice.
+Publication of recovery PR276 and its non-rewriting main integration are approved;
+this sidecar must not merge the PR or release anything. No real restore,
+production connection, API/worker change or migration is authorized. Read the
+latest handoff. Earlier pending retail repair notes below are superseded:
+PR274 was released and its bounded replay is consumed. Live scheduled-run
+acceptance is a separate internal task; detailed receipts stay internal.
+
+UI PR275 merged the reviewed `codex/acquisition-keyboard-acceptance` head a80d4df,
+originally based on main8cd7d96. It adds synthetic local keyboard acceptance for
 Deal Inbox/Add Deal and Dashboard Top Opportunities (VALIDATION CR-1/H-5/H-7).
 Use deterministic local scoring and existing external-request guards; do not
 call models/sources/production or change product logic without a reproduced bug.
@@ -51,9 +69,15 @@ state retain focus trapping and dismiss the menu before the dialog. No dependenc
 change. Final Node22.23.5:436unit/26browser tests passed, zero retries; typecheck,
 build and lint passed (existing warnings). Full accessibility/production acceptance
 remain separate. See e2e/README.md for the exact offline fixture/command.
-Parent owns docs; one agent owns the new E2E file. Recovery CLI hardening is on a
-different branch/worktree; do not copy or modify it here. The retail repair was
-released and its one-shot replay consumed; older pending repair notes below are
+Parent verified the frontend-only production release of UI PR275: merged a82b3cc
+is tree-equal to tested a80d4df, and Vercel is READY at the exact merged SHA on
+production domains. Fresh owner Chrome checks passed trigger focus and layered
+Escape for both Add Deal select menus, without Save or a write. Null-NOI behavior
+is covered synthetically, not by the empty live Inbox. API/workers are unchanged.
+Parent serializes remaining approved green-only merges; this recovery sidecar
+preserves UI files and must not release anything. Private audits stay internal;
+source activation and other production/paid gates remain unchanged.
+The retail repair was released and its one-shot replay consumed; older notes are
 historical. Actual next scheduled-cycle verification remains in the active chat.
 
 Current repair is isolated in `.worktrees/retail-catalog-repair`, branch
