@@ -61,12 +61,23 @@ def build_connector(connector_type: str, config: Mapping[str, Any]) -> Connector
             **common,
         )
     if connector_type in {"arcgis", "arcgis_featureserver"}:
+        collapse = _mapping(config.get("collapse_duplicates")) or {}
+        collapse_identity_fields: tuple[str, ...] | None = None
+        if collapse.get("identity_fields") is not None:
+            collapse_identity_fields = tuple(
+                _string_list(
+                    collapse.get("identity_fields"),
+                    "collapse_duplicates.identity_fields",
+                )
+            )
         return ArcGISConnector(
             _required(config, "endpoint"),
             where=str(config.get("where", "1=1")),
             out_fields=str(config.get("out_fields", "*")),
             order_by_fields=config.get("order_by_fields"),
             keyset_field=config.get("keyset_field"),
+            collapse_identity_fields=collapse_identity_fields,
+            collapse_recency_field=collapse.get("recency_field"),
             include_geometry=bool(config.get("include_geometry", False)),
             include_centroid=bool(config.get("include_centroid", False)),
             query=_mapping(config.get("query")),
