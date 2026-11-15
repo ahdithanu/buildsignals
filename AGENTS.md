@@ -1,5 +1,12 @@
 # BuildSignals: Shared Agent Instructions
 
+Research workflow PR is review-only, integrated on current main. Read
+`docs/agent-orchestration.md` and the latest handoff. Local research API/UI and
+isolated SDK runtime are opt-in; defaults disable calls and staging/production
+are code-denied. Application and optional SDK dependencies remain separate.
+No live-model, production, source-activation, merge or deployment authority is
+granted. Keep detailed operational receipts internal and unrelated local work out.
+
 Start here regardless of agent or editor. Read `docs/agent-handoff.md` next,
 then `docs/agent-onboarding.md` for setup and the relevant product checklist.
 These files carry context across sessions; the current user request and actual

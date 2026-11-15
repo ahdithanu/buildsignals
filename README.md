@@ -243,6 +243,19 @@ npm run typecheck
 npm test
 ```
 
+## Agent Orchestration
+
+Local, opt-in foundations separate coding-agent task packets from read-only
+research over a tenant-scoped saved-deal snapshot. The planner and research
+dry-run are offline. The optional Agents SDK runtime has a separate environment
+because its OpenAI 3.x dependency conflicts with the app's 1.55.3 pin.
+The local dashboard/API now include an explicit research action, an isolated
+worker and committed per-workspace attempt/audit controls. Defaults disable it;
+staging/production are code-gated off. Attempt limits are not dollar budgets,
+and findings are currently session-only. No production feature is enabled by installation. See
+[agent orchestration](docs/agent-orchestration.md) for setup, limits, offline
+verification and explicit paid-execution gates.
+
 ## License
 
 See [LICENSE](LICENSE).

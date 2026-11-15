@@ -2,6 +2,12 @@
 
 @AGENTS.md
 
+Research integration is review-only on current main. Read docs/agent-orchestration.md
+and the latest handoff. Local API/UI, attempt reservations and the separate SDK
+runtime are disabled by default; staging/production remain code-denied. No paid
+calls, source activation, production configuration change, merge or deployment
+is authorized. Do not publish unrelated local history or internal receipts.
+
 Every browser task must use a fresh normal Chrome window/new tab through the
 browser-management window API; leave existing windows/tabs untouched.
 

@@ -3,22 +3,80 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import UUID4, BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
+from app import config
 from app.db import get_db
 from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.schemas.deal import DealResponse
+from app.services import research_service
 from app.services.enrichment_service import enrich_deal
+from app.services.eval_workflows import EvalExecutionError, execute_live
 from app.services.llm_client import is_openrouter_service_error
 from app.services.rate_limiter import AI_LIMIT, AI_WINDOW, limiter, rate_limit_headers
 from app.services.scoring_service import score_deal, score_deal_deterministic
-from app.utils.auth_deps import require_role
+from app.utils.auth_deps import require_role, require_role_strict
 from app.utils.org_scope import active_query, get_org_id
 
 router = APIRouter(tags=["deal-intelligence"])
 log = logging.getLogger(__name__)
+
+
+class ResearchRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    request_id: UUID4
+
+
+@router.get('/deals/{deal_id}/research/capabilities')
+def research_capabilities(
+    deal_id: str, response: Response,
+    principal: dict = Depends(require_role_strict(MemberRole.admin, MemberRole.editor)),
+    db: Session = Depends(get_db),
+):
+    if principal.get('is_demo'):
+        raise HTTPException(status_code=403, detail='Research unavailable in demo')
+    _get_deal(deal_id, db)
+    response.headers['Cache-Control'] = 'no-store'
+    return research_service.capabilities(db, principal['org_id'])
+
+
+@router.post('/deals/{deal_id}/research')
+def research(
+    deal_id: str, payload: ResearchRequest, response: Response,
+    principal: dict = Depends(require_role_strict(MemberRole.admin, MemberRole.editor)),
+    db: Session = Depends(get_db),
+):
+    if principal.get('is_demo'):
+        raise HTTPException(status_code=403, detail='Research unavailable in demo')
+    response.headers['Cache-Control'] = 'no-store'
+    return research_service.run(db, org_id=principal['org_id'], user_id=principal['user_id'],
+                                deal_id=deal_id, request_id=str(payload.request_id))
+
+
+@router.get("/deals/{deal_id}/research-context")
+def research_context(
+    deal_id: str,
+    response: Response,
+    principal: dict = Depends(require_role_strict(MemberRole.admin, MemberRole.editor)),
+    db: Session = Depends(get_db),
+):
+    """Export a bounded saved-deal snapshot; never call a model or mutate a deal."""
+    if not config.AGENT_RESEARCH_CONTEXT_ENABLED:
+        raise HTTPException(status_code=404, detail="Not found")
+    if principal.get('is_demo'):
+        raise HTTPException(status_code=403, detail="Research export unavailable in demo")
+    try:
+        _, evidence = execute_live(db, principal['org_id'], 'score_explanation', {'deal_id': deal_id})
+    except EvalExecutionError as exc:
+        if exc.code == 'workflow_input_not_found':
+            raise HTTPException(status_code=404, detail='Deal not found') from None
+        raise HTTPException(status_code=422, detail='Research context unavailable') from None
+    response.headers['Cache-Control'] = 'no-store'
+    return {'schema_version': 'research-context-v1',
+            'evidence_kind': 'saved_workspace_facts_not_independently_verified',
+            'evidence': [{'id': row.id, 'text': row.text} for row in evidence]}
 
 
 class ScoreResponse(BaseModel):

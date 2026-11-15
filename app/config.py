@@ -283,5 +283,11 @@ OPENROUTER_FALLBACK_MODELS = [
 OPENROUTER_TIMEOUT_SECONDS = float(os.environ.get("OPENROUTER_TIMEOUT_SECONDS", "30"))
 OPENROUTER_MAX_RETRIES = _require_int("OPENROUTER_MAX_RETRIES", "2")
 SCORING_MODE = os.environ.get("SCORING_MODE", "deterministic").strip().lower()
+AGENT_RESEARCH_CONTEXT_ENABLED = os.environ.get("AGENT_RESEARCH_CONTEXT_ENABLED", "false").lower() == "true"
+AGENT_RESEARCH_API_ENABLED = os.environ.get("AGENT_RESEARCH_API_ENABLED", "false").lower() == "true"
+AGENT_RESEARCH_PYTHON = os.environ.get("AGENT_RESEARCH_PYTHON", "").strip()
+AGENT_RESEARCH_DAILY_RUN_LIMIT = _require_int("AGENT_RESEARCH_DAILY_RUN_LIMIT", "0")
+if not 0 <= AGENT_RESEARCH_DAILY_RUN_LIMIT <= 100:
+    raise RuntimeError("AGENT_RESEARCH_DAILY_RUN_LIMIT must be between 0 and 100")
 if SCORING_MODE not in {"deterministic", "llm"}:
     raise RuntimeError("SCORING_MODE must be 'deterministic' or 'llm'")

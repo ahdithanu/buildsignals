@@ -1,5 +1,24 @@
 # Current Agent Handoff
 
+## Research Workflow Integration (Review Only)
+
+The owner approved publication of a review-only PR for the local research workflow.
+Integration starts at current origin/main 5a0d8ea and includes only the research
+and offline task-packet changes, not the unmerged ingestion or criteria branch.
+Read docs/agent-orchestration.md for architecture and limits. Destination-tree
+acceptance: 3,135 backend tests passed with zero skips and 91.44% app coverage
+(424.67s); 477 frontend tests passed. All 2,717 existing main test cases remain;
+418 research/test-safety cases were added. Local PostgreSQL/PostGIS migration and
+drift checks, default-sized lock observation, typecheck/build/scoped lint/Ruff,
+SDK fake-client check, and desktop/mobile research journeys passed. Chrome:
+2/9.2s; CI-style headless Chromium: 2/9.8s. Browser data and worker are synthetic;
+no model-quality claim is made. Hosted checks must be verified after publication.
+Known geography reflection and existing build warnings remain. No app/schema/
+source/catalog/dependency-lock changes outside the reviewed research feature.
+Defaults disable execution and staging/production are code-denied. No merge,
+deployment, source activation, production configuration change, paid calls or
+automation resume is authorized. Detailed production receipts remain internal.
+
 ## November 12: Recovery PR276 Integrates Merged UI PR275
 
 Latest parent-verified frontend state: PR275 is production-verified. Merged
