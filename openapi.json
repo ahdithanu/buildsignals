@@ -140,6 +140,19 @@
         "title": "AcquisitionCriteria",
         "type": "object"
       },
+      "AcquisitionCriteriaRetire": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_criteria": {
+            "$ref": "#/components/schemas/AcquisitionCriteria"
+          }
+        },
+        "required": [
+          "expected_criteria"
+        ],
+        "title": "AcquisitionCriteriaRetire",
+        "type": "object"
+      },
       "AcquisitionCriteriaUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -3391,6 +3404,18 @@
           "organization_id": {
             "title": "Organization Id",
             "type": "string"
+          },
+          "retired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retired At"
           },
           "user_id": {
             "anyOf": [
@@ -20920,6 +20945,16 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "include_retired",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Retired",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -21074,6 +21109,74 @@
           }
         },
         "summary": "Update Acquisition Criteria",
+        "tags": [
+          "buy-box"
+        ]
+      }
+    },
+    "/v1/buy-box/{buy_box_id}/retire": {
+      "post": {
+        "operationId": "retire_acquisition_criteria_v1_buy_box__buy_box_id__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "buy_box_id",
+            "required": true,
+            "schema": {
+              "title": "Buy Box Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcquisitionCriteriaRetire"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuyBoxResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retire Acquisition Criteria",
         "tags": [
           "buy-box"
         ]
