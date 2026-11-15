@@ -1,5 +1,12 @@
 # BuildSignals: Shared Agent Instructions
 
+November15 publication: owner explicitly approved push/review-only PR after checks.
+Retirement44751b9 acceptance remains unchanged; currentmainb699acc adds only
+generated openapi.json from the previously merged editing route and is integrated
+normally. Publish only this isolated branch; parent owns hosted-check watch.
+No merge/deploy/production migration/APIworkerrollout/paid/source/settings/tasks/
+automation authority. Earlier pending-publication notes below are historical.
+
 FinalNov15 retirementlocal:3,245backend/zero skips/91.46%/3existingwarnings476.92s;
 512frontend78files;freshChromedesktop/mobile2/18.6s,PGordering/demoREADONLY/
 migration/drift/typecheck/build/lint/harness/reviews pass. OwnedPG/browserservers

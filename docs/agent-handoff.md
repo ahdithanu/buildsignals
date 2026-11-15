@@ -1,5 +1,21 @@
 # Current Agent Handoff
 
+## November 15: Review-Only Publication Approved
+
+Owner explicitly approved pushing retirement and opening a review-only PR after
+checks. This supersedes the older pending-publication gate below, not any merge,
+deployment or production-migration gate. Currentmainb699acc after4d6455c changes
+only generated openapi.json for the already merged editing route. It is merged
+normally; runtime/tests remain identical to accepted44751b9. Final local results
+below remain applicable; hosted checks will be measured on the published head.
+Parent owns publication and hosted-check watch; no duplicate collector/writer.
+
+No production task, API/worker rollout, migration against production, source/
+settings/access/schedule action, paid-model call or automation resume is approved.
+Keep root dirty security/research and private operational receipts out of this PR.
+Record actual publication/head and hosted receipts in PR metadata after they
+occur; do not restart CI solely to add a completion note.
+
 ## November 15: Retirement Local Acceptance Complete
 
 Final unchanged runtime acceptance:3,245backend passed/zero skips/91.46%appcoverage/

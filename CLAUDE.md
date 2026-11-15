@@ -2,6 +2,11 @@
 
 @AGENTS.md
 
+November15: review-only retirement PR publication now approved after checks.
+Mainb699acc's generated-schema-only update integrated; runtime/tests unchanged
+from44751b9. Parent owns publication/checkwatch, no duplicate collectors. No
+merge/release/productionmigration/paid/source/settings/automation authority.
+
 FinalNov15 localretirement:3,245backend/zero skips/91.46%,512frontend,Chrome2,
 PGordering/READONLY/migration/drift/review pass;ownedruntime stopped. Read latest
 handoff/criteria-retirement.md. Publication requested,pending;no production

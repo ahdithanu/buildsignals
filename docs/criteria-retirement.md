@@ -6,6 +6,9 @@ On November15 the owner chose retirement with preserved history, not permanent
 deletion. Implementation is isolated on `codex/criteria-retirement`; this is not
 part of the approved PR280/282/281 merge or an authorized production migration.
 
+The owner subsequently approved review-only push/PR publication after checks.
+This is not approval to merge, deploy or apply the migration in production.
+
 The schema adds nullable `buy_boxes.retired_at`. No rows, JSON criteria, owners,
 legacy fields, or saved screening bytes are deleted or rewritten. Existing
 organization/RLS scope remains in force. No restoration or permanent deletion
