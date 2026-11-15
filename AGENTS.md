@@ -1,5 +1,26 @@
 # BuildSignals: Shared Agent Instructions
 
+FinalNov15 retirementlocal:3,245backend/zero skips/91.46%/3existingwarnings476.92s;
+512frontend78files;freshChromedesktop/mobile2/18.6s,PGordering/demoREADONLY/
+migration/drift/typecheck/build/lint/harness/reviews pass. OwnedPG/browserservers
+stopped/statusconfirmed. Read newesthandoff/criteria-retirement.md; PR-only
+publication requested,notreceived. No newpush/merge/productionmigration/release/
+paid/source/settings/automation authority. Rootdirtysecurity/research preserved.
+
+November 15 current: approved PR280 merged b428a75, dependent282 retargeted to
+main and merged3760d1a, then integrated281 merged4d6455c after fresh all-green
+checks. Main tree equals tested6bb9775:3,186backend/zero skips/91.44%,496frontend,
+baseline19pass12skip and dedicatedcriteria2/research2/module1. Receipts are in281.
+Local next slice is codex/criteria-retirement in .worktrees/criteria-retirement:
+owner chose retirement/preserved history. Read docs/criteria-retirement.md and
+current handoff for actual acceptance. This new migration/API/UI work has no
+publication/merge/production migration or rollout approval. Keep dirty root
+security/research work out. No paid calls, sources, production settings/tasks,
+credentials/schedules or automation resume. Original live crash stillunverified.
+Read parcel-use-feasibility.md for the owner's new direction and evidence gates;
+it is a proposed research workflow, not an implemented entitlement classifier.
+Older preparation states below are historical.
+
 November 15 integration: user approved merging PR280, PR282 and PR281 in dependency
 order. Recovery280 merged b428a75; module282 merged3760d1a, each tree-identical
 to its tested head. Criteria281 integrates that main normally and must pass fresh

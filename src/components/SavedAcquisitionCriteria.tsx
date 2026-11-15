@@ -1,18 +1,23 @@
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AcquisitionCriteriaEditor, CreateAcquisitionCriteria } from './CreateAcquisitionCriteria';
 import type { AcquisitionCriteria } from './CreateAcquisitionCriteria';
+import { RetireAcquisitionCriteria } from './RetireAcquisitionCriteria';
 
 interface SavedBox {
   id: string;
   acquisition_criteria: AcquisitionCriteria | null;
+  retired_at?: string | null;
 }
 
-export function SavedAcquisitionCriteria({ value, onChange }: {
-  value: string; onChange: (id: string) => void;
+export function SavedAcquisitionCriteria({ value, onChange, onRetired }: {
+  value: string; onChange: (id: string) => void; onRetired?: (id: string) => void;
 }) {
   const { organizationId, user } = useAuth();
+  const [retiredId, setRetiredId] = useState('');
+  const picker = useRef<HTMLSelectElement>(null);
   const query = useQuery({
     queryKey: ['saved-acquisition-criteria', organizationId, user?.id],
     enabled: !!organizationId && !!user,
@@ -22,14 +27,16 @@ export function SavedAcquisitionCriteria({ value, onChange }: {
       return boxes;
     },
   });
-  const boxes = query.data?.filter(box => box.acquisition_criteria) ?? [];
+  const boxes = query.data?.filter(box => box.acquisition_criteria && !box.retired_at) ?? [];
   const selected = boxes.find(box => box.id === value);
   return <div className="mb-3">
     <label className="block text-sm">Saved buy box
-      <select className="mt-1 block w-full border bg-background p-2" value={value}
+      <select ref={picker} className="mt-1 block w-full border bg-background p-2" value={value}
         onChange={event => onChange(event.target.value)}>
         <option value="">Default criteria</option>
-        {value && !boxes.some(box => box.id === value) && <option value={value}>Selected buy box</option>}
+        {value && !boxes.some(box => box.id === value) && <option value={value}>
+          {value === retiredId ? 'Retired buy box' : 'Selected buy box'}
+        </option>}
         {boxes.map(box => {
           const c = box.acquisition_criteria!;
           return <option key={box.id} value={box.id}>
@@ -42,10 +49,15 @@ export function SavedAcquisitionCriteria({ value, onChange }: {
     {query.isError && <p role="alert" className="text-xs">Saved buy boxes unavailable. <button onClick={() => query.refetch()} className="underline">Retry buy boxes</button></p>}
     {query.data?.length === 200 && <p className="text-xs">Showing the first 200 buy boxes.</p>}
     <CreateAcquisitionCriteria onCreated={onChange} />
-    {selected?.acquisition_criteria && <AcquisitionCriteriaEditor
+    {selected?.acquisition_criteria && <><AcquisitionCriteriaEditor
       key={`${organizationId}:${user?.id}:${selected.id}`}
       existingBox={{ id: selected.id, acquisition_criteria: selected.acquisition_criteria }}
       disabled={query.isFetching || query.isError}
-      onSaved={() => undefined} />}
+      onSaved={() => undefined} />
+      {selected.retired_at !== undefined && <RetireAcquisitionCriteria key={`retire:${organizationId}:${user?.id}:${selected.id}`}
+        returnFocusRef={picker}
+        box={{ id: selected.id, acquisition_criteria: selected.acquisition_criteria }}
+        disabled={query.isFetching || query.isError}
+        onRetired={id => { setRetiredId(id); onRetired?.(id); }} />}</>}
   </div>;
 }

@@ -12,6 +12,7 @@ from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
 from app.schemas.buy_box import (
     AcquisitionCriteria,
+    AcquisitionCriteriaRetire,
     AcquisitionCriteriaUpdate,
     BuyBoxCreate,
     BuyBoxResponse,
@@ -46,9 +47,16 @@ def acquisition_screen(
     response.headers["Cache-Control"] = "no-store"
     custom = None
     if buy_box_id is not None:
-        box = scope_query(db.query(BuyBox), BuyBox).filter(BuyBox.id == buy_box_id).first()
+        box = (
+            scope_query(db.query(BuyBox), BuyBox)
+            .filter(BuyBox.id == buy_box_id)
+            .populate_existing()
+            .first()
+        )
         if box is None:
             raise HTTPException(status_code=404, detail="Buy box not found")
+        if box.retired_at is not None:
+            raise HTTPException(status_code=409, detail="Acquisition criteria are retired")
         if box.acquisition_criteria is None:
             raise HTTPException(status_code=422, detail="Buy box has no structured acquisition criteria")
         custom = AcquisitionCriteria.model_validate(box.acquisition_criteria)
@@ -81,6 +89,17 @@ def export_acquisition_screen(
     db: Session = Depends(get_db),
     buy_box_id: str | None = None,
 ):
+    if buy_box_id is not None:
+        # Serialize new snapshots with edits/retirement until the export commit.
+        box = (
+            scope_query(db.query(BuyBox), BuyBox)
+            .filter(BuyBox.id == buy_box_id)
+            .populate_existing()
+            .with_for_update()
+            .first()
+        )
+        if box is None:
+            raise HTTPException(status_code=404, detail="Buy box not found")
     screen = acquisition_screen(deal_id, Response(), profile, market_city, market_state, db, buy_box_id)
     criteria = screen["criteria_snapshot"]
     if criteria:
@@ -193,6 +212,8 @@ def update_acquisition_criteria(
     )
     if box is None:
         raise HTTPException(status_code=404, detail="Buy box not found")
+    if box.retired_at is not None:
+        raise HTTPException(status_code=409, detail="Acquisition criteria are retired")
     try:
         current = AcquisitionCriteria.model_validate(box.acquisition_criteria).model_dump()
     except ValueError:
@@ -212,6 +233,50 @@ def update_acquisition_criteria(
     return box
 
 
+@router.post(
+    "/buy-box/{buy_box_id}/retire",
+    response_model=BuyBoxResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def retire_acquisition_criteria(
+    buy_box_id: str,
+    payload: AcquisitionCriteriaRetire,
+    db: Session = Depends(get_db),
+    principal: dict = Depends(get_current_user),
+):
+    box = (
+        scope_query(db.query(BuyBox), BuyBox)
+        .filter(BuyBox.id == buy_box_id)
+        .populate_existing()
+        .with_for_update()
+        .first()
+    )
+    if box is None:
+        raise HTTPException(status_code=404, detail="Buy box not found")
+    try:
+        current = AcquisitionCriteria.model_validate(box.acquisition_criteria).model_dump()
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Buy box has no valid structured acquisition criteria") from None
+    if current != payload.expected_criteria.model_dump():
+        raise HTTPException(status_code=409, detail="Acquisition criteria changed; reload before retiring")
+    if box.retired_at is not None:
+        return box
+    try:
+        box.retired_at = datetime.now(timezone.utc)
+        log_change(
+            db, "buy_box", box.id, "retire_acquisition_criteria",
+            actor_id=principal["user_id"],
+            old_values={"retired_at": None},
+            new_values={"retired_at": box.retired_at.isoformat()},
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    db.refresh(box)
+    return box
+
+
 # ── list buy boxes ──────────────────────────────────────────────────────────
 
 @router.get("/buy-box", response_model=list[BuyBoxResponse])
@@ -219,9 +284,13 @@ def list_buy_boxes(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
+    include_retired: bool = False,
 ):
+    query = scope_query(db.query(BuyBox), BuyBox)
+    if not include_retired:
+        query = query.filter(BuyBox.retired_at.is_(None))
     boxes = (
-        scope_query(db.query(BuyBox), BuyBox)
+        query
         .order_by(BuyBox.created_at.desc())
         .offset(skip)
         .limit(limit)

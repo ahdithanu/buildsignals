@@ -90,6 +90,46 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await edit.getByRole('button', { name: 'Cancel buy box' }).click();
       await panel.getByRole('button', { name: 'Edit selected buy box' }).click();
       await expect(edit.getByLabel('Minimum units')).toHaveValue('26');
+      await edit.getByRole('button', { name: 'Cancel buy box' }).click();
+      await panel.getByRole('button', { name: 'Retire selected buy box' }).click();
+      const confirmation = page.getByRole('alertdialog');
+      await expect(confirmation).toContainText('Past screening records will be kept.');
+      await confirmation.screenshot({ path: test.info().outputPath(`criteria-retire-${viewport.width}.png`) });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+      let releaseRetirement!: () => void;
+      const retirementGate = new Promise<void>(resolve => { releaseRetirement = resolve; });
+      if (viewport.width === 390) await page.route(`**/buy-box/${box.id}/retire`, async route => {
+        const response = await route.fetch();
+        await retirementGate;
+        await route.fulfill({ response });
+      });
+      const retirement = page.waitForResponse(res => res.url().endsWith(`/buy-box/${box.id}/retire`));
+      await confirmation.getByRole('button', { name: 'Retire buy box' }).click();
+      if (viewport.width === 390) {
+        await confirmation.getByRole('button', { name: 'Close' }).click();
+        await expect(panel.getByRole('button', { name: 'Retire selected buy box' })).toBeFocused();
+        releaseRetirement();
+      }
+      expect((await retirement).status()).toBe(200);
+      await expect(confirmation).not.toBeVisible();
+      await expect(panel.getByLabel('Saved buy box')).toHaveValue(box.id);
+      await expect(panel.getByLabel('Saved buy box')).toBeFocused();
+      await expect(panel.getByRole('alert')).toContainText('This buy box is retired');
+      await expect(panel.getByRole('button', { name: 'Download acquisition screen' })).toBeDisabled();
+      await expect(panel.getByRole('button', { name: 'Retire selected buy box' })).toHaveCount(0);
+      const active = await page.request.get(`${api}/buy-box`, { headers });
+      expect((await active.json()).some((item: { id: string }) => item.id === box.id)).toBe(false);
+      const archived = await page.request.get(`${api}/buy-box?include_retired=true`, { headers });
+      expect((await archived.json()).find((item: { id: string }) => item.id === box.id).retired_at).toBeTruthy();
+      expect((await page.request.get(`${api}/deals/${(await created.json()).id}/acquisition-screen?buy_box_id=${box.id}`, { headers })).status()).toBe(409);
+      await panel.getByText('Screening history', { exact: true }).click();
+      const retainedDownload = page.waitForEvent('download');
+      await panel.getByRole('button', { name: /^Download saved screen/ }).click();
+      expect((await bytes(await retainedDownload)).equals(original)).toBeTruthy();
+      await page.reload();
+      await expect(panel.getByLabel('Saved buy box')).toHaveValue(box.id);
+      await expect(panel.getByRole('alert')).toContainText('This buy box is retired');
+      await expect(panel.getByRole('button', { name: 'Download acquisition screen' })).toBeDisabled();
       expect(errors).toEqual([]);
     });
   });

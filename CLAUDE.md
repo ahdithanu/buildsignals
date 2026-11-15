@@ -2,6 +2,18 @@
 
 @AGENTS.md
 
+FinalNov15 localretirement:3,245backend/zero skips/91.46%,512frontend,Chrome2,
+PGordering/READONLY/migration/drift/review pass;ownedruntime stopped. Read latest
+handoff/criteria-retirement.md. Publication requested,pending;no production
+migration/newrelease/paid/source/settings/automation authority.
+
+November15:280/282/281 merged in dependency order, finalmain4d6455c treeequals
+tested6bb9775;3,186backend/91.44%,496frontend and dedicated browsergates passed.
+Current localonly criteria-retirement implements owner-approved retirement with
+historical screening preserved. Read criteria-retirement.md/currenthandoff and
+parcel-use-feasibility.md. No publication/newmerge/production migration/rollout,
+paid/source/settings/automation authority. Preserve dirty root security/research.
+
 November15: user approved merging280,282,281 in dependency order. First two merged
 b428a75/3760d1a. Criteria integrates their main and requires fresh combined green
 checks. Read current handoff. No API/worker rollout, paid calls, source/settings
