@@ -171,6 +171,7 @@ def _seed_sf_map_fixture(db):
 
 def main():
     sf_map_enabled = os.environ.get("RUN_SF_MAP_E2E") == "1"
+    research_enabled = os.environ.get("RUN_RESEARCH_E2E") == "1"
     api_port = int(os.environ.get("E2E_API_PORT") or "8000")
     web_port = int(os.environ.get("E2E_WEB_PORT") or "8080")
     if not all(1 <= port <= 65535 for port in (api_port, web_port)):
@@ -200,13 +201,19 @@ def main():
             "SENTRY_DSN": "",
             "RESEND_API_KEY": "",
             "OPENROUTER_API_KEY": "",
+            "AGENT_RESEARCH_API_ENABLED": "true" if research_enabled else "false",
+            "AGENT_RESEARCH_CONTEXT_ENABLED": "true" if research_enabled else "false",
+            "AGENT_RESEARCH_DAILY_RUN_LIMIT": "1" if research_enabled else "0",
+            "AGENT_RESEARCH_PYTHON": sys.executable if research_enabled else "",
             "REDIS_URL": "",
             "SF_DERIVED_LOCATIONS_ENABLED": "true" if sf_map_enabled else "false",
             "DEMO_ENABLED": "true",
             "INTERNAL_OPERATIONS_USER_IDS": OPERATOR_USER_ID,
         })
-        if sf_map_enabled:
+        if sf_map_enabled or research_enabled:
             _deny_external_sockets()
+        if research_enabled:
+            os.environ["OPENROUTER_API_KEY"] = "synthetic-no-provider-call"
         import uvicorn
         from alembic.config import Config
 
@@ -224,6 +231,12 @@ def main():
         from app.services.demo_seed import seed_demo
         from app.services.security import hash_password
         from tests.demo_fixtures import create_snapshot
+
+        if research_enabled:
+            from app.services import research_service
+            from e2e.research_fixture import offline_research
+
+            research_service.run_research_process = offline_research
 
         snapshot_dir = os.environ.get("DEMO_TEST_SNAPSHOT_DIR")
         if snapshot_dir:

@@ -13,6 +13,8 @@ jobs:
       DATABASE_URL: "sqlite:///./ci.db"
       SECRET_KEY: "ci-test-secret-key-not-for-production"
       ENVIRONMENT: "ci"
+      OPENROUTER_API_KEY: ""
+      REDIS_URL: ""
       # RLS + migration-reversibility tests run against real Postgres, as a
       # NON-superuser role. This matters: a superuser bypasses row-level
       # security even under FORCE RLS, so RLS assertions only mean something
@@ -110,6 +112,32 @@ jobs:
 
       - name: PostgreSQL schema drift check
         run: DATABASE_URL="$TEST_POSTGRES_URL" python -m alembic check
+
+      - name: Provision isolated research acceptance database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          run_id="$(python -c 'import uuid; print(uuid.uuid4().hex)')"
+          db_name="bs_snapshot_test_${run_id}"
+          createdb -h 127.0.0.1 -U postgres -O appuser "$db_name"
+          psql -h 127.0.0.1 -U postgres -d "$db_name" -v ON_ERROR_STOP=1 \
+            -v db_name="$db_name" -v marker="BuildSignals disposable snapshot test:${run_id}" <<'SQL'
+          COMMENT ON DATABASE :"db_name" IS :'marker';
+          CREATE EXTENSION postgis;
+          CREATE EXTENSION postgis_topology;
+          GRANT USAGE ON SCHEMA topology TO appuser;
+          GRANT SELECT ON ALL TABLES IN SCHEMA topology TO appuser;
+          SQL
+          research_url="postgresql+psycopg2://appuser:app@127.0.0.1:5432/${db_name}"
+          PGPASSWORD= SNAPSHOT_TEST_POSTGRES_URL="$research_url" SNAPSHOT_TEST_RUN_ID="$run_id" python - <<'PY'
+          import os
+          from tests.snapshot_postgres_support import verified_snapshot_connection
+          with verified_snapshot_connection(os.environ['SNAPSHOT_TEST_POSTGRES_URL'], os.environ['SNAPSHOT_TEST_RUN_ID']):
+              pass
+          PY
+          DATABASE_URL="$research_url" alembic upgrade head
+          echo "SNAPSHOT_TEST_POSTGRES_URL=$research_url" >> "$GITHUB_ENV"
+          echo "SNAPSHOT_TEST_RUN_ID=$run_id" >> "$GITHUB_ENV"
 
       # Coverage gate: floor is set below current (~88%) so it passes with
       # headroom but fails if a meaningful chunk of new code lands untested.

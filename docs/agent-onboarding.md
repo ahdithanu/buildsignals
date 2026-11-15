@@ -54,6 +54,7 @@ There is no need to supply an OpenRouter key for ordinary unit tests.
 
 | Work | Read first |
 |---|---|
+| Coding coordination / optional research SDK | `docs/agent-orchestration.md`; keep SDK and app virtualenvs separate |
 | Architecture and auth | README.md, `app/main.py`, `app/middleware/auth_context.py`, `docs/rbac.md` |
 | OpenRouter and evaluation | `docs/openrouter-cleanup-integration.md`, README Model routing, `eval/`, `docs/ai-evaluation-platform.md` |
 | Public demo | `docs/read-only-demo.md`, `docs/demo-readiness.md` |
