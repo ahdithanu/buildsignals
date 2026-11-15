@@ -100,4 +100,6 @@ now pass for success/409 and both response orders. Final frontend485passed/76fil
 12.42s; focused63passed. Final Chrome2passed11.7s. Typecheck/build/scopedlint and
 independent final review pass. Final CI-style headless criteria2passed11.5s.
 Use destination receipts, not source-branch totals.
-Owned PG/browser servers stopped. Publication/merge/deployment remain unapproved.
+Owned PG/browser servers stopped. Separate PR publication/checks are approved;
+merge/deployment remain unapproved. Generated-schema main9f09d87 is integrated
+without changing runtime/tests. Read PR metadata for actual hosted outcomes.

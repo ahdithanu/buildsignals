@@ -1,5 +1,14 @@
 # Current Agent Handoff
 
+## November 14: Separate PR Publication Approved
+
+Owner approved pushing criteria editing and recovery as separate PRs and verifying
+hosted checks; no merge/release/paid/source/production authority. Current main
+9f09d87 adds only generated openapi.json afterc34cef4 and was merged normally;
+runtime/tests remain identical to accepted criteria checkpoint1f3452d. The two
+branches stay independent. PR metadata will carry exact heads/hosted receipts.
+Keep root concurrent research and all private operational receipts out of both.
+
 ## November 14: Research Merged; Criteria Editing Integration
 
 User explicitly approved PR279 merge and continued local checklist work. PR279

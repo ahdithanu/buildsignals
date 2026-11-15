@@ -6,7 +6,9 @@ fc515ab. Hosted3,135backend/zero skips/91.44%coverage,477frontend,baselinebrowse
 work is saved structured-criteria editing in codex/criteria-edit-integration,
 ported only from06f7b3d onto merged main. No prior ingestion/history changes are
 included. Read docs/edit-acquisition-criteria.md and current handoff for receipts.
-No subsequent publication/merge or API/worker release is authorized. The standing
+User approved publishing this and the separate recovery PR and verifying checks;
+no subsequent merge or API/worker release is authorized. Main9f09d87 contributes
+generated OpenAPI only, integrated without runtime changes/history rewriting. The standing
 automation remains paused; this chat's local continuation does not resume it.
 Read `docs/agent-orchestration.md` and the latest handoff. Local research API/UI and
 isolated SDK runtime are opt-in; defaults disable calls and staging/production

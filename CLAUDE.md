@@ -5,7 +5,8 @@
 PR279 merged c34cef4/treeequalfc515ab after approval; hosted gates passed.
 Next local-only branch codex/criteria-edit-integration ports saved criteria editing
 from06f7b3d without unrelated ingestion history. Read edit-acquisition-criteria.md
-and current handoff. No later publication/merge/release approval; automation stays
+and current handoff. Separate PR publication/checks approved; no merge/release.
+Generated-schema main9f09d87 integrated without runtime changes; automation stays
 paused. Research execution is still disabled; read docs/agent-orchestration.md
 and the latest handoff. Local API/UI, attempt reservations and the separate SDK
 runtime are disabled by default; staging/production remain code-denied. No paid
