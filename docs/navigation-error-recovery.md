@@ -1,6 +1,8 @@
 # Error Screen Recovery
 
-Local fix on merged mainc34cef4; not published or released.
+Recovery checkpointae5ce92 on merged mainc34cef4; generated-schema main9f09d87
+is integrated without runtime changes. Separate PR publication and checks are
+approved; merge and release are not. See PR metadata for hosted results.
 
 The user reported a full error screen during fast navigation. Fresh normal
 Chrome checks across Map, Planning, Brands, Signals, Watchlist and Graph did not

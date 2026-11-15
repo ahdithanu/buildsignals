@@ -1,5 +1,16 @@
 # Current Agent Handoff
 
+## November 14: Separate PR Publication Approved
+
+Owner approved pushing recovery and criteria editing as separate PRs and checking
+hosted outcomes. No merge, release, source/production/configuration changes or
+paid calls are authorized. Integrated current main9f09d87 without rewriting
+history; its only change afterc34cef4 is generated openapi.json. Runtime/tests
+remain identical to the accepted recovery checkpointae5ce92. Publication/head/
+hosted receipts will be recorded in PR metadata after checks, not inferred here.
+The original crash remains a separate bounded offline browser investigation;
+this change fixes only the reproduced stuck-dashboard recovery path.
+
 ## November 14: Local Error-Recovery Regression
 
 PR279 merged at c34cef4 after explicit user approval; its tree equals tested
@@ -23,8 +34,8 @@ before completing recovery; no claim of zero transient renders is made.
 See docs/navigation-error-recovery.md. No backend/schema/auth/data changes.
 
 Branch codex/navigation-error-recovery is based only on merged mainc34cef4, not
-the unpublished criteria integration. No publication/merge/deployment authority
-for this fix yet; root user research and collector remain untouched. Standing
+the separate criteria integration. Publication/checks are now approved, but not
+merge/deployment; root user research and collector remain untouched. Standing
 automation remains paused. Do not call this a production crash repair.
 
 ## Research Workflow Integration (Review Only)

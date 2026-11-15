@@ -5,7 +5,9 @@
 Latest: PR279 merged c34cef4. Local navigation-error-recovery fixes only the
 reproduced dashboard-link reset defect; actual live trigger remains unverified.
 Read current handoff/navigation-error-recovery.md. Do not overlap criteria branch
-or infer new publication/release/paid/production authority. Automation stays paused.
+or infer release/paid/production authority. User approved separate PR publication
+and hosted checks; current generated-schema main9f09d87 is integrated. No merge
+or deployment approval for either new PR. Automation stays paused.
 
 Research integration is review-only on current main. Read docs/agent-orchestration.md
 and the latest handoff. Local API/UI, attempt reservations and the separate SDK
