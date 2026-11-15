@@ -25,6 +25,13 @@ Status meanings:
 
 ## Coverage Ledger
 
+Arlington issued permit caveat, November 14, 2026: its existing catalog admission
+below is not proof of current ingestion health. PR #277 supplies optional ArcGIS
+snapshot collapse within a page, with Arlington catalog enablement still pending.
+Signed rollout/digest review, live canary recovery, reconciliation and production
+activation remain separate gates. See [the runbook](runbooks/arcgis-duplicate-collapse.md);
+this capability does not establish operational Arlington repair or new coverage.
+
 | State | Priority jurisdiction/source | Status | Early-warning note |
 |---|---|---|---|
 | Alabama | Montgomery; Birmingham/Huntsville/Mobile holds | confirmation / parcel production | Montgomery commercial construction permits are admitted narrowly as approved/issued confirmation, and Montgomery parcels are admitted for derived nearby-parcel context. Birmingham, Huntsville, and Mobile remain held for current pre-approval or richer parcel rights. |

@@ -43,6 +43,18 @@ Git/code state take precedence over stale notes.
 
 ## Product and Architecture
 
+November 14 PR277 documentation follow up: branch `fix/arlington-identity-dedupe`
+implements opt in ArcGIS `collapse_duplicates` for imported snapshots, keeping
+the maximum configured recency per raw identity tuple within each fetched page.
+Arlington issued permits still lack the catalog option; this is not an operational
+repair. Preserve the folder year/sequence/type identity and `ImportDate` refresh
+semantics. Read `docs/runbooks/arcgis-duplicate-collapse.md` for exact behavior,
+test limits, and pending catalog, signed rollout/digest, live canary,
+reconciliation and production activation gates. No catalog/artifact update,
+source activation, merge or deployment is authorized by this documentation task.
+The latest handoff records this task; older current task notes below are dated
+history and do not expand its authorization.
+
 Current local work is `codex/recovery-preflight-hardening` in its own worktree,
 originally based on main8cd7d96, now integrating main a82b3cc after UI PR275 merged.
 Recovery CLI now requires valid explicit source and

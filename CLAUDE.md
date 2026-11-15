@@ -2,6 +2,15 @@
 
 @AGENTS.md
 
+November 14 PR277 documentation follow up: `fix/arlington-identity-dedupe` adds
+optional ArcGIS snapshot collapse within each fetched page. It is implemented
+but not configured for `arlington_tx_commercial_issued_permits`. Read
+`docs/runbooks/arcgis-duplicate-collapse.md` and the latest handoff for identity,
+recency, test limits and pending catalog, signed rollout, live canary,
+reconciliation and activation gates. This task does not authorize catalog or
+rollout artifact changes, ingestion activation, merge or deployment. Older
+current task entries below are historical context.
+
 Every browser task must use a fresh normal Chrome window/new tab through the
 browser-management window API; leave existing windows/tabs untouched.
 
