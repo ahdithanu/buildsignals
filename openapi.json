@@ -140,6 +140,23 @@
         "title": "AcquisitionCriteria",
         "type": "object"
       },
+      "AcquisitionCriteriaUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "acquisition_criteria": {
+            "$ref": "#/components/schemas/AcquisitionCriteria"
+          },
+          "expected_criteria": {
+            "$ref": "#/components/schemas/AcquisitionCriteria"
+          }
+        },
+        "required": [
+          "acquisition_criteria",
+          "expected_criteria"
+        ],
+        "title": "AcquisitionCriteriaUpdate",
+        "type": "object"
+      },
       "AcquisitionRadarItemResponse": {
         "properties": {
           "acquisition_case_id": {
@@ -20989,6 +21006,74 @@
           }
         },
         "summary": "Create Buy Box",
+        "tags": [
+          "buy-box"
+        ]
+      }
+    },
+    "/v1/buy-box/{buy_box_id}/acquisition-criteria": {
+      "put": {
+        "operationId": "update_acquisition_criteria_v1_buy_box__buy_box_id__acquisition_criteria_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "buy_box_id",
+            "required": true,
+            "schema": {
+              "title": "Buy Box Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcquisitionCriteriaUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuyBoxResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Acquisition Criteria",
         "tags": [
           "buy-box"
         ]
