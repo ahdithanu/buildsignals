@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -72,4 +72,30 @@ describe("<ErrorBoundary>", () => {
     expect(screen.getByText(/RECOVERED/)).toBeInTheDocument();
     expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
   });
+
+  it("recovers to the dashboard when leaving a crashed route", () => {
+    render(
+      <MemoryRouter initialEntries={["/broken"]}>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/broken" element={<Boom />} />
+            <Route path="/" element={<h1>Recovered dashboard</h1>} />
+          </Routes>
+        </ErrorBoundary>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("link", { name: /back to dashboard/i }));
+    expect(screen.getByRole("heading", { name: "Recovered dashboard" })).toBeInTheDocument();
+    expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+  });
+
+  it.each([{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }])(
+    "does not retry the current failed route for a modified click: %j", modifiers => {
+      render(<MemoryRouter initialEntries={["/broken"]}><ErrorBoundary><Boom /></ErrorBoundary></MemoryRouter>);
+      const reports = errSpy.mock.calls.length;
+      fireEvent.click(screen.getByRole("link", { name: /back to dashboard/i }), modifiers);
+      expect(errSpy).toHaveBeenCalledTimes(reports);
+      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    },
+  );
 });

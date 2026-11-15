@@ -1,5 +1,43 @@
 # Current Agent Handoff
 
+## November 14: Separate PR Publication Approved
+
+Owner approved pushing recovery and criteria editing as separate PRs and checking
+hosted outcomes. No merge, release, source/production/configuration changes or
+paid calls are authorized. Integrated current main9f09d87 without rewriting
+history; its only change afterc34cef4 is generated openapi.json. Runtime/tests
+remain identical to the accepted recovery checkpointae5ce92. Publication/head/
+hosted receipts will be recorded in PR metadata after checks, not inferred here.
+The original crash remains a separate bounded offline browser investigation;
+this change fixes only the reproduced stuck-dashboard recovery path.
+
+## November 14: Local Error-Recovery Regression
+
+PR279 merged at c34cef4 after explicit user approval; its tree equals tested
+fc515ab. Prior review-only statements below are historical. No API/worker
+runtime enablement or production settings/source/task changes occurred.
+
+User reports live full error screen during fast navigation. Fresh normal Chrome
+checks did not reproduce a render exception across six primary routes plus Graph.
+Exact failing URL/clicks requested; no actual root cause is claimed. Independent
+read-only review reproduced a separate recovery defect: Back to dashboard changes
+route but leaves ErrorBoundary latched. Parent regression on actual MemoryRouter/
+Routes and real boundary/components failed1/passed2 before fix, then passed3.
+InternalError dashboard Link now invokes existing onReset; Try again unchanged.
+Independent review reproduced another caught exception for modified clicks; five
+regressions failed before a same-tab unmodified-left-click guard was added. Final
+frontend **483passed/75files12.97s**, including all8boundary cases. Typecheck and
+scopedlint and final build pass. Existing annotation/large-chunk warnings remain.
+Independent final review found no
+remaining code blockers. Router transitions may still attempt old-route renders
+before completing recovery; no claim of zero transient renders is made.
+See docs/navigation-error-recovery.md. No backend/schema/auth/data changes.
+
+Branch codex/navigation-error-recovery is based only on merged mainc34cef4, not
+the separate criteria integration. Publication/checks are now approved, but not
+merge/deployment; root user research and collector remain untouched. Standing
+automation remains paused. Do not call this a production crash repair.
+
 ## Research Workflow Integration (Review Only)
 
 The owner approved publication of a review-only PR for the local research workflow.

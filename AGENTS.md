@@ -1,6 +1,16 @@
 # BuildSignals: Shared Agent Instructions
 
-Research workflow PR is review-only, integrated on current main. Read
+Latest: PR279 merged c34cef4/treeequaltestedfc515ab after approval. This isolated
+codex/navigation-error-recovery branch addresses a reproduced sticky error-screen
+recovery defect, not the unknown live rapid-navigation trigger. Read current
+handoff and docs/navigation-error-recovery.md. Separate criteria integration is
+owned in .worktrees/criteria-edit-integration; do not overlap its writer. User
+approved publishing both separate PRs and verifying checks, not merging/releasing.
+Current main9f09d87 adds generated OpenAPI only; it was merged without rewriting
+history. Paid calls, sources and production actions remain unapproved.
+Research remains default-off/deployed-denied; standing automation stays paused.
+
+Research PR279 is merged; runtime execution remains disabled. Read
 `docs/agent-orchestration.md` and the latest handoff. Local research API/UI and
 isolated SDK runtime are opt-in; defaults disable calls and staging/production
 are code-denied. Application and optional SDK dependencies remain separate.
