@@ -4,6 +4,14 @@ The regional expansion uses independently scheduled, bounded jobs for reviewed
 Florida, Texas, Arizona and Georgia sources. Mississippi's D'Iberville and Biloxi
 entries remain candidate `legal_hold` sources, not production coverage.
 
+Arlington issued permit status, November 14, 2026: PR #277 implements optional
+snapshot duplicate collapse but does not configure it in the production catalog.
+Earlier verification receipts are historical. Live canary recovery, cross page
+snapshot handling and raw provider count versus emitted record reconciliation
+remain unverified. Keep quarantine and reconciliation guards intact. See
+[ArcGIS duplicate collapse](arcgis-duplicate-collapse.md) before preparing any
+separately approved catalog, signed rollout or worker activation change.
+
 ## Admission and Scope
 
 `scripts/recurring_regions.py` permits only named, active production catalog

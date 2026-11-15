@@ -1,5 +1,70 @@
 # Current Agent Handoff
 
+## November 14: PR277 Documentation Finding Addressed
+
+Task: address the unresolved P1 context documentation finding in
+[PR #277](https://github.com/ahdithanu/buildsignals/pull/277#discussion_r4559558711)
+on its existing branch `fix/arlington-identity-dedupe`. Starting and tested code
+commit: `f4af20473581108ce635babdad26a53add16af6d`, based on merged main `5a0d8ea`.
+The enclosing documentation checkpoint preserves the connector, tests, catalog,
+signed rollout artifacts and deployment configuration unchanged. Earlier current
+task/approval notes below are historical context, not this task's authority.
+
+Implemented: optional ArcGIS `collapse_duplicates` factory configuration and
+maximum recency selection per exact raw identity tuple within one fetched page.
+Not enabled: `arlington_tx_commercial_issued_permits` has no collapse option in
+the checked in production catalog. No new source access, tenant state change,
+stored data repair, production verification, merge or deployment occurred.
+This capability must not be reported as an operational Arlington repair.
+
+Documentation changed: `AGENTS.md`, `CLAUDE.md`, this handoff,
+`docs/runbooks/arcgis-duplicate-collapse.md`,
+`docs/runbooks/regional-ingestion.md`, `docs/source_onboarding_decisions.md`, and
+`docs/nationwide_source_coverage.md`. The new runbook is the detailed contract;
+existing product/admission docs point to it and qualify older coverage receipts.
+Read it before any follow up catalog or source recovery work.
+
+Offline verification on the preserved PR code with Python 3.12.14 and an isolated
+project virtualenv installed from `requirements.txt` plus test tools:
+
+```sh
+ENVIRONMENT=test DATABASE_URL=sqlite:///:memory: REDIS_URL= OPENROUTER_API_KEY= SCORING_MODE=deterministic .venv/bin/python -m pytest -q tests/test_arcgis_identity_collapse.py tests/test_ingestion_connectors.py tests/test_ingestion_health.py tests/test_ingestion_rollout.py tests/test_ingestion_catalog.py::test_arlington_lifecycle_pair_preserves_retail_signal_and_identity
+ENVIRONMENT=test DATABASE_URL=sqlite:///:memory: REDIS_URL= OPENROUTER_API_KEY= .venv/bin/python -m app.services.ingestion.cli catalog rollout-manifest --check
+.venv/bin/ruff check app/services/ingestion/connectors/arcgis.py app/services/ingestion/connectors/factory.py tests/test_arcgis_identity_collapse.py
+python3 scripts/agent_status.py --check
+git diff --check
+```
+
+Results: 106 tests passed, zero skipped, in 11.21 seconds; one Starlette test
+client deprecation warning. Manifest check reported current without regeneration.
+Scoped Ruff, agent file presence and whitespace checks passed. No full backend,
+PostgreSQL, browser, live source or production suite was run for these docs.
+Hosted checks and reviewer resolution must be inspected on the published PR;
+the existing P1 thread was open when inspected and is not automatically resolved
+by this checkpoint.
+
+Independent read only code/documentation review confirmed these remaining
+limits: collapse has no cross page memory; recency does not parse dates and ranks
+strings above numbers; output uses retained row positions. Existing helper
+comments about first seen order and incomparable recency are inaccurate. The
+five collapse tests do not cover factory wiring, offset collapse, ties, mixed
+recency, ordering, cross page snapshots, or removal of the maximum cursor row.
+The runbook records these limits without changing runtime behavior or claiming
+untested cases passed.
+
+Next: reviewer checks the documentation fix on PR277. Any Arlington recovery
+proposal must separately qualify catalog configuration, signed rollout
+regeneration and deployment digest pins, bounded main/freshness live canaries,
+cross page snapshot handling and regional count reconciliation. Raw provider
+counts may exceed emitted rows after collapse; preserve the existing guards and
+quarantine rather than weakening them. Then obtain approval before production
+activation or worker deployment and verify actual ingestion receipts.
+
+Authorization: this task permits documentation updates on the existing PR and
+offline checks. Arlington activation, signed production artifact changes,
+merge and deployment require user approval. No new operational authorization is
+inferred from previous receipts or a passing offline suite.
+
 ## November 12: Recovery PR276 Integrates Merged UI PR275
 
 Latest parent-verified frontend state: PR275 is production-verified. Merged

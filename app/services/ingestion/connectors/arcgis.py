@@ -32,6 +32,8 @@ class ArcGISFeatureServerConnector(BaseConnector):
         out_fields: str = "*",
         order_by_fields: str | None = None,
         keyset_field: str | None = None,
+        collapse_identity_fields: tuple[str, ...] | None = None,
+        collapse_recency_field: str | None = None,
         include_geometry: bool = False,
         include_centroid: bool = False,
         query: Mapping[str, Any] | None = None,
@@ -55,6 +57,30 @@ class ArcGISFeatureServerConnector(BaseConnector):
         if keyset_order and order_by_fields and _normalize_order(order_by_fields) != _normalize_order(keyset_order):
             raise ValueError("order_by_fields must match ascending keyset_field")
         self.order_by_fields = keyset_order or order_by_fields
+        # Optional collapse of publisher re-import snapshots: some ArcGIS layers
+        # (e.g. Arlington "Issued Permits") carry several rows for one real
+        # permit — each a fresh ImportDate/OBJECTID snapshot. They share the
+        # derived business identity (source_record_id), so the canary's
+        # duplicate-identity check rejects them even though downstream ingestion
+        # upserts by source_record_id. When configured, keep only the most
+        # recent row per identity (max recency_field) so the fetched batch
+        # carries one row per permit. Identity/recency fields are validated as
+        # ArcGIS identifiers to avoid injection into later query building.
+        self.collapse_identity_fields: tuple[str, ...] = tuple(
+            collapse_identity_fields or ()
+        )
+        self.collapse_recency_field = (
+            collapse_recency_field.strip() if collapse_recency_field else None
+        )
+        for _field in (*self.collapse_identity_fields, *filter(None, [self.collapse_recency_field])):
+            if not _ARCGIS_IDENTIFIER.fullmatch(_field):
+                raise ValueError(
+                    f"collapse field must be a valid ArcGIS field identifier: {_field!r}"
+                )
+        if self.collapse_identity_fields and not self.collapse_recency_field:
+            raise ValueError(
+                "collapse_recency_field is required when collapse_identity_fields is set"
+            )
         self.include_geometry = include_geometry
         self.include_centroid = include_centroid
         self.query = dict(query or {})
@@ -100,21 +126,34 @@ class ArcGISFeatureServerConnector(BaseConnector):
         raw_record_count = len(records)
         if self.keyset_field:
             records = _dedupe_keyset_records(records, self.keyset_field)
+        # Pagination cursor is derived from the keyset-deduped page BEFORE the
+        # identity collapse, so collapsing re-import snapshots can never drop the
+        # row that carries the max keyset value (keyset) or shorten the advance
+        # (offset) — either would silently skip or re-read rows.
+        page_records = records
+        if self.collapse_identity_fields:
+            records = _collapse_latest_by_identity(
+                records,
+                self.collapse_identity_fields,
+                self.collapse_recency_field,  # type: ignore[arg-type]
+            )
         exceeded_limit = payload.get("exceededTransferLimit") is True
         has_more = exceeded_limit or raw_record_count == self.page_size
-        if has_more and not records:
+        if has_more and not page_records:
             raise ConnectorResponseError(
                 "ArcGIS indicated another page without returning any features"
             )
         if self.keyset_field and has_more:
-            last_value = records[-1].get(self.keyset_field)
+            last_value = page_records[-1].get(self.keyset_field)
             if last_value is None:
                 raise ConnectorResponseError(
                     f"ArcGIS keyset row is missing cursor field: {self.keyset_field}"
                 )
             next_checkpoint = {"keyset": {self.keyset_field: last_value}}
         else:
-            next_checkpoint = {"offset": offset + len(records)} if has_more else None
+            next_checkpoint = (
+                {"offset": offset + len(page_records)} if has_more else None
+            )
         return FetchEnvelope(
             source=self.source_name,
             records=records,
@@ -176,6 +215,63 @@ def _dedupe_keyset_records(
             if value is not None:
                 seen.add(value)
     return tuple(deduped)
+
+
+def _collapse_latest_by_identity(
+    records: tuple[dict[str, Any], ...],
+    identity_fields: tuple[str, ...],
+    recency_field: str,
+) -> tuple[dict[str, Any], ...]:
+    """Keep one row per derived identity, the most recent by ``recency_field``.
+
+    Some publishers re-import the same real record repeatedly, emitting multiple
+    rows that share a business identity (the join of ``identity_fields``) but
+    differ by snapshot (``recency_field``, e.g. ImportDate). They collapse to one
+    source_record_id downstream, so a canary sample otherwise trips the
+    duplicate-identity check. Rows whose identity fields are all present are
+    collapsed keeping the max recency value (missing/incomparable recency sorts
+    oldest); rows missing any identity field are passed through untouched so this
+    never silently drops records it cannot key. First-seen order is preserved.
+    """
+    latest: dict[tuple[Any, ...], int] = {}
+    recency: dict[tuple[Any, ...], Any] = {}
+    order: list[tuple[Any, ...]] = []
+    passthrough: list[tuple[int, dict[str, Any]]] = []
+    kept: dict[tuple[Any, ...], dict[str, Any]] = {}
+
+    for index, record in enumerate(records):
+        if any(record.get(f) is None for f in identity_fields):
+            passthrough.append((index, record))
+            continue
+        key = tuple(record.get(f) for f in identity_fields)
+        value = record.get(recency_field)
+        if key not in kept:
+            order.append(key)
+            kept[key] = record
+            recency[key] = value
+            latest[key] = index
+            continue
+        if _recency_sort_key(value) >= _recency_sort_key(recency[key]):
+            kept[key] = record
+            recency[key] = value
+            latest[key] = index
+
+    # Re-emit in first-seen order, interleaving untouched passthrough rows by
+    # their original position so downstream ordering stays stable.
+    collapsed_by_pos = {latest[key]: kept[key] for key in order}
+    collapsed_by_pos.update({idx: rec for idx, rec in passthrough})
+    return tuple(collapsed_by_pos[pos] for pos in sorted(collapsed_by_pos))
+
+
+def _recency_sort_key(value: Any) -> tuple[int, Any]:
+    """Sort key placing missing/incomparable recency values oldest."""
+    if value is None:
+        return (0, 0)
+    if isinstance(value, bool):
+        return (1, int(value))
+    if isinstance(value, (int, float)):
+        return (1, value)
+    return (2, str(value))
 
 
 # Concise alias for callers that do not need the vendor product name.

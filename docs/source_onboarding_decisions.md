@@ -3622,6 +3622,18 @@ Evidence URLs:
 
 ### Arlington, Texas Commercial Applications And Issued Permits
 
+November 14, 2026 status clarification: [PR #277](https://github.com/ahdithanu/buildsignals/pull/277)
+implements optional ArcGIS collapse of imported snapshots within each fetched
+page. The issued source catalog does not yet configure it. The stable folder
+year/sequence/type identity remains unchanged; `ImportDate` selects a snapshot
+and measures dataset refresh, not issuance or filing time. Earlier admission
+notes below do not establish recovery from the reported duplicate identity
+canary failure. Catalog enablement, signed rollout regeneration and deployment
+digest review, live main/freshness canaries, count reconciliation and production
+activation remain separate gates. Preserve existing licensing and suppression.
+See [the connector runbook](runbooks/arcgis-duplicate-collapse.md) for exact
+semantics and test limits. No operational repair is claimed by this PR.
+
 - Arlington publishes separate Permit Applications and Issued Permits layers
   under Creative Commons Attribution 4.0. The application layer is explicitly a
   one-year view of permits before issuance and updates each weekday.
