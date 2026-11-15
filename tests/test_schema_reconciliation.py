@@ -27,7 +27,7 @@ from app.db import Base
 ROOT = Path(__file__).resolve().parents[1]
 PREVIOUS = "20260927_0001"
 REVISION = "20260923_0002"
-HEAD_REVISION = "20260928_0008"
+HEAD_REVISION = "20261115_0001"
 PG_URL = os.environ.get("TEST_SCHEMA_RECONCILIATION_POSTGRES_URL")
 PATH = ROOT / "alembic/versions/20260923_0001_reconcile_schema.py"
 POST_RECONCILIATION_TABLES = {
@@ -40,6 +40,7 @@ POST_RECONCILIATION_TABLES = {
     "webhook_deliveries",
     "webhook_subscriptions",
 }
+POST_RECONCILIATION_COLUMNS = {"buy_boxes": {"retired_at"}}
 
 
 def _migration():
@@ -175,8 +176,11 @@ def _snapshot(engine):
             for name, table in Base.metadata.tables.items():
                 if name in POST_RECONCILIATION_TABLES:
                     continue  # Later migrations are outside this revision's data snapshot.
-                # Explicit model columns exclude PostGIS's generated centroid.
-                statement = sa.select(table).order_by(*table.primary_key.columns)
+                # Preserve every column of the historical revision, excluding
+                # only known later additions and PostGIS's generated centroid.
+                columns = [column for column in table.c
+                           if column.name not in POST_RECONCILIATION_COLUMNS.get(name, set())]
+                statement = sa.select(*columns).order_by(*table.primary_key.columns)
                 if "organization_id" in table.c:
                     statement = statement.where(table.c.organization_id == f"org-{tenant}")
                 result[tenant, name] = connection.execute(statement).all()

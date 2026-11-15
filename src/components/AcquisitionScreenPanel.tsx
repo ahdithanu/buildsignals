@@ -74,15 +74,19 @@ function AcquisitionScreenContent({ dealId }: { dealId: string }) {
   const [state, setState] = useState(initialSelection.state ?? '');
   const [market, setMarket] = useState<{ market_city?: string; market_state?: string }>(initialSelection.market ?? {});
   const [buyBoxId, setBuyBoxId] = useState(initialSelection.buyBoxId ?? '');
+  const [retiredBuyBoxId, setRetiredBuyBoxId] = useState('');
   const parameters = buyBoxId ? { buy_box_id: buyBoxId } : { profile, ...market };
   useEffect(() => {
     writeSelection(selectionKey, { profile, city, state, market, buyBoxId });
   }, [buyBoxId, city, market, profile, selectionKey, state]);
   const { data, error, isPending, refetch } = useQuery({
     queryKey: ['acquisition-screen', organizationId, user?.id, dealId, parameters],
-    enabled: !!organizationId && !!user,
+    enabled: !!organizationId && !!user && !(buyBoxId && buyBoxId === retiredBuyBoxId),
     queryFn: () => apiClient.get<Screen>(`/deals/${dealId}/acquisition-screen`, parameters),
+    retry: (count, failure) => !('status' in failure && failure.status === 409) && count < 3,
   });
+  const retired = !!buyBoxId && (buyBoxId === retiredBuyBoxId
+    || (error && 'status' in error && error.status === 409 && /retired/i.test(error.message)));
   const downloadScreen = async () => {
     setExporting(true); setExportError(false);
     try {
@@ -102,12 +106,12 @@ function AcquisitionScreenContent({ dealId }: { dealId: string }) {
       <h3 className="text-sm font-semibold">Acquisition buy-box screen</h3>
       {(role === 'admin' || role === 'editor') && <button type="button" className="shrink-0 border p-2"
         title="Download acquisition screen" aria-label="Download acquisition screen"
-        disabled={exporting || isPending || !!error || !data} onClick={downloadScreen}>
+        disabled={exporting || isPending || !!error || !data || !!retired} onClick={downloadScreen}>
         <Download size={16} />
       </button>}
     </div>
     {exportError && <p role="alert" className="mb-3 text-sm">Screen export failed. Try downloading again.</p>}
-    <SavedAcquisitionCriteria value={buyBoxId} onChange={setBuyBoxId} />
+    <SavedAcquisitionCriteria value={buyBoxId} onChange={setBuyBoxId} onRetired={setRetiredBuyBoxId} />
     <AcquisitionScreenHistory dealId={dealId} />
     {!buyBoxId && <>
     <label className="block text-sm">Profile
@@ -124,7 +128,8 @@ function AcquisitionScreenContent({ dealId }: { dealId: string }) {
     </form>
     </>}
     <p className="my-3 text-xs text-muted-foreground">Preliminary comparison of saved deal facts. Source verification and underwriting remain outstanding.</p>
-    {error ? <p role="alert">Screen unavailable. <button className="underline" onClick={() => refetch()}>Retry screen</button></p>
+    {retired ? <p role="alert">This buy box is retired. Choose active criteria for a new screen. Past screens remain in history.</p>
+      : error ? <p role="alert">Screen unavailable. <button className="underline" onClick={() => refetch()}>Retry screen</button></p>
       : isPending ? <p role="status">Loading acquisition screen...</p>
       : <>
         <p className="mb-3 text-sm font-semibold">{data.status === 'outside_buy_box' ? 'Outside recorded criteria' : 'Diligence required'}: {data.counts.pass} pass, {data.counts.fail} fail, {data.counts.unknown} unknown</p>

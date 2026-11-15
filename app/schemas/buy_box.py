@@ -42,6 +42,12 @@ class AcquisitionCriteriaUpdate(BaseModel):
     expected_criteria: AcquisitionCriteria
 
 
+class AcquisitionCriteriaRetire(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_criteria: AcquisitionCriteria
+
+
 class BuyBoxResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,4 +62,5 @@ class BuyBoxResponse(BaseModel):
     deal_type: Optional[str] = None
     notes: Optional[str] = None
     acquisition_criteria: Optional[AcquisitionCriteria] = None
+    retired_at: Optional[datetime] = None
     created_at: datetime

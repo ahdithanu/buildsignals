@@ -2,6 +2,18 @@
 
 ## Local implementation, not deployed
 
+### November15: Retirement And Parcel-Use Direction
+
+The owner chose retirement with historical screening preserved. Local implementation
+is isolated in `codex/criteria-retirement`; see `docs/criteria-retirement.md`.
+This choice does not authorize its migration or API rollout in production.
+
+The owner also requested AI-assisted parcel-use/entitlement investigation near
+retail signals. `docs/parcel-use-feasibility.md` records the evidence contract and
+one-market qualification gate. Current zoning, a possible entitlement path and an
+actual approval must stay distinct; missing code/geometry evidence stays unknown.
+No implemented classifier, qualified new source or live inference is claimed.
+
 ### Structured Criteria Editing Integration (2026-11-14, Local)
 
 The earlier saved-criteria editing gap is ported onto merged research mainc34cef4

@@ -30,6 +30,7 @@ class BuyBox(OrgMixin, Base):
     deal_type: Mapped[Optional[str]] = mapped_column(String(100))
     notes: Mapped[Optional[str]] = mapped_column(Text)
     acquisition_criteria: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    retired_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     # ── Relationships ──────────────────────────────────────────────────────

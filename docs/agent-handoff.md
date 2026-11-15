@@ -1,5 +1,106 @@
 # Current Agent Handoff
 
+## November 15: Review-Only Publication Approved
+
+Owner explicitly approved pushing retirement and opening a review-only PR after
+checks. This supersedes the older pending-publication gate below, not any merge,
+deployment or production-migration gate. Currentmainb699acc after4d6455c changes
+only generated openapi.json for the already merged editing route. It is merged
+normally; runtime/tests remain identical to accepted44751b9. Final local results
+below remain applicable; hosted checks will be measured on the published head.
+Parent owns publication and hosted-check watch; no duplicate collector/writer.
+
+No production task, API/worker rollout, migration against production, source/
+settings/access/schedule action, paid-model call or automation resume is approved.
+Keep root dirty security/research and private operational receipts out of this PR.
+Record actual publication/head and hosted receipts in PR metadata after they
+occur; do not restart CI solely to add a completion note.
+
+## November 15: Retirement Local Acceptance Complete
+
+Final unchanged runtime acceptance:3,245backend passed/zero skips/91.46%appcoverage/
+3existing geography-reflection warnings476.92s;512frontend78files7.00s. Fresh
+normalChrome desktop/mobile2passed18.6s on final lifecycle-field gating. Scoped
+Ruff/ESLint,typecheck/build/harness/diffchecks and independent reviews pass.
+RealPG ordering/read-only/migration tests included in the full suite; final
+Alembic drift check reports no new operations. The fresh owned PG17.11/PostGIS
+runtime was stopped with pg_ctl and status independently confirmed no server;
+port62558 and browser/API/Vite8688/8120 clear. No shared runtime was stopped.
+
+Local branch codex/criteria-retirement is based on mergedmain4d6455c. Read
+criteria-retirement.md for contract/rollback limits and parcel-use-feasibility.md
+for the separately proposed evidence-backed zoning/entitlement workflow.
+Review-only PR publication approval requested; not received. Do not publish,
+merge, apply its migration to production or release this new slice without fresh
+applicable authorization. Existing280/282/281 merge approvals are consumed.
+Research/paid/source/settings/tasks/credentials/schedules/automation gates remain.
+Current main Vercel commit status reports deployment complete for4d6455c;
+no signed-in product acceptance or manual API/worker rollout is claimed.
+Root dirty security/research work remains intact and unpublished.
+
+## November 15: Merges Complete; Local Retirement
+
+User-approved merge order completed:280/b428a75,282/3760d1a (retargeted to main
+first),281/4d6455ce8b518cd170e9b240e3ab97f7d04dab34. Final main tree equals
+tested integration6bb9775983ec1be1b268c0b6f2aab4d6b57948ec. Fresh hosted backend
+CI43755080100:3,186passed/zero skips/91.44%appcoverage/621existingwarnings978.94s;
+frontend43755080046:496passed76files/typecheck/build. Browser43755080199:
+baseline19passed12skipped; dedicatedcriteria2/14.1s,research2/12.7s,module1/8.8s.
+Precommit/gitleaks/Vercelpreview green. Detailed public-safe receipt is PR281
+metadata; no commit/CI restart needed to record it. Hosted/preview success is
+not API/worker rollout or original crash-cause proof.
+
+Owner selected retirement with preserved history. Work continues locally in
+codex/criteria-retirement, based on the exact merged main. Parent owns frontend/
+browser/docs; Parfit owns model/schema/migration/routes/new backend tests; Boole
+reviews independently. See criteria-retirement.md. No new source/model/production
+task/settings change, migration against production, paid call or automationresume.
+This new slice is not approved for publication/merge/deployment.
+
+Initial browser lifecycle checks reached retirement/history preservation but
+failed on reload because generic query retries delayed a permanent409 beyond the
+assertion window. Retired409 now is non-retrying. Review additionally found a
+stalled-dialog trap and focus restoration to an unmounted trigger; Close/Escape
+remain usable without duplicate submission, and focus returns to the surviving
+picker. Actual fresh normalChrome desktop1440/mobile390 final lifecycle passed
+2/14.2s, with explicit retired selection, disabled new export, exact historical
+download bytes before/after and persisted reload409. Dialog screenshots inspected:
+text fits; no overlap/horizontal overflow. Owned browser/API/Vite servers stopped
+and ports8688/8120clear. Final full suites/database acceptance remain in progress.
+
+Fresh disposable PG17.11/PostGIS/topology independently physically identified;
+restricted role/nonce guard passed before all migrations through20261115_0001.
+No existing or production database used. Runtime remains owned for focused PG
+tests and must be stopped/status-confirmed before completing this local slice.
+Parent review caught GET FOR UPDATE incompatibility with demo READ ONLY; export
+locking must be separate from ordinary read-only screening. Do not claim that
+regression closed until real PostgreSQL tests pass.
+
+Owner also proposed nearby-lot AI use/entitlement classification; see
+parcel-use-feasibility.md. Qualified parcel-to-zone/overlay evidence, official
+dated rules and reviewed labels remain gates; proximity is not entitlement or
+for-sale status. No classifier or paid inference was implemented by that note.
+
+Retirement follow-up: backend owner completed180focused SQLite and7realPG cases,
+including actual export/retire/edit ordering, cached-row refresh and demo READ
+ONLY GET. Parent final review has no backend blockers. Frontend final512tests/
+78files7.00s,typecheck/build/scopedlint passed. A late-closed-dialog focus
+regression failed before the final fix (1fail/1pass with targeted omissions),
+then all cases passed; focus moves only if it remains on the disappearing trigger.
+FreshChrome lifecycle2/19.5s additionally delays the mobile retirement response,
+closes the pending dialog, then verifies picker focus/history/reload. Older APIs
+without retired_at expose no unsupported retirement action (both branches tested).
+
+First complete local run:3234passed11failed470.37s/91.46%coverage. All failures
+were tests/test_schema_reconciliation.py, whose pinned head and historical model
+SELECTs predated retired_at. Head pin updated to20261115_0001; historical snapshots
+explicitly exclude only the known later buy_boxes.retired_at column. No generic
+missing-column filter or relaxed current-head drift/schema/RLS/rollback assertion.
+Focused SQLite/PG reconciliation now17passed/3existingwarnings22.58s. Independent
+review accepted the narrow change. Full suite rerun is in progress; owned PG must
+remain until its final receipt/drift check, then stop/status-confirm it. No new
+publication, paid/production/source/task/settings or automation authority.
+
 ## November 15: Approved Dependency-Ordered Merge
 
 User approved merging280,281,282 and continuing the existing pending checklist.
