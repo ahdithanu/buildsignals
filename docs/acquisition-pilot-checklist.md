@@ -2,6 +2,18 @@
 
 ## Local implementation, not deployed
 
+### Structured Criteria Editing Integration (2026-11-14, Local)
+
+The earlier saved-criteria editing gap is ported onto merged research mainc34cef4
+without the source branch's unrelated ingestion history. Tenant/admin/editor PUT,
+fresh locked baseline comparison, atomic audit and preserved historical exports
+are retained. The existing editor preserves drafts and reconciles list/screen
+caches. Dedicated PostgreSQL tests now use main's verified test-session helpers;
+browser checks use disposable data and deny external connections. Destination
+receipts are in the latest handoff and edit-acquisition-criteria.md. This closes
+editing only: deletion/retirement, revision history, real-property acceptance and
+subsequent publication/release remain separate gates. Not deployed.
+
 ### Demo acquisition workflow readiness (2026-09-28)
 
 The read-only demo overview now translates the historical Columbus cohort into

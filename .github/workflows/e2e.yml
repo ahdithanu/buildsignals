@@ -55,6 +55,13 @@ jobs:
         # (:8080). No manual server startup needed here.
         run: npm run e2e
 
+      - name: Run offline criteria editing E2E
+        env:
+          RUN_CRITERIA_E2E: "1"
+          OPENROUTER_API_KEY: ""
+          REDIS_URL: ""
+        run: node node_modules/@playwright/test/cli.js test -c e2e/criteria.playwright.config.ts
+
       - name: Run offline research E2E
         env:
           RUN_RESEARCH_E2E: "1"

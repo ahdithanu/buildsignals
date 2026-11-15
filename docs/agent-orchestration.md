@@ -1,7 +1,8 @@
 # Coding Coordination and Research Agents
 
-Review-only integration of the local research workflow onto current main.
-Not merged or deployed. Production settings and existing source jobs are unchanged.
+Research workflow merged in PR279 at c34cef4 after explicit approval, with an exact
+tree match to tested fc515ab. Execution remains disabled; no API/worker runtime or
+production settings/source changes were made. A merge is not runtime qualification.
 No paid model calls are required for the offline checks.
 
 ## Two Separate Responsibilities
@@ -257,7 +258,8 @@ config excludes E2E files; real-browser execution is a separate check.
 - [ ] Reviewed hosted worker image/lifecycle and audit/budget-store access/retention.
 - [ ] Install the guarded `multi_agent_research` evaluation workflow if selected.
 - [ ] Separately approved coding-agent dispatch; current packets do not execute agents.
-- [ ] Current-main integration, PR/publication and production release approval.
+- [x] Current-main integration, PR/publication and separately approved merge (PR279).
+- [ ] Separate production runtime qualification and release approval.
 
 Preserve source rights and evidence/privacy gates. Do not claim that two agents
 have discovered or validated investment opportunities, or that this is deployed.

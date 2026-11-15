@@ -210,7 +210,7 @@ def main():
             "DEMO_ENABLED": "true",
             "INTERNAL_OPERATIONS_USER_IDS": OPERATOR_USER_ID,
         })
-        if sf_map_enabled or research_enabled:
+        if sf_map_enabled or research_enabled or os.environ.get("RUN_CRITERIA_E2E") == "1":
             _deny_external_sockets()
         if research_enabled:
             os.environ["OPENROUTER_API_KEY"] = "synthetic-no-provider-call"

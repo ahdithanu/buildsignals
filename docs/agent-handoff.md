@@ -1,5 +1,58 @@
 # Current Agent Handoff
 
+## November 14: Research Merged; Criteria Editing Integration
+
+User explicitly approved PR279 merge and continued local checklist work. PR279
+merged at **c34cef415855389ff915e9e73f452ebd10dfdfcb**, tree-identical to tested
+fc515ab. Prior draft-only statements below are historical. Hosted PR gates passed:
+3,135backend/zero skips/91.44%coverage (621 disclosed warnings),477frontend,
+baselinebrowser19passed9skipped and research2passed. Research defaults and deployed
+hard-denials remain; no API/worker rollout, paid-model call, source/schedule/access
+change or standing-automation resume was performed. Automatic post-merge main
+CI43679288872 also passed3,135tests/91.44%coverage/621warnings818.62s.
+
+Next existing unblocked item: `.worktrees/criteria-edit-integration`, branch
+`codex/criteria-edit-integration`, base merged mainc34cef4. Only the criteria
+editing diff from06f7b3d was ported; no prior ingestion/history/runtime changes.
+Parent owns application/UI/HTTP/browser/docs. Independent writer ported only the
+two PG tests; independent review found and closed the gaps below. PG tests use merged
+research_postgres_support, not the unmerged ingestion test module, and prove
+complete blocker SQL at the default activity-monitor size. HTTP49passed16.86s;
+frontend481passed6.74s; freshChromecriteria2passed11.9s and research2passed11.9s;
+realPG criteria/research/foundation7passed0.42s. Typecheck/build/scopedlint/Ruff/
+migration drift pass. Full backend: **3,186 passed, zero skipped, 91.44% app
+coverage, three existing geography-reflection warnings, 464.36s**. The 3,135 main
+cases plus49HTTP/twoPG editing cases are retained. Owned PG was stopped and its
+status independently confirmed. An independent review found a deferred-initial-
+screen cache race and browser-guard wiring gap; the guard is now selected by the
+dedicated config and CI step, with default-suite skip if unguarded. The explicit
+no-caller-flag Chrome rerun passed2/14.0s. Four deferred initial-response regressions
+failed before the fix; explicit scoped screen cancellation before invalidation on
+success/409 makes all four pass in either response order, leaving other account/
+research caches unchanged. Final frontend **485passed/76files12.42s**, focused63
+pass, typecheck/build/scopedlint pass. Final freshChrome **2passed11.7s**. No
+backend product/test code changed after the full backend receipt. Independent
+final review reports no remaining code blockers; no publication/release implied.
+Final CI-style headless criteria2passed11.5s, with the same config-owned guard.
+
+Test setup failures were local-only: sandbox shared-memory denial required normal
+local-runtime escalation; CREATE DATABASE inside a transaction was rejected.
+The first passwordless test URL failed the guard. It is NOT the acceptance
+target; a second fresh nonce database passed restricted-role/read-only proof
+before migrations. Never use unknown/production targets or weaken these guards.
+Owned temporary PG has been stopped after the full suite; do not restart it
+without a new concrete test need.
+No new migration/dependency change; known build/reflection warnings remain.
+
+User subsequently reported a live full error screen during fast navigation.
+Fresh normal Chrome read-only checks across Map/Planning/Brands/Signals/Watchlist/
+Graph did not reproduce an ErrorBoundary exception. Browser logged async message
+channel closures only, not a proven app cause. Exact failing URL/click sequence
+was requested; do not claim fixed or substitute green tests for reproduction.
+Keep that investigation separate from the unpublished criteria feature. Separate
+codex/navigation-error-recovery reproduces a latched-dashboard recovery defect,
+not the initial trigger; read that worktree's handoff before continuing it.
+
 ## Research Workflow Integration (Review Only)
 
 The owner approved publication of a review-only PR for the local research workflow.

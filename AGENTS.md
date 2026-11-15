@@ -1,10 +1,17 @@
 # BuildSignals: Shared Agent Instructions
 
-Research workflow PR is review-only, integrated on current main. Read
-`docs/agent-orchestration.md` and the latest handoff. Local research API/UI and
+Research PR279 merged at c34cef4 after explicit approval; its tree equals tested
+fc515ab. Hosted3,135backend/zero skips/91.44%coverage,477frontend,baselinebrowser
+19pass9skip/research2pass; warnings/skips are disclosed in PR metadata. Next local
+work is saved structured-criteria editing in codex/criteria-edit-integration,
+ported only from06f7b3d onto merged main. No prior ingestion/history changes are
+included. Read docs/edit-acquisition-criteria.md and current handoff for receipts.
+No subsequent publication/merge or API/worker release is authorized. The standing
+automation remains paused; this chat's local continuation does not resume it.
+Read `docs/agent-orchestration.md` and the latest handoff. Local research API/UI and
 isolated SDK runtime are opt-in; defaults disable calls and staging/production
 are code-denied. Application and optional SDK dependencies remain separate.
-No live-model, production, source-activation, merge or deployment authority is
+No live-model, production, source-activation or further merge/deployment authority is
 granted. Keep detailed operational receipts internal and unrelated local work out.
 
 Start here regardless of agent or editor. Read `docs/agent-handoff.md` next,
