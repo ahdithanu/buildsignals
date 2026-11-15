@@ -1,5 +1,53 @@
 # Current Agent Handoff
 
+## November 14: Stacked Map-Load PR Approved
+
+The user approved publishing this separate stacked PR after checks, not a merge
+or production release. Base remains recoveryPR280 at121ccbc; criteriaPR281 at
+b941bc1 and recoveryPR280 heads are untouched and all their hosted checks passed.
+This approval supersedes the prior local-only publication gate below.
+
+Accepted product/unit/browser code remains unchanged from32121c8. This slice adds
+only an explicit module-load browser step to CI, with blank provider/Redis keys,
+so the opt-in test is executed rather than silently skipped. CI-style headless
+local verification passed1case/6.8s with0skips/retries; ownedservers stopped and
+ports clear. CI YAML parses and its blank provider/Redis env is verified. Product/
+unit/browser code matches32121c8; local488frontend/typecheck/build/lint receipts
+remain applicable. Exact published head and hosted receipts will be recorded in
+PR metadata. No live data, paid/model/source/production calls or
+platform settings changes. Original production crash cause remains unconfirmed.
+Keep root dirty research, other worktrees and private collector/receipts intact.
+
+## November 14: Local Failed-Module Investigation Follow-Up
+
+Published draft recovery280/121ccbc and criteria281/b941bc1 are separate and
+unchanged. Their frontend/browser/security/preview checks passed; parent watches
+the backend gates. Current local branch codex/map-module-load-recovery is stacked
+on recovery280. Separate publication/checks are now approved, not merge/deploy.
+
+Bounded offline investigation on main9f09d87: natural12routeclicks/sixin519ms,
+no page/rejection/boundary error. Final expected-login401assertion failed; corrected
+classification was checked against saved receipt, not called a fresh passing run.
+Controlled module abort did reproduce TypeError through mapLazy/Suspense to the
+boundary. Try again recaught it without another module request. Detailed synthetic
+receipts stay in ignored local test-results; no production data or calls involved.
+
+Parent owns InternalError/unit/docs; browser agent owns only the new module-load
+test/config in this worktree. Explicit manual Reload page/no auto reload/mutation
+replay is implemented. Unit red3fail/10pass; fullfrontend488passed/75files7.50s,
+13boundary cases; typecheck/build/scopedlint pass, existing build warnings remain.
+Actual browserred(before productpatch): login/sourceabort/error screen succeeded,
+then failed because named Reloadpagebutton was absent, not a setup failure.
+Final green1passed2.4s/total7.5s; fresh normal Chrome/new temporary profile proves
+newdocument/sameURL/module rerequest/rendered syntheticmarker/viewer session
+preserved/no business mutations/postreloaderrors. Loopbackonly fixture, external
+traffic blocked. Both bounded follow-up sessions used; owned servers stopped and
+profiles removed. Product and final browser static reviews have no blockers.
+Do not call this production stale-bundle acceptance.
+Actual production crash still needs exact
+failing URL/exception or a matched live receipt; do not overclaim root cause.
+No paid/model/source/settings/collector/standing-automation action.
+
 ## November 14: Separate PR Publication Approved
 
 Owner approved pushing recovery and criteria editing as separate PRs and checking
