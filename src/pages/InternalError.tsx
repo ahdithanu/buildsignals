@@ -16,6 +16,8 @@ interface InternalErrorProps {
  */
 export default function InternalError({ onReset, error }: InternalErrorProps) {
   const isDev = import.meta.env.DEV;
+  const requiresReload = error instanceof TypeError
+    && /^(Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module)/i.test(error.message);
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md card-shadow">
@@ -27,7 +29,9 @@ export default function InternalError({ onReset, error }: InternalErrorProps) {
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-sm text-muted-foreground">
-            An unexpected error occurred. Engineering has been notified.
+            {requiresReload
+              ? 'A page component could not be loaded. Reload the page to try again. Unsaved changes may be lost.'
+              : 'An unexpected error occurred. Engineering has been notified.'}
           </p>
           {isDev && error?.message && (
             <pre className="text-left text-xs bg-secondary rounded p-2 overflow-auto max-h-40 whitespace-pre-wrap break-all">
@@ -35,9 +39,9 @@ export default function InternalError({ onReset, error }: InternalErrorProps) {
             </pre>
           )}
           <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
-            {onReset && (
-              <Button onClick={onReset} variant="default">
-                Try again
+            {(onReset || requiresReload) && (
+              <Button onClick={requiresReload ? () => window.location.reload() : onReset} variant="default">
+                {requiresReload ? 'Reload page' : 'Try again'}
               </Button>
             )}
             <Button asChild variant="outline">

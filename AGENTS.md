@@ -1,5 +1,13 @@
 # BuildSignals: Shared Agent Instructions
 
+Current local-only follow-up: codex/map-module-load-recovery, based on PR280's
+121ccbc, not part of published recovery280 or criteria281. Controlled map-module
+abort reproduced a full error and cached failed retry; actual production trigger
+remains unverified. Read docs/module-load-recovery.md and current handoff for
+bounded red/green evidence. Parent owns product/unit/docs; one agent owns only
+module-load browser test/config. No new publication/merge/deploy/settings/source/
+paid action. Both published PR heads remain unchanged; standing automation paused.
+
 Latest: PR279 merged c34cef4/treeequaltestedfc515ab after approval. This isolated
 codex/navigation-error-recovery branch addresses a reproduced sticky error-screen
 recovery defect, not the unknown live rapid-navigation trigger. Read current

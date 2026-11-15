@@ -2,6 +2,11 @@
 
 @AGENTS.md
 
+Current branch is local-only map-module-load-recovery on PR280/121ccbc. Controlled
+import failure is reproduced; no live-trigger diagnosis. Read module-load-recovery
+doc/handoff. Browser writer owns test/config only; no publication/release/paid/
+production authority or changes to either running PR. Automation stays paused.
+
 Latest: PR279 merged c34cef4. Local navigation-error-recovery fixes only the
 reproduced dashboard-link reset defect; actual live trigger remains unverified.
 Read current handoff/navigation-error-recovery.md. Do not overlap criteria branch
