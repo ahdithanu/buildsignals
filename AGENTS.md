@@ -1,5 +1,13 @@
 # BuildSignals: Shared Agent Instructions
 
+November 15 integration: user approved merging PR280, PR282 and PR281 in dependency
+order. Recovery280 merged b428a75; module282 merged3760d1a, each tree-identical
+to its tested head. Criteria281 integrates that main normally and must pass fresh
+combined checks before merge. No API/worker rollout, model calls, sources,
+production settings or automation resume is authorized. Automatic frontend
+deployment may follow main merges; no live crash-cause claim is established.
+Historical November14 preparation notes below do not override this approval.
+
 Research PR279 merged at c34cef4 after explicit approval; its tree equals tested
 fc515ab. Hosted3,135backend/zero skips/91.44%coverage,477frontend,baselinebrowser
 19pass9skip/research2pass; warnings/skips are disclosed in PR metadata. Next local
@@ -10,7 +18,29 @@ User approved publishing this and the separate recovery PR and verifying checks;
 no subsequent merge or API/worker release is authorized. Main9f09d87 contributes
 generated OpenAPI only, integrated without runtime changes/history rewriting. The standing
 automation remains paused; this chat's local continuation does not resume it.
-Read `docs/agent-orchestration.md` and the latest handoff. Local research API/UI and
+
+Current approved stacked-PR follow-up: codex/map-module-load-recovery, based on PR280's
+121ccbc, not part of published recovery280 or criteria281. Controlled map-module
+abort reproduced a full error and cached failed retry; actual production trigger
+remains unverified. Read docs/module-load-recovery.md and current handoff for
+bounded red/green evidence. Parent owns product/unit/docs; one agent owns only
+module-load browser test/config. User approved a separate PR after checks, not
+merge/deploy/settings/source/paid actions. CI now has an explicit guarded browser
+step; read the handoff/PR metadata for actual outcomes. Both existing published
+PR heads remain unchanged; standing automation paused.
+
+Latest: PR279 merged c34cef4/treeequaltestedfc515ab after approval. This isolated
+codex/navigation-error-recovery branch addresses a reproduced sticky error-screen
+recovery defect, not the unknown live rapid-navigation trigger. Read current
+handoff and docs/navigation-error-recovery.md. Separate criteria integration is
+owned in .worktrees/criteria-edit-integration; do not overlap its writer. User
+approved publishing both separate PRs and verifying checks, not merging/releasing.
+Current main9f09d87 adds generated OpenAPI only; it was merged without rewriting
+history. Paid calls, sources and production actions remain unapproved.
+Research remains default-off/deployed-denied; standing automation stays paused.
+
+Research PR279 is merged; runtime execution remains disabled. Read
+`docs/agent-orchestration.md` and the latest handoff. Local research API/UI and
 isolated SDK runtime are opt-in; defaults disable calls and staging/production
 are code-denied. Application and optional SDK dependencies remain separate.
 No live-model, production, source-activation or further merge/deployment authority is

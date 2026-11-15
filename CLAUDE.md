@@ -2,12 +2,33 @@
 
 @AGENTS.md
 
+November15: user approved merging280,282,281 in dependency order. First two merged
+b428a75/3760d1a. Criteria integrates their main and requires fresh combined green
+checks. Read current handoff. No API/worker rollout, paid calls, source/settings
+change or automation resume; automatic frontend deployment may follow main merges.
+The older preparation restrictions below are historical, not current merge gates.
+
 PR279 merged c34cef4/treeequalfc515ab after approval; hosted gates passed.
 Next local-only branch codex/criteria-edit-integration ports saved criteria editing
 from06f7b3d without unrelated ingestion history. Read edit-acquisition-criteria.md
 and current handoff. Separate PR publication/checks approved; no merge/release.
 Generated-schema main9f09d87 integrated without runtime changes; automation stays
-paused. Research execution is still disabled; read docs/agent-orchestration.md
+paused. Research execution is still disabled.
+
+Current branch is map-module-load-recovery stacked on PR280/121ccbc. Controlled
+import failure is reproduced; no live-trigger diagnosis. Read module-load-recovery
+doc/handoff. Separate PR publication/checks are now approved; no merge/release/
+paid/production authority or changes to PR280/281. CI explicitly runs the new
+guarded browser regression. Automation stays paused.
+
+Latest: PR279 merged c34cef4. Local navigation-error-recovery fixes only the
+reproduced dashboard-link reset defect; actual live trigger remains unverified.
+Read current handoff/navigation-error-recovery.md. Do not overlap criteria branch
+or infer release/paid/production authority. User approved separate PR publication
+and hosted checks; current generated-schema main9f09d87 is integrated. No merge
+or deployment approval for either new PR. Automation stays paused.
+
+Research integration is review-only on current main. Read docs/agent-orchestration.md
 and the latest handoff. Local API/UI, attempt reservations and the separate SDK
 runtime are disabled by default; staging/production remain code-denied. No paid
 calls, source activation, production configuration change, merge or deployment

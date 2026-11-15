@@ -1,5 +1,39 @@
 # Current Agent Handoff
 
+## November 15: Approved Dependency-Ordered Merge
+
+User approved merging280,281,282 and continuing the existing pending checklist.
+Order is280,282,281 because282 depends on280. Recovery280 merged atb428a75 and
+module282 at3760d1a, each with no tree changes from its tested head. PR282 was
+retargeted to main before merge. Criteria281 integrates that main without rewriting
+history; only handoff documentation conflicted. Both recovery behaviors and the
+criteria/research/module dedicated browser CI steps are retained. Fresh combined
+checks and independent review are required before281 merge; results go in PR
+metadata. The November14 approval statements below are historical.
+
+Combined local acceptance:496frontend tests/76files passed7.03s;49criteria HTTP
+tests passed16.36s;typecheck/build/scopedRuff/harness/diff-check passed. Existing
+Rollup annotation/large-chunk warnings remain. An initial test command used a
+nonexistent filename and collected nothing; corrected existing test file produced
+the49pass receipt. No PostgreSQL acceptance is inferred from this local HTTP run;
+fresh full hosted PostgreSQL/backend and dedicated browser gates remain required.
+Independent integration review found no blockers. Recovery product/tests/config
+remain byte-identical to merged main; no root concurrent changes were included.
+
+No API/worker rollout, paid calls, source/access/schedule/settings changes,
+consumed production repair or automation resume is authorized. Automatic Vercel
+frontend deployment may follow main merges, but green CI is not live verification.
+The original live crash remains unconfirmed without the failing URL/clicks and
+exception or matched live receipt. Root concurrent research/security work stays
+untouched and unpublished.
+
+Independent pending-list inspection found no fully specified unblocked local
+slice beyond this integration. Acquisition gates are qualified parcel rights/
+identifier/geometry/freshness data, reviewed fact-application adjudication, and
+criteria deletion-versus-retirement/history policy. Research needs spend/storage/
+retention decisions and separately approved real-model evaluation. Do not invent
+polish or repeat synthetic acceptance as a substitute for those dependencies.
+
 ## November 14: Separate PR Publication Approved
 
 Owner approved pushing criteria editing and recovery as separate PRs and verifying
@@ -61,6 +95,91 @@ was requested; do not claim fixed or substitute green tests for reproduction.
 Keep that investigation separate from the unpublished criteria feature. Separate
 codex/navigation-error-recovery reproduces a latched-dashboard recovery defect,
 not the initial trigger; read that worktree's handoff before continuing it.
+## November 14: Stacked Map-Load PR Approved
+
+The user approved publishing this separate stacked PR after checks, not a merge
+or production release. Base remains recoveryPR280 at121ccbc; criteriaPR281 at
+b941bc1 and recoveryPR280 heads are untouched and all their hosted checks passed.
+This approval supersedes the prior local-only publication gate below.
+
+Accepted product/unit/browser code remains unchanged from32121c8. This slice adds
+only an explicit module-load browser step to CI, with blank provider/Redis keys,
+so the opt-in test is executed rather than silently skipped. CI-style headless
+local verification passed1case/6.8s with0skips/retries; ownedservers stopped and
+ports clear. CI YAML parses and its blank provider/Redis env is verified. Product/
+unit/browser code matches32121c8; local488frontend/typecheck/build/lint receipts
+remain applicable. Exact published head and hosted receipts will be recorded in
+PR metadata. No live data, paid/model/source/production calls or
+platform settings changes. Original production crash cause remains unconfirmed.
+Keep root dirty research, other worktrees and private collector/receipts intact.
+
+## November 14: Local Failed-Module Investigation Follow-Up
+
+Published draft recovery280/121ccbc and criteria281/b941bc1 are separate and
+unchanged. Their frontend/browser/security/preview checks passed; parent watches
+the backend gates. Current local branch codex/map-module-load-recovery is stacked
+on recovery280. Separate publication/checks are now approved, not merge/deploy.
+
+Bounded offline investigation on main9f09d87: natural12routeclicks/sixin519ms,
+no page/rejection/boundary error. Final expected-login401assertion failed; corrected
+classification was checked against saved receipt, not called a fresh passing run.
+Controlled module abort did reproduce TypeError through mapLazy/Suspense to the
+boundary. Try again recaught it without another module request. Detailed synthetic
+receipts stay in ignored local test-results; no production data or calls involved.
+
+Parent owns InternalError/unit/docs; browser agent owns only the new module-load
+test/config in this worktree. Explicit manual Reload page/no auto reload/mutation
+replay is implemented. Unit red3fail/10pass; fullfrontend488passed/75files7.50s,
+13boundary cases; typecheck/build/scopedlint pass, existing build warnings remain.
+Actual browserred(before productpatch): login/sourceabort/error screen succeeded,
+then failed because named Reloadpagebutton was absent, not a setup failure.
+Final green1passed2.4s/total7.5s; fresh normal Chrome/new temporary profile proves
+newdocument/sameURL/module rerequest/rendered syntheticmarker/viewer session
+preserved/no business mutations/postreloaderrors. Loopbackonly fixture, external
+traffic blocked. Both bounded follow-up sessions used; owned servers stopped and
+profiles removed. Product and final browser static reviews have no blockers.
+Do not call this production stale-bundle acceptance.
+Actual production crash still needs exact
+failing URL/exception or a matched live receipt; do not overclaim root cause.
+No paid/model/source/settings/collector/standing-automation action.
+
+## November 14: Separate PR Publication Approved
+
+Owner approved pushing recovery and criteria editing as separate PRs and checking
+hosted outcomes. No merge, release, source/production/configuration changes or
+paid calls are authorized. Integrated current main9f09d87 without rewriting
+history; its only change afterc34cef4 is generated openapi.json. Runtime/tests
+remain identical to the accepted recovery checkpointae5ce92. Publication/head/
+hosted receipts will be recorded in PR metadata after checks, not inferred here.
+The original crash remains a separate bounded offline browser investigation;
+this change fixes only the reproduced stuck-dashboard recovery path.
+
+## November 14: Local Error-Recovery Regression
+
+PR279 merged at c34cef4 after explicit user approval; its tree equals tested
+fc515ab. Prior review-only statements below are historical. No API/worker
+runtime enablement or production settings/source/task changes occurred.
+
+User reports live full error screen during fast navigation. Fresh normal Chrome
+checks did not reproduce a render exception across six primary routes plus Graph.
+Exact failing URL/clicks requested; no actual root cause is claimed. Independent
+read-only review reproduced a separate recovery defect: Back to dashboard changes
+route but leaves ErrorBoundary latched. Parent regression on actual MemoryRouter/
+Routes and real boundary/components failed1/passed2 before fix, then passed3.
+InternalError dashboard Link now invokes existing onReset; Try again unchanged.
+Independent review reproduced another caught exception for modified clicks; five
+regressions failed before a same-tab unmodified-left-click guard was added. Final
+frontend **483passed/75files12.97s**, including all8boundary cases. Typecheck and
+scopedlint and final build pass. Existing annotation/large-chunk warnings remain.
+Independent final review found no
+remaining code blockers. Router transitions may still attempt old-route renders
+before completing recovery; no claim of zero transient renders is made.
+See docs/navigation-error-recovery.md. No backend/schema/auth/data changes.
+
+Branch codex/navigation-error-recovery is based only on merged mainc34cef4, not
+the separate criteria integration. Publication/checks are now approved, but not
+merge/deployment; root user research and collector remain untouched. Standing
+automation remains paused. Do not call this a production crash repair.
 
 ## Research Workflow Integration (Review Only)
 

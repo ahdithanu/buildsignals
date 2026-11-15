@@ -1,9 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { useState } from "react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import InternalError from "@/pages/InternalError";
 
 /**
  * Pins the contract for the top-level error boundary:
@@ -71,5 +72,55 @@ describe("<ErrorBoundary>", () => {
 
     expect(screen.getByText(/RECOVERED/)).toBeInTheDocument();
     expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+  });
+
+  it("recovers to the dashboard when leaving a crashed route", () => {
+    render(
+      <MemoryRouter initialEntries={["/broken"]}>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/broken" element={<Boom />} />
+            <Route path="/" element={<h1>Recovered dashboard</h1>} />
+          </Routes>
+        </ErrorBoundary>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("link", { name: /back to dashboard/i }));
+    expect(screen.getByRole("heading", { name: "Recovered dashboard" })).toBeInTheDocument();
+    expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+  });
+
+  it.each([{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }])(
+    "does not retry the current failed route for a modified click: %j", modifiers => {
+      render(<MemoryRouter initialEntries={["/broken"]}><ErrorBoundary><Boom /></ErrorBoundary></MemoryRouter>);
+      const reports = errSpy.mock.calls.length;
+      fireEvent.click(screen.getByRole("link", { name: /back to dashboard/i }), modifiers);
+      expect(errSpy).toHaveBeenCalledTimes(reports);
+      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    "Failed to fetch dynamically imported module: https://example.invalid/map.js",
+    "Importing a module script failed.",
+    "error loading dynamically imported module: https://example.invalid/map.js",
+  ])("offers explicit reload without retrying a rejected module: %s", message => {
+    const reset = vi.fn();
+    render(<MemoryRouter><InternalError error={new TypeError(message)} onReset={reset} /></MemoryRouter>);
+    expect(screen.getByRole("button", { name: "Reload page" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Unsaved changes may be lost/)).toBeInTheDocument();
+    expect(reset).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    new TypeError("Cannot read properties of undefined"),
+    new Error("Failed to fetch dynamically imported module"),
+  ])("keeps ordinary rendering errors on the existing retry path: %s", error => {
+    const reset = vi.fn();
+    render(<MemoryRouter><InternalError error={error} onReset={reset} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Reload page" })).not.toBeInTheDocument();
   });
 });
