@@ -41,7 +41,10 @@ export default function InternalError({ onReset, error }: InternalErrorProps) {
               </Button>
             )}
             <Button asChild variant="outline">
-              <Link to="/">Back to dashboard</Link>
+              <Link to="/" onClick={event => {
+                if (event.button === 0 && !event.defaultPrevented
+                  && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) onReset?.();
+              }}>Back to dashboard</Link>
             </Button>
           </div>
         </CardContent>
