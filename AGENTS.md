@@ -1,5 +1,24 @@
 # BuildSignals: Shared Agent Instructions
 
+November 15 integration: user approved merging PR280, PR282 and PR281 in dependency
+order. Recovery280 merged b428a75; module282 merged3760d1a, each tree-identical
+to its tested head. Criteria281 integrates that main normally and must pass fresh
+combined checks before merge. No API/worker rollout, model calls, sources,
+production settings or automation resume is authorized. Automatic frontend
+deployment may follow main merges; no live crash-cause claim is established.
+Historical November14 preparation notes below do not override this approval.
+
+Research PR279 merged at c34cef4 after explicit approval; its tree equals tested
+fc515ab. Hosted3,135backend/zero skips/91.44%coverage,477frontend,baselinebrowser
+19pass9skip/research2pass; warnings/skips are disclosed in PR metadata. Next local
+work is saved structured-criteria editing in codex/criteria-edit-integration,
+ported only from06f7b3d onto merged main. No prior ingestion/history changes are
+included. Read docs/edit-acquisition-criteria.md and current handoff for receipts.
+User approved publishing this and the separate recovery PR and verifying checks;
+no subsequent merge or API/worker release is authorized. Main9f09d87 contributes
+generated OpenAPI only, integrated without runtime changes/history rewriting. The standing
+automation remains paused; this chat's local continuation does not resume it.
+
 Current approved stacked-PR follow-up: codex/map-module-load-recovery, based on PR280's
 121ccbc, not part of published recovery280 or criteria281. Controlled map-module
 abort reproduced a full error and cached failed retry; actual production trigger
@@ -24,7 +43,7 @@ Research PR279 is merged; runtime execution remains disabled. Read
 `docs/agent-orchestration.md` and the latest handoff. Local research API/UI and
 isolated SDK runtime are opt-in; defaults disable calls and staging/production
 are code-denied. Application and optional SDK dependencies remain separate.
-No live-model, production, source-activation, merge or deployment authority is
+No live-model, production, source-activation or further merge/deployment authority is
 granted. Keep detailed operational receipts internal and unrelated local work out.
 
 Start here regardless of agent or editor. Read `docs/agent-handoff.md` next,

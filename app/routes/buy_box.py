@@ -10,7 +10,12 @@ from app.models.acquisition_screen import AcquisitionScreenSnapshot
 from app.models.buy_box import BuyBox
 from app.models.deal import Deal
 from app.models.organization_membership import MemberRole
-from app.schemas.buy_box import AcquisitionCriteria, BuyBoxCreate, BuyBoxResponse
+from app.schemas.buy_box import (
+    AcquisitionCriteria,
+    AcquisitionCriteriaUpdate,
+    BuyBoxCreate,
+    BuyBoxResponse,
+)
 from app.services.acquisition_history import (
     review_export_context,
     reviewed_observations_context,
@@ -163,6 +168,45 @@ def create_buy_box(payload: BuyBoxCreate, db: Session = Depends(get_db),
     box.organization_id = get_org_id()
     box.user_id = principal["user_id"]
     db.add(box)
+    db.commit()
+    db.refresh(box)
+    return box
+
+
+@router.put(
+    "/buy-box/{buy_box_id}/acquisition-criteria",
+    response_model=BuyBoxResponse,
+    dependencies=[Depends(require_role(MemberRole.admin, MemberRole.editor))],
+)
+def update_acquisition_criteria(
+    buy_box_id: str,
+    payload: AcquisitionCriteriaUpdate,
+    db: Session = Depends(get_db),
+    principal: dict = Depends(get_current_user),
+):
+    box = (
+        scope_query(db.query(BuyBox), BuyBox)
+        .filter(BuyBox.id == buy_box_id)
+        .populate_existing()
+        .with_for_update()
+        .first()
+    )
+    if box is None:
+        raise HTTPException(status_code=404, detail="Buy box not found")
+    try:
+        current = AcquisitionCriteria.model_validate(box.acquisition_criteria).model_dump()
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Buy box has no valid structured acquisition criteria") from None
+    if current != payload.expected_criteria.model_dump():
+        raise HTTPException(status_code=409, detail="Acquisition criteria changed; reload before editing")
+    replacement = payload.acquisition_criteria.model_dump()
+    box.acquisition_criteria = replacement
+    log_change(
+        db, "buy_box", box.id, "update_acquisition_criteria",
+        actor_id=principal["user_id"],
+        old_values={"acquisition_criteria": current},
+        new_values={"acquisition_criteria": replacement},
+    )
     db.commit()
     db.refresh(box)
     return box

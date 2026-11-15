@@ -35,6 +35,13 @@ class BuyBoxCreate(BaseModel):
     acquisition_criteria: Optional[AcquisitionCriteria] = None
 
 
+class AcquisitionCriteriaUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    acquisition_criteria: AcquisitionCriteria
+    expected_criteria: AcquisitionCriteria
+
+
 class BuyBoxResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

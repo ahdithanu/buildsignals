@@ -1,14 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { CreateAcquisitionCriteria } from './CreateAcquisitionCriteria';
+import { AcquisitionCriteriaEditor, CreateAcquisitionCriteria } from './CreateAcquisitionCriteria';
+import type { AcquisitionCriteria } from './CreateAcquisitionCriteria';
 
 interface SavedBox {
   id: string;
-  acquisition_criteria: null | {
-    profile: string; market_city: string; market_state: string;
-    min_price: number; max_price: number; min_size: number; max_size: number;
-  };
+  acquisition_criteria: AcquisitionCriteria | null;
 }
 
 export function SavedAcquisitionCriteria({ value, onChange }: {
@@ -25,6 +23,7 @@ export function SavedAcquisitionCriteria({ value, onChange }: {
     },
   });
   const boxes = query.data?.filter(box => box.acquisition_criteria) ?? [];
+  const selected = boxes.find(box => box.id === value);
   return <div className="mb-3">
     <label className="block text-sm">Saved buy box
       <select className="mt-1 block w-full border bg-background p-2" value={value}
@@ -43,5 +42,10 @@ export function SavedAcquisitionCriteria({ value, onChange }: {
     {query.isError && <p role="alert" className="text-xs">Saved buy boxes unavailable. <button onClick={() => query.refetch()} className="underline">Retry buy boxes</button></p>}
     {query.data?.length === 200 && <p className="text-xs">Showing the first 200 buy boxes.</p>}
     <CreateAcquisitionCriteria onCreated={onChange} />
+    {selected?.acquisition_criteria && <AcquisitionCriteriaEditor
+      key={`${organizationId}:${user?.id}:${selected.id}`}
+      existingBox={{ id: selected.id, acquisition_criteria: selected.acquisition_criteria }}
+      disabled={query.isFetching || query.isError}
+      onSaved={() => undefined} />}
   </div>;
 }

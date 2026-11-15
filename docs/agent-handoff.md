@@ -1,5 +1,100 @@
 # Current Agent Handoff
 
+## November 15: Approved Dependency-Ordered Merge
+
+User approved merging280,281,282 and continuing the existing pending checklist.
+Order is280,282,281 because282 depends on280. Recovery280 merged atb428a75 and
+module282 at3760d1a, each with no tree changes from its tested head. PR282 was
+retargeted to main before merge. Criteria281 integrates that main without rewriting
+history; only handoff documentation conflicted. Both recovery behaviors and the
+criteria/research/module dedicated browser CI steps are retained. Fresh combined
+checks and independent review are required before281 merge; results go in PR
+metadata. The November14 approval statements below are historical.
+
+Combined local acceptance:496frontend tests/76files passed7.03s;49criteria HTTP
+tests passed16.36s;typecheck/build/scopedRuff/harness/diff-check passed. Existing
+Rollup annotation/large-chunk warnings remain. An initial test command used a
+nonexistent filename and collected nothing; corrected existing test file produced
+the49pass receipt. No PostgreSQL acceptance is inferred from this local HTTP run;
+fresh full hosted PostgreSQL/backend and dedicated browser gates remain required.
+Independent integration review found no blockers. Recovery product/tests/config
+remain byte-identical to merged main; no root concurrent changes were included.
+
+No API/worker rollout, paid calls, source/access/schedule/settings changes,
+consumed production repair or automation resume is authorized. Automatic Vercel
+frontend deployment may follow main merges, but green CI is not live verification.
+The original live crash remains unconfirmed without the failing URL/clicks and
+exception or matched live receipt. Root concurrent research/security work stays
+untouched and unpublished.
+
+Independent pending-list inspection found no fully specified unblocked local
+slice beyond this integration. Acquisition gates are qualified parcel rights/
+identifier/geometry/freshness data, reviewed fact-application adjudication, and
+criteria deletion-versus-retirement/history policy. Research needs spend/storage/
+retention decisions and separately approved real-model evaluation. Do not invent
+polish or repeat synthetic acceptance as a substitute for those dependencies.
+
+## November 14: Separate PR Publication Approved
+
+Owner approved pushing criteria editing and recovery as separate PRs and verifying
+hosted checks; no merge/release/paid/source/production authority. Current main
+9f09d87 adds only generated openapi.json afterc34cef4 and was merged normally;
+runtime/tests remain identical to accepted criteria checkpoint1f3452d. The two
+branches stay independent. PR metadata will carry exact heads/hosted receipts.
+Keep root concurrent research and all private operational receipts out of both.
+
+## November 14: Research Merged; Criteria Editing Integration
+
+User explicitly approved PR279 merge and continued local checklist work. PR279
+merged at **c34cef415855389ff915e9e73f452ebd10dfdfcb**, tree-identical to tested
+fc515ab. Prior draft-only statements below are historical. Hosted PR gates passed:
+3,135backend/zero skips/91.44%coverage (621 disclosed warnings),477frontend,
+baselinebrowser19passed9skipped and research2passed. Research defaults and deployed
+hard-denials remain; no API/worker rollout, paid-model call, source/schedule/access
+change or standing-automation resume was performed. Automatic post-merge main
+CI43679288872 also passed3,135tests/91.44%coverage/621warnings818.62s.
+
+Next existing unblocked item: `.worktrees/criteria-edit-integration`, branch
+`codex/criteria-edit-integration`, base merged mainc34cef4. Only the criteria
+editing diff from06f7b3d was ported; no prior ingestion/history/runtime changes.
+Parent owns application/UI/HTTP/browser/docs. Independent writer ported only the
+two PG tests; independent review found and closed the gaps below. PG tests use merged
+research_postgres_support, not the unmerged ingestion test module, and prove
+complete blocker SQL at the default activity-monitor size. HTTP49passed16.86s;
+frontend481passed6.74s; freshChromecriteria2passed11.9s and research2passed11.9s;
+realPG criteria/research/foundation7passed0.42s. Typecheck/build/scopedlint/Ruff/
+migration drift pass. Full backend: **3,186 passed, zero skipped, 91.44% app
+coverage, three existing geography-reflection warnings, 464.36s**. The 3,135 main
+cases plus49HTTP/twoPG editing cases are retained. Owned PG was stopped and its
+status independently confirmed. An independent review found a deferred-initial-
+screen cache race and browser-guard wiring gap; the guard is now selected by the
+dedicated config and CI step, with default-suite skip if unguarded. The explicit
+no-caller-flag Chrome rerun passed2/14.0s. Four deferred initial-response regressions
+failed before the fix; explicit scoped screen cancellation before invalidation on
+success/409 makes all four pass in either response order, leaving other account/
+research caches unchanged. Final frontend **485passed/76files12.42s**, focused63
+pass, typecheck/build/scopedlint pass. Final freshChrome **2passed11.7s**. No
+backend product/test code changed after the full backend receipt. Independent
+final review reports no remaining code blockers; no publication/release implied.
+Final CI-style headless criteria2passed11.5s, with the same config-owned guard.
+
+Test setup failures were local-only: sandbox shared-memory denial required normal
+local-runtime escalation; CREATE DATABASE inside a transaction was rejected.
+The first passwordless test URL failed the guard. It is NOT the acceptance
+target; a second fresh nonce database passed restricted-role/read-only proof
+before migrations. Never use unknown/production targets or weaken these guards.
+Owned temporary PG has been stopped after the full suite; do not restart it
+without a new concrete test need.
+No new migration/dependency change; known build/reflection warnings remain.
+
+User subsequently reported a live full error screen during fast navigation.
+Fresh normal Chrome read-only checks across Map/Planning/Brands/Signals/Watchlist/
+Graph did not reproduce an ErrorBoundary exception. Browser logged async message
+channel closures only, not a proven app cause. Exact failing URL/click sequence
+was requested; do not claim fixed or substitute green tests for reproduction.
+Keep that investigation separate from the unpublished criteria feature. Separate
+codex/navigation-error-recovery reproduces a latched-dashboard recovery defect,
+not the initial trigger; read that worktree's handoff before continuing it.
 ## November 14: Stacked Map-Load PR Approved
 
 The user approved publishing this separate stacked PR after checks, not a merge
