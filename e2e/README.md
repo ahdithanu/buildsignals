@@ -364,3 +364,18 @@ e2e/
     internal-operations.spec.ts # synthetic operator/customer/demo boundaries
     sf-derived-map.spec.ts     # opt-in synthetic SF estimates, desktop/mobile
 ```
+
+## Parcel Zoning Context (Local Only)
+
+`PYTHON=.venv/bin/python E2E_API_PORT=8121 E2E_WEB_PORT=8122 npm exec -- playwright test -c e2e/parcel-use.playwright.config.ts`
+
+Uses a fresh synthetic temporary database and new normal Chrome windows locally
+(Chromium headless in CI). Opens a saved nearby parcel, tests isolated context
+failure/retry, checks unknown potential uses, reload persistence, zero business
+mutations, console errors and desktop/mobile overflow. The fixture is not real
+parcel inventory or source/entitlement acceptance. HTTP/WebSocket traffic is
+restricted to exact owned origins; Vite's proxy is pinned to the owned API and
+the backend denies external sockets before app import. Existing demo gates and
+normal E2E fixtures are unchanged. Screenshots are local ignored test outputs.
+The browser workflow includes an explicit offline parcel-context step; the
+baseline suite intentionally skips this opt-in fixture, not its dedicated step.

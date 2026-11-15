@@ -8,6 +8,7 @@ import { ParcelMap } from '@/components/ParcelMap';
 import { LoadingState, ErrorState, EmptyState } from '@/components/DataStates';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { ParcelUseContext } from '@/components/ParcelUseContext';
 import { useParcelDetail } from '@/hooks/useParcelDetail';
 import { safeSourceUrl } from '@/lib/sourceUrl';
 
@@ -260,6 +261,8 @@ export default function ParcelDetail() {
             <Detail label="Total assessed value" value={formatCurrency(parcel.total_assessed_value)} />
           </div>
         </section>
+
+        <ParcelUseContext key={parcel.id} parcelId={parcel.id} />
 
         <section className="rounded-md border bg-card p-4 card-shadow">
           <div className="mb-3 flex items-center justify-between gap-3">

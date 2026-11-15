@@ -2,6 +2,18 @@
 
 ## Local implementation, not deployed
 
+### November15: Nearby Parcel Zoning Evidence
+
+PR283 retirement merged625208c after exact-head hosted checks; its production
+migration/API rollout remain separate. Local `codex/parcel-use-feasibility` adds
+read-only zoning context to the existing saved-nearby-parcel detail journey.
+Recorded codes, provenance, conflicts and missing rules remain distinct from
+permitted uses. No parcel-source activation or live entitlement classifier.
+See parcel-use-feasibility.md and the November15 Cherry Hill qualification note.
+Final local acceptance:3,319backend/zero skips/91.51%,523frontend,13focusedPG,
+freshChrome desktop/mobile2pass. Remaining real-property/rules/source/release
+gates are in the current handoff; no entitlement or production acceptance.
+
 ### November15: Retirement And Parcel-Use Direction
 
 The owner chose retirement with historical screening preserved. Local implementation

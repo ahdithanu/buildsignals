@@ -1,5 +1,82 @@
 # Current Agent Handoff
 
+## November15: Local Zoning Context Acceptance Complete
+
+Final frozen runtime acceptance: **3,319 backend passed, zero skips, 91.51% app
+coverage, 3 existing geography-reflection warnings, 432.55s**. New context schema
+and service have100% statement coverage; that is not real-property acceptance.
+Frontend **523 passed/79files/6.20s**, typecheck/build/scoped ESLint passed. Build
+retains existing large-chunk and dependency PURE-comment warnings. Fresh normal
+Chrome desktop1440/mobile390 **2passed/8.2s** on the final exact-origin guards;
+screenshots inspected with fitting text/no overflow. A dedicated offline CI
+browser step is included and its exact headless command passed locally2/7.8s;
+workflow YAML and independent review pass. Hosted CI remains unverified because
+this slice is not published. Journey uses actual local
+API/temporary DB, saved nearby search -> parcel -> recorded zoning context,
+injected503 -> retry -> reload, no page errors and no business writes (ordinary
+session-refresh POSTs excluded explicitly). Synthetic data is not live coverage.
+
+Dedicated actual PostgreSQL13passed/1.14s, also included in the full suite:
+restricted current/session role, forced RLS on four provenance tables, foreign/
+default/unset denial, read-only transaction, unchanged retained evidence, strict
+source/parcel/type matching, oversized JSON and50/51-row boundary. Unit cases
+also verify malformed stored JSON, dates and excessive decoder nesting.
+Independent review findings (wrong-parcel raw evidence, recursive JSON, browser
+origin/proxy/handler bypass) were corrected with regressions and rereview passed.
+No source/model calls in application/test journeys; public qualification fetched
+metadata only. Ruff, staged Gitleaks, generated OpenAPI, diff and final Alembic
+drift check passed. No warnings suppressed or failing tests deselected.
+
+The owned fresh PostgreSQL17.11/PostGIS/topology instance was stopped with pg_ctl
+and status confirmed no server; ports62559/8121/8122 have no listeners. Owned
+browser servers stopped, no shared runtime stopped. Initial setup failures below
+remain disclosed; after fresh-process migration, the three affected cases passed
+before the successful complete run. No product patch was made for that setup.
+
+Next bounded data dependency: Cherry Hill current parcel identity/full geometry,
+dated zoning/overlay capture, amendment-reconciled use rules and reviewed examples
+for one specific use. Source-use and production activation gates remain. Do not
+substitute a centroid/map label or historical approval for those inputs. Later
+push/PR/release requires fresh approval. No production migration/APIworker rollout,
+task/source/access/settings/schedule changes, paid calls or automation resume.
+
+## November 15: PR283 Merged; Parcel Zoning Context
+
+User approved merging PR283. Exact hosted-green head fdb2be9 merged normally as
+625208c; fetched main tree equals that tested head. No production migration or
+API/worker rollout was run. New work is isolated in `.worktrees/parcel-use-feasibility`,
+branch `codex/parcel-use-feasibility`, based on that main without an upstream.
+Root concurrent security/research files remain intact and unpublished.
+
+First slice is a bounded read-only zoning-evidence reader, not an entitlement
+classifier. GET `/parcels/{id}/use-context` reads current scoped facts and returns
+reported codes, conflicts and gaps. Parcel detail has an independently failing,
+runtime-validated panel. Potential uses stay empty/not_assessed and AIunused.
+Demo stays denied by the existing default-deny policy. No migration, catalog,
+ingestion, coordinate, model-provider or production data changes are included.
+See `parcel-use-feasibility.md` and
+`source-qualification/2026-11-15-cherry-hill-zoning.md` for semantic/data gates.
+
+Parent owns routes/frontend/browser/docs; Lagrange owns service/schema/unit and
+dedicated PostgreSQL tests; Boole reviews independently. Exactly one writer per
+file set. Final test/review receipts are recorded above; the following is history.
+Initial focused57backend/15frontend and fresh Chrome desktop/mobile2pass10.2s.
+Screenshots show fitting text/no horizontal overflow. Initial browser assertion
+incorrectly counted ordinary auth-refresh POSTs as business writes; corrected.
+Review tightened browser exact origins and pinned its Vite proxy to the owned API.
+
+Disposable PostgreSQL was provisioned independently and guarded before local
+migrations. The first full-suite attempt stopped after 627passes/2failures/2errors
+because a provisioning loop reused app.config and migrated the first DB twice;
+tracebacks showed absent organizations/permit_geocodes in the second test DB.
+The second DB was then migrated in a fresh process and drift check passed.
+This is a local setup failure, not product acceptance; no product fix or skips.
+All owned runtimes must be stopped/status-confirmed before the local checkpoint.
+
+Publication approval for283 is consumed. No new push/PR/merge/deploy, production
+migration, task, source activation, access/schedule change, paid-model call or
+automation resume is authorized. Existing production schedules/collector untouched.
+
 ## November 15: Review-Only Publication Approved
 
 Owner explicitly approved pushing retirement and opening a review-only PR after

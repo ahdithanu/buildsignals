@@ -1,5 +1,21 @@
 # BuildSignals: Shared Agent Instructions
 
+FinalNov15 localzoning:3,319backend/zero skips/91.51%/3existingwarnings432.55s;
+523frontend79files6.20s;freshnormalChrome desktop/mobile2pass8.2s.13focusedPG
+restrictedrole/RLS/READONLY/provenance/bounds pass;typecheck/build/Ruff/scopedlint/
+drift/stagedsecret/diff/review pass. OwnedPG/browser/API/Vite stopped and ports
+confirmed clear. DedicatedCIbrowserstep exactlocalheadless2/7.8spass;hostedCI
+unverified/unpublished. Local only, no later publication/release/source/paid authority.
+
+November15: user-approved PR283 merged625208c, tree equal hosted-green fdb2be9.
+No production migration/APIworker rollout performed. New local branch
+codex/parcel-use-feasibility reads bounded tenant-scoped parcel zoning evidence
+and surfaces missing/conflicting inputs on parcel details. Read handoff and
+parcel-use-feasibility.md; local acceptance complete. Potential uses remain
+not_assessed, AIunused; no qualified rules/zone join or live-parcel claim.
+No later push/PR/merge/release/source/settings/paid/task/automation authority.
+Preserve dirty root research/security work and all private operational receipts.
+
 November15 publication: owner explicitly approved push/review-only PR after checks.
 Retirement44751b9 acceptance remains unchanged; currentmainb699acc adds only
 generated openapi.json from the previously merged editing route and is integrated

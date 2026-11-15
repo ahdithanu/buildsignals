@@ -1,5 +1,13 @@
 # Saved Criteria Retirement
 
+## Merged Status (November15)
+
+The owner approved PR283 merge after hosted checks. Headfdb2be9 merged as625208c;
+the merged tree equals the tested head. This supersedes the historical review-
+only gate below. No production migration or API/worker rollout was performed.
+The next local product slice is recorded parcel zoning context; see
+parcel-use-feasibility.md. Later publication/release actions need fresh approval.
+
 ## Scope
 
 On November15 the owner chose retirement with preserved history, not permanent

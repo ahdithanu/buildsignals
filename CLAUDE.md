@@ -2,6 +2,17 @@
 
 @AGENTS.md
 
+FinalNov15localzoning:3,319backend/zero skips/91.51%,523frontend,Chrome2,
+13focusedPG/RLS/READONLY/provenance/bounds and review/checks pass. Owned runtimes
+stopped/status-confirmed. ExplicitCIstep localheadless2/7.8spass;hostedunverified.
+Read handoff;not published/deployed or useclassification.
+
+November15 latest: PR283 merged625208c with tested-tree equality. No production
+migration or APIworker release. Local parcel-use-feasibility branch adds only
+read-only recorded zoning context, not permitted-use classification. Read newest
+handoff/spec and Cherry Hill qualification note. Local acceptance complete; no
+new publication/release/source/paid/task/settings/automation authority.
+
 November15: review-only retirement PR publication now approved after checks.
 Mainb699acc's generated-schema-only update integrated; runtime/tests unchanged
 from44751b9. Parent owns publication/checkwatch, no duplicate collectors. No
