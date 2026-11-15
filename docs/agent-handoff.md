@@ -1,11 +1,29 @@
 # Current Agent Handoff
 
+## November 14: Stacked Map-Load PR Approved
+
+The user approved publishing this separate stacked PR after checks, not a merge
+or production release. Base remains recoveryPR280 at121ccbc; criteriaPR281 at
+b941bc1 and recoveryPR280 heads are untouched and all their hosted checks passed.
+This approval supersedes the prior local-only publication gate below.
+
+Accepted product/unit/browser code remains unchanged from32121c8. This slice adds
+only an explicit module-load browser step to CI, with blank provider/Redis keys,
+so the opt-in test is executed rather than silently skipped. CI-style headless
+local verification passed1case/6.8s with0skips/retries; ownedservers stopped and
+ports clear. CI YAML parses and its blank provider/Redis env is verified. Product/
+unit/browser code matches32121c8; local488frontend/typecheck/build/lint receipts
+remain applicable. Exact published head and hosted receipts will be recorded in
+PR metadata. No live data, paid/model/source/production calls or
+platform settings changes. Original production crash cause remains unconfirmed.
+Keep root dirty research, other worktrees and private collector/receipts intact.
+
 ## November 14: Local Failed-Module Investigation Follow-Up
 
 Published draft recovery280/121ccbc and criteria281/b941bc1 are separate and
 unchanged. Their frontend/browser/security/preview checks passed; parent watches
 the backend gates. Current local branch codex/map-module-load-recovery is stacked
-on recovery280, not separately authorized for publication/merge/deploy.
+on recovery280. Separate publication/checks are now approved, not merge/deploy.
 
 Bounded offline investigation on main9f09d87: natural12routeclicks/sixin519ms,
 no page/rejection/boundary error. Final expected-login401assertion failed; corrected

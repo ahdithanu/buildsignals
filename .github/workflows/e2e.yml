@@ -62,6 +62,12 @@ jobs:
           REDIS_URL: ""
         run: node node_modules/@playwright/test/cli.js test -c e2e/research.playwright.config.ts
 
+      - name: Run offline module-load recovery E2E
+        env:
+          OPENROUTER_API_KEY: ""
+          REDIS_URL: ""
+        run: node node_modules/@playwright/test/cli.js test -c e2e/module-load.playwright.config.ts
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

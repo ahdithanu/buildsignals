@@ -1,7 +1,8 @@
 # Failed Map Module Recovery
 
-Local follow-up on recovery PR280, not part of either published PR and not
-approved for publication, merge, deployment or production configuration changes.
+Separate follow-up stacked on recovery PR280, not part of either existing PR.
+Publication/checks are approved; merge, deployment and production configuration
+changes are not. Existing PR280/281 heads remain unchanged.
 
 ## Observed Failure
 
@@ -38,6 +39,9 @@ tiles are intentionally unavailable. Browser servers/profiles were cleaned up.
 This verifies development-module network failure in desktop Chrome, not a stale
 hashed production bundle, Safari/Firefox runtime, publisher coverage or the
 user's original failure. Their message variants have unit coverage only.
-Read the newest handoff before continuing or publishing this local branch.
+CI now explicitly runs the guarded module-load browser test. Local CI-style
+headless acceptance passed1case/6.8s with0skips/retries; its ownedservers stopped.
+CI YAML and blank provider/Redis environment validation pass. Read the newest
+handoff/PR metadata for actual hosted outcomes before continuing.
 No changes to either published PR head, API, auth, tenant scope, data, source
 jobs, paid models, platform settings or standing automation are authorized here.

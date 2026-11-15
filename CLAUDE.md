@@ -2,10 +2,11 @@
 
 @AGENTS.md
 
-Current branch is local-only map-module-load-recovery on PR280/121ccbc. Controlled
+Current branch is map-module-load-recovery stacked on PR280/121ccbc. Controlled
 import failure is reproduced; no live-trigger diagnosis. Read module-load-recovery
-doc/handoff. Browser writer owns test/config only; no publication/release/paid/
-production authority or changes to either running PR. Automation stays paused.
+doc/handoff. Separate PR publication/checks are now approved; no merge/release/
+paid/production authority or changes to PR280/281. CI explicitly runs the new
+guarded browser regression. Automation stays paused.
 
 Latest: PR279 merged c34cef4. Local navigation-error-recovery fixes only the
 reproduced dashboard-link reset defect; actual live trigger remains unverified.
