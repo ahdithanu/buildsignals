@@ -1,5 +1,70 @@
 # Current Agent Handoff
 
+## November16: Local Privacy And Packaging Integration
+
+Owner requested a new isolated codex/owner-only-coverage-integration worktree
+from published privacy9e0e446, then a normal merge of packaging2f60682. Only
+AGENTS/handoff conflicted; retain both parent notes below. CLAUDE merged both
+notes automatically. No runtime/test/CI/Dockerfile conflict or new product change.
+Integration focused backend/full frontend/typecheck/privacy browser acceptance
+is recorded below. Parent owns cloud watch/publication; checkpoint only here.
+No cloud calls, push/PR/deploy, PostgreSQL target or private operational receipts.
+
+Prior privacy full backend completed3275passed/108existing PostgreSQL skips/
+508deprecationwarnings360.42s using cleared environment and disposable SQLite;
+no PostgreSQL target or additional PostgreSQL acceptance was claimed. That is a
+prior-parent receipt, not a fresh full-suite result for this integration.
+
+Fresh combined-tree local acceptance:147focused backend passed46.24s, zero skips,
+one dependency deprecation warning;569frontend passed82files5.54s; typecheck pass.
+Existing release-gate tests9passed1.61s with the same dependency warning.
+Exact CI-equivalent privacy step passed2headless tests16.0s on the disposable
+actual API, with external origins denied. Only the coverage fixture was enabled;
+SF/research/criteria/parcel-use flags were disabled and demo snapshot input empty.
+Both owned8141/8142 listeners are absent after shutdown. No PostgreSQL was started
+or reused. No fresh Docker build, hosted CI or production acceptance is claimed.
+
+Integration changes versus privacy9e0e446 are only Dockerfile, the CI image job,
+and four documentation files. Dockerfile/CI image job/coverage document exactly
+match packaging2f60682. All app/src/tests/agent_runtime/alembic/dependencies/E2E/
+OpenAPI files exactly match privacy9e0e446. Conflict resolution preserves both
+privacy and packaging notes below; no runtime conflict or manual product edit.
+Parent owns cloud watch and publication; no push/PR/deploy is authorized here.
+
+## November16: Owner-Only Diagnostics Follow-Up
+
+Owner requested that the Dashboard national parcel gap matrix/connector queue
+and SourceHealth diagnostics not be visible to ordinary users. This isolated
+codex/owner-only-coverage-diagnostics branch starts at green PR285 head0294794;
+do not mix into the frozen staged release. SourceHealth already uses existing
+internal-operator UI/API gates. Dashboard and national-parcels gap endpoint need
+the same owner allowlist, not organization-admin access. Preserve real customer
+inventory coverage/map APIs. Separate writer owns product/tests; parent docs.
+Owner approved staged publication, merge and release after local checks and green
+CI. Parent owns publication/hosted watch/release; no access/source/schedule/paid
+changes. This authorization is not a production acceptance receipt.
+
+Implemented: both Dashboard branches and the component fail closed unless the
+server-derived internal-operator flag is exactly true. The hook does not fetch
+for nonoperators and separates permission scopes in its query cache. The gap
+API now requires the existing internal-operator dependency before computing the
+report; customer-admin status is insufficient. SourceHealth already had these
+UI/API gates. Customer map/coverage APIs and backend provenance are unchanged.
+
+Local red/green acceptance:147focused backend passed36.66s;569frontend/82files
+passed5.22s; typecheck/build/Ruff/scoped ESLint pass. Existing dependency/build
+warnings remain. Fresh normal Chrome actual disposable API desktop1440/mobile390
+2passed12.6s; owner panel visible, newly registered customer panel absent,
+zero report requests, direct SourceHealth UI redirect, customer map accessible.
+Parent added the explicit CI browser step; exact headless command2passed13.2s.
+Owned browser servers stopped and8141/8142 listeners absent. Parent runtime/test
+review and screenshot inspection pass. Full backend result remains pending.
+Parent independently inspected runtime/testdiff and mobile screenshot. Explicit
+CI browser step added and its exact local headless command passed2/13.2s.
+Owned browser servers stopped; full backend verification remains in progress.
+Concurrent full-coverage-map release and private operational receipts stay in
+their separate worktree. Root research/collector/CherryHill draft untouched.
+
 ## November16: Container Packaging Correction
 
 Exact image startup smoke caught ModuleNotFoundError for agent_runtime imported

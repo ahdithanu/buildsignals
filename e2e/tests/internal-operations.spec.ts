@@ -16,6 +16,7 @@ const viewports = [{ width: 1024, height: 900 }, { width: 1280, height: 900 }, {
 const operationsPaths = [
   '/ingestion/sources', '/ingestion/health', '/ingestion/coverage/measured',
   '/ingestion/runs', '/ingestion/schedule-plan', '/observability/overview',
+  '/ingestion/coverage/national-parcels',
 ];
 
 function authResponse(page: Page, action: string) {
@@ -109,28 +110,7 @@ test('ordinary customer admin keeps coverage and map access but cannot use opera
     expect(summary.geocoded_records).toBe(0);
   }
   const national = await get(page, '/ingestion/coverage/national-parcels', session.access_token);
-  expect(national.status()).toBe(200);
-  const coverage = await national.json();
-  expect(Object.keys(coverage).sort()).toEqual([
-    'coverage_claim', 'measured_at', 'record_type', 'scope', 'states', 'summary', 'warnings',
-  ]);
-  expect(Object.keys(coverage.summary).sort()).toEqual([
-    'geocoded_parcel_records', 'measured_state_count', 'nearby_candidate_parcels',
-    'nearby_verified_available_parcels', 'state_count', 'states_with_nearby_candidates',
-    'states_with_verified_available_parcels', 'stored_parcel_records', 'unmeasured_state_count',
-    'verified_available_parcels',
-  ]);
-  expect(coverage.summary).toMatchObject({ state_count: 50, measured_state_count: 0,
-    unmeasured_state_count: 50, stored_parcel_records: 0 });
-  expect(coverage.states).toHaveLength(50);
-  for (const state of coverage.states) {
-    expect(Object.keys(state).sort()).toEqual([
-      'geocoded_parcel_records', 'latest_verified_availability_at', 'nearby_candidate_parcels',
-      'nearby_verified_available_parcels', 'posture', 'recently_seen_parcel_records', 'state',
-      'stored_parcel_records', 'verified_available_parcels',
-    ]);
-    expect(state.posture).toBe('unmeasured');
-  }
+  expect(national.status()).toBe(403);
   expect((await get(page, '/acquisition-map/signals', session.access_token)).status()).toBe(200);
 
   for (const viewport of viewports) {
@@ -138,7 +118,7 @@ test('ordinary customer admin keeps coverage and map access but cannot use opera
     await page.goto('/source-health');
     await expect(page).toHaveURL(`${webOrigin}/`);
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'National parcel coverage gap', exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'National parcel coverage gap', exact: true })).toHaveCount(0);
     await expect(page.locator('a[href^="/source-health"]')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Operations', exact: true })).toHaveCount(0);
     await captureLayout(page, testInfo, 'customer-coverage', viewport.width);
@@ -187,6 +167,7 @@ test('synthetic allowlisted operator admin can open the operations console', asy
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.goto('/');
+    await expect(page.getByRole('region', { name: 'National parcel coverage gap', exact: true })).toBeVisible();
     const operationsLink = page.getByRole('link', { name: 'Operations', exact: true });
     if (viewport.width >= 1024) {
       await expect(operationsLink).toBeVisible();

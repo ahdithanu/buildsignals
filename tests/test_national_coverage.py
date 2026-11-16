@@ -5,7 +5,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.main import app
 from app.schemas.national_coverage import (
     CustomerNationalParcelCoverageResponse,
     NationalParcelCoverageResponse,
@@ -15,7 +14,7 @@ from app.services.ingestion.national_coverage import (
     customer_national_parcel_coverage,
     national_parcel_coverage,
 )
-from app.utils.auth_deps import get_current_user
+from tests.internal_operations_fixtures import internal_operator as internal_operator
 
 
 def test_national_parcel_coverage_is_honest_about_measured_vs_configured(monkeypatch, db):
@@ -120,7 +119,7 @@ def test_national_parcel_coverage_executes_real_empty_inventory_queries(monkeypa
     assert report["summary"]["uncovered_state_count"] == 50
 
 
-def test_national_parcel_coverage_endpoint_returns_typed_report(client, monkeypatch):
+def test_national_parcel_coverage_endpoint_returns_typed_report(client, monkeypatch, internal_operator):
     state_row = {
         "posture": "uncovered",
         "configured_source_count": 0,
@@ -163,14 +162,11 @@ def test_national_parcel_coverage_endpoint_returns_typed_report(client, monkeypa
             "warnings": [],
         },
     )
-    app.dependency_overrides[get_current_user] = lambda: {"user_id": "test", "org_id": "default-org", "role": "viewer"}
-    try:
-        response = client.get("/ingestion/coverage/national-parcels")
-    finally:
-        app.dependency_overrides.pop(get_current_user, None)
+    response = client.get("/ingestion/coverage/national-parcels")
 
     assert response.status_code == 200
     assert response.json()["summary"]["state_count"] == 50
+    assert "next_connector_targets" in response.json()
     assert response.headers["cache-control"] == "no-store"
 
 

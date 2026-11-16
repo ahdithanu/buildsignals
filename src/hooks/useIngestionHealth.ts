@@ -63,11 +63,11 @@ export function useIngestionCoverage() {
 }
 
 export function useNationalParcelCoverage() {
-  const { organizationId, isAuthenticated } = useAuth();
+  const { organizationId, isAuthenticated, isInternalOperator } = useAuth();
   return useQuery({
-    queryKey: queryKeys.ingestion.nationalParcelCoverage(organizationId),
+    queryKey: queryKeys.ingestion.nationalParcelCoverage(organizationId, isInternalOperator === true),
     queryFn: () => ingestionApi.nationalParcelCoverage(),
-    enabled: isAuthenticated && !!organizationId,
+    enabled: isInternalOperator === true && isAuthenticated && !!organizationId,
     retry: 1,
     staleTime: 60_000,
   });

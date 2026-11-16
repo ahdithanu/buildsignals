@@ -2,6 +2,13 @@
 
 @AGENTS.md
 
+Nov16 integration: local-only codex/owner-only-coverage-integration combines
+privacy9e0e446 and packaging2f60682 by normal merge. Both owner-only diagnostics
+and packaged app-import gates remain required. No new product changes or private
+operational receipts. Integration147focused backend/569frontend82files/typecheck
+and CI-equivalent privacy2 pass; owned8141/8142 listeners clear. Parent owns
+cloud/publication; no image build or hosted acceptance is claimed by this merge.
+
 Nov16 latest: full API image import, unlike source tests, caught missing bundled
 agent_runtime. Minimal Docker COPY plus a dedicated no-network image-import CI
 job corrects it; local red/green confirmed. Read newest handoff. Parent owns the
@@ -195,3 +202,13 @@ remains HOLD. Data/code integrity does not certify independent coverage, mature
 outcomes or a fully specified validation method. Do not activate its local source.
 Read the handoff and
 `docs/source-qualification/` before continuing.
+# November16 Owner-Only Diagnostics
+
+Read docs/agent-handoff.md first. This separate isolated branch restricts the
+Dashboard parcel gap report and API to existing internal operators. SourceHealth
+is already gated. Preserve customer inventory/map access. Owner approved staged
+publication/merge/release after checks and green CI, not data-permission/source/
+schedule changes. Local147focused backend/569frontend,
+Chrome2 and CI-equivalent headless2 pass; see the handoff for full-suite gates.
+Concurrent full-coverage-map release and private receipts remain separate.
+Root research, collector and CherryHill unsent draft remain untouched.

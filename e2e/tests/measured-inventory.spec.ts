@@ -61,7 +61,7 @@ test('a new organization reads customer-safe empty counts and cannot open the op
   await page.goto('/source-health?record_type=planning');
   await expect(page).toHaveURL(`${webOrigin}/`);
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'National parcel coverage gap', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'National parcel coverage gap', exact: true })).toHaveCount(0);
   const panel = page.getByRole('region', { name: 'Measured ingestion inventory' });
   await expect(panel).toHaveCount(0);
   await expect(page.locator('a[href^="/source-health"]')).toHaveCount(0);

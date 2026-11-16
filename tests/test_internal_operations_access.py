@@ -23,6 +23,7 @@ OPERATIONS_REQUESTS = [
     ("GET", "/ingestion/schedule-plan"),
     ("GET", "/ingestion/coverage"),
     ("GET", "/ingestion/coverage/measured"),
+    ("GET", "/ingestion/coverage/national-parcels"),
     ("GET", "/ingestion/sources/missing/health"),
     ("GET", "/ingestion/sources/missing/parcel-reference-audit?parcel_source_id=missing"),
     ("GET", "/ingestion/sources/missing/parcel-reconciliation?parcel_source_id=missing"),
@@ -107,7 +108,7 @@ def test_customer_source_options_are_narrow_active_and_tenant_scoped(client, db,
     assert client.get("/v1/ingestion/source-options").status_code == 401
     assert client.get("/v1/ingestion/permits", headers=headers).status_code == 200
     assert client.get("/v1/acquisition-map/signals", headers=headers).status_code == 200
-    assert client.get("/v1/ingestion/coverage/national-parcels", headers=headers).status_code == 200
+    assert client.get("/v1/ingestion/coverage/national-parcels", headers=headers).status_code == 403
 
 
 @pytest.mark.parametrize("role,allowlisted,expected", [
@@ -242,7 +243,7 @@ def test_mfa_login_preserves_computed_operator_flag(client, db, monkeypatch):
     (MemberRole.admin, False, False), (MemberRole.editor, True, False),
     (MemberRole.viewer, True, False), (MemberRole.admin, True, True),
 ])
-def test_national_parcel_report_hides_nested_operations_except_for_operators(
+def test_national_parcel_report_requires_operator_before_computing_report(
     client, db, monkeypatch, role, allowlisted, operator,
 ):
     from datetime import datetime, timezone
@@ -269,8 +270,19 @@ def test_national_parcel_report_hides_nested_operations_except_for_operators(
     internal_report["scope"] = "PRIVATE_SCOPE_SENTINEL"
     internal_report["coverage_claim"] = "PRIVATE_CLAIM_SENTINEL"
     internal_report["warnings"] = ["PRIVATE_WARNING_SENTINEL"]
-    monkeypatch.setattr("app.routes.ingestion.national_parcel_coverage", lambda db: internal_report)
+    calls = []
+
+    def report(db):
+        calls.append(True)
+        return internal_report
+
+    monkeypatch.setattr("app.routes.ingestion.national_parcel_coverage", report)
     response = client.get("/v1/ingestion/coverage/national-parcels", headers=headers)
+    if not operator:
+        assert response.status_code == 403, response.text
+        assert "PRIVATE_" not in response.text
+        assert not calls
+        return
     assert response.status_code == 200, response.text
     assert response.headers["cache-control"] == "no-store"
     body = response.json()
@@ -280,28 +292,22 @@ def test_national_parcel_report_hides_nested_operations_except_for_operators(
     assert body["summary"]["measured_state_count"] == 1
     visible_florida = next(row for row in body["states"] if row["state"] == "FL")
     assert visible_florida["latest_verified_availability_at"].startswith("2026-11-10")
-    if operator:
-        assert body["next_connector_targets"]
-        assert visible_florida["next_action"] == "PRIVATE_ACTION_SENTINEL"
-        assert visible_florida["candidate_status_counts"] == {"PRIVATE_GATE_SENTINEL": 1}
-        monkeypatch.setattr(config, "INTERNAL_OPERATIONS_USER_IDS", frozenset())
-        revoked = client.get("/v1/ingestion/coverage/national-parcels", headers=headers)
-        assert revoked.status_code == 200
-        assert "next_connector_targets" not in revoked.json()
-        assert "PRIVATE_" not in revoked.text
-        return
-    assert set(body) == {"measured_at", "record_type", "scope", "coverage_claim", "summary", "states", "warnings"}
-    assert set(body["summary"]) == {
-        "state_count", "measured_state_count", "unmeasured_state_count", "states_with_nearby_candidates",
-        "states_with_verified_available_parcels", "stored_parcel_records", "geocoded_parcel_records",
-        "nearby_candidate_parcels", "verified_available_parcels", "nearby_verified_available_parcels",
-    }
-    assert body["summary"]["unmeasured_state_count"] == 49
-    for row in body["states"]:
-        assert set(row) == {
-            "state", "posture", "stored_parcel_records", "geocoded_parcel_records", "recently_seen_parcel_records",
-            "nearby_candidate_parcels", "verified_available_parcels", "nearby_verified_available_parcels",
-            "latest_verified_availability_at",
-        }
-        assert row["posture"] == ("measured" if row["stored_parcel_records"] else "unmeasured")
-    assert "PRIVATE_" not in response.text
+    assert body["next_connector_targets"]
+    assert visible_florida["next_action"] == "PRIVATE_ACTION_SENTINEL"
+    assert visible_florida["candidate_status_counts"] == {"PRIVATE_GATE_SENTINEL": 1}
+    assert len(calls) == 1
+    monkeypatch.setattr(config, "INTERNAL_OPERATIONS_USER_IDS", frozenset())
+    revoked = client.get("/v1/ingestion/coverage/national-parcels", headers=headers)
+    assert revoked.status_code == 403
+    assert "PRIVATE_" not in revoked.text
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("authorization", [None, "Bearer invalid", "unknown"])
+def test_national_parcel_report_denies_unknown_identity_without_computing(client, monkeypatch, authorization):
+    def unexpected_report(db):
+        pytest.fail("Unauthorized identity must not compute the diagnostics report")
+
+    monkeypatch.setattr("app.routes.ingestion.national_parcel_coverage", unexpected_report)
+    headers = {} if authorization is None else {"Authorization": authorization}
+    assert client.get("/v1/ingestion/coverage/national-parcels", headers=headers).status_code == 401

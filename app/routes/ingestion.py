@@ -44,7 +44,6 @@ from app.schemas.ingestion import (
 )
 from app.schemas.measured_coverage import MeasuredCoverageResponse
 from app.schemas.national_coverage import (
-    CustomerNationalParcelCoverageResponse,
     NationalParcelCoverageResponse,
 )
 from app.schemas.parcel_reference import (
@@ -73,7 +72,6 @@ from app.services.ingestion.health import (
 )
 from app.services.ingestion.host_policy import audit_ingestion_hosts
 from app.services.ingestion.national_coverage import (
-    customer_national_parcel_coverage,
     national_parcel_coverage,
 )
 from app.services.ingestion.scheduling import build_schedule_plan, source_schedule_policy
@@ -88,7 +86,6 @@ from app.services.ingestion.service import (
 )
 from app.utils.auth_deps import (
     get_current_user,
-    is_internal_operator,
     require_internal_operator,
     require_role_strict,
 )
@@ -205,19 +202,16 @@ def get_measured_coverage(
 
 @router.get(
     "/coverage/national-parcels",
-    response_model=NationalParcelCoverageResponse | CustomerNationalParcelCoverageResponse,
+    response_model=NationalParcelCoverageResponse,
+    dependencies=[Depends(require_internal_operator)],
 )
 def get_national_parcel_coverage(
     response: Response,
-    principal: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Return a measured 50-state parcel gap report without changing intake state."""
     response.headers["Cache-Control"] = "no-store"
-    report = NationalParcelCoverageResponse.model_validate(national_parcel_coverage(db))
-    if is_internal_operator(principal["user_id"], principal["role"], is_demo=principal.get("is_demo", False)):
-        return report
-    return customer_national_parcel_coverage(report)
+    return NationalParcelCoverageResponse.model_validate(national_parcel_coverage(db))
 
 
 def _normalize_state_filter(state: str | None) -> str | None:
