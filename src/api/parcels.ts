@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { parcelUseContextSchema } from '@/types/parcelUseContext';
 import type {
   ParcelDetail,
   NearbyParcelCandidate,
@@ -24,6 +25,13 @@ import type {
 } from '@/types/parcel';
 
 export const parcelsApi = {
+  useContext: async (parcelId: string) => {
+    const data = parcelUseContextSchema.parse(
+      await apiClient.get(`/parcels/${encodeURIComponent(parcelId)}/use-context`),
+    );
+    if (data.parcel_id !== parcelId) throw new Error('Parcel context mismatch');
+    return data;
+  },
   radar: (params?: AcquisitionRadarParams): Promise<AcquisitionRadarResponse> =>
     apiClient.get<AcquisitionRadarResponse>(
       '/acquisition-radar',

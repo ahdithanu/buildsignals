@@ -1,5 +1,38 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov15PR284 publishedaa62c84 onmainb31ea6f. Initialhostedbackend/e2e/precommit/
+gitleaks/previewpassed; frontendfailedstrictCSP(script-src). Reproducedlocally:
+newZodobjectsattemptedevalprobebeforeexistingjitlesssetup. Newmodule nowmatches
+evaluation'sjitlessconfigbeforeconstruction; red/greenFunctionspyregression,
+524frontend80files6.38s,typecheck/build/scopedlint and unchangedstrictbuilt
+policylogin/inventory390/768/1440pass(inlinescriptsstillblocked). Backendunchanged.
+PushthisscopedCIcorrectionunderexistingPRapproval;watchnewhostedhead,norestart
+forreceiptonly. No merge/release/source/productiontask/paid/settingsauthority.
+
+November15 publication approved: owner requested push/openPR with zoning test
+results, then continued Cherry Hill qualification. Mainb31ea6f generated schema
+update integrated normally; merged tree equals testeda6462fc. Publish only this
+isolated zoning branch, not root research. Parent owns hosted-check watch; no
+duplicate collectors. No merge/deploy/production migration/task/source activation,
+paid call or settings/access/schedule/automation change authorized by this PR.
+Continue independent bounded public qualification separately from PR runtime.
+
+FinalNov15 localzoning:3,319backend/zero skips/91.51%/3existingwarnings432.55s;
+523frontend79files6.20s;freshnormalChrome desktop/mobile2pass8.2s.13focusedPG
+restrictedrole/RLS/READONLY/provenance/bounds pass;typecheck/build/Ruff/scopedlint/
+drift/stagedsecret/diff/review pass. OwnedPG/browser/API/Vite stopped and ports
+confirmed clear. DedicatedCIbrowserstep exactlocalheadless2/7.8spass;hostedCI
+unverified/unpublished. Local only, no later publication/release/source/paid authority.
+
+November15: user-approved PR283 merged625208c, tree equal hosted-green fdb2be9.
+No production migration/APIworker rollout performed. New local branch
+codex/parcel-use-feasibility reads bounded tenant-scoped parcel zoning evidence
+and surfaces missing/conflicting inputs on parcel details. Read handoff and
+parcel-use-feasibility.md; local acceptance complete. Potential uses remain
+not_assessed, AIunused; no qualified rules/zone join or live-parcel claim.
+No later push/PR/merge/release/source/settings/paid/task/automation authority.
+Preserve dirty root research/security work and all private operational receipts.
+
 November15 publication: owner explicitly approved push/review-only PR after checks.
 Retirement44751b9 acceptance remains unchanged; currentmainb699acc adds only
 generated openapi.json from the previously merged editing route and is integrated

@@ -13571,6 +13571,190 @@
         "title": "ParcelSummaryResponse",
         "type": "object"
       },
+      "ParcelUseContextResponse": {
+        "properties": {
+          "ai_used": {
+            "const": false,
+            "default": false,
+            "title": "Ai Used",
+            "type": "boolean"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/ParcelUseEvidence"
+            },
+            "maxItems": 50,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "method_version": {
+            "const": "parcel-use-context-v1",
+            "default": "parcel-use-context-v1",
+            "title": "Method Version",
+            "type": "string"
+          },
+          "parcel_id": {
+            "title": "Parcel Id",
+            "type": "string"
+          },
+          "potential_uses": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 0,
+            "title": "Potential Uses",
+            "type": "array"
+          },
+          "potential_uses_status": {
+            "const": "not_assessed",
+            "default": "not_assessed",
+            "title": "Potential Uses Status",
+            "type": "string"
+          },
+          "recorded_land_uses": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 51,
+            "title": "Recorded Land Uses",
+            "type": "array"
+          },
+          "recorded_zoning_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded Zoning Code"
+          },
+          "reported_zoning_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Reported Zoning Codes",
+            "type": "array"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "status": {
+            "enum": [
+              "missing",
+              "reported",
+              "conflicting",
+              "incomplete"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parcel_id",
+          "as_of",
+          "jurisdiction",
+          "state",
+          "status",
+          "recorded_zoning_code",
+          "gaps"
+        ],
+        "title": "ParcelUseContextResponse",
+        "type": "object"
+      },
+      "ParcelUseEvidence": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "fact_id": {
+            "title": "Fact Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "zoning",
+              "land_use"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_verified_at": {
+            "format": "date-time",
+            "title": "Last Verified At",
+            "type": "string"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "recorded_value": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Recorded Value",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "fact_id",
+          "kind",
+          "recorded_value",
+          "source_url",
+          "confidence",
+          "observed_at",
+          "last_verified_at"
+        ],
+        "title": "ParcelUseEvidence",
+        "type": "object"
+      },
       "PermitBrandMatchEvidenceResponse": {
         "properties": {
           "brand": {
@@ -30874,6 +31058,64 @@
           }
         },
         "summary": "Create Parcel Availability Evidence",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/parcels/{parcel_id}/use-context": {
+      "get": {
+        "operationId": "parcel_use_context_v1_parcels__parcel_id__use_context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "parcel_id",
+            "required": true,
+            "schema": {
+              "title": "Parcel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParcelUseContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Parcel Use Context",
         "tags": [
           "nearby parcels"
         ]

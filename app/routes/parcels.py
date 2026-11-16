@@ -36,6 +36,7 @@ from app.schemas.parcel import (
     ParcelSearchHitResponse,
     PlanningNearbyParcelSearchCreate,
 )
+from app.schemas.parcel_use_context import ParcelUseContextResponse
 from app.services.acquisition_service import (
     get_acquisition_case,
     record_acquisition_activity,
@@ -62,11 +63,25 @@ from app.services.parcel_service import (
     promote_nearby_parcel_candidate_to_deal,
     review_nearby_parcel_candidate,
 )
+from app.services.parcel_use_context import get_parcel_use_context
 from app.services.zip3_heatmap import zip3_heatmap
 from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(tags=["nearby parcels"])
+
+
+@router.get(
+    "/parcels/{parcel_id}/use-context",
+    response_model=ParcelUseContextResponse,
+    dependencies=[Depends(get_current_user)],
+)
+def parcel_use_context(parcel_id: str, response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    context = get_parcel_use_context(db, parcel_id)
+    if context is None:
+        raise HTTPException(status_code=404, detail="Parcel not found")
+    return context
 
 
 @router.get("/acquisition-map/signals", dependencies=[Depends(get_current_user)])
