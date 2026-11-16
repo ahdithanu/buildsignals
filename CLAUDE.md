@@ -2,6 +2,11 @@
 
 @AGENTS.md
 
+Nov15PR284 initialfrontendCSPgatefailed;otherhostedgatespassed. Localrepro and
+minimalexistingjitlesspatternfix,newred/greenregression,524frontend/typecheck/
+build/scopedlint/unchangedstrictpolicy3viewportspass. Parentpushescorrection,
+watchesnewhead. Backendunchanged;no merge/release/paid/source/taskauthority.
+
 November15: owner approved zoning push/PR publication and continued Cherry Hill
 qualification. Currentmainb31ea6f generated-schema update integrated; tree equals
 testeda6462fc. Parent owns publication/checkwatch. No merge/release/production

@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+// Match the existing evaluation schemas: even a caught eval probe violates CSP.
+z.config({ jitless: true });
+
 const label = z.string().min(1).max(255);
 const timestamp = z.string().datetime({ offset: true });
 

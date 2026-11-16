@@ -1,5 +1,29 @@
 # Current Agent Handoff
 
+## November15: PR284 CSP Correction
+
+PR284 opened on aa62c84/mainb31ea6f with measured local results. Initial hosted
+backend, e2e, precommit, gitleaks and preview passed; frontend failed the built
+strict-policy harness with a script-src violation. It was not an all-green PR.
+Parent reproduced the exact violation locally. The new Zod object's construction
+attempted a caught Function capability probe before the evaluation module's
+existing app-wide jitless setup ran. No CSP/header/test relaxation was made.
+
+The context module now follows the existing jitless pattern before constructing
+schemas. A fresh-module Function-spy regression failed before the fix, then
+passed. Fullfrontend524/80files6.38s,typecheck/build/scopedlint passed; unchanged
+built strict-policy harness passed login/inventory at390/768/1440, including
+negative inline-script denial. Backend/runtime contract unchanged. Push this
+correction under existing PR publication approval and watch actual new hosted
+checks; do not relabel initial failure or restart CI merely for receipts.
+
+Parent owns the PR/check watch. Separate local Cherry Hill qualification is in
+`.worktrees/cherry-hill-spatial-qualification` on the matching codex branch.
+Municipal pilot identity count1before/after, qualifier empty, source date2016;
+later edit date is not ground-condition currency. State comparison lookup timed
+out without data, no automatic retry. Current boundary/use eligibility unknown.
+No production, source activation, paid call, settings or automation changes.
+
 ## November15: Zoning Publication Approved
 
 Owner requested pushing the zoning branch and opening a PR with results, then

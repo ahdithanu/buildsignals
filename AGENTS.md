@@ -1,5 +1,14 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov15PR284 publishedaa62c84 onmainb31ea6f. Initialhostedbackend/e2e/precommit/
+gitleaks/previewpassed; frontendfailedstrictCSP(script-src). Reproducedlocally:
+newZodobjectsattemptedevalprobebeforeexistingjitlesssetup. Newmodule nowmatches
+evaluation'sjitlessconfigbeforeconstruction; red/greenFunctionspyregression,
+524frontend80files6.38s,typecheck/build/scopedlint and unchangedstrictbuilt
+policylogin/inventory390/768/1440pass(inlinescriptsstillblocked). Backendunchanged.
+PushthisscopedCIcorrectionunderexistingPRapproval;watchnewhostedhead,norestart
+forreceiptonly. No merge/release/source/productiontask/paid/settingsauthority.
+
 November15 publication approved: owner requested push/openPR with zoning test
 results, then continued Cherry Hill qualification. Mainb31ea6f generated schema
 update integrated normally; merged tree equals testeda6462fc. Publish only this
