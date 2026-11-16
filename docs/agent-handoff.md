@@ -36,8 +36,14 @@ The local browser captured a Leaflet deferred zoom-end teardown error; disabling
 zoom animation, stopping before remove and guarding queued resize callbacks fixes
 that reproduced case. Not proof of the older production crash trigger. Synthetic
 217record browser fixture uses real local ingestion with external calls denied;
-it is not live inventory. Existing cached Gitleaks staged scan passed with no leaks;
-local checkpoint is next. Hosted checks are not claimed for this unpublished slice.
+it is not live inventory. Existing cached Gitleaks staged scan passed with no leaks.
+Local feature checkpoint2915f9b is clean; this follow-up changes receipts only.
+Hosted checks are not claimed for this unpublished slice.
+Automatic local Git maintenance reported a stale intake-worktree HEAD while its
+separate docs checkpoint advanced. Both commits/parents were verified:2915f9b on
+285512a and intake59b4a7a on c39443d; intake tree is clean. No forced maintenance,
+history rewrite or rollback. Follow-up docs commit disables automatic GC for that
+one command only, not repository configuration.
 
 Publication/staged-release approval requested, pending. No new push/PR/merge/API/
 frontend rollout, production task/migration/source/access/schedule/paid authority.

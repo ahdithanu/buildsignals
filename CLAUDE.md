@@ -10,6 +10,7 @@ Final3,380backend/zero skips/3existingwarnings,16nonownerPG/554frontend/headless
 freshChrome/strictCSP/review/drift pass. OwnedPG/API/frontend stopped and confirmed.
 See latest handoff. No publication or release approval yet; do not use the
 migration-running production workflow under a no-migration grant.
+Feature checkpoint2915f9b is local only; follow-up documentation does not rerun CI.
 
 Nov15PR284 initialfrontendCSPgatefailed;otherhostedgatespassed. Localrepro and
 minimalexistingjitlesspatternfix,newred/greenregression,524frontend/typecheck/

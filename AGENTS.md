@@ -3,6 +3,7 @@
 Nov16 latest priority: isolated .worktrees/full-coverage-map, branch
 codex/full-coverage-map on main285512a. User wants complete observed geographic
 coverage visible, not the first100 map records. Read docs/full-geographic-coverage-map.md.
+Local feature checkpoint2915f9b; no push/PR/merge/release occurred.
 Parent owns map-shell/shared renderer/browser/docs; Lagrange owns backend;
 Boole owns coverage explorer/contracts/tests; independent reviewer is read-only.
 Orlando's separately approved one-shot intake is already production-verified:
