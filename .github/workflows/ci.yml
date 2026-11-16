@@ -6,6 +6,23 @@ on:
   pull_request:
 
 jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build API image
+        run: docker build --platform linux/amd64 -t buildsignals-api-ci:${{ github.sha }} .
+      - name: Import packaged API without network access
+        run: >-
+          docker run --rm --network none --entrypoint python
+          -e ENVIRONMENT=test -e TESTING=1
+          -e DATABASE_URL=sqlite:///:memory:
+          -e SECRET_KEY=ci-image-import-not-a-production-secret
+          -e OPENROUTER_API_KEY= -e REDIS_URL=
+          buildsignals-api-ci:${{ github.sha }}
+          -c 'import app.main; print("Packaged API import passed")'
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 25

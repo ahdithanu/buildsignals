@@ -211,7 +211,8 @@ def main():
             "INTERNAL_OPERATIONS_USER_IDS": OPERATOR_USER_ID,
         })
         if (sf_map_enabled or research_enabled or os.environ.get("RUN_CRITERIA_E2E") == "1"
-                or os.environ.get("RUN_PARCEL_USE_E2E") == "1"):
+                or os.environ.get("RUN_PARCEL_USE_E2E") == "1"
+                or os.environ.get("RUN_COVERAGE_MAP_E2E") == "1"):
             _deny_external_sockets()
         if research_enabled:
             os.environ["OPENROUTER_API_KEY"] = "synthetic-no-provider-call"
@@ -276,6 +277,10 @@ def main():
                 from e2e.parcel_use_fixture import seed_parcel_use_fixture
 
                 seed_parcel_use_fixture(db, OPERATOR_ORG_ID, OPERATOR_USER_ID)
+            if os.environ.get("RUN_COVERAGE_MAP_E2E") == "1":
+                from e2e.coverage_map_fixture import seed_coverage_map_fixture
+
+                seed_coverage_map_fixture(db, OPERATOR_ORG_ID, OPERATOR_USER_ID, directory)
 
         try:
             uvicorn.run(app, host="127.0.0.1", port=api_port, log_level="warning")

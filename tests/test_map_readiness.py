@@ -1,9 +1,59 @@
+import pytest
+
 from app.models.deal import Deal
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact
 from app.models.planning import PlanningRecord
+from app.services.map_coverage import get_map_coverage, list_map_records
 from app.services.map_readiness import map_readiness
+from app.services.map_signals import list_map_signals
 from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
 from tests.test_parcel_reference import fixture_records
+from tests.test_sf_map_locations import sf_location as sf_location  # noqa: F401
+
+
+@pytest.mark.parametrize("kind", ["permit", "parcel"])
+def test_active_but_retired_records_are_consistently_absent_from_current_maps(db, kind):
+    _source, _run, now, parcel, permit = fixture_records(db)
+    permit.latitude, permit.longitude = parcel.latitude, parcel.longitude
+    retired = permit if kind == "permit" else parcel
+    retired.is_active = True
+    retired.retired_at = now
+    db.flush()
+
+    readiness = map_readiness(db)
+    assert readiness["permits" if kind == "permit" else "parcels"] == 0
+    assert readiness["geocoded_permits" if kind == "permit" else "geocoded_parcels"] == 0
+    coverage = get_map_coverage(db)
+    assert getattr(coverage.totals, f"{kind}_count") == 0
+    assert coverage.totals.mapped_count == 1
+    assert len(list_map_records(db).items) == 1
+    assert len(list_map_signals(db)["items"]) == (0 if kind == "permit" else 1)
+
+
+def test_retired_sf_estimate_does_not_remain_in_signals_or_readiness(db, sf_location):
+    _source, permit, _geocode = sf_location
+    permit.retired_at = permit.updated_at
+    db.flush()
+    assert list_map_signals(db, state="CA")["items"] == []
+    assert map_readiness(db)["permits"] == 0
+    assert map_readiness(db)["derived_geocoded_permits"] == 0
+    assert get_map_coverage(db, state="CA", kind="permit").totals.mapped_count == 0
+    assert list_map_records(db, state="CA", kind="permit").total == 0
+
+
+def test_retired_parcel_cannot_count_as_verified_available_inventory(db):
+    _source, _run, now, parcel, _permit = fixture_records(db)
+    parcel.is_active = True
+    parcel.retired_at = now
+    db.add(ParcelFact(
+        organization_id=parcel.organization_id, parcel_id=parcel.id,
+        raw_source_record_id=parcel.latest_raw_record_id, fact_type="availability",
+        value={"status": "available", "evidence_type": "listing"}, source_system="synthetic",
+        source_url="https://example.invalid/availability", confidence=.9,
+        observed_at=now, last_verified_at=now, valid_from=now, is_current=True,
+    ))
+    db.flush()
+    assert map_readiness(db)["verified_available_parcels"] == 0
 
 
 def test_inventory_coordinates_and_retirement(db):

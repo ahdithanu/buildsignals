@@ -1,5 +1,5 @@
 """Bounded geographic source records independent of saved parcel searches."""
-from sqlalchemy import and_, case, false, literal, or_
+from sqlalchemy import and_, case, false, literal, or_, true
 from sqlalchemy.orm import Session
 
 from app import config
@@ -13,10 +13,19 @@ def native_coordinate_predicate(model):
     return and_(model.latitude.between(-85, 85), model.longitude.between(-180, 180))
 
 
+def current_record_predicate(model):
+    predicates = []
+    if hasattr(model, "is_active"):
+        predicates.append(model.is_active.is_(True))
+    if hasattr(model, "retired_at"):
+        predicates.append(model.retired_at.is_(None))
+    return and_(*predicates) if predicates else true()
+
+
 def permit_location_query(db: Session):
     """Share map eligibility and location projection with inventory counts."""
     query = active_query(db.query(PermitRecord), PermitRecord).filter(
-        PermitRecord.is_active.is_(True),
+        current_record_predicate(PermitRecord),
     )
     native = native_coordinate_predicate(PermitRecord)
     derived = false()
@@ -62,6 +71,7 @@ def list_map_signals(
             query = query.filter(or_(native, derived))
         else:
             query = active_query(db.query(model), model).filter(
+                current_record_predicate(model),
                 native_coordinate_predicate(model),
             ).add_columns(
                 model.latitude.label("map_latitude"), model.longitude.label("map_longitude"),

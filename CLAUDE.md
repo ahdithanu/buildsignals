@@ -2,6 +2,25 @@
 
 @AGENTS.md
 
+Nov16 latest: full API image import, unlike source tests, caught missing bundled
+agent_runtime. Minimal Docker COPY plus a dedicated no-network image-import CI
+job corrects it; local red/green confirmed. Read newest handoff. Parent owns the
+approved staged release; require checks on the corrected head, not old green CI.
+
+Nov16 staged release is now approved after checks/CI and bounded read-only schema
+preflight, without migrations/source/schedule/access/paid changes. Parent owns
+release; hold merge if compatibility fails to avoid automatic frontend rollout.
+
+Nov16: current local work is codex/full-coverage-map, not the unpublished intake
+branch. Read docs/full-geographic-coverage-map.md and the newest handoff.
+Orlando already has70productionverified parcels; new full-inventory overview is
+local only until tested/reviewed/released separately. Cherry Hill stays unsent.
+Final3,380backend/zero skips/3existingwarnings,16nonownerPG/554frontend/headless2/
+freshChrome/strictCSP/review/drift pass. OwnedPG/API/frontend stopped and confirmed.
+See latest handoff. No publication or release approval yet; do not use the
+migration-running production workflow under a no-migration grant.
+Feature checkpoint2915f9b is local only; follow-up documentation does not rerun CI.
+
 Nov15PR284 initialfrontendCSPgatefailed;otherhostedgatespassed. Localrepro and
 minimalexistingjitlesspatternfix,newred/greenregression,524frontend/typecheck/
 build/scopedlint/unchangedstrictpolicy3viewportspass. Parentpushescorrection,

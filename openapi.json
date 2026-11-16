@@ -4021,6 +4021,137 @@
         "title": "ContactUpdate",
         "type": "object"
       },
+      "CoverageCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "mapped_count": {
+            "minimum": 0.0,
+            "title": "Mapped Count",
+            "type": "integer"
+          },
+          "parcel_count": {
+            "minimum": 0.0,
+            "title": "Parcel Count",
+            "type": "integer"
+          },
+          "permit_count": {
+            "minimum": 0.0,
+            "title": "Permit Count",
+            "type": "integer"
+          },
+          "planning_count": {
+            "minimum": 0.0,
+            "title": "Planning Count",
+            "type": "integer"
+          },
+          "unmapped_count": {
+            "minimum": 0.0,
+            "title": "Unmapped Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "permit_count",
+          "planning_count",
+          "parcel_count",
+          "mapped_count",
+          "unmapped_count"
+        ],
+        "title": "CoverageCounts",
+        "type": "object"
+      },
+      "CoverageGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "maximum": 85.0,
+                "minimum": -85.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "mapped_count": {
+            "minimum": 0.0,
+            "title": "Mapped Count",
+            "type": "integer"
+          },
+          "parcel_count": {
+            "minimum": 0.0,
+            "title": "Parcel Count",
+            "type": "integer"
+          },
+          "permit_count": {
+            "minimum": 0.0,
+            "title": "Permit Count",
+            "type": "integer"
+          },
+          "planning_count": {
+            "minimum": 0.0,
+            "title": "Planning Count",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "unmapped_count": {
+            "minimum": 0.0,
+            "title": "Unmapped Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "permit_count",
+          "planning_count",
+          "parcel_count",
+          "mapped_count",
+          "unmapped_count",
+          "state",
+          "label",
+          "id",
+          "jurisdiction"
+        ],
+        "title": "CoverageGroup",
+        "type": "object"
+      },
       "CoverageJurisdictionBucket": {
         "properties": {
           "candidate_sources": {
@@ -4042,6 +4173,81 @@
           "candidate_sources"
         ],
         "title": "CoverageJurisdictionBucket",
+        "type": "object"
+      },
+      "CoverageState": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "maximum": 85.0,
+                "minimum": -85.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "mapped_count": {
+            "minimum": 0.0,
+            "title": "Mapped Count",
+            "type": "integer"
+          },
+          "parcel_count": {
+            "minimum": 0.0,
+            "title": "Parcel Count",
+            "type": "integer"
+          },
+          "permit_count": {
+            "minimum": 0.0,
+            "title": "Permit Count",
+            "type": "integer"
+          },
+          "planning_count": {
+            "minimum": 0.0,
+            "title": "Planning Count",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "unmapped_count": {
+            "minimum": 0.0,
+            "title": "Unmapped Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "permit_count",
+          "planning_count",
+          "parcel_count",
+          "mapped_count",
+          "unmapped_count",
+          "state",
+          "label"
+        ],
+        "title": "CoverageState",
         "type": "object"
       },
       "CustomerCoverageSummary": {
@@ -9587,6 +9793,268 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "MapCoverageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "grouping": {
+            "enum": [
+              "state",
+              "jurisdiction"
+            ],
+            "title": "Grouping",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageGroup"
+            },
+            "maxItems": 100,
+            "title": "Groups",
+            "type": "array"
+          },
+          "limit": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "previous_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Offset"
+          },
+          "states": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageState"
+            },
+            "maxItems": 52,
+            "title": "States",
+            "type": "array"
+          },
+          "total_groups": {
+            "minimum": 0.0,
+            "title": "Total Groups",
+            "type": "integer"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/CoverageCounts"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "measured_at",
+          "totals",
+          "states",
+          "groups",
+          "grouping",
+          "total_groups",
+          "limit",
+          "offset",
+          "next_offset",
+          "previous_offset",
+          "truncated"
+        ],
+        "title": "MapCoverageResponse",
+        "type": "object"
+      },
+      "MapInventoryRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "jurisdiction": {
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "permit",
+              "planning",
+              "parcel"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "maximum": 85.0,
+                "minimum": -85.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "location_method": {
+            "anyOf": [
+              {
+                "enum": [
+                  "source_coordinate",
+                  "census_address_range_estimate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Method"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "address",
+          "city",
+          "state",
+          "jurisdiction",
+          "location_method"
+        ],
+        "title": "MapInventoryRecord",
+        "type": "object"
+      },
+      "MapRecordsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MapInventoryRecord"
+            },
+            "maxItems": 100,
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "previous_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Offset"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "next_offset",
+          "previous_offset"
+        ],
+        "title": "MapRecordsResponse",
         "type": "object"
       },
       "MeResponse": {
@@ -19350,6 +19818,113 @@
         ]
       }
     },
+    "/v1/acquisition-map/coverage": {
+      "get": {
+        "operationId": "map_coverage_v1_acquisition_map_coverage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "permit",
+                "planning",
+                "parcel"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Map Coverage",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
     "/v1/acquisition-map/readiness": {
       "get": {
         "operationId": "get_map_readiness_v1_acquisition_map_readiness_get",
@@ -19392,6 +19967,131 @@
           }
         },
         "summary": "Get Map Readiness",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/acquisition-map/records": {
+      "get": {
+        "operationId": "map_records_v1_acquisition_map_records_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "permit",
+                "planning",
+                "parcel"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "jurisdiction",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Jurisdiction"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapRecordsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Map Records",
         "tags": [
           "nearby parcels"
         ]

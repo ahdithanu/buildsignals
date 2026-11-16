@@ -379,3 +379,30 @@ the backend denies external sockets before app import. Existing demo gates and
 normal E2E fixtures are unchanged. Screenshots are local ignored test outputs.
 The browser workflow includes an explicit offline parcel-context step; the
 baseline suite intentionally skips this opt-in fixture, not its dedicated step.
+# Full Geographic Inventory
+
+Run the dedicated, isolated actual-API journey:
+
+```sh
+PYTHON=.venv/bin/python E2E_API_PORT=8131 E2E_WEB_PORT=8132 \
+  CI=1 node node_modules/@playwright/test/cli.js test \
+  -c e2e/coverage-map.playwright.config.ts
+```
+
+The config sets `RUN_COVERAGE_MAP_E2E=1`, starts fresh owned API/frontend servers
+and never reuses a listening server. Its backend owns a migrated throwaway
+SQLite database. External source/model sockets and browser requests are blocked;
+the offline basemap can be unavailable while aggregate markers and record lists
+remain testable. The explicit CI step uses the same command.
+
+The fixture uses real local CSV ingestion to normalize217synthetic records:
+145permits,2planningrecords and70parcels;161mapped and56unmapped. Florida,
+Texas, Ohio and an unknown-state bucket are represented. These are test data,
+not production counts or independent geographic qualification.
+
+Desktop1440px and mobile390px verify all-state totals above the record-page
+size, missing-coordinate records, jurisdiction drilldown, parcels without saved
+searches, stable pagination, reload,503recovery and parcel-detail navigation.
+Page errors and business writes fail the journey. Login/session refresh is
+explicitly separate from business writes. Screenshots and vector paths verify
+the rendered map; no API response is replaced except the single injected503.

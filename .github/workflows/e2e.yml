@@ -87,6 +87,19 @@ jobs:
           REDIS_URL: ""
         run: node node_modules/@playwright/test/cli.js test -c e2e/parcel-use.playwright.config.ts
 
+      - name: Run offline full geographic inventory E2E
+        env:
+          E2E_API_PORT: "8131"
+          E2E_WEB_PORT: "8132"
+          RUN_SF_MAP_E2E: "0"
+          RUN_RESEARCH_E2E: "0"
+          RUN_CRITERIA_E2E: "0"
+          RUN_PARCEL_USE_E2E: "0"
+          DEMO_TEST_SNAPSHOT_DIR: ""
+          OPENROUTER_API_KEY: ""
+          REDIS_URL: ""
+        run: node node_modules/@playwright/test/cli.js test -c e2e/coverage-map.playwright.config.ts
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

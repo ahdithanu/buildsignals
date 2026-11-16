@@ -1,5 +1,38 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov16packaginggate:fullAPIimageimportcaughtmissingagent_runtime COPY although
+hostedsourcechecksfor0294794passed. MinimalDockerCOPYanddedicatedCIimagebuild/
+no-networkapp.mainimportcorrectthis;actualoldimagered/newimagegreenlocally.
+Noappbusinesslogic/dependencieschanged. ParentownsPR285correctionandstaged
+release; greenchecksandreverifiedimage/APIrequired. Donotmergebasedonoldhead.
+PrivacyPR286separate; integrateactualparentcorrectionwithoutrewritinghistory.
+Privateopsreceiptsstayinternal;rootresearch/collector/CherryHilldraftpreserved.
+
+Nov16 staged release approved after final checks/CI, including one bounded
+read-only schema preflight. Parent owns publication/checkwatch/preflight/release;
+no migrations/sourceactivation/schedule/access/paid changes. Hold merge as well
+as rollout if schema is incompatible: main merges can auto-release the frontend.
+No live/hosted acceptance claimed yet. Earlier pending-approval notes are history.
+
+Nov16 latest priority: isolated .worktrees/full-coverage-map, branch
+codex/full-coverage-map on main285512a. User wants complete observed geographic
+coverage visible, not the first100 map records. Read docs/full-geographic-coverage-map.md.
+Local feature checkpoint2915f9b; no push/PR/merge/release occurred.
+Parent owns map-shell/shared renderer/browser/docs; Lagrange owns backend;
+Boole owns coverage explorer/contracts/tests; independent reviewer is read-only.
+Orlando's separately approved one-shot intake is already production-verified:
+70 active/located parcels, zero saved/ranked candidates; temporary task stopped
+and definition deregistered. Source currentness unknown. Existing jobs unchanged;
+Cherry Hill DRAFT/UNSENT. Intake checkpoints64bf916/c39443d stay on their own branch.
+Final local:3,380backend/zero skips/3existingwarnings427.52s,554frontend82files,
+16nonownerPG, actualAPIheadless2/13.2s, freshnormalChrome/strictCSP/typecheck/build/
+Ruff/lint/drift/review pass. OwnedPG/API/frontend stopped/status-confirmed. No
+coveragepercentage or hosted acceptance claimed. See handoff for provisioning
+failures and final receipts. Publication/staged-release approval requested,pending;
+no new rollout/source/task/access/schedule/paid authority. Normal deploy includes
+migrations and is not covered by a no-migration grant. Preserve dirty root/private
+collector; Cherry Hill inquiry stays DRAFT/UNSENT.
+
 Nov15PR284 publishedaa62c84 onmainb31ea6f. Initialhostedbackend/e2e/precommit/
 gitleaks/previewpassed; frontendfailedstrictCSP(script-src). Reproducedlocally:
 newZodobjectsattemptedevalprobebeforeexistingjitlesssetup. Newmodule nowmatches

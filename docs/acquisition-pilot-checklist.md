@@ -2,6 +2,21 @@
 
 ## Local implementation, not deployed
 
+### November16: Complete Observed Geographic Inventory
+
+Local `codex/full-coverage-map` replaces the default first-page-only map with
+database-aggregated tenant inventory, all observed states/unknown geography,
+bounded jurisdiction drilldown and independently paginated records. Unmapped
+filings and unranked parcels remain visible. Measured timestamps and foreground
+refresh do not imply publisher freshness or complete market coverage. See
+`full-geographic-coverage-map.md` for exact tests and the outstanding release gate.
+
+The separately approved Orlando intake is production-verified:70active/located
+parcels, zero saved searches/ranked candidates;54centroidswithinquartermile and
+16outside the centroid radius, from a polygon-intersection source query. No
+parcel boundaries, sale availability or entitlements are implied. Its one-shot
+authorization is consumed. Cherry Hill inquiry remains DRAFT/UNSENT.
+
 ### November15: Nearby Parcel Zoning Evidence
 
 PR283 retirement merged625208c after exact-head hosted checks; its production
