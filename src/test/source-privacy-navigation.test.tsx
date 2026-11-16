@@ -78,8 +78,8 @@ it.each([false, true])('keeps Coverage and operator-only Operations discoverable
   else expect(screen.queryByRole('menuitem', { name: 'Operations' })).not.toBeInTheDocument();
 });
 
-it.each([false, true])('renders the exact customer projection without missing operational fields (%s)', operator => {
-  auth.isInternalOperator = operator;
+it('renders a legacy customer projection only for the explicit operator', () => {
+  auth.isInternalOperator = true;
   render(<MemoryRouter><NationalParcelGapPanel coverage={customerCoverage} /></MemoryRouter>);
   expect(screen.getByText('50-state parcel matrix')).toBeInTheDocument();
   expect(screen.getByText('123 stored · 100 geocoded')).toBeInTheDocument();
@@ -93,16 +93,13 @@ it.each([false, true])('renders the exact customer projection without missing op
   expect(screen.queryByText('Not reported')).not.toBeInTheDocument();
 });
 
-it('keeps geographic counts and uncertainty visible without the internal connector queue', () => {
-  render(<MemoryRouter><NationalParcelGapPanel coverage={coverage} /></MemoryRouter>);
-  expect(screen.getByText('50-state parcel matrix')).toBeInTheDocument();
-  expect(screen.getByText('FL')).toBeInTheDocument();
-  expect(screen.getByText('123 stored · 100 geocoded')).toBeInTheDocument();
-  expect(screen.getByText('Source freshness is unknown.')).toBeInTheDocument();
-  expect(screen.getByText(/Measurement time does not establish source freshness/)).toBeInTheDocument();
-  expect(screen.queryByText('Next connector targets')).not.toBeInTheDocument();
-  expect(screen.queryByText('Internal connector priority')).not.toBeInTheDocument();
-  expect(screen.queryByRole('link', { name: /source queue/ })).not.toBeInTheDocument();
+it('hides diagnostics and error states from nonoperators even with cached data', () => {
+  const view = render(<MemoryRouter><NationalParcelGapPanel coverage={coverage} /></MemoryRouter>);
+  expect(view.container).toBeEmptyDOMElement();
+  view.rerender(<MemoryRouter><NationalParcelGapPanel coverage={customerCoverage} /></MemoryRouter>);
+  expect(view.container).toBeEmptyDOMElement();
+  view.rerender(<MemoryRouter><NationalParcelGapPanel error /></MemoryRouter>);
+  expect(view.container).toBeEmptyDOMElement();
 });
 
 it('retains the internal connector queue for the explicit operator', () => {

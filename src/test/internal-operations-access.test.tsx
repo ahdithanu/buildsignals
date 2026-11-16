@@ -9,13 +9,13 @@ import { useCandidateCanaryHistory, useIngestionCoverage, useIngestionHealth, us
 import { useIngestionSourceDetail } from '@/hooks/useIngestionSourceDetail';
 import { useMeasuredCoverage } from '@/hooks/useMeasuredCoverage';
 
-const auth = vi.hoisted(() => ({ organizationId: 'org', isAuthenticated: true, role: 'admin', isInternalOperator: false }));
+const auth = vi.hoisted(() => ({ organizationId: 'org', isAuthenticated: true, role: 'admin', isDemo: false, isInternalOperator: false as boolean | undefined | null | string }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/api/client', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }));
 
 const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{children}</QueryClientProvider>;
 
-beforeEach(() => { vi.clearAllMocks(); auth.isInternalOperator = false; vi.mocked(apiClient.get).mockResolvedValue([]); });
+beforeEach(() => { vi.clearAllMocks(); auth.isInternalOperator = false; auth.role = 'admin'; auth.isDemo = false; auth.isAuthenticated = true; vi.mocked(apiClient.get).mockResolvedValue([]); });
 
 it('never fetches raw operations for an ordinary customer admin', async () => {
   const { result } = renderHook(() => [
@@ -27,9 +27,39 @@ it('never fetches raw operations for an ordinary customer admin', async () => {
   expect(apiClient.get).not.toHaveBeenCalled();
 });
 
-it('keeps customer geographic parcel coverage enabled', async () => {
+it.each([
+  ['admin', false], ['editor', false], ['viewer', false], ['demo', false],
+  ['unknown', undefined], ['null', null], ['nonboolean', 'true'],
+])('never fetches national parcel diagnostics for %s', async (role, permission) => {
+  auth.role = role as string;
+  auth.isDemo = role === 'demo';
+  auth.isInternalOperator = permission as typeof auth.isInternalOperator;
+  const { result } = renderHook(() => useNationalParcelCoverage(), { wrapper });
+  await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
+  expect(apiClient.get).not.toHaveBeenCalled();
+});
+
+it('fetches national parcel diagnostics for the explicit operator', async () => {
+  auth.isInternalOperator = true;
   renderHook(() => useNationalParcelCoverage(), { wrapper });
   await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/ingestion/coverage/national-parcels'));
+});
+
+it('does not reuse operator diagnostics after permission is revoked', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const scopedWrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  const report = { scope: 'PRIVATE_OPERATOR_REPORT' };
+  vi.mocked(apiClient.get).mockResolvedValue(report);
+  auth.isInternalOperator = true;
+  const { result, rerender } = renderHook(() => useNationalParcelCoverage(), { wrapper: scopedWrapper });
+  await waitFor(() => expect(result.current.data).toEqual(report));
+  vi.mocked(apiClient.get).mockClear();
+  auth.isInternalOperator = false;
+  rerender();
+  expect(result.current.data).toBeUndefined();
+  expect(result.current.fetchStatus).toBe('idle');
+  expect(apiClient.get).not.toHaveBeenCalled();
+  client.clear();
 });
 
 it('fetches operations for an explicitly authorized operator', async () => {

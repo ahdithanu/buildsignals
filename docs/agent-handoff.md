@@ -1,5 +1,39 @@
 # Current Agent Handoff
 
+## November16: Owner-Only Diagnostics Follow-Up
+
+Owner requested that the Dashboard national parcel gap matrix/connector queue
+and SourceHealth diagnostics not be visible to ordinary users. This isolated
+codex/owner-only-coverage-diagnostics branch starts at green PR285 head0294794;
+do not mix into the frozen staged release. SourceHealth already uses existing
+internal-operator UI/API gates. Dashboard and national-parcels gap endpoint need
+the same owner allowlist, not organization-admin access. Preserve real customer
+inventory coverage/map APIs. Separate writer owns product/tests; parent docs.
+Owner approved staged publication, merge and release after local checks and green
+CI. Parent owns publication/hosted watch/release; no access/source/schedule/paid
+changes. This authorization is not a production acceptance receipt.
+
+Implemented: both Dashboard branches and the component fail closed unless the
+server-derived internal-operator flag is exactly true. The hook does not fetch
+for nonoperators and separates permission scopes in its query cache. The gap
+API now requires the existing internal-operator dependency before computing the
+report; customer-admin status is insufficient. SourceHealth already had these
+UI/API gates. Customer map/coverage APIs and backend provenance are unchanged.
+
+Local red/green acceptance:147focused backend passed36.66s;569frontend/82files
+passed5.22s; typecheck/build/Ruff/scoped ESLint pass. Existing dependency/build
+warnings remain. Fresh normal Chrome actual disposable API desktop1440/mobile390
+2passed12.6s; owner panel visible, newly registered customer panel absent,
+zero report requests, direct SourceHealth UI redirect, customer map accessible.
+Parent added the explicit CI browser step; exact headless command2passed13.2s.
+Owned browser servers stopped and8141/8142 listeners absent. Parent runtime/test
+review and screenshot inspection pass. Full backend result remains pending.
+Parent independently inspected runtime/testdiff and mobile screenshot. Explicit
+CI browser step added and its exact local headless command passed2/13.2s.
+Owned browser servers stopped; full backend verification remains in progress.
+Concurrent full-coverage-map release and private operational receipts stay in
+their separate worktree. Root research/collector/CherryHill draft untouched.
+
 ## November16: Staged Release Approved
 
 Owner approved publication, merge and staged map/API release after checks/CI,

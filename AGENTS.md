@@ -1,5 +1,16 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov16current:isolatedowner-only-coverage-diagnosticsfollowupfrom0294794;
+restrictDashboardgapmatrixandgapAPItoexistinginternaloperatorallowlist;
+SourceHealthalreadygated.Preservecustomerinventory/map.Ownerapprovedstaged
+publication/merge/releaseafterchecksandgreenCI;nodatapermission/source/schedule
+changes.Parentownsrelease;currentworklocalnotproductionverified.
+Local147focusedbackend/569frontend/typecheck/build/lintpass;freshChrome2/12.6s,
+CIequivalentheadless2/13.2s;ownedserversstopped.Fullbackend/hostednotyetclaimed.
+ConcurrentPR285releaseownsitsownprivateworktree;do notmixcloudreceipts.
+Norepeatconsumedtasks.Rootresearchpreserved.
+Readnewestdocs/agent-handoff.md;oldermain/approvalnotesbelowarehistorical.
+
 Nov16 staged release approved after final checks/CI, including one bounded
 read-only schema preflight. Parent owns publication/checkwatch/preflight/release;
 no migrations/sourceactivation/schedule/access/paid changes. Hold merge as well

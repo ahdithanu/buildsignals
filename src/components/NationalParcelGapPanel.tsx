@@ -44,6 +44,7 @@ export function NationalParcelGapPanel({
   error?: boolean;
 }) {
   const { isInternalOperator } = useAuth();
+  if (isInternalOperator !== true) return null;
   if (!coverage && !error) return null;
   if (!coverage) {
     return (

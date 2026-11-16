@@ -1,9 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 import Dashboard from "@/pages/Dashboard";
+
+const auth = vi.hoisted(() => ({
+  user: { full_name: "Test User" }, role: "admin", isAuthenticated: true,
+  isDemo: false, isInternalOperator: false as boolean | undefined | null | string, logout: vi.fn(),
+}));
 
 vi.mock("@/components/Layout", () => ({
   Layout: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -19,6 +24,9 @@ vi.mock("@/components/NationalParcelGapPanel", () => ({
 }));
 vi.mock("@/components/GraphCoverageCard", () => ({
   GraphCoverageCard: () => <div>GraphCoverageCard</div>,
+}));
+vi.mock("@/components/DetectedActivity", () => ({
+  DetectedActivity: () => <div>DetectedActivity</div>,
 }));
 vi.mock("@/components/NearbyParcelCoverageCard", () => ({
   NearbyParcelCoverageCard: () => <div>NearbyParcelCoverageCard</div>,
@@ -41,14 +49,51 @@ vi.mock("@/hooks/useIngestionHealth", () => ({
   useNationalParcelCoverage: vi.fn(),
 }));
 vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({ user: { full_name: "Test User" }, role: "admin", isAuthenticated: true, logout: vi.fn() }),
+  useAuth: () => auth,
 }));
 
 import { useDashboardKpis, useTopOpportunities, usePipelineSnapshot, useRecentSignals, useAiInsights } from "@/hooks/useDashboard";
 import { useIngestionHealth, useNationalParcelCoverage } from "@/hooks/useIngestionHealth";
 
 describe("<Dashboard>", () => {
+  beforeEach(() => {
+    auth.role = 'admin';
+    auth.isDemo = false;
+    auth.isInternalOperator = false;
+    vi.mocked(useDashboardKpis).mockReturnValue({ data: { pipelineDeals: 0 }, isLoading: false } as ReturnType<typeof useDashboardKpis>);
+    vi.mocked(useTopOpportunities).mockReturnValue({ data: [] } as ReturnType<typeof useTopOpportunities>);
+    vi.mocked(usePipelineSnapshot).mockReturnValue({ data: [] } as ReturnType<typeof usePipelineSnapshot>);
+    vi.mocked(useRecentSignals).mockReturnValue({ data: [] } as ReturnType<typeof useRecentSignals>);
+    vi.mocked(useAiInsights).mockReturnValue({ data: [] } as ReturnType<typeof useAiInsights>);
+    vi.mocked(useNationalParcelCoverage).mockReturnValue({ data: { summary: { state_count: 50 } }, isError: false } as ReturnType<typeof useNationalParcelCoverage>);
+  });
+
+  it.each([
+    ['customer admin', 'admin', false, false],
+    ['customer editor', 'editor', false, false],
+    ['customer viewer', 'viewer', false, false],
+    ['demo', 'viewer', false, true],
+    ['unknown', 'admin', undefined, false],
+    ['null permission', 'admin', null, false],
+    ['nonboolean permission', 'admin', 'true', false],
+    ['owner', 'admin', true, false],
+  ])('gates diagnostics in both dashboard branches for %s', (_name, role, operator, demo) => {
+    auth.role = role as string;
+    auth.isInternalOperator = operator as typeof auth.isInternalOperator;
+    auth.isDemo = demo as boolean;
+    const view = render(<MemoryRouter><Dashboard /></MemoryRouter>);
+    expect(screen.queryByText('NationalParcelGapPanel') !== null).toBe(operator === true);
+    vi.mocked(useDashboardKpis).mockReturnValue({ data: { pipelineDeals: 1 }, isLoading: false } as ReturnType<typeof useDashboardKpis>);
+    view.rerender(<MemoryRouter><Dashboard /></MemoryRouter>);
+    expect(screen.getByText('Pipeline Snapshot')).toBeInTheDocument();
+    expect(screen.queryByText('NationalParcelGapPanel') !== null).toBe(operator === true);
+    vi.mocked(useNationalParcelCoverage).mockReturnValue({ isError: true } as ReturnType<typeof useNationalParcelCoverage>);
+    view.rerender(<MemoryRouter><Dashboard /></MemoryRouter>);
+    expect(screen.queryByText('NationalParcelGapPanel') !== null).toBe(operator === true);
+  });
+
   it("surfaces direct routes into the permit review and source health loops", () => {
+    auth.isInternalOperator = true;
     (useDashboardKpis as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
         pipelineDeals: 7,

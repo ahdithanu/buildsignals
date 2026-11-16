@@ -190,3 +190,13 @@ remains HOLD. Data/code integrity does not certify independent coverage, mature
 outcomes or a fully specified validation method. Do not activate its local source.
 Read the handoff and
 `docs/source-qualification/` before continuing.
+# November16 Owner-Only Diagnostics
+
+Read docs/agent-handoff.md first. This separate isolated branch restricts the
+Dashboard parcel gap report and API to existing internal operators. SourceHealth
+is already gated. Preserve customer inventory/map access. Owner approved staged
+publication/merge/release after checks and green CI, not data-permission/source/
+schedule changes. Local147focused backend/569frontend,
+Chrome2 and CI-equivalent headless2 pass; see the handoff for full-suite gates.
+Concurrent full-coverage-map release and private receipts remain separate.
+Root research, collector and CherryHill unsent draft remain untouched.

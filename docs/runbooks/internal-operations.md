@@ -34,6 +34,21 @@ generic public-record labels. Coverage summaries return only organization-scoped
 record/geocode totals and a measurement timestamp. Internal reports require the
 operator dependency even when requested directly rather than through the UI.
 
+The Dashboard national parcel gap matrix and connector targets are internal,
+including `/v1/ingestion/coverage/national-parcels`. Ordinary customer admins,
+editors, viewers and demo sessions receive403; unauthorized requests do not
+compute the report. The component itself fails closed, both Dashboard branches
+hide it, and its query is disabled for nonoperators with permission-scoped keys.
+Source Health keeps its existing internal UI and API guards. Customer measured
+coverage summaries and full geographic inventory/map endpoints are unchanged.
+
+This follow-up is locally implemented/tested, not merged or production-verified.
+The browser regression uses a disposable operator then a newly registered
+customer at desktop/mobile sizes, checks zero diagnostic requests after signout,
+reloads the guarded route and verifies customer map access. Run it with
+`node node_modules/@playwright/test/cli.js test -c e2e/coverage-privacy.playwright.config.ts`.
+CI runs this dedicated offline journey separately from the default suite.
+
 Investment-area provenance is projected as Public records, period and capture
 date. Full publisher URLs, hashes and original capture timestamps remain in the
 backend reference artifact. Do not erase lineage or required publisher/license

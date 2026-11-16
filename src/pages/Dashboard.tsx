@@ -12,6 +12,7 @@ import { NationalParcelGapPanel } from "@/components/NationalParcelGapPanel";
 import { useNationalParcelCoverage } from "@/hooks/useIngestionHealth";
 import { TrendingUp, Target, Star, DollarSign, BarChart3, Lightbulb, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 
 const fadeIn = {
@@ -35,6 +36,7 @@ function insightWindowLabel(value: Record<string, unknown> | null | undefined, g
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { isInternalOperator } = useAuth();
   const { data: kpis, isLoading: kpisLoading, error: kpisError, refetch: refetchKpis } = useDashboardKpis();
   const { data: topDeals } = useTopOpportunities();
   const { data: pipelineSnapshot } = usePipelineSnapshot();
@@ -61,12 +63,12 @@ export default function Dashboard() {
             <h2 className="text-lg md:text-xl font-semibold font-display text-foreground">Dashboard</h2>
             <p className="text-sm text-muted-foreground mt-0.5">Your acquisition engine at a glance</p>
           </div>
-          <div className="mb-5 md:mb-6">
+          {isInternalOperator === true && <div className="mb-5 md:mb-6">
             <NationalParcelGapPanel
               coverage={nationalParcelCoverage}
               error={nationalParcelCoverageError}
             />
-          </div>
+          </div>}
           <div className="flex flex-wrap items-center justify-between gap-3 border-y py-3 text-sm">
             <p className="text-muted-foreground">No saved deals yet.</p>
             <Button asChild variant="outline" size="sm">
@@ -87,12 +89,12 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground mt-0.5">Your acquisition engine at a glance</p>
         </motion.div>
 
-        <motion.div {...fadeIn} transition={{ delay: 0.05 }}>
+        {isInternalOperator === true && <motion.div {...fadeIn} transition={{ delay: 0.05 }}>
           <NationalParcelGapPanel
             coverage={nationalParcelCoverage}
             error={nationalParcelCoverageError}
           />
-        </motion.div>
+        </motion.div>}
 
         {/* KPIs */}
         <motion.div {...fadeIn} transition={{ delay: 0.1 }} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
