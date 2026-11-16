@@ -1,5 +1,13 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov16packaginggate:fullAPIimageimportcaughtmissingagent_runtime COPY although
+hostedsourcechecksfor0294794passed. MinimalDockerCOPYanddedicatedCIimagebuild/
+no-networkapp.mainimportcorrectthis;actualoldimagered/newimagegreenlocally.
+Noappbusinesslogic/dependencieschanged. ParentownsPR285correctionandstaged
+release; greenchecksandreverifiedimage/APIrequired. Donotmergebasedonoldhead.
+PrivacyPR286separate; integrateactualparentcorrectionwithoutrewritinghistory.
+Privateopsreceiptsstayinternal;rootresearch/collector/CherryHilldraftpreserved.
+
 Nov16 staged release approved after final checks/CI, including one bounded
 read-only schema preflight. Parent owns publication/checkwatch/preflight/release;
 no migrations/sourceactivation/schedule/access/paid changes. Hold merge as well

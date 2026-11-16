@@ -1,5 +1,25 @@
 # Current Agent Handoff
 
+## November16: Container Packaging Correction
+
+Exact image startup smoke caught ModuleNotFoundError for agent_runtime imported
+by app.main -> deal_intelligence -> research_service. Source-checkout tests and
+the database-only canary did not exercise the packaged application entrypoint.
+Do not call prior green source tests sufficient deployment acceptance.
+
+The minimal correction copies the existing agent_runtime package into the image,
+without installing its optional SDK requirements or enabling research execution.
+A separate CI job builds the actual API image and imports app.main under
+synthetic SQLite settings with container networking disabled. Actual old image
+failed that check; corrected local image passed. No business logic, dependency,
+source/schedule/access or database changes are included. Detailed production
+rollout diagnostics remain internal in the separate receipt worktree.
+
+Parent owns the approved PR285 correction, changed-head CI watch and staged
+release. Integrate the real parent correction into stacked privacyPR286 normally,
+not by rewriting either history; require fresh checks for changed heads. Do not
+push private receipt branches or dirty root. Preserve CherryHill unsent draft.
+
 ## November16: Staged Release Approved
 
 Owner approved publication, merge and staged map/API release after checks/CI,

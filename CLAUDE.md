@@ -2,6 +2,11 @@
 
 @AGENTS.md
 
+Nov16 latest: full API image import, unlike source tests, caught missing bundled
+agent_runtime. Minimal Docker COPY plus a dedicated no-network image-import CI
+job corrects it; local red/green confirmed. Read newest handoff. Parent owns the
+approved staged release; require checks on the corrected head, not old green CI.
+
 Nov16 staged release is now approved after checks/CI and bounded read-only schema
 preflight, without migrations/source/schedule/access/paid changes. Parent owns
 release; hold merge if compatibility fails to avoid automatic frontend rollout.
