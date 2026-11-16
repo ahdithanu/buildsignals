@@ -2,6 +2,11 @@
 
 @AGENTS.md
 
+November15: owner approved zoning push/PR publication and continued Cherry Hill
+qualification. Currentmainb31ea6f generated-schema update integrated; tree equals
+testeda6462fc. Parent owns publication/checkwatch. No merge/release/production
+tasks/source/settings/paid/automation authority; root research remains private.
+
 FinalNov15localzoning:3,319backend/zero skips/91.51%,523frontend,Chrome2,
 13focusedPG/RLS/READONLY/provenance/bounds and review/checks pass. Owned runtimes
 stopped/status-confirmed. ExplicitCIstep localheadless2/7.8spass;hostedunverified.

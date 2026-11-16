@@ -1,5 +1,20 @@
 # Current Agent Handoff
 
+## November15: Zoning Publication Approved
+
+Owner requested pushing the zoning branch and opening a PR with results, then
+continuing Cherry Hill parcel/overlay/current-rule qualification. Mainb31ea6f
+adds only generated retirement schema; integrated normally and the resulting tree
+equals testeda6462fc. Runtime acceptance below remains applicable; fresh focused
+checks and hosted results will be distinguished in PR metadata. Publish this
+isolated product branch only, never root concurrent security/research changes.
+
+Parent owns publication/hosted checks and subsequent geometry qualification;
+Boole independently researches current rules, Lagrange reviews parcel identity
+and source-use gates. New qualification stays separate from this PR's runtime.
+No merge/deploy, production migration/task, source activation, paid call,
+access/schedule/settings change or automation resume is authorized.
+
 ## November15: Local Zoning Context Acceptance Complete
 
 Final frozen runtime acceptance: **3,319 backend passed, zero skips, 91.51% app

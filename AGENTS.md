@@ -1,5 +1,13 @@
 # BuildSignals: Shared Agent Instructions
 
+November15 publication approved: owner requested push/openPR with zoning test
+results, then continued Cherry Hill qualification. Mainb31ea6f generated schema
+update integrated normally; merged tree equals testeda6462fc. Publish only this
+isolated zoning branch, not root research. Parent owns hosted-check watch; no
+duplicate collectors. No merge/deploy/production migration/task/source activation,
+paid call or settings/access/schedule/automation change authorized by this PR.
+Continue independent bounded public qualification separately from PR runtime.
+
 FinalNov15 localzoning:3,319backend/zero skips/91.51%/3existingwarnings432.55s;
 523frontend79files6.20s;freshnormalChrome desktop/mobile2pass8.2s.13focusedPG
 restrictedrole/RLS/READONLY/provenance/bounds pass;typecheck/build/Ruff/scopedlint/
