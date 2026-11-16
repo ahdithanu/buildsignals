@@ -1,5 +1,11 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov16 staged release approved after final checks/CI, including one bounded
+read-only schema preflight. Parent owns publication/checkwatch/preflight/release;
+no migrations/sourceactivation/schedule/access/paid changes. Hold merge as well
+as rollout if schema is incompatible: main merges can auto-release the frontend.
+No live/hosted acceptance claimed yet. Earlier pending-approval notes are history.
+
 Nov16 latest priority: isolated .worktrees/full-coverage-map, branch
 codex/full-coverage-map on main285512a. User wants complete observed geographic
 coverage visible, not the first100 map records. Read docs/full-geographic-coverage-map.md.

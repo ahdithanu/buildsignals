@@ -1,5 +1,16 @@
 # Current Agent Handoff
 
+## November16: Staged Release Approved
+
+Owner approved publication, merge and staged map/API release after checks/CI,
+with a bounded read-only schema preflight. No production migration, source
+activation, schedule/access change or paid model call. Parent owns publication,
+hosted watch and the one preflight; no duplicate collector/task. Hold merge too
+if incompatible because main can automatically release the frontend. Standard
+migration-bearing deployment workflow is not authorized. The previous exact
+runtime acceptance remains unchanged; this authorization update changes docs only.
+Keep detailed deployment/database/security receipts private, not in the public PR.
+
 ## November16: Full Geographic Coverage View
 
 Latest user request corrects the current map's first100-record sampling. Work

@@ -96,9 +96,10 @@ credentials and operational receipts remain ignored, outside this change.
 
 ## Release Gate
 
-Fresh publication/staged-release approval requested, not received. No production
-migration, task, access/source/schedule change or paid call is authorized. The
-normal AWS deployment workflow applies migrations; do not dispatch it under a
-no-migration release grant. A separately authorized read-only schema preflight
-must establish compatibility, or hold the release for the exact dependency.
+Owner approved publication, merge and staged release after checks/CI, including
+a bounded read-only schema preflight. No production migration, source activation,
+access/schedule change or paid call is authorized. The normal AWS deployment
+workflow applies migrations; do not dispatch it under this no-migration grant.
+The preflight must establish compatibility, or hold the release (including merge
+because frontend auto-release may follow) for the exact dependency.
 Existing ingestion stays running; Cherry Hill inquiry stays DRAFT/UNSENT.

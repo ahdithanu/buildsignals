@@ -2,6 +2,10 @@
 
 @AGENTS.md
 
+Nov16 staged release is now approved after checks/CI and bounded read-only schema
+preflight, without migrations/source/schedule/access/paid changes. Parent owns
+release; hold merge if compatibility fails to avoid automatic frontend rollout.
+
 Nov16: current local work is codex/full-coverage-map, not the unpublished intake
 branch. Read docs/full-geographic-coverage-map.md and the newest handoff.
 Orlando already has70productionverified parcels; new full-inventory overview is
