@@ -1,5 +1,50 @@
 # Current Agent Handoff
 
+## November16: Full Geographic Coverage View
+
+Latest user request corrects the current map's first100-record sampling. Work
+is isolated in codex/full-coverage-map on fetched main285512a, without upstream.
+Read full-geographic-coverage-map.md for the agreed bounded API/UI contract.
+Parent owns map-shell/shared map/browser/docs; Lagrange backend/schema/routes/
+tests; Boole coverage explorer/frontend contract/tests. One writer per file set.
+No new publication, production API/frontend rollout or source/schedule/access
+change approved. Root dirty research and private collector remain untouched.
+
+Previous separate Orlando slice is locally checkpointed64bf916/c39443d. Its one
+approved production intake completed exit0 with70distinct stored parcels and
+source-before/after70,54centroidswithinquartermile/16outside. Live owner UI
+independently showed70active/locatedparcels and0rankedcandidates/savedsearches.
+Temporarydefinition deregistered afterSTOPPED; no ingestion retry, recurring
+activation or existing-job change. Currentnessunknown; CherryHillDRAFT/UNSENT.
+Detailed operational receipts remain ignored/private in retail-parcel-wave-one.
+
+Current actual dated workspace UI:20,437permits/112planning/70parcels,
+5,139locatedfilings. Not full-market coverage or unique projects. New browser
+fixture will be synthetic, through local ingestion, with no external requests.
+Final frozen-runtime local acceptance:3,380backendpassed/zero skips/3existing
+geographyreflectionwarnings427.52s. No coveragepercentage: localpytest-cov absent.
+Frontend554/82files7.00s, dedicated actualAPIheadless2/13.2s, freshnormalChrome,
+strictCSP3viewports/typecheck/build/Ruff/lint/workflow/harness/review pass. Actual
+nonownerPG coverage/parcelcontext16/1.71s; the full suite separately uses restricted
+owner targets for legacy transactional-DDL tests. Both Alembic drift checks pass.
+Initial local schema-create/ownership/SQL_ASCII provisioning failures are retained
+in the feature doc; no tests weakened/deselected and no product workaround.
+Both ownedPGclusters stopped/pg_ctlstatus-confirmed, ports62563/62564/8131/8132
+have no listeners. Private credentials/ops receipts remain ignored in intake worktree.
+
+The local browser captured a Leaflet deferred zoom-end teardown error; disabling
+zoom animation, stopping before remove and guarding queued resize callbacks fixes
+that reproduced case. Not proof of the older production crash trigger. Synthetic
+217record browser fixture uses real local ingestion with external calls denied;
+it is not live inventory. Existing cached Gitleaks staged scan passed with no leaks;
+local checkpoint is next. Hosted checks are not claimed for this unpublished slice.
+
+Publication/staged-release approval requested, pending. No new push/PR/merge/API/
+frontend rollout, production task/migration/source/access/schedule/paid authority.
+Normal deploy workflow runs migrations and is not covered by a no-migration grant;
+fresh authorized read-only schema compatibility preflight precedes any API release.
+Do not duplicate the private collector or revive consumed Orlando intake approval.
+
 ## November15: PR284 CSP Correction
 
 PR284 opened on aa62c84/mainb31ea6f with measured local results. Initial hosted

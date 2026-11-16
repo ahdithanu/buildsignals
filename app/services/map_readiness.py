@@ -11,7 +11,11 @@ from sqlalchemy.orm import Session
 from app.models.ingestion import PermitRecord
 from app.models.parcel import NearbyParcelCandidate, NearbyParcelSearch, ParcelFact, ParcelRecord
 from app.models.planning import PlanningRecord
-from app.services.map_signals import native_coordinate_predicate, permit_location_query
+from app.services.map_signals import (
+    current_record_predicate,
+    native_coordinate_predicate,
+    permit_location_query,
+)
 from app.utils.org_scope import active_query
 
 
@@ -20,9 +24,7 @@ def _active_count_and_located(db: Session, model) -> tuple[int, int]:
     query = active_query(
         db.query(func.count(model.id), func.sum(case((valid, 1), else_=0))),
         model,
-    )
-    if hasattr(model, "is_active"):
-        query = query.filter(model.is_active.is_(True))
+    ).filter(current_record_predicate(model))
     total, located = query.one()
     return int(total), int(located or 0)
 
@@ -87,7 +89,7 @@ def map_readiness(db: Session) -> dict:
     counts["verified_available_parcels"] = int(active_query(
         db.query(func.count(func.distinct(ParcelRecord.id))), ParcelRecord,
     ).filter(
-        ParcelRecord.is_active.is_(True),
+        current_record_predicate(ParcelRecord),
         _verified_availability_exists(ParcelRecord.id, ParcelRecord.organization_id),
     ).scalar() or 0)
     counts["nearby_verified_available_parcels"] = int(active_query(
@@ -101,7 +103,7 @@ def map_readiness(db: Session) -> dict:
         ),
     ).filter(
         NearbyParcelCandidate.review_status != "dismissed",
-        ParcelRecord.is_active.is_(True),
+        current_record_predicate(ParcelRecord),
         _verified_availability_exists(
             NearbyParcelCandidate.parcel_id,
             NearbyParcelCandidate.organization_id,

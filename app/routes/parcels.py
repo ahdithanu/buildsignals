@@ -17,6 +17,7 @@ from app.schemas.graph import (
     GraphRelatedEntityResponse,
     GraphRelationshipResponse,
 )
+from app.schemas.map_coverage import CoverageKind, MapCoverageResponse, MapRecordsResponse
 from app.schemas.parcel import (
     AcquisitionRadarResponse,
     NearbyParcelCandidateAssignment,
@@ -44,6 +45,7 @@ from app.services.acquisition_service import (
 )
 from app.services.deal_service import deal_to_detail_response
 from app.services.graph_service import relationships_for_entity
+from app.services.map_coverage import get_map_coverage, list_map_records
 from app.services.map_readiness import map_readiness
 from app.services.map_signals import list_map_signals
 from app.services.parcel_availability_ingestion import (
@@ -69,6 +71,42 @@ from app.utils.auth_deps import get_current_user, require_role
 from app.utils.org_scope import active_query
 
 router = APIRouter(tags=["nearby parcels"])
+
+
+@router.get("/acquisition-map/coverage", response_model=MapCoverageResponse,
+            dependencies=[Depends(get_current_user)])
+def map_coverage(
+    response: Response,
+    state: str | None = Query(default=None, min_length=2, max_length=20),
+    kind: CoverageKind = "all",
+    limit: int = Query(default=100, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=100000),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return get_map_coverage(db, state=state, kind=kind, limit=limit, offset=offset)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/acquisition-map/records", response_model=MapRecordsResponse,
+            dependencies=[Depends(get_current_user)])
+def map_records(
+    response: Response,
+    state: str | None = Query(default=None, min_length=2, max_length=20),
+    kind: CoverageKind = "all",
+    jurisdiction: str | None = Query(default=None, min_length=1, max_length=255),
+    limit: int = Query(default=100, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=100000),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return list_map_records(db, state=state, kind=kind, jurisdiction=jurisdiction,
+                                limit=limit, offset=offset)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.get(

@@ -15,6 +15,7 @@ const exportSearch = { mutate: vi.fn(), isPending: false };
 
 // Map data/loading and Leaflet interactions have their own focused/browser tests.
 vi.mock('@/components/SignalMapExplorer', () => ({ SignalMapExplorer: () => null }));
+vi.mock('@/components/CoverageMapExplorer', () => ({ CoverageMapExplorer: () => null }));
 vi.mock('@/components/GeographicMap', () => ({ default: () => null }));
 
 vi.mock('@/hooks/useAcquisitionRadar', () => ({

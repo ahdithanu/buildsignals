@@ -1,9 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AcquisitionMap from '@/pages/AcquisitionMap';
 import type { GeographicPoint } from '@/components/GeographicMap';
+
+vi.mock('@/components/CoverageMapExplorer', () => ({
+  CoverageMapExplorer: ({ state, onStateChange }: { state?: string; onStateChange?: (value: string) => void }) => (
+    <section aria-label="Full geographic inventory">
+      <h1>Coverage overview</h1>
+      <button onClick={() => onStateChange?.('FL')}>Select coverage state</button>
+      <span>Coverage state {state || 'all'}</span>
+    </section>
+  ),
+}));
 
 const refetch = vi.fn();
 const mapRender = vi.hoisted(() => vi.fn());
@@ -115,6 +125,20 @@ describe('<AcquisitionMap> states', () => {
     };
   });
 
+  it('starts with full geographic inventory even when there are no ranked searches', () => {
+    render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'Coverage overview' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Coverage' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByText('Signal geography')).not.toBeInTheDocument();
+  });
+  it('preserves the unknown-state coverage selection in the shared URL', () => {
+    function Location() { return <output aria-label="Map location">{useLocation().search}</output>; }
+    render(<MemoryRouter initialEntries={['/map?state=__unknown__']}><AcquisitionMap /><Location /></MemoryRouter>);
+    expect(screen.getByText('Coverage state __unknown__')).toBeInTheDocument();
+    expect(screen.getByLabelText('Map location')).toHaveTextContent('state=__unknown__');
+    expect(screen.queryByText('No ranked parcels yet')).not.toBeInTheDocument();
+  });
+
   it('directs an empty workspace into the permit review workflow', () => {
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
 
@@ -124,6 +148,7 @@ describe('<AcquisitionMap> states', () => {
 
   it('gates an estimated selection even when the parcel radar is empty', () => {
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Filings' }), { button: 0, ctrlKey: false });
     fireEvent.click(screen.getByRole('button', { name: 'Select estimated permit' }));
     expect(screen.getByText('Estimated location only')).toBeInTheDocument();
     expect(screen.getByText(/Street-range estimate; not a verified parcel. Nearby search requires source-provided coordinates/)).toBeInTheDocument();
@@ -135,6 +160,7 @@ describe('<AcquisitionMap> states', () => {
   it('does not imply a new search is available for a derived point in a populated radar', async () => {
     populateRadar('unrelated-permit');
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Filings' }), { button: 0, ctrlKey: false });
     fireEvent.click(screen.getByRole('button', { name: 'Select estimated permit' }));
     expect(screen.getByText('Estimated location only')).toBeInTheDocument();
     expect(screen.getByText('No saved parcel candidates are linked to this filing.')).toBeInTheDocument();
@@ -152,6 +178,7 @@ describe('<AcquisitionMap> states', () => {
   it('preserves existing linked candidates without declaring an estimated anchor search-ready', async () => {
     populateRadar('sf-estimate');
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Filings' }), { button: 0, ctrlKey: false });
     fireEvent.click(screen.getByRole('button', { name: 'Select estimated permit' }));
     expect(screen.getByText('Estimated location only')).toBeInTheDocument();
     expect(screen.getByText('Existing saved parcel candidates remain available for evidence review; this estimate cannot anchor a new search.')).toBeInTheDocument();
@@ -165,6 +192,7 @@ describe('<AcquisitionMap> states', () => {
   it('preserves the native search workflow and selected-point method', async () => {
     populateRadar('unrelated-permit');
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Filings' }), { button: 0, ctrlKey: false });
     fireEvent.click(screen.getByRole('button', { name: 'Select native permit' }));
     expect(screen.getByText('Permit has no saved nearby-parcel search yet')).toBeInTheDocument();
     expect(screen.getByText(/run the bounded nearby-parcel workflow/)).toBeInTheDocument();
@@ -305,6 +333,7 @@ describe('<AcquisitionMap> states', () => {
     };
 
     render(<MemoryRouter initialEntries={['/map?state=TX&zip3=787']}><AcquisitionMap /></MemoryRouter>);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Filings' }), { button: 0, ctrlKey: false });
 
     expect(screen.getByText('ZIP3 opportunity heat')).toBeInTheDocument();
     expect(screen.getByText(/Nearby candidates are investigation leads, not verified listings/)).toBeInTheDocument();
@@ -422,6 +451,7 @@ describe('<AcquisitionMap> states', () => {
 
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
 
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Filings' }), { button: 0, ctrlKey: false });
     fireEvent.click(screen.getByRole('button', { name: 'Select planning source' }));
 
     expect(screen.getByText(/Planning market filter:/)).toBeInTheDocument();

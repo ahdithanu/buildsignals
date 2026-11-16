@@ -9,6 +9,7 @@ export interface GeographicPoint {
   longitude: number;
   kind: 'permit' | 'planning' | 'parcel' | 'heat';
   weight?: number;
+  count?: number;
   location_method?: 'source_coordinate' | 'census_address_range_estimate';
 }
 
@@ -34,16 +35,19 @@ export default function GeographicMap({ points, boundaries = [], initialCenter, 
   const initialZoom = initialCenter?.zoom ?? 4;
   useEffect(() => {
     if (!element.current) return;
-    const instance = L.map(element.current, { scrollWheelZoom: false }).setView([initialLatitude, initialLongitude], initialZoom);
+    // A deferred zoom-end callback can outlive a filter or route transition.
+    const instance = L.map(element.current, { scrollWheelZoom: false, zoomAnimation: false }).setView([initialLatitude, initialLongitude], initialZoom);
     map.current = instance;
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, referrerPolicy: 'strict-origin-when-cross-origin',
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).on('tileerror', () => setTileError(true)).addTo(instance);
     L.control.scale().addTo(instance);
-    const observer = new ResizeObserver(() => instance.invalidateSize());
+    const observer = new ResizeObserver(() => {
+      if (map.current === instance) instance.invalidateSize();
+    });
     observer.observe(element.current);
-    return () => { observer.disconnect(); instance.remove(); map.current = undefined; };
+    return () => { observer.disconnect(); map.current = undefined; instance.stop(); instance.remove(); };
   }, [initialLatitude, initialLongitude, initialZoom]);
   useEffect(() => {
     const instance = map.current;
@@ -71,18 +75,26 @@ export default function GeographicMap({ points, boundaries = [], initialCenter, 
     }
     for (const groupPoints of grouped.values()) {
       const point = groupPoints[0];
+      const aggregate = groupPoints.some(item => Number.isSafeInteger(item.count) && (item.count ?? 0) > 0);
+      const represented = groupPoints.reduce((sum, item) => sum + (
+        Number.isSafeInteger(item.count) && (item.count ?? 0) > 0 ? item.count! : 1
+      ), 0);
       const label = document.createElement('span');
-      label.textContent = groupPoints.length > 1 ? `${groupPoints.length} ${point.kind} records at this coordinate` : point.title;
+      label.textContent = groupPoints.length > 1
+        ? aggregate ? `${represented.toLocaleString()} mapped records across ${groupPoints.length} geographic groups`
+          : `${groupPoints.length} ${point.kind} records at this coordinate` : point.title;
       const marker = L.circleMarker([point.latitude, point.longitude], {
         radius: point.kind === 'heat' ? Math.max(12, Math.min(28, point.weight ?? 12)) : groupPoints.length > 1 ? 14 : 8,
         color: point.kind === 'heat' ? '#f59e0b' : point.kind === 'planning' ? '#047857' : point.kind === 'parcel' ? '#9f1239' : point.location_method === 'census_address_range_estimate' ? '#a16207' : '#1d4ed8',
         fillOpacity: point.kind === 'heat' ? 0.38 : 0.8, weight: point.kind === 'heat' ? 3 : 2,
       }).bindPopup(label).on('click', () => selection.current(point.id)).addTo(group);
-      if (groupPoints.length > 1) marker.bindTooltip(String(groupPoints.length), {
+      const displayedCount = (aggregate || groupPoints.length > 1) && Number.isSafeInteger(represented)
+        ? represented : null;
+      if (displayedCount !== null) marker.bindTooltip(String(displayedCount), {
         permanent: true, direction: 'center', className: 'geographic-map-count',
       });
     }
-    if (group.getLayers().length) instance.fitBounds(group.getBounds(), { padding: [35, 35], maxZoom: 14 });
+    if (group.getLayers().length) instance.fitBounds(group.getBounds(), { padding: [35, 35], maxZoom: 14, animate: false });
     return () => { group.remove(); };
   }, [points, boundaries]);
   return <div>

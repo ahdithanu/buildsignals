@@ -2,6 +2,15 @@
 
 @AGENTS.md
 
+Nov16: current local work is codex/full-coverage-map, not the unpublished intake
+branch. Read docs/full-geographic-coverage-map.md and the newest handoff.
+Orlando already has70productionverified parcels; new full-inventory overview is
+local only until tested/reviewed/released separately. Cherry Hill stays unsent.
+Final3,380backend/zero skips/3existingwarnings,16nonownerPG/554frontend/headless2/
+freshChrome/strictCSP/review/drift pass. OwnedPG/API/frontend stopped and confirmed.
+See latest handoff. No publication or release approval yet; do not use the
+migration-running production workflow under a no-migration grant.
+
 Nov15PR284 initialfrontendCSPgatefailed;otherhostedgatespassed. Localrepro and
 minimalexistingjitlesspatternfix,newred/greenregression,524frontend/typecheck/
 build/scopedlint/unchangedstrictpolicy3viewportspass. Parentpushescorrection,

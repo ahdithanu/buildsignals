@@ -12,6 +12,8 @@ import {
 import { Layout } from '@/components/Layout';
 import { MapReadiness } from '@/components/MapReadiness';
 import { SignalMapExplorer, type MapSignal } from '@/components/SignalMapExplorer';
+import { CoverageMapExplorer } from '@/components/CoverageMapExplorer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +31,7 @@ import {
   workflowLabel,
 } from '@/lib/acquisitionMap';
 import { cn } from '@/lib/utils';
+import { normalizedCoverageState, UNKNOWN_GEOGRAPHY } from '@/lib/mapCoverage';
 import type { AcquisitionRadarItem } from '@/types/parcel';
 
 const evidenceFilters = ['Shortlisted', 'Verified availability', 'Owner evidence', 'Held 10+ yrs', 'Tax evidence'];
@@ -104,7 +107,8 @@ export default function AcquisitionMap() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [stateFilter, setStateFilter] = useState(searchParams.get('state') || '');
   const [selectedSourceRecord, setSelectedSourceRecord] = useState<MapSignal | null>(null);
-  const selectedState = stateFilter.trim().toUpperCase() || undefined;
+  const coverageState = normalizedCoverageState(stateFilter);
+  const selectedState = /^[A-Z]{2}$/.test(coverageState) ? coverageState : undefined;
   const { data, isLoading, error, refetch, exportSearch } = useAcquisitionRadar({ state: selectedState, limit: 100, offset: 0 });
   const { data: heatmap } = useZip3Heatmap({ state: selectedState, limit: 25 });
   const [selectedSignalId, setSelectedSignalId] = useState('');
@@ -116,10 +120,10 @@ export default function AcquisitionMap() {
 
   useEffect(() => {
     const next = new URLSearchParams();
-    if (selectedState) next.set('state', selectedState);
+    if (coverageState) next.set('state', coverageState);
     if (selectedZip3) next.set('zip3', selectedZip3);
     setSearchParams(next, { replace: true });
-  }, [selectedState, selectedZip3, setSearchParams]);
+  }, [coverageState, selectedZip3, setSearchParams]);
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const signals = useMemo(() => radarSignals(items), [items]);
@@ -249,7 +253,7 @@ export default function AcquisitionMap() {
 
   async function copyMapLink() {
     const next = new URLSearchParams();
-    if (selectedState) next.set('state', selectedState);
+    if (coverageState) next.set('state', coverageState);
     if (selectedZip3) next.set('zip3', selectedZip3);
     const query = next.toString();
     const url = `${window.location.origin}/map${query ? `?${query}` : ''}`;
@@ -262,14 +266,35 @@ export default function AcquisitionMap() {
     });
   }
 
+  function changeMapState(value: string) {
+    setStateFilter(value);
+    setSelectedZip3('');
+    setSelectedSourceRecord(null);
+  }
+
   const signalMap = (
-    <SignalMapExplorer
-      state={stateFilter}
-      onStateChange={setStateFilter}
-      onRecordSelect={setSelectedSourceRecord}
-    />
+    <Tabs defaultValue="coverage" onValueChange={(value) => {
+      setSelectedSourceRecord(null);
+      if (value === 'filings' && coverageState === UNKNOWN_GEOGRAPHY) changeMapState('');
+    }}>
+      <TabsList aria-label="Map view" className="mx-4 mt-4">
+        <TabsTrigger value="coverage">Coverage</TabsTrigger>
+        <TabsTrigger value="filings">Filings</TabsTrigger>
+      </TabsList>
+      <TabsContent value="coverage">
+        <CoverageMapExplorer state={stateFilter} onStateChange={changeMapState} />
+      </TabsContent>
+      <TabsContent value="filings">
+        <SignalMapExplorer
+          state={selectedState ?? ''}
+          onStateChange={changeMapState}
+          onRecordSelect={setSelectedSourceRecord}
+        />
+      </TabsContent>
+    </Tabs>
   );
 
+  if (coverageState === UNKNOWN_GEOGRAPHY) return <Layout>{signalMap}</Layout>;
   if (isLoading) return <Layout>{signalMap}<LoadingState message="Loading acquisition map..." /></Layout>;
   if (error) return <Layout>{signalMap}<ErrorState message="The acquisition map could not be loaded." onRetry={() => refetch()} /></Layout>;
   if (!items.length) {
