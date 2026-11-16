@@ -2,6 +2,18 @@
 
 @AGENTS.md
 
+Nov16 integration: local-only codex/owner-only-coverage-integration combines
+privacy9e0e446 and packaging2f60682 by normal merge. Both owner-only diagnostics
+and packaged app-import gates remain required. No new product changes or private
+operational receipts. Integration147focused backend/569frontend82files/typecheck
+and CI-equivalent privacy2 pass; owned8141/8142 listeners clear. Parent owns
+cloud/publication; no image build or hosted acceptance is claimed by this merge.
+
+Nov16 latest: full API image import, unlike source tests, caught missing bundled
+agent_runtime. Minimal Docker COPY plus a dedicated no-network image-import CI
+job corrects it; local red/green confirmed. Read newest handoff. Parent owns the
+approved staged release; require checks on the corrected head, not old green CI.
+
 Nov16 staged release is now approved after checks/CI and bounded read-only schema
 preflight, without migrations/source/schedule/access/paid changes. Parent owns
 release; hold merge if compatibility fails to avoid automatic frontend rollout.

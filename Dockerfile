@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # App code + migrations (the old image omitted alembic/, so it couldn't migrate).
 COPY app/ app/
+COPY agent_runtime/ agent_runtime/
 COPY alembic/ alembic/
 COPY alembic.ini .
 COPY seed.py .

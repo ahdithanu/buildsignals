@@ -1,5 +1,15 @@
 # Full Geographic Inventory
 
+## Container Acceptance
+
+Source-checkout tests do not prove the release image imports successfully.
+The packaged API imports the existing agent_runtime research validation module;
+Docker must copy that package without enabling research or installing its optional
+SDK. A dedicated CI job now builds the image and imports app.main in a disposable
+container with networking disabled and synthetic SQLite configuration. The old
+image failed with a missing module; the corrected local image passed. Hosted
+acceptance must use the corrected head before the staged release continues.
+
 ## Problem
 
 The existing signal map displays one bounded page of up to100 permits and100

@@ -1,5 +1,11 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov16 integration: local-only codex/owner-only-coverage-integration normally merges
+privacy9e0e446 with packaging2f60682. Preserve both gates below; no new product
+changes or private operational receipts. Integration147backend/569frontend82files/
+typecheck and CI-equivalent privacy2 pass; owned8141/8142 listeners clear. Parent
+owns cloud watch/publication; this worktree only resolves docs and checkpoints.
+
 Nov16current:isolatedowner-only-coverage-diagnosticsfollowupfrom0294794;
 restrictDashboardgapmatrixandgapAPItoexistinginternaloperatorallowlist;
 SourceHealthalreadygated.Preservecustomerinventory/map.Ownerapprovedstaged
@@ -10,6 +16,14 @@ CIequivalentheadless2/13.2s;ownedserversstopped.Fullbackend/hostednotyetclaimed.
 ConcurrentPR285releaseownsitsownprivateworktree;do notmixcloudreceipts.
 Norepeatconsumedtasks.Rootresearchpreserved.
 Readnewestdocs/agent-handoff.md;oldermain/approvalnotesbelowarehistorical.
+
+Nov16packaginggate:fullAPIimageimportcaughtmissingagent_runtime COPY although
+hostedsourcechecksfor0294794passed. MinimalDockerCOPYanddedicatedCIimagebuild/
+no-networkapp.mainimportcorrectthis;actualoldimagered/newimagegreenlocally.
+Noappbusinesslogic/dependencieschanged. ParentownsPR285correctionandstaged
+release; greenchecksandreverifiedimage/APIrequired. Donotmergebasedonoldhead.
+PrivacyPR286separate; integrateactualparentcorrectionwithoutrewritinghistory.
+Privateopsreceiptsstayinternal;rootresearch/collector/CherryHilldraftpreserved.
 
 Nov16 staged release approved after final checks/CI, including one bounded
 read-only schema preflight. Parent owns publication/checkwatch/preflight/release;

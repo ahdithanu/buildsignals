@@ -1,5 +1,36 @@
 # Current Agent Handoff
 
+## November16: Local Privacy And Packaging Integration
+
+Owner requested a new isolated codex/owner-only-coverage-integration worktree
+from published privacy9e0e446, then a normal merge of packaging2f60682. Only
+AGENTS/handoff conflicted; retain both parent notes below. CLAUDE merged both
+notes automatically. No runtime/test/CI/Dockerfile conflict or new product change.
+Integration focused backend/full frontend/typecheck/privacy browser acceptance
+is recorded below. Parent owns cloud watch/publication; checkpoint only here.
+No cloud calls, push/PR/deploy, PostgreSQL target or private operational receipts.
+
+Prior privacy full backend completed3275passed/108existing PostgreSQL skips/
+508deprecationwarnings360.42s using cleared environment and disposable SQLite;
+no PostgreSQL target or additional PostgreSQL acceptance was claimed. That is a
+prior-parent receipt, not a fresh full-suite result for this integration.
+
+Fresh combined-tree local acceptance:147focused backend passed46.24s, zero skips,
+one dependency deprecation warning;569frontend passed82files5.54s; typecheck pass.
+Existing release-gate tests9passed1.61s with the same dependency warning.
+Exact CI-equivalent privacy step passed2headless tests16.0s on the disposable
+actual API, with external origins denied. Only the coverage fixture was enabled;
+SF/research/criteria/parcel-use flags were disabled and demo snapshot input empty.
+Both owned8141/8142 listeners are absent after shutdown. No PostgreSQL was started
+or reused. No fresh Docker build, hosted CI or production acceptance is claimed.
+
+Integration changes versus privacy9e0e446 are only Dockerfile, the CI image job,
+and four documentation files. Dockerfile/CI image job/coverage document exactly
+match packaging2f60682. All app/src/tests/agent_runtime/alembic/dependencies/E2E/
+OpenAPI files exactly match privacy9e0e446. Conflict resolution preserves both
+privacy and packaging notes below; no runtime conflict or manual product edit.
+Parent owns cloud watch and publication; no push/PR/deploy is authorized here.
+
 ## November16: Owner-Only Diagnostics Follow-Up
 
 Owner requested that the Dashboard national parcel gap matrix/connector queue
@@ -33,6 +64,26 @@ CI browser step added and its exact local headless command passed2/13.2s.
 Owned browser servers stopped; full backend verification remains in progress.
 Concurrent full-coverage-map release and private operational receipts stay in
 their separate worktree. Root research/collector/CherryHill draft untouched.
+
+## November16: Container Packaging Correction
+
+Exact image startup smoke caught ModuleNotFoundError for agent_runtime imported
+by app.main -> deal_intelligence -> research_service. Source-checkout tests and
+the database-only canary did not exercise the packaged application entrypoint.
+Do not call prior green source tests sufficient deployment acceptance.
+
+The minimal correction copies the existing agent_runtime package into the image,
+without installing its optional SDK requirements or enabling research execution.
+A separate CI job builds the actual API image and imports app.main under
+synthetic SQLite settings with container networking disabled. Actual old image
+failed that check; corrected local image passed. No business logic, dependency,
+source/schedule/access or database changes are included. Detailed production
+rollout diagnostics remain internal in the separate receipt worktree.
+
+Parent owns the approved PR285 correction, changed-head CI watch and staged
+release. Integrate the real parent correction into stacked privacyPR286 normally,
+not by rewriting either history; require fresh checks for changed heads. Do not
+push private receipt branches or dirty root. Preserve CherryHill unsent draft.
 
 ## November16: Staged Release Approved
 
