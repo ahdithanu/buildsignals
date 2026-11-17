@@ -1,5 +1,7 @@
 import { apiClient } from './client';
 
+export type IcpTier = 'strong' | 'emerging' | 'stable';
+
 export interface InvestmentAreaResponse {
   model_version: 'metro-research-v0.3';
   input_mode: 'release_reference';
@@ -8,6 +10,8 @@ export interface InvestmentAreaResponse {
   captured_at: string;
   snapshot_id: string;
   cohort_size: number;
+  icp_tier: IcpTier | null;
+  icp_rationale: string | null;
   market: {
     cbsa: string;
     name: string;
@@ -49,6 +53,8 @@ export interface RankedMarket {
   cbsa: string;
   name: string;
   score: number;
+  icp_tier: IcpTier;
+  icp_rationale: string;
   momentum_percentile: number;
   supply_percentile: number;
   price_momentum_2yr: number;
@@ -70,6 +76,7 @@ export interface RankedMarketsResponse {
   offset: number;
   limit: number;
   local_evidence_metros: number;
+  tier_counts: Record<IcpTier, number>;
   markets: RankedMarket[];
   limitations: string[];
 }

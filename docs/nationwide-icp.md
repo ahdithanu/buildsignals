@@ -43,6 +43,37 @@ no expected-return claim). `has_local_evidence` never influences the score.
 Tests: `tests/test_investment_ranked.py` (5) + panel tests (8, incl. 2 new);
 full investment suite 119 passed; typecheck clean.
 
+## Increment 2 (this change) — explicit ICP tiering
+
+The bare rank/score is now classified into an ICP tier so the growth signal reads
+as a profile, not just a percentile:
+
+- `investment_areas.icp_tier(row)` returns `(tier, rationale)` where tier is
+  `strong` / `emerging` / `stable`. It lives in `investment_areas`, downstream of
+  the snapshot, on purpose: the reference artifact's `code_version` binds the
+  ranking/transform code (`investment_model.py` + `investment_inputs.py`), and the
+  tier is a read-time classification that does not change the captured snapshot, so
+  it is deliberately outside that binding. The tier is set **only** by the two
+  scored, cohort-relative percentiles:
+  - **strong** — price momentum ≥ P75 **and** supply surge ≥ P60 (both appreciation
+    and development lead the cohort — the ideal investment-area profile).
+  - **emerging** — blended score ≥ 0.60 but not strong (above-cohort growth, usually
+    one dimension leading while the other catches up).
+  - **stable** — around or below the cohort on both.
+- Population growth / net migration appear in the rationale as **context only** and
+  never change the tier — the same gate the score itself keeps.
+- `ranked_markets` carries `icp_tier` + `icp_rationale` per row and a
+  `tier_counts` distribution over the **full** cohort (stable across search/paging).
+- `investment_area` (single metro) carries the selected metro's `icp_tier` +
+  `icp_rationale`; `null` when the metro has insufficient aligned history.
+
+Frontend: a tier badge + rationale on the detail header, and the nationwide tier
+distribution in the caption ("N metros ranked · X strong · Y emerging · Z stable").
+Honesty lines added to both endpoints: the tier is not a return forecast.
+
+Tests: `test_investment_model.py` (+3 icp_tier unit tests), `test_investment_ranked.py`
+(+1 cohort-distribution test), panel (+2: badge/rationale, distribution caption).
+
 ## Coverage registry = the anti-silo backbone
 
 `metro_coverage()` + `has_local_evidence` is the seed of the shared registry: adding
@@ -51,8 +82,7 @@ Model growth and coverage growth are one surface.
 
 ## Next increments (Phase 1 cont. / Phase 2)
 
-- Explicit ICP tiering (e.g. Strong / Emerging / Stable) layered on the score +
-  demand context, clearly research-framed — not just a bare percentile.
+- ✅ Explicit ICP tiering (Strong / Emerging / Stable) — increment 2 above.
 - Port the gated **frontier hotspots** layer (the "why BJ's is converging here")
   onto this branch, keyed by CBSA so every covered metro gets it.
 - Appreciation projection stays last and gated until backtested against realized

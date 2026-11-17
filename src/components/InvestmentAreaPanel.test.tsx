@@ -11,6 +11,7 @@ vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 const fixture: InvestmentAreaResponse = {
   model_version: 'metro-research-v0.3', input_mode: 'release_reference', status: 'research', year: 2025,
   captured_at: '2026-11-09T12:00:00Z', snapshot_id: 'test-snapshot', cohort_size: 50,
+  icp_tier: 'emerging', icp_rationale: 'Above-cohort growth; price growth leads (momentum P80, supply P60).',
   market: { cbsa: '36100', name: 'Ocala', score: 0.7, momentum_percentile: 0.8,
     supply_percentile: 0.6, price_momentum_2yr: 0.04, supply_surge: 0.1,
     population_growth_1yr: null, net_migration_per_1000: null },
@@ -26,10 +27,15 @@ const rankedFixture: RankedMarketsResponse = {
   model_version: 'metro-research-v0.3', status: 'research', year: 2025,
   captured_at: '2026-11-09T12:00:00Z', snapshot_id: 'test-snapshot', input_mode: 'release_reference',
   cohort_size: 360, matched: 2, offset: 0, limit: 200, local_evidence_metros: 1,
+  tier_counts: { strong: 42, emerging: 118, stable: 200 },
   markets: [
-    { rank: 1, cbsa: '45300', name: 'Tampa, FL', score: 0.98, momentum_percentile: 0.99, supply_percentile: 0.9,
+    { rank: 1, cbsa: '45300', name: 'Tampa, FL', score: 0.98, icp_tier: 'strong',
+      icp_rationale: 'Price growth (P99) and development (P90) both lead the cohort.',
+      momentum_percentile: 0.99, supply_percentile: 0.9,
       price_momentum_2yr: 0.3, supply_surge: 1.1, population_growth_1yr: null, net_migration_per_1000: null, has_local_evidence: false },
-    { rank: 2, cbsa: '36100', name: 'Ocala, FL', score: 0.7, momentum_percentile: 0.8, supply_percentile: 0.6,
+    { rank: 2, cbsa: '36100', name: 'Ocala, FL', score: 0.7, icp_tier: 'emerging',
+      icp_rationale: 'Above-cohort growth; price growth leads (momentum P80, supply P60).',
+      momentum_percentile: 0.8, supply_percentile: 0.6,
       price_momentum_2yr: 0.04, supply_surge: 1.1, population_growth_1yr: null, net_migration_per_1000: null, has_local_evidence: true },
   ],
   limitations: ['Research relative growth ranking; not an expected return.'],
@@ -139,8 +145,24 @@ it('searches the ranked cohort by typing a metro name', async () => {
   await waitFor(() => expect(ranked).toHaveBeenLastCalledWith({ q: 'Austin', limit: 200 }));
 });
 
+it('shows the selected metro ICP tier badge and rationale', async () => {
+  vi.spyOn(investmentAreasApi, 'get').mockResolvedValue(fixture);
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.getByText('ICP: Emerging')).toBeInTheDocument();
+  expect(screen.getByText(/Above-cohort growth; price growth leads/)).toBeInTheDocument();
+});
+
+it('shows the nationwide ICP tier distribution in the caption', async () => {
+  vi.spyOn(investmentAreasApi, 'get').mockResolvedValue(fixture);
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.getByText(/42 strong · 118 emerging · 200 stable/)).toBeInTheDocument();
+});
+
 it('shows available demand context without inventing an unavailable ranking', async () => {
   vi.spyOn(investmentAreasApi, 'get').mockResolvedValue({ ...fixture, status: 'insufficient_data',
+    icp_tier: null, icp_rationale: null,
     market: { ...fixture.market, score: null, momentum_percentile: null, supply_percentile: null,
       price_momentum_2yr: null, supply_surge: null, population_growth_1yr: .03 } });
   setup();

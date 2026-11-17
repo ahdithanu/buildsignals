@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { ApiError } from '@/api/client';
-import { investmentAreasApi } from '@/api/investmentAreas';
+import { investmentAreasApi, type IcpTier } from '@/api/investmentAreas';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -24,6 +24,19 @@ function Metric({ label, value, percent = false }: { label: string; value: numbe
     <dt className="text-xs text-muted-foreground">{label}</dt>
     <dd className="mt-1 text-sm font-medium tabular-nums">{percent && value !== null && Number.isFinite(value) ? `${metric(value * 100)}%` : metric(value)}</dd>
   </div>;
+}
+
+const TIER_LABEL: Record<IcpTier, string> = { strong: 'Strong', emerging: 'Emerging', stable: 'Stable' };
+const TIER_CLASS: Record<IcpTier, string> = {
+  strong: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
+  emerging: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+  stable: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+};
+
+function TierBadge({ tier }: { tier: IcpTier }) {
+  return <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ${TIER_CLASS[tier]}`}>
+    ICP: {TIER_LABEL[tier]}
+  </span>;
 }
 
 function ResearchRank({ score, cohortSize }: { score: number | null; cohortSize: number }) {
@@ -88,7 +101,7 @@ export function InvestmentAreaPanel() {
       </div>
     </div>
     <p className="mt-2 text-xs text-muted-foreground">Research only. This score is not an expected return or an investment recommendation.</p>
-    {ranked.data && <p className="mt-1 text-xs text-muted-foreground">{number.format(ranked.data.cohort_size)} metros ranked nationwide · ◆ {number.format(ranked.data.local_evidence_metros)} with local permit evidence.</p>}
+    {ranked.data && <p className="mt-1 text-xs text-muted-foreground">{number.format(ranked.data.cohort_size)} metros ranked nationwide · {number.format(ranked.data.tier_counts.strong)} strong · {number.format(ranked.data.tier_counts.emerging)} emerging · {number.format(ranked.data.tier_counts.stable)} stable · ◆ {number.format(ranked.data.local_evidence_metros)} with local permit evidence.</p>}
     {authLoading ? <p role="status" className="mt-4 text-sm text-muted-foreground">Loading session...</p>
       : !enabled ? <p className="mt-4 text-sm text-muted-foreground">Sign in to a workspace to view investment areas.</p>
         : error ? <div role="alert" className="mt-4 text-sm text-destructive">
@@ -100,7 +113,11 @@ export function InvestmentAreaPanel() {
           : isPending ? <p role="status" className="mt-4 text-sm text-muted-foreground">Loading metro research...</p>
             : data ? <div className="mt-4 space-y-4">
               <div>
-                <h3 className="text-sm font-semibold">{data.market.name} <span className="font-normal text-muted-foreground">Metro / CBSA {data.market.cbsa}</span></h3>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <h3 className="text-sm font-semibold">{data.market.name} <span className="font-normal text-muted-foreground">Metro / CBSA {data.market.cbsa}</span></h3>
+                  {data.icp_tier && <TierBadge tier={data.icp_tier} />}
+                </div>
+                {data.icp_rationale && <p className="mt-1 text-xs text-muted-foreground">{data.icp_rationale}</p>}
                 <p className="mt-1 text-xs text-muted-foreground">Annual reference | {data.year} | Captured {dateLabel(data.captured_at)} | {data.model_version}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Public records. Newer releases are not checked here; local evidence is queried from your workspace.</p>
               </div>

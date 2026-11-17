@@ -1,6 +1,12 @@
 """Nationwide ranked-cohort endpoint: surfaces the full research growth ranking
 the model already computes, with a coverage flag for local evidence."""
 from app.services import investment_areas as areas
+from app.services.investment_areas import ICP_EMERGING_SCORE, ICP_TIERS, icp_tier
+
+
+def _row(mm, ss, **demand):
+    return {"momentum_percentile": mm, "supply_percentile": ss,
+            "score": .7 * mm + .3 * ss, **demand}
 
 
 def snapshot():
@@ -42,6 +48,44 @@ def test_ranked_surfaces_full_cohort_ordered_with_coverage_flag():
     ocala = next(m for m in out["markets"] if m["cbsa"] == "36100")
     assert ocala["has_local_evidence"] is True
     assert all(m["has_local_evidence"] is False for m in out["markets"] if m["cbsa"] != "36100")
+
+
+def test_icp_tier_strong_requires_both_dimensions_leading():
+    tier, why = icp_tier(_row(0.9, 0.8))
+    assert tier == "strong"
+    assert "P90" in why and "P80" in why
+    # High price momentum alone is not strong when development lags the cohort.
+    assert icp_tier(_row(0.99, 0.5))[0] == "emerging"
+
+
+def test_icp_tier_emerging_and_stable_split_on_score():
+    # score 0.7*mm + 0.3*ss; emerging cut is a blended score threshold.
+    emerging_mm = (ICP_EMERGING_SCORE - 0.3 * 0.4) / 0.7
+    assert icp_tier(_row(emerging_mm + 0.01, 0.4))[0] == "emerging"
+    assert icp_tier(_row(emerging_mm - 0.05, 0.4))[0] == "stable"
+    assert all(icp_tier(_row(mm, ss))[0] in ICP_TIERS
+               for mm in (0.0, 0.5, 1.0) for ss in (0.0, 0.5, 1.0))
+
+
+def test_icp_tier_rationale_adds_demand_context_but_demand_never_sets_tier():
+    base, rich = _row(0.9, 0.8), _row(0.9, 0.8, population_growth_1yr=0.03, net_migration_per_1000=12.0)
+    assert icp_tier(base)[0] == icp_tier(rich)[0] == "strong"
+    assert "Context" not in icp_tier(base)[1]
+    assert "population +3.0%/yr" in icp_tier(rich)[1]
+    assert "net migration +12.0/1k" in icp_tier(rich)[1]
+
+
+def test_ranked_carries_icp_tiers_and_full_cohort_distribution():
+    out = areas.ranked_markets(snapshot=snapshot())
+    counts = out["tier_counts"]
+    assert set(counts) == {"strong", "emerging", "stable"}
+    assert sum(counts.values()) == out["cohort_size"] == 20
+    assert all(m["icp_tier"] in counts and m["icp_rationale"] for m in out["markets"])
+    # Every metro shares the same unit surge here, so supply never leads the
+    # cohort: even the top-momentum metro is emerging, never strong. This proves
+    # the tier needs BOTH dimensions, not price momentum alone.
+    assert counts["strong"] == 0
+    assert out["markets"][0]["cbsa"] == "45300" and out["markets"][0]["icp_tier"] == "emerging"
 
 
 def test_ranked_filters_by_name_or_cbsa_and_paginates():
