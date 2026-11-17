@@ -124,6 +124,12 @@ test('ordinary customer admin keeps coverage and map access but cannot use opera
     await captureLayout(page, testInfo, 'customer-coverage', viewport.width);
     await page.getByRole('link', { name: 'Map', exact: true }).click();
     await expect(page).toHaveURL(`${webOrigin}/map`);
+    const activity = page.getByRole('region', { name: 'Permit activity', exact: true });
+    await expect(activity).toBeVisible();
+    await expect(activity.getByLabel('Permit inventory totals').locator('dd')).toHaveText(['0', '0', '0']);
+    await expect(page.getByRole('region', { name: 'Map readiness', exact: true })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Inventory', exact: true }).click();
+    await expect(page).toHaveURL(`${webOrigin}/map?view=coverage`);
     const readiness = page.getByRole('region', { name: 'Map readiness', exact: true });
     await expect(readiness).toBeVisible();
     await expect(readiness.getByText('No active permit or planning records in this workspace.', { exact: true })).toBeVisible();

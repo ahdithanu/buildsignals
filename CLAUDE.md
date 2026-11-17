@@ -2,6 +2,16 @@
 
 @AGENTS.md
 
+Nov17 map-consistency localcheckpoint preparation: implementation/review complete;
+finalheightframing and baseline browser reruns pending after interruption.
+Backend3468pass+1DDL-ownerfixturefailure; separate unchangedDDLowner test passes.
+Focusedmap142/front608 pass; ownedPGstopped. Read isolatedhandoff; notlive.
+
+Nov16 currenttask localpermit-activity-heatmap:oneconsistentall-statepermit
+choropleth, statefilter+densitydetail; no sampled/parcel-driven default. Read
+newesthandoff. Parentownsfrontendintegration/harness; independentworkersscoped.
+No production/release/task/source/scheduleauthority; CherryHill staysunsent.
+
 Nov16 integration: local-only codex/owner-only-coverage-integration combines
 privacy9e0e446 and packaging2f60682 by normal merge. Both owner-only diagnostics
 and packaged app-import gates remain required. No new product changes or private

@@ -113,6 +113,21 @@ jobs:
           REDIS_URL: ""
         run: node node_modules/@playwright/test/cli.js test -c e2e/coverage-privacy.playwright.config.ts
 
+      - name: Run offline national permit activity E2E
+        env:
+          E2E_API_PORT: "8151"
+          E2E_WEB_PORT: "8152"
+          RUN_PERMIT_ACTIVITY_MAP_E2E: "1"
+          RUN_COVERAGE_MAP_E2E: "0"
+          RUN_SF_MAP_E2E: "0"
+          RUN_RESEARCH_E2E: "0"
+          RUN_CRITERIA_E2E: "0"
+          RUN_PARCEL_USE_E2E: "0"
+          DEMO_TEST_SNAPSHOT_DIR: ""
+          OPENROUTER_API_KEY: ""
+          REDIS_URL: ""
+        run: node node_modules/@playwright/test/cli.js test -c e2e/playwright.config.ts e2e/tests/permit-activity-map.spec.ts
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

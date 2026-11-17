@@ -143,17 +143,25 @@ def get_map_coverage(db: Session, *, state=None, kind="all", limit=100, offset=0
     measured_at = datetime.now(timezone.utc)
     with db.no_autoflush:
         inventory = _inventory(db)
-        totals = _select_filters(db.query(*_counts(inventory)).select_from(inventory),
-                                inventory, state, kind).one()._mapping
-        # SQL normalizes to only 51 state codes plus one unknown bucket.
-        states = [_state_row(row._mapping) for row in _group_query(db, inventory)
-                  .order_by(inventory.c.state).limit(52).all()]
-        query = _group_query(db, inventory, state=state, kind=kind, jurisdiction=state is not None)
-        total_groups = db.query(func.count()).select_from(query.subquery()).scalar()
-        ordering = [inventory.c.state]
-        if state is not None:
-            ordering.append(inventory.c.jurisdiction_key)
-        rows = query.order_by(*ordering).offset(offset).limit(limit).all()
+        if state is None:
+            # At most 52 groups: derive the national headline and page from one
+            # statement snapshot so concurrent ingestion cannot split counts.
+            all_rows = _group_query(db, inventory, kind=kind).order_by(inventory.c.state).limit(52).all()
+            totals = {name: sum(int(row._mapping[name] or 0) for row in all_rows)
+                      for name in ("permit_count", "planning_count", "parcel_count", "mapped_count", "unmapped_count")}
+            total_groups = len(all_rows)
+            rows = all_rows[offset:offset + limit]
+            states = ([_state_row(row._mapping) for row in all_rows] if kind == "all" else
+                      [_state_row(row._mapping) for row in _group_query(db, inventory)
+                       .order_by(inventory.c.state).limit(52).all()])
+        else:
+            totals = _select_filters(db.query(*_counts(inventory)).select_from(inventory),
+                                    inventory, state, kind).one()._mapping
+            states = [_state_row(row._mapping) for row in _group_query(db, inventory)
+                      .order_by(inventory.c.state).limit(52).all()]
+            query = _group_query(db, inventory, state=state, kind=kind, jurisdiction=True)
+            total_groups = db.query(func.count()).select_from(query.subquery()).scalar()
+            rows = query.order_by(inventory.c.state, inventory.c.jurisdiction_key).offset(offset).limit(limit).all()
         groups = []
         for result in rows:
             row = result._mapping

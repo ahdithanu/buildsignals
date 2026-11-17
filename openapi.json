@@ -14421,6 +14421,167 @@
         "title": "PermitBrandOpportunityResponse",
         "type": "object"
       },
+      "PermitDensityCell": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "east": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "East",
+            "type": "number"
+          },
+          "estimated_count": {
+            "minimum": 0.0,
+            "title": "Estimated Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "latitude": {
+            "maximum": 85.0,
+            "minimum": -85.0,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude",
+            "type": "number"
+          },
+          "north": {
+            "maximum": 85.0,
+            "minimum": -85.0,
+            "title": "North",
+            "type": "number"
+          },
+          "source_coordinate_count": {
+            "minimum": 0.0,
+            "title": "Source Coordinate Count",
+            "type": "integer"
+          },
+          "south": {
+            "maximum": 85.0,
+            "minimum": -85.0,
+            "title": "South",
+            "type": "number"
+          },
+          "west": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "West",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "latitude",
+          "longitude",
+          "count",
+          "source_coordinate_count",
+          "estimated_count",
+          "south",
+          "west",
+          "north",
+          "east"
+        ],
+        "title": "PermitDensityCell",
+        "type": "object"
+      },
+      "PermitDensityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "cell_degrees": {
+            "enum": [
+              0.025,
+              0.05,
+              0.1,
+              0.25,
+              0.5,
+              1,
+              2,
+              4,
+              8
+            ],
+            "title": "Cell Degrees"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/PermitDensityCell"
+            },
+            "maxItems": 2048,
+            "title": "Cells",
+            "type": "array"
+          },
+          "complete": {
+            "const": true,
+            "default": true,
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "estimated_count": {
+            "minimum": 0.0,
+            "title": "Estimated Count",
+            "type": "integer"
+          },
+          "mapped_permits": {
+            "minimum": 0.0,
+            "title": "Mapped Permits",
+            "type": "integer"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "source_coordinate_count": {
+            "minimum": 0.0,
+            "title": "Source Coordinate Count",
+            "type": "integer"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "total_permits": {
+            "minimum": 0.0,
+            "title": "Total Permits",
+            "type": "integer"
+          },
+          "unmapped_permits": {
+            "minimum": 0.0,
+            "title": "Unmapped Permits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "measured_at",
+          "state",
+          "total_permits",
+          "mapped_permits",
+          "unmapped_permits",
+          "source_coordinate_count",
+          "estimated_count",
+          "cell_degrees",
+          "cells"
+        ],
+        "title": "PermitDensityResponse",
+        "type": "object"
+      },
       "PermitDetailResponse": {
         "properties": {
           "brand_matches": {
@@ -19745,6 +19906,73 @@
           }
         },
         "summary": "Map Coverage",
+        "tags": [
+          "nearby parcels"
+        ]
+      }
+    },
+    "/v1/acquisition-map/permit-density": {
+      "get": {
+        "operationId": "permit_density_v1_acquisition_map_permit_density_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 20,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermitDensityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Permit Density",
         "tags": [
           "nearby parcels"
         ]

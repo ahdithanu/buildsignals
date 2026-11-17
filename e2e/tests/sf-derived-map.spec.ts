@@ -91,7 +91,7 @@ test.describe('synthetic SF derived map, real disposable API', () => {
       await page.setViewportSize(viewport);
       const signalsPending = mapResponse(page, 'signals', 'CA');
       const readinessPending = mapResponse(page, 'readiness');
-      await page.goto('/map?state=CA');
+      await page.goto('/map?view=filings&state=CA');
       const signalsResponse = await signalsPending;
       const readinessResponse = await readinessPending;
       expect(signalsResponse.status()).toBe(200);

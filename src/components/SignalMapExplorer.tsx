@@ -40,6 +40,13 @@ export function SignalMapExplorer({
   const [offset, setOffset] = useState(0);
   const selectedState = (state ?? internalState).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
   const stateFilter = selectedState.length === 2 ? selectedState : '';
+  const scope = JSON.stringify([organizationId, stateFilter]);
+  const [previousScope, setPreviousScope] = useState(scope);
+  if (previousScope !== scope) {
+    setPreviousScope(scope);
+    setSelected('');
+    setOffset(0);
+  }
   const setSelectedState = (value: string) => {
     const normalized = value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
     setSelected('');

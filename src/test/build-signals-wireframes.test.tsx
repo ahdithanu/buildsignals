@@ -103,7 +103,7 @@ describe('Build Signals wireframe screens', () => {
   });
 
   it('renders live radar parcels without inferring listing or owner intent', async () => {
-    await act(async () => { render(<MemoryRouter><AcquisitionMap /></MemoryRouter>); });
+    await act(async () => { render(<MemoryRouter initialEntries={['/map?view=coverage']}><AcquisitionMap /></MemoryRouter>); });
 
     expect(screen.getByRole('heading', { name: /ranked parcels near retail shell project/i })).toBeInTheDocument();
     expect(screen.getAllByText('Congress Holdings LLC').length).toBeGreaterThan(0);

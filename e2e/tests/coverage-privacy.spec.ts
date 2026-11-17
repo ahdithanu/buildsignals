@@ -60,7 +60,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const coverageResponse = page.waitForResponse(response => response.url().includes('/v1/acquisition-map/coverage?') && response.status() === 200);
       await page.goto('/map');
       expect((await (await coverageResponse).json()).totals.parcel_count).toBe(0);
-      await expect(page.getByRole('region', { name: 'Inventory coverage', exact: true })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Permit activity', exact: true })).toBeVisible();
       expect(customerDiagnosticsRequests).toEqual([]);
       expect(errors).toEqual([]);
     });

@@ -1,5 +1,27 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov17 checkpoint preparation: default national permit activity, complete bounded
+state density, URL/nav/history/refresh/focus fixes implemented locally. Backend
+full3468pass/1existingDDL-ownerfixturefailure/zero skips/91.59%/3warnings679.43s;
+unchangedDDLtestpassed separately0.14s on freshnonbypassowner target. Mapnonowner
+targetunchanged; focusedmap142pass27.70s, ownedPGstopped/statusconfirmed.
+Frontend608pass86files; reviewaccepted. Browserdesktop/mobile/strictCSP passed
+before finalSVGheightcap; finalframing/fullbaseline runs interrupted, pending.
+Read newesthandoff for exactstates; no blanketgreen/fullsuite/live claim.
+No publication/release/source/schedule/access/paid authority. Rootpreserved.
+
+Nov16 CURRENT local map-consistency task in codex/permit-activity-heatmap on
+releasedmain175fba6. Userwantsoneconsistentdefaultall-regionpermitheatmap, then
+statefilter; ingestionisnot UIselection. ParentownsAcquisitionMap/ActivityExplorer/
+frontendcontracts/dependencies/assets/harness/browser. RussellownsdensityAPI/
+schema/service/tests; Harveyownsnewnationalchoropleth+stateDensityMap/tests.
+Onewriterperfileset. Nationalheatcountsallstoredpermitsincludingunmapped, uses
+pinnedpublicCensus51stateoutlines+D3AlbersUSA(noinventedactivity). State density
+usesboundedDBaggregates ofalllocatedpermits, notfirst100pins orparcelcounts.
+FixURLauthoritativefilters/navreset; no refreshautozoom. No new source/schedule/
+credential/IAM/migration/paid/prodtask/push/merge/release authority. PriorSF
+parcelone-shotconsumed; CherryHill DRAFT/UNSENT. Rootresearch/collector preserved.
+
 Nov16 integration: local-only codex/owner-only-coverage-integration normally merges
 privacy9e0e446 with packaging2f60682. Preserve both gates below; no new product
 changes or private operational receipts. Integration147backend/569frontend82files/

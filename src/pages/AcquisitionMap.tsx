@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Check,
@@ -13,6 +13,7 @@ import { Layout } from '@/components/Layout';
 import { MapReadiness } from '@/components/MapReadiness';
 import { SignalMapExplorer, type MapSignal } from '@/components/SignalMapExplorer';
 import { CoverageMapExplorer } from '@/components/CoverageMapExplorer';
+import { PermitActivityExplorer } from '@/components/PermitActivityExplorer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates';
 import { ApiError } from '@/api/client';
@@ -32,6 +33,7 @@ import {
 } from '@/lib/acquisitionMap';
 import { cn } from '@/lib/utils';
 import { normalizedCoverageState, UNKNOWN_GEOGRAPHY } from '@/lib/mapCoverage';
+import { mapFilterParams, mapView } from '@/lib/permitActivity';
 import type { AcquisitionRadarItem } from '@/types/parcel';
 
 const evidenceFilters = ['Shortlisted', 'Verified availability', 'Owner evidence', 'Held 10+ yrs', 'Tax evidence'];
@@ -102,10 +104,39 @@ function sourceWorkflowCopy({
 }
 
 export default function AcquisitionMap() {
+  const [params, setParams] = useSearchParams();
+  const { organizationId, user, role } = useAuth();
+  const view = mapView(params);
+  const state = normalizedCoverageState(params.get('state') || '');
+  const framingState = view === 'activity' ? state : '';
+  // Explicit navigation starts at the controls; inventory refreshes do not move the page.
+  useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }, [view, framingState, organizationId]);
+  if (view !== 'activity') return <AcquisitionMapWorkspace key={JSON.stringify([
+    organizationId, user?.id, role, view,
+  ])} />;
+  return <Layout>
+    <Tabs value="activity" onValueChange={view => setParams(mapFilterParams(params, { view: view === 'filings' ? 'filings' : 'coverage' }))}>
+      <MapViewTabs />
+      <TabsContent value="activity">
+        <PermitActivityExplorer state={params.get('state') || ''} onStateChange={state => setParams(mapFilterParams(params, { state }))} />
+      </TabsContent>
+    </Tabs>
+  </Layout>;
+}
+
+function MapViewTabs() {
+  return <TabsList aria-label="Map view" className="mx-4 mt-4">
+    <TabsTrigger value="activity">Permit activity</TabsTrigger>
+    <TabsTrigger value="coverage">Inventory</TabsTrigger>
+    <TabsTrigger value="filings">Filings</TabsTrigger>
+  </TabsList>;
+}
+
+function AcquisitionMapWorkspace() {
   const { role } = useAuth();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [stateFilter, setStateFilter] = useState(searchParams.get('state') || '');
+  const stateFilter = searchParams.get('state') || '';
   const [selectedSourceRecord, setSelectedSourceRecord] = useState<MapSignal | null>(null);
   const coverageState = normalizedCoverageState(stateFilter);
   const selectedState = /^[A-Z]{2}$/.test(coverageState) ? coverageState : undefined;
@@ -113,17 +144,22 @@ export default function AcquisitionMap() {
   const { data: heatmap } = useZip3Heatmap({ state: selectedState, limit: 25 });
   const [selectedSignalId, setSelectedSignalId] = useState('');
   const [selectedParcelId, setSelectedParcelId] = useState('');
-  const [selectedZip3, setSelectedZip3] = useState(normalizedZip3(searchParams.get('zip3')));
+  const selectedZip3 = normalizedZip3(searchParams.get('zip3'));
+  const setSelectedZip3 = (zip3: string) => setSearchParams(mapFilterParams(searchParams, { zip3 }));
   const [assemblage, setAssemblage] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [activeOnly, setActiveOnly] = useState(true);
-
-  useEffect(() => {
-    const next = new URLSearchParams();
-    if (coverageState) next.set('state', coverageState);
-    if (selectedZip3) next.set('zip3', selectedZip3);
-    setSearchParams(next, { replace: true });
-  }, [coverageState, selectedZip3, setSearchParams]);
+  const scope = JSON.stringify([coverageState, selectedZip3]);
+  const [previousScope, setPreviousScope] = useState(scope);
+  // Reset transient selections before committing a changed URL scope, without
+  // remounting the text controls and interrupting keyboard input.
+  if (previousScope !== scope) {
+    setPreviousScope(scope);
+    setSelectedSourceRecord(null);
+    setSelectedSignalId('');
+    setSelectedParcelId('');
+    setAssemblage(new Set());
+  }
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
   const signals = useMemo(() => radarSignals(items), [items]);
@@ -252,7 +288,7 @@ export default function AcquisitionMap() {
   }
 
   async function copyMapLink() {
-    const next = new URLSearchParams();
+    const next = new URLSearchParams({ view: mapView(searchParams) });
     if (coverageState) next.set('state', coverageState);
     if (selectedZip3) next.set('zip3', selectedZip3);
     const query = next.toString();
@@ -267,20 +303,21 @@ export default function AcquisitionMap() {
   }
 
   function changeMapState(value: string) {
-    setStateFilter(value);
-    setSelectedZip3('');
+    setSearchParams(mapFilterParams(searchParams, { state: value }));
+    setSelectedSignalId('');
+    setSelectedParcelId('');
     setSelectedSourceRecord(null);
   }
 
   const signalMap = (
-    <Tabs defaultValue="coverage" onValueChange={(value) => {
+    <Tabs value={mapView(searchParams)} onValueChange={(value) => {
       setSelectedSourceRecord(null);
-      if (value === 'filings' && coverageState === UNKNOWN_GEOGRAPHY) changeMapState('');
+      setSearchParams(mapFilterParams(searchParams, {
+        view: value === 'filings' ? 'filings' : value === 'activity' ? 'activity' : 'coverage',
+        ...(value === 'filings' && coverageState === UNKNOWN_GEOGRAPHY ? { state: '' } : {}),
+      }));
     }}>
-      <TabsList aria-label="Map view" className="mx-4 mt-4">
-        <TabsTrigger value="coverage">Coverage</TabsTrigger>
-        <TabsTrigger value="filings">Filings</TabsTrigger>
-      </TabsList>
+      <MapViewTabs />
       <TabsContent value="coverage">
         <CoverageMapExplorer state={stateFilter} onStateChange={changeMapState} />
       </TabsContent>
@@ -366,11 +403,7 @@ export default function AcquisitionMap() {
                 <input
                   value={stateFilter}
                   onChange={(event) => {
-                    setStateFilter(event.target.value.slice(0, 2).toUpperCase());
-                    setSelectedSignalId('');
-                    setSelectedParcelId('');
-                    setSelectedZip3('');
-                    setSelectedSourceRecord(null);
+                    changeMapState(event.target.value.slice(0, 2).toUpperCase());
                   }}
                   placeholder="All"
                   aria-label="Filter acquisition map by state"
@@ -381,11 +414,7 @@ export default function AcquisitionMap() {
                 <button
                   type="button"
                   onClick={() => {
-                    setStateFilter('');
-                    setSelectedSignalId('');
-                    setSelectedParcelId('');
-                    setSelectedZip3('');
-                    setSelectedSourceRecord(null);
+                    changeMapState('');
                   }}
                   className="h-8 border border-foreground px-2 text-[10px] font-semibold"
                 >

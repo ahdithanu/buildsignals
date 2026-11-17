@@ -1,5 +1,80 @@
 # Current Agent Handoff
 
+## November17: Implementation Complete, Final Browser Framing Pending
+
+All map code is local on `codex/permit-activity-heatmap`, base175fba6. Bare `/map`
+opens national stored-permit counts including unmapped states; state drilldown
+aggregates all eligible located permits with exact reconciliation and <=2048
+cells. URL scope is authoritative, Map resets nationally, refresh preserves
+camera/page scroll. Legacy text fields preserve focus; controlled-state history
+resets scoped selections/offsets before commit, without remounting controls.
+National shapes now have a responsive height cap: actual uncapped desktop RED
+was1133.03125px bottom versus1000px viewport. Final cap GREEN remains pending.
+
+Verification already completed:
+- Full backend3468passed/1failed/zero skips/3warnings679.43s, coverage91.59%.
+  Sole failure is the unchanged retirement migration DDL test attempting
+  `ALTER TABLE buy_boxes` through the intentionally nonowner map acceptance role.
+  Its exact error was `must be owner of table buy_boxes`. No test/product fix
+  or privilege relaxation was made. The unchanged test separately passed0.14s
+  on a different freshly provisioned non-superuser/non-BYPASSRLS owner target;
+  FORCE RLS and post-rollback column shape verified. Complementary receipts,
+  not one all-green full suite. Actual map acceptance target remained nonowner.
+- Final focused map/demo/concurrency/actual-PG tests142passed27.70s.
+- Frontend608passed86files8.30s before the presentation-only height cap;
+  cap-focused20passed, typecheck/scoped ESLint/Ruff/diff/harness pass.
+- Independent final focus/history review accepted; no outstanding code findings.
+- Prior final-tree actual-API activity headless2/19.8s, built locally enforced
+  strict-CSP2/16.0s, inventory/privacy4/17.7s; fresh build4.96s. These predate
+  only the SVG height cap. Strict enforcement was local-test-only, not a
+  production CSP claim. All data were explicitly synthetic, not live inventory.
+
+The first full baseline browser attempt on custom8181/8182 was stopped after
+legacy specs attempted their hard-coded8000 URL (ECONNREFUSED). Correct-port
+rerun18passed/1failed/20fixture-specific skips49.3s exposed only the old default
+MapReadiness expectation. That assertion now first checks the new activity
+default, then explicitly selects Inventory, preserving readiness/privacy checks.
+Its final full rerun and final framing browser run were interrupted by the user;
+do not count them as passes. Remaining work: complete those bounded browser
+checks, final typecheck/frontend/secret scan, document receipts and checkpoint.
+
+Owned freshPG17.11/PostGIS cluster stopped/status3 and62578portfree; prior
+parent8171/8172 and agent8151/8152 servers are clear. Verify current owned browser
+listeners before restarting; never reuse an existing server or user browser.
+Temporary local setup required serial npm-ci repair after overlapping initial
+installs, and pinned coverage plugins in a temp directory because venv lacked
+them. Initial sandbox-local PG connections were denied, then explicitly scoped
+local execution succeeded. Do not suppress these setup failures or warnings.
+
+No source/ingestion/schedule/schema/access/production/paid/publication change.
+Separate SF/Wake work remains separate; Cherry Hill inquiry DRAFT/UNSENT.
+Fresh publication/green-CI/merge/API-first frontend release approval is still
+required. Root research/security and private collector stay untouched/unpublished.
+
+## November16: Consistent Permit Activity Map
+
+User reportsinconsistentmapviews, wantsMaptoalwaysopenallpermitregions and
+thenfilterstate. Isolatedcodex/permit-activity-heatmap startsreleasedmain175fba6;
+do notmergeotherlocalSF/Wakebranches or rootresearch. CodeconfirmscurrentUI
+mixesstate-averagecoveragepoints/first100filingpins/acquisitionparcels; local
+stateinitializedfromURLonlyonce canreassertoldfilterswhenMaplinkclearsquery.
+GeographicMapalsorefitesboundsoneverypoints/boundarieschange; notdefaultstable.
+
+Plan:defaultstatechoropleth fromalltenantstoredpermitcounts(includingunmapped),
+real51stateCensuscartographicoutlines withD3AlbersUSA/AKHIinsets. State selection
+addsboundedSQLdensitygrid foralllocatedpermits, not recordpagination. Explicit
+URLstate/view, cleanMapnavreset, no geolocation/lastclickedrecordautocenter,
+backgroundrefreshpreservesview. Retainexistinginventory/filings/parcelsasexplicit
+views; no unrunparcelworkflowemptystateonthedefaultpermitmap.
+
+ParentownsAcquisitionMap/newActivityExplorer/TScontracts/harness/deps/asset/browser.
+Russellownsdensityservice/schema/read-onlyparcelsroute/tests; HarveyownsnewD3
+nationalmap/Leafletdensitymap/tests. PinnedCensus2018state20mcartographicasset
+isdisplaygeometryonly, notnewpermitinventory/statewidecoverage/parcelgeometry.
+No newproduction/source/schedule/IAM/migration/paid/task/release authority.
+Verifyunit/backend/tenant/rapidnav/desktop/mobilebrowser+pixelcontent andupdate
+exactreceipts; do notcalllocallyimplementedfixlive. CherryHill inquiryunsent.
+
 ## November16: Local Privacy And Packaging Integration
 
 Owner requested a new isolated codex/owner-only-coverage-integration worktree
