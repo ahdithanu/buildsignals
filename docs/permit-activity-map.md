@@ -93,3 +93,21 @@ old clients remain supported. Verify real workspace totals, national/default
 entry, selected-state density, refresh and isolation before claiming it live.
 Do not bundle the separate SF native-location or Wake qualification branches,
 repeat consumed intake tasks, or send the Cherry Hill inquiry.
+
+## Local Acceptance Receipt
+
+Runtime checkpoint `8c47870`, not published or live:
+- Frontend608passed; focused map/demo/concurrency/nonowner PostgreSQL142passed.
+- Baseline browser19passed/20fixture-specific skips; dedicated actual-API
+  desktop/mobile framing2passed and built strict-local-CSP2passed, zero retries.
+- Build/typecheck/scoped ESLint/Ruff/schema-drift/harness and independent review pass.
+- Full backend3468passed,1existing test failed because its migration DDL requires
+  table ownership while the map acceptance role deliberately has none.
+  `test_migration_downgrade_upgrade_operations_are_transactionally_rolled_back`
+  separately passed unchanged on a different fresh restricted DDL-owner target;
+  FORCE RLS and rollback restoration were verified. Coverage91.59%,3warnings.
+  This is not a single all-green full-suite claim. Hosted CI remains unverified.
+
+The final built browser test waits for rendered geometry before measuring it;
+all51 shape, pixel and framing assertions remain. Production counts and CSP
+enforcement were not inferred from synthetic browser fixtures or local checks.

@@ -1,5 +1,41 @@
 # Current Agent Handoff
 
+## November17 Final: Local Map Acceptance Complete, Release Approval Pending
+
+Runtime checkpoint `8c47870` is local only. The follow-up changes only one browser
+test synchronization wait and receipts: after reload, wait for all51 national
+shapes before measuring the unmapped state's map. The first built-mode run
+failed2 on a zero-map measurement taken before lazy rendering; no product code,
+assertion or CSP policy was relaxed. The synchronized final built run passed.
+
+Final receipts supersede the pending/interrupted browser notes below:
+- Frontend608passed/86files7.83s; typecheck and explicit changed-file ESLint pass.
+- Actual API national/state/framing desktop+mobile2passed15.3s. The whole national
+  map fits the initial viewport; all51 shapes and colored/zero-data pixels checked.
+- Fresh production build8.95s; built strict-local-CSP desktop+mobile2passed16.3s.
+  This does not mean production's report-only policy became enforced.
+- Full baseline browser19passed/20fixture-specific skips42.4s, zero retries.
+  Existing diagnostics/readiness assertions remain under explicit Inventory.
+- Focused map/demo/concurrent-snapshot/actual nonowner-PG142passed27.70s.
+- Full backend3468passed/1existing DDL-owner fixture failure/zero skips/
+  3warnings679.43s, coverage91.59%. Separate unchanged migration test1passed0.14s
+  on a fresh non-superuser/non-BYPASSRLS DDL-owner database with FORCE RLS and
+  rollback column shape verified. Map nonowner target was never relaxed.
+  These are complementary receipts, not one all-green full suite.
+- Ruff, PostgreSQL Alembic drift check, harness/diff and staged Gitleaks passed.
+  Existing20global ESLint warnings, build chunk warnings and geography-reflection
+  warning remain disclosed. Independent focus/API review accepted; final3-file
+  framing/privacy review accepted, including the explicit lazy-render wait.
+
+All final browser fixtures are synthetic, not production inventory. No actual
+coverage remeasurement, data import, source/schedule/access/migration/paid call,
+production task, push, merge or deployment occurred. Root research/security,
+separate SF/Wake branches, Cherry Hill DRAFT/UNSENT and private collector preserved.
+Publication/merge-after-green-CI and staged API-first/frontend release approval
+was requested asynchronously, still pending. Do not infer it from this handoff.
+Next authorized step without that approval is none; do not manufacture polish
+or rerun the full suite solely to hide the owner-role fixture mismatch.
+
 ## November17: Implementation Complete, Final Browser Framing Pending
 
 All map code is local on `codex/permit-activity-heatmap`, base175fba6. Bare `/map`

@@ -339,6 +339,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
         await totalValues(activity, [37, 0, 37]);
         await expect(activity.getByText(/37 permits have no mapped location/)).toBeVisible();
         await expect(activity.locator('.leaflet-container')).toHaveCount(0);
+        await nationalMap(activity);
         await layout(page, activity, info, `ohio-unmapped-${viewport.width}`);
         await page.goBack();
         await scope(page, '');

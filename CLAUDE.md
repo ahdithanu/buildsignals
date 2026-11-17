@@ -2,6 +2,11 @@
 
 @AGENTS.md
 
+Nov17 FINAL map runtime8c47870 locallyaccepted:608frontend,142focusedbackend,
+baseline19pass20gatedskips, framing2 and builtstrictlocalCSP2 pass. Fullbackend
+3468pass+1DDL-ownerfixturefailure; separate unchangedDDLowner testpasses. Read
+newesthandoff, notallgreenfullsuite/notlive. Freshpublication/releaseapprovalpending.
+
 Nov17 map-consistency localcheckpoint preparation: implementation/review complete;
 finalheightframing and baseline browser reruns pending after interruption.
 Backend3468pass+1DDL-ownerfixturefailure; separate unchangedDDLowner test passes.

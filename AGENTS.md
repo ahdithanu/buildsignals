@@ -1,5 +1,15 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov17 FINAL local map acceptance: runtime8c47870, frontend608/86files7.83s,
+focusedbackend142/actualnonownerPG27.70s, baselinebrowser19pass20gatedskips42.4s,
+newframingdesktop/mobile2/15.3s, builtstrictlocalCSP2/16.3s. Typecheck/build8.95s/
+scopedlint/Ruff/drift/harness/independentreview pass. Fullbackend3468pass+1existing
+DDL-ownerfixturefailure/91.59%/3warnings679.43s; unchangedDDLtestseparatelypasses
+freshrestrictedownerDB0.14s. Do notcalloneallgreenfullsuite. OwnedPGstopped;
+finalserversshutdownverification recordedinhandoff. Newesttestwaitpreservesall
+51geometry/pixel/framingassertions. Publication/stagedreleaseapprovalrequested,
+pending; notpushed/merged/live. No source/schedule/access/paid/collectorchange.
+
 Nov17 checkpoint preparation: default national permit activity, complete bounded
 state density, URL/nav/history/refresh/focus fixes implemented locally. Backend
 full3468pass/1existingDDL-ownerfixturefailure/zero skips/91.59%/3warnings679.43s;
