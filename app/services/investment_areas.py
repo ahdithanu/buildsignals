@@ -106,3 +106,54 @@ def investment_area(db, cbsa, *, snapshot=None):
             "Metro home-price research does not establish parcel, multifamily or retail investment returns.",
         ],
     }
+
+
+# Coverage registry: metros for which a tenant-scoped local evidence source is
+# declared. The public ranking spans every eligible metro in the snapshot; this
+# flag only marks where local permit evidence can deepen the national signal.
+def metro_coverage():
+    return frozenset(LOCAL_CONTEXT_SOURCES)
+
+
+def ranked_markets(*, snapshot=None, query=None, limit=50, offset=0):
+    """Nationwide research growth ranking: the full ordered metro cohort the
+    model scores, surfaced for discovery. Public snapshot only — no tenant data,
+    so the same for every workspace. `has_local_evidence` marks which metros a
+    local permit source is declared for (the coverage registry), not a score input."""
+    snapshot = snapshot if snapshot is not None else current_snapshot()
+    rows = rank_metros(snapshot)  # already sorted by score desc, then cbsa
+    covered = metro_coverage()
+    limit = max(1, min(int(limit), 200))
+    offset = max(0, int(offset))
+    needle = (query or "").strip().lower()
+
+    markets = []
+    for rank, row in enumerate(rows, start=1):
+        if needle and needle not in row["name"].lower() and needle not in row["cbsa"]:
+            continue
+        markets.append({
+            "rank": rank, "cbsa": row["cbsa"], "name": row["name"],
+            "score": row["score"],
+            "momentum_percentile": row["momentum_percentile"],
+            "supply_percentile": row["supply_percentile"],
+            "price_momentum_2yr": row["price_momentum_2yr"],
+            "supply_surge": row["supply_surge"],
+            "population_growth_1yr": row.get("population_growth_1yr"),
+            "net_migration_per_1000": row.get("net_migration_per_1000"),
+            "has_local_evidence": row["cbsa"] in covered,
+        })
+    total = len(markets)
+    window = markets[offset:offset + limit]
+    return {
+        "model_version": MODEL_VERSION, "status": "research", "year": snapshot["year"],
+        "captured_at": snapshot["captured_at"], "snapshot_id": snapshot["snapshot_id"],
+        "input_mode": "release_reference",
+        "cohort_size": len(rows), "matched": total, "offset": offset, "limit": limit,
+        "local_evidence_metros": len(covered),
+        "markets": window,
+        "limitations": [
+            "Research relative growth ranking across metros with aligned public price and supply history; not an expected return, investment-quality score or buy recommendation.",
+            "Rank reflects fixed 70% price-momentum / 30% residential-unit-surge research weights on annual 2025 public data; no performance claim.",
+            "has_local_evidence marks a declared local permit source for discovery; it never changes the national score.",
+        ],
+    }

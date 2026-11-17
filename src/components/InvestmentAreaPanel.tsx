@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { ApiError } from '@/api/client';
@@ -38,6 +38,7 @@ function ResearchRank({ score, cohortSize }: { score: number | null; cohortSize:
 export function InvestmentAreaPanel() {
   const id = useId();
   const [cbsa, setCbsa] = useState('36100');
+  const [search, setSearch] = useState('');
   const { user, organizationId, role, isAuthenticated, isLoading: authLoading } = useAuth();
   const enabled = isAuthenticated && !authLoading && !!organizationId;
   const { data, error, isPending, isFetching, refetch } = useQuery({
@@ -46,16 +47,37 @@ export function InvestmentAreaPanel() {
     enabled,
     retry: false,
   });
+  // Nationwide ranked cohort drives the picker: coverage and model are one list.
+  const ranked = useQuery({
+    queryKey: ['investment-areas-ranked', organizationId, user?.id, role, search],
+    queryFn: () => investmentAreasApi.ranked({ q: search || undefined, limit: 200 }),
+    enabled,
+    retry: false,
+  });
+  const metroOptions = useMemo(() => {
+    const rows = ranked.data?.markets ?? [];
+    const options = rows.map(m => ({ value: m.cbsa, label: `${m.rank}. ${m.name}${m.has_local_evidence ? ' ◆' : ''}` }));
+    if (options.length === 0) {
+      options.push({ value: '36100', label: 'Ocala metro (36100)' }, { value: '45300', label: 'Tampa metro (45300)' });
+    }
+    if (!options.some(option => option.value === cbsa)) {
+      options.unshift({ value: cbsa, label: `Metro ${cbsa}` });
+    }
+    return options;
+  }, [ranked.data, cbsa]);
 
   return <section aria-labelledby={`${id}-title`} className="min-w-0 py-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 id={`${id}-title`} className="text-base font-semibold">Investment areas</h2>
       <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor={`${id}-search`} className="sr-only">Search metros</label>
+        <input id={`${id}-search`} type="search" value={search} placeholder="Search metros"
+          aria-label="Search metros" onChange={event => setSearch(event.target.value)}
+          className="h-9 w-32 max-w-full rounded-md border bg-background px-2 text-xs" />
         <label htmlFor={`${id}-metro`} className="text-xs text-muted-foreground">Metro</label>
         <select id={`${id}-metro`} value={cbsa} onChange={event => setCbsa(event.target.value)}
           className="h-9 max-w-full rounded-md border bg-background px-2 text-xs">
-          <option value="36100">Ocala metro (36100)</option>
-          <option value="45300">Tampa metro (45300)</option>
+          {metroOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         <TooltipProvider><Tooltip><TooltipTrigger asChild>
           <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0"
@@ -66,6 +88,7 @@ export function InvestmentAreaPanel() {
       </div>
     </div>
     <p className="mt-2 text-xs text-muted-foreground">Research only. This score is not an expected return or an investment recommendation.</p>
+    {ranked.data && <p className="mt-1 text-xs text-muted-foreground">{number.format(ranked.data.cohort_size)} metros ranked nationwide · ◆ {number.format(ranked.data.local_evidence_metros)} with local permit evidence.</p>}
     {authLoading ? <p role="status" className="mt-4 text-sm text-muted-foreground">Loading session...</p>
       : !enabled ? <p className="mt-4 text-sm text-muted-foreground">Sign in to a workspace to view investment areas.</p>
         : error ? <div role="alert" className="mt-4 text-sm text-destructive">

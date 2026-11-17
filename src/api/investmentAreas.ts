@@ -44,11 +44,48 @@ export interface InvestmentAreaResponse {
   limitations: string[];
 }
 
+export interface RankedMarket {
+  rank: number;
+  cbsa: string;
+  name: string;
+  score: number;
+  momentum_percentile: number;
+  supply_percentile: number;
+  price_momentum_2yr: number;
+  supply_surge: number;
+  population_growth_1yr: number | null;
+  net_migration_per_1000: number | null;
+  has_local_evidence: boolean;
+}
+
+export interface RankedMarketsResponse {
+  model_version: 'metro-research-v0.3';
+  status: 'research';
+  year: number;
+  captured_at: string;
+  snapshot_id: string;
+  input_mode: 'release_reference';
+  cohort_size: number;
+  matched: number;
+  offset: number;
+  limit: number;
+  local_evidence_metros: number;
+  markets: RankedMarket[];
+  limitations: string[];
+}
+
 export const investmentAreasApi = {
   get: (cbsa: string): Promise<InvestmentAreaResponse> => {
     if (!/^\d{5}$/.test(cbsa)) {
       throw new Error('CBSA must be a five-digit metro code.');
     }
     return apiClient.get<InvestmentAreaResponse>('/investment-areas', { cbsa });
+  },
+  ranked: (params: { q?: string; limit?: number; offset?: number } = {}): Promise<RankedMarketsResponse> => {
+    const query: Record<string, string> = {};
+    if (params.q) query.q = params.q;
+    if (params.limit != null) query.limit = String(params.limit);
+    if (params.offset != null) query.offset = String(params.offset);
+    return apiClient.get<RankedMarketsResponse>('/investment-areas/ranked', query);
   },
 };

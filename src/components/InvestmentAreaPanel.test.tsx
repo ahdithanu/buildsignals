@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ApiError, apiClient } from '@/api/client';
-import { investmentAreasApi, type InvestmentAreaResponse } from '@/api/investmentAreas';
+import { investmentAreasApi, type InvestmentAreaResponse, type RankedMarketsResponse } from '@/api/investmentAreas';
 import { InvestmentAreaPanel } from './InvestmentAreaPanel';
 
 let auth = { organizationId: 'org-a', user: { id: 'user-a' }, role: 'viewer', isAuthenticated: true, isLoading: false };
@@ -22,12 +22,28 @@ const fixture: InvestmentAreaResponse = {
   limitations: ['Research snapshot; no expected-return validation.'],
 };
 
+const rankedFixture: RankedMarketsResponse = {
+  model_version: 'metro-research-v0.3', status: 'research', year: 2025,
+  captured_at: '2026-11-09T12:00:00Z', snapshot_id: 'test-snapshot', input_mode: 'release_reference',
+  cohort_size: 360, matched: 2, offset: 0, limit: 200, local_evidence_metros: 1,
+  markets: [
+    { rank: 1, cbsa: '45300', name: 'Tampa, FL', score: 0.98, momentum_percentile: 0.99, supply_percentile: 0.9,
+      price_momentum_2yr: 0.3, supply_surge: 1.1, population_growth_1yr: null, net_migration_per_1000: null, has_local_evidence: false },
+    { rank: 2, cbsa: '36100', name: 'Ocala, FL', score: 0.7, momentum_percentile: 0.8, supply_percentile: 0.6,
+      price_momentum_2yr: 0.04, supply_surge: 1.1, population_growth_1yr: null, net_migration_per_1000: null, has_local_evidence: true },
+  ],
+  limitations: ['Research relative growth ranking; not an expected return.'],
+};
+
 beforeEach(() => {
   auth = { organizationId: 'org-a', user: { id: 'user-a' }, role: 'viewer', isAuthenticated: true, isLoading: false };
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function setup() {
+  if (!vi.isMockFunction(investmentAreasApi.ranked)) {
+    vi.spyOn(investmentAreasApi, 'ranked').mockResolvedValue(rankedFixture);
+  }
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   const view = <QueryClientProvider client={client}><InvestmentAreaPanel /></QueryClientProvider>;
   return { ...render(view), client };
@@ -101,6 +117,26 @@ it('does not fetch without an authenticated workspace', () => {
   expect(get).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Refresh investment areas' })).toBeDisabled();
   expect(screen.getByText(/Sign in to a workspace/)).toBeInTheDocument();
+});
+
+it('surfaces the nationwide ranked cohort in the metro picker', async () => {
+  vi.spyOn(investmentAreasApi, 'get').mockResolvedValue(fixture);
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.getByText(/360 metros ranked nationwide/)).toBeInTheDocument();
+  expect(screen.getByText(/1 with local permit evidence/)).toBeInTheDocument();
+  const combo = screen.getByRole('combobox', { name: 'Metro' });
+  expect(within(combo).getByRole('option', { name: /Tampa, FL/ })).toBeInTheDocument();
+  expect(within(combo).getByRole('option', { name: /Ocala, FL/ })).toBeInTheDocument();
+});
+
+it('searches the ranked cohort by typing a metro name', async () => {
+  vi.spyOn(investmentAreasApi, 'get').mockResolvedValue(fixture);
+  const ranked = vi.spyOn(investmentAreasApi, 'ranked').mockResolvedValue(rankedFixture);
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search metros' }), { target: { value: 'Austin' } });
+  await waitFor(() => expect(ranked).toHaveBeenLastCalledWith({ q: 'Austin', limit: 200 }));
 });
 
 it('shows available demand context without inventing an unavailable ranking', async () => {
