@@ -20,6 +20,7 @@ const fixture: InvestmentAreaResponse = {
     geography_match: 'declared_source_scope', is_complete_metro_inventory: false },
   investment_quality: { status: 'insufficient_data', missing: ['rent_yield', 'vacancy'] },
   provenance: [{ label: 'Public records', captured_at: '2026-11-09T12:00:00Z', period: '2025' }],
+  frontier: { status: 'disabled', parcel_candidates: { status: 'research_preview', note: 'Needs external GIS + licensed listings feed.' } },
   limitations: ['Research snapshot; no expected-return validation.'],
 };
 
@@ -123,6 +124,25 @@ it('does not fetch without an authenticated workspace', () => {
   expect(get).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Refresh investment areas' })).toBeDisabled();
   expect(screen.getByText(/Sign in to a workspace/)).toBeInTheDocument();
+});
+
+it('shows frontier hotspots and the not-live parcel preview when enabled, hidden when disabled', async () => {
+  const get = vi.spyOn(investmentAreasApi, 'get').mockResolvedValue({ ...fixture,
+    frontier: { status: 'research', model_version: 'frontier-hotspots-v0.1', reference_year: 2025, evidence_points: 12,
+      hotspots: [{ lat: 44.01, lon: -121.27, recent: 6, prior: 1, acceleration: 6, dev_share: 1, score: 42, sample_address: '27TH ST' }],
+      parcel_candidates: { status: 'research_preview', note: 'Needs external GIS + licensed listings feed.' } } });
+  setup();
+  expect(await screen.findByText('Frontier hotspots')).toBeInTheDocument();
+  expect(screen.getByText('27TH ST')).toBeInTheDocument();
+  expect(screen.getByText(/6x accel/)).toBeInTheDocument();
+  expect(screen.getByText(/Needs external GIS/)).toBeInTheDocument();
+
+  get.mockResolvedValue(fixture);           // disabled fixture
+  auth = { ...auth, organizationId: 'org-frontier-off' };
+  cleanup();
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.queryByText('Frontier hotspots')).not.toBeInTheDocument();
 });
 
 it('surfaces the nationwide ranked cohort in the metro picker', async () => {

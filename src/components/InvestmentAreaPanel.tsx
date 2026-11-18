@@ -144,6 +144,17 @@ export function InvestmentAreaPanel() {
                     <span className="text-muted-foreground">{metric(source.records)} records | Collected {dateLabel(source.last_collected_at)}</span>
                   </li>)}</ul>}
               </div>
+              {data.frontier.status !== 'disabled' && <div className="border-y py-3">
+                <h3 className="text-sm font-medium">Frontier hotspots <span className="font-normal text-muted-foreground">Research locator</span></h3>
+                {data.frontier.status === 'research' && data.frontier.hotspots && data.frontier.hotspots.length > 0 ? <>
+                  <p className="mt-1 text-xs text-muted-foreground">Where filing is recent and accelerating in your evidence ({metric(data.frontier.evidence_points ?? null)} points, through {data.frontier.reference_year}). Not verified parcels.</p>
+                  <ul className="mt-2 divide-y">{data.frontier.hotspots.slice(0, 6).map((spot, index) => <li key={index} className="flex flex-wrap justify-between gap-2 py-2 text-xs">
+                    <span className="min-w-0 break-words font-medium">{spot.sample_address || `${spot.lat}, ${spot.lon}`}</span>
+                    <span className="text-muted-foreground tabular-nums">{spot.acceleration}x accel | {spot.recent} recent vs {spot.prior} prior</span>
+                  </li>)}</ul>
+                </> : <p className="mt-1 text-xs text-muted-foreground">No accelerating hotspots in this workspace's geocoded permit evidence yet.</p>}
+                <p className="mt-2 text-xs text-muted-foreground">{data.frontier.parcel_candidates.note}</p>
+              </div>}
               <details className="text-xs text-muted-foreground">
                 <summary className="cursor-pointer font-medium text-foreground">Data and limitations</summary>
                 <ul className="mt-2 space-y-3">{data.provenance.map((source, index) =>

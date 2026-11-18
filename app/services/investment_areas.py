@@ -114,6 +114,34 @@ def local_evidence(db, cbsa):
     return result
 
 
+def frontier(db, cbsa):
+    """Where-to-look layer: ignition hotspots from the tenant's own evidence,
+    plus the honest status of the (offline, not-live) ranked-parcel step. Gated
+    off by default."""
+    from app import config
+    from app.services.frontier_hotspots import metro_hotspots
+
+    preview = {
+        "status": "research_preview",
+        "note": ("Ranked buyable parcels and for-sale status require external "
+                 "county parcel GIS plus a licensed listings feed; computed "
+                 "offline in research/appreciation, not served live here."),
+    }
+    if not getattr(config, "FRONTIER_HOTSPOTS_ENABLED", False):
+        return {"status": "disabled", "parcel_candidates": preview}
+    hotspots = metro_hotspots(db, cbsa, LOCAL_CONTEXT_SOURCES.get(cbsa, ()))
+    return {
+        **hotspots,
+        "parcel_candidates": preview,
+        "limitations": [
+            "Hotspots mark where permit filing is recent and accelerating, not verified projects, parcels or for-sale listings.",
+            "Computed only from this workspace's geocoded, dated permit evidence; coverage is partial and not a complete inventory.",
+            "Acceleration is relative to each cell's own prior window; sparse history can over- or under-state a cell.",
+            "Not calibrated to appreciation; this is a research locator, not an expected return.",
+        ],
+    }
+
+
 def investment_area(db, cbsa, *, snapshot=None):
     snapshot = snapshot if snapshot is not None else current_snapshot()
     rows = rank_metros(snapshot)
@@ -139,6 +167,7 @@ def investment_area(db, cbsa, *, snapshot=None):
             "jobs_and_wages", "verified_anchor_and_entitlement_events"]},
         "provenance": [{"label": "Public records", "captured_at": item["captured_at"],
                         "period": item["period"]} for item in snapshot["provenance"]],
+        "frontier": frontier(db, cbsa),
         "evaluated_at": datetime.now(timezone.utc).isoformat(),
         "limitations": [
             "Rank requires complete aligned HPI and unit histories; absent or mismatched geography yields no score, not zero.",

@@ -204,6 +204,12 @@ if IS_PRODUCTION:
 DEMO_ENABLED = _parse_bool(os.getenv("DEMO_ENABLED"), default=False)
 SF_DERIVED_LOCATIONS_ENABLED = _parse_bool(os.getenv("SF_DERIVED_LOCATIONS_ENABLED"), default=False)
 
+# Frontier ignition hotspots in the investment-area response. Research-only,
+# read-only, computed from the tenant's own geocoded permit evidence; gated off
+# by default so it ships dark until a workspace opts in.
+FRONTIER_HOTSPOTS_ENABLED = _parse_bool(
+    os.environ.get("FRONTIER_HOTSPOTS_ENABLED"), default=False)
+
 PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     "/auth/demo",
     "/v1/auth/demo",

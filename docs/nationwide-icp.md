@@ -74,6 +74,39 @@ Honesty lines added to both endpoints: the tier is not a return forecast.
 Tests: `test_investment_model.py` (+3 icp_tier unit tests), `test_investment_ranked.py`
 (+1 cohort-distribution test), panel (+2: badge/rationale, distribution caption).
 
+## Increment 3 (this change) — frontier hotspots (ported, gated dark)
+
+The "why a tenant is converging *here*" layer: within a metro, *where* permit
+filing is recent and accelerating. Ported from the stranded research work
+(`76bc59a`) onto this branch's privacy-hardened endpoint/panel, keyed by CBSA so
+every covered metro gets it through the same coverage registry.
+
+- `frontier_hotspots.rank_hotspots(records, …)` is pure (no DB, no network, no
+  clock unless `reference_year` is omitted): it bins the tenant's own geocoded,
+  dated permit evidence into ~1 km cells and scores each by ignition —
+  `recent · min(acceleration, 5) · (1 + 0.5·dev_share)`, where acceleration is the
+  recent-window count over the cell's own prior window. `metro_hotspots(db, cbsa,
+  source_keys)` runs it org-scoped and read-only over the metro's declared local
+  sources; it returns `insufficient_data` (never fabricated) when the tenant has
+  no aligned geocoded evidence.
+- `investment_areas.frontier(db, cbsa)` wraps it and is **gated off by default**
+  via `FRONTIER_HOTSPOTS_ENABLED` — it ships dark, returning `status: "disabled"`
+  with only the honest parcel preview until a workspace opts in. The
+  single-metro `investment_area` response carries a `frontier` block.
+- The ranked-buyable-parcel + for-sale step stays an explicit
+  `research_preview`: it needs external county parcel GIS plus a licensed
+  listings feed, is computed offline, and is **not served live** here.
+- Honesty gates: a hotspot is a research signal of where land is converting, not
+  a verified project/parcel/listing; coverage is partial; acceleration against a
+  sparse prior can mislead; it is not calibrated to appreciation.
+
+Frontend: a flagged "Frontier hotspots — Research locator" panel section appears
+only when the block is not `disabled`.
+
+Tests: `tests/test_frontier_hotspots.py` (5: scoring/min-recent, malformed-row +
+clockless, disabled-by-default, enabled org-scoped ranking, cross-tenant
+isolation), panel (+1: enabled shows hotspots/preview, disabled hides section).
+
 ## Coverage registry = the anti-silo backbone
 
 `metro_coverage()` + `has_local_evidence` is the seed of the shared registry: adding
@@ -83,8 +116,8 @@ Model growth and coverage growth are one surface.
 ## Next increments (Phase 1 cont. / Phase 2)
 
 - ✅ Explicit ICP tiering (Strong / Emerging / Stable) — increment 2 above.
-- Port the gated **frontier hotspots** layer (the "why BJ's is converging here")
-  onto this branch, keyed by CBSA so every covered metro gets it.
+- ✅ Gated **frontier hotspots** layer (the "why BJ's is converging here"),
+  keyed by CBSA — increment 3 above. Ships dark behind `FRONTIER_HOTSPOTS_ENABLED`.
 - Appreciation projection stays last and gated until backtested against realized
   outcomes.
 

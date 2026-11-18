@@ -45,6 +45,24 @@ export interface InvestmentAreaResponse {
     captured_at: string;
     period: string;
   }[];
+  frontier: {
+    status: 'disabled' | 'research' | 'insufficient_data';
+    model_version?: string;
+    reference_year?: number;
+    evidence_points?: number;
+    hotspots?: {
+      lat: number;
+      lon: number;
+      recent: number;
+      prior: number;
+      acceleration: number;
+      dev_share: number;
+      score: number;
+      sample_address: string | null;
+    }[];
+    parcel_candidates: { status: 'research_preview'; note: string };
+    limitations?: string[];
+  };
   limitations: string[];
 }
 
