@@ -155,6 +155,12 @@ export function InvestmentAreaPanel() {
                 </> : <p className="mt-1 text-xs text-muted-foreground">No accelerating hotspots in this workspace's geocoded permit evidence yet.</p>}
                 <p className="mt-2 text-xs text-muted-foreground">{data.frontier.parcel_candidates.note}</p>
               </div>}
+              {data.appreciation.status !== 'disabled' && <div className="border-y py-3">
+                <h3 className="text-sm font-medium">Appreciation outlook <span className="font-normal text-muted-foreground">{data.appreciation.status === 'research' ? 'Backtested' : 'Not yet backtested'}</span></h3>
+                <p className="mt-1 text-xs text-muted-foreground">{data.appreciation.status === 'research' ? data.appreciation.note : data.appreciation.required}</p>
+                {data.appreciation.calibration && <p className="mt-1 text-xs text-muted-foreground tabular-nums">Backtest: {metric(data.appreciation.calibration.observation_count)} out-of-sample observation(s) across {metric(data.appreciation.calibration.horizons.length)} horizon(s).</p>}
+                <p className="mt-2 text-xs text-muted-foreground">{data.appreciation.projection.note}</p>
+              </div>}
               <details className="text-xs text-muted-foreground">
                 <summary className="cursor-pointer font-medium text-foreground">Data and limitations</summary>
                 <ul className="mt-2 space-y-3">{data.provenance.map((source, index) =>

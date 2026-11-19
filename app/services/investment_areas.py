@@ -142,6 +142,27 @@ def frontier(db, cbsa):
     }
 
 
+def appreciation(db, cbsa, *, snapshot=None):
+    """Appreciation outlook, gated off by default. Ships dark; even enabled it
+    withholds any projection until the signal is backtested against realized
+    price change (currently insufficient_history on the single-vintage reference).
+    `db` is accepted for call symmetry and a future tenant realized-outcome join;
+    today the outlook is derived purely from the public snapshot."""
+    from app import config
+    from app.services.appreciation import appreciation_outlook
+
+    preview = {
+        "status": "research_preview",
+        "note": ("A metro appreciation projection is withheld until the research "
+                 "signal is backtested against realized forward price change; it "
+                 "is not served live here."),
+    }
+    if not getattr(config, "APPRECIATION_OUTLOOK_ENABLED", False):
+        return {"status": "disabled", "projection": preview}
+    snapshot = snapshot if snapshot is not None else current_snapshot()
+    return {**appreciation_outlook(snapshot, cbsa), "projection": preview}
+
+
 def investment_area(db, cbsa, *, snapshot=None):
     snapshot = snapshot if snapshot is not None else current_snapshot()
     rows = rank_metros(snapshot)
@@ -168,6 +189,7 @@ def investment_area(db, cbsa, *, snapshot=None):
         "provenance": [{"label": "Public records", "captured_at": item["captured_at"],
                         "period": item["period"]} for item in snapshot["provenance"]],
         "frontier": frontier(db, cbsa),
+        "appreciation": appreciation(db, cbsa, snapshot=snapshot),
         "evaluated_at": datetime.now(timezone.utc).isoformat(),
         "limitations": [
             "Rank requires complete aligned HPI and unit histories; absent or mismatched geography yields no score, not zero.",

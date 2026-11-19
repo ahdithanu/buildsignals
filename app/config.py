@@ -210,6 +210,13 @@ SF_DERIVED_LOCATIONS_ENABLED = _parse_bool(os.getenv("SF_DERIVED_LOCATIONS_ENABL
 FRONTIER_HOTSPOTS_ENABLED = _parse_bool(
     os.environ.get("FRONTIER_HOTSPOTS_ENABLED"), default=False)
 
+# Appreciation outlook in the investment-area response. The last and most gated
+# layer: a research-only backtest gate that withholds any projection until the
+# metro signal shows out-of-sample skill against realized price change. Gated off
+# by default so it ships dark; even enabled it emits no forecast until calibrated.
+APPRECIATION_OUTLOOK_ENABLED = _parse_bool(
+    os.environ.get("APPRECIATION_OUTLOOK_ENABLED"), default=False)
+
 PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     "/auth/demo",
     "/v1/auth/demo",

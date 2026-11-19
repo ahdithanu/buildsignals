@@ -63,6 +63,25 @@ export interface InvestmentAreaResponse {
     parcel_candidates: { status: 'research_preview'; note: string };
     limitations?: string[];
   };
+  appreciation: {
+    status: 'disabled' | 'insufficient_history' | 'research';
+    model_version?: string;
+    calibration?: {
+      status: 'calibrated' | 'insufficient_history';
+      observation_count: number;
+      horizons: {
+        horizon_years: number;
+        observations: number;
+        rank_correlation: number | null;
+        tercile_lift: number | null;
+        calibrated: boolean;
+      }[];
+    };
+    projection: { status: 'research_preview'; note: string };
+    required?: string;
+    note?: string;
+    limitations?: string[];
+  };
   limitations: string[];
 }
 

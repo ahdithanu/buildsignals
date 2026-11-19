@@ -21,6 +21,7 @@ const fixture: InvestmentAreaResponse = {
   investment_quality: { status: 'insufficient_data', missing: ['rent_yield', 'vacancy'] },
   provenance: [{ label: 'Public records', captured_at: '2026-11-09T12:00:00Z', period: '2025' }],
   frontier: { status: 'disabled', parcel_candidates: { status: 'research_preview', note: 'Needs external GIS + licensed listings feed.' } },
+  appreciation: { status: 'disabled', projection: { status: 'research_preview', note: 'Withheld until backtested.' } },
   limitations: ['Research snapshot; no expected-return validation.'],
 };
 
@@ -143,6 +144,27 @@ it('shows frontier hotspots and the not-live parcel preview when enabled, hidden
   setup();
   await screen.findByText('Investment quality unavailable');
   expect(screen.queryByText('Frontier hotspots')).not.toBeInTheDocument();
+});
+
+it('shows the appreciation backtest gate when enabled, without a return number, and hides it when disabled', async () => {
+  const get = vi.spyOn(investmentAreasApi, 'get').mockResolvedValue({ ...fixture,
+    appreciation: { status: 'insufficient_history', model_version: 'appreciation-backtest-v0.1',
+      calibration: { status: 'insufficient_history', observation_count: 0, horizons: [] },
+      projection: { status: 'research_preview', note: 'Withheld until backtested.' },
+      required: 'A projection needs multi-vintage HPI history to backtest.',
+      limitations: ['Last and most gated layer.'] } });
+  setup();
+  expect(await screen.findByText('Appreciation outlook')).toBeInTheDocument();
+  expect(screen.getByText('Not yet backtested')).toBeInTheDocument();
+  expect(screen.getByText(/multi-vintage HPI history/)).toBeInTheDocument();
+  expect(screen.getByText(/0 out-of-sample observation/)).toBeInTheDocument();
+
+  get.mockResolvedValue(fixture);           // disabled fixture
+  auth = { ...auth, organizationId: 'org-appr-off' };
+  cleanup();
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.queryByText('Appreciation outlook')).not.toBeInTheDocument();
 });
 
 it('surfaces the nationwide ranked cohort in the metro picker', async () => {

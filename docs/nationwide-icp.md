@@ -107,6 +107,38 @@ Tests: `tests/test_frontier_hotspots.py` (5: scoring/min-recent, malformed-row +
 clockless, disabled-by-default, enabled org-scoped ranking, cross-tenant
 isolation), panel (+1: enabled shows hotspots/preview, disabled hides section).
 
+## Increment 4 (this change) — appreciation layer as a backtest gate (Phase 3 start)
+
+The last and most gated layer. A metro's rank/tier is a **relative growth
+signal**; an appreciation projection requires proof the signal predicted realized
+forward price change **out of sample**. This increment ships that proof gate, not
+a forecast.
+
+- `appreciation.backtest(observations, …)` is pure: it groups
+  `(signal, realized_return, horizon_years)` observations by horizon and reports
+  per-horizon rank correlation + top/bottom tercile lift. `status` is
+  `calibrated` only when at least `MIN_HORIZONS` horizons each clear
+  `MIN_OBSERVATIONS_PER_HORIZON` and `MIN_RANK_CORRELATION` — a conservative floor
+  for showing *any* projection, never a performance claim.
+- `appreciation.observations_from_snapshot(snapshot)` forms **disjoint** windows:
+  for HPI vintages `t0 < t1 < t2`, the signal is the momentum known at `t1`
+  (`hpi[t1]/hpi[t0]-1`) and the realized return is the strictly-later
+  `hpi[t2]/hpi[t1]-1`. The packaged 2025 reference holds a **single** vintage pair
+  (2023 & 2025) — that pair *is* the momentum signal — so it yields **zero**
+  observations and the gate stays `insufficient_history`. No appreciation number
+  is produced; emitting one would be a predicted return, which this product never
+  makes.
+- `investment_areas.appreciation(db, cbsa)` wraps it and is **gated off by
+  default** via `APPRECIATION_OUTLOOK_ENABLED` — ships dark, returning
+  `status: "disabled"` with only an honest withheld-projection preview. Even
+  enabled it currently returns `insufficient_history` on the real reference.
+- Frontend: an "Appreciation outlook — Not yet backtested" section appears only
+  when the block is not `disabled`, and renders **no return figure**.
+
+Tests: `tests/test_appreciation.py` (rank correlation, calibrated-only-with-skill,
+three-vintage requirement, insufficient on single vintage, disabled-by-default,
+enabled-withholds-projection), panel (+1: gate shown enabled / hidden disabled).
+
 ## Coverage registry = the anti-silo backbone
 
 `metro_coverage()` + `has_local_evidence` is the seed of the shared registry: adding
@@ -118,7 +150,12 @@ Model growth and coverage growth are one surface.
 - ✅ Explicit ICP tiering (Strong / Emerging / Stable) — increment 2 above.
 - ✅ Gated **frontier hotspots** layer (the "why BJ's is converging here"),
   keyed by CBSA — increment 3 above. Ships dark behind `FRONTIER_HOTSPOTS_ENABLED`.
-- Appreciation projection stays last and gated until backtested against realized
-  outcomes.
+- ✅ **Appreciation layer as a backtest gate** — increment 4 above. The gate is
+  built and ships dark behind `APPRECIATION_OUTLOOK_ENABLED`; it withholds any
+  projection and reports `insufficient_history` until multi-vintage HPI history
+  clears the skill bar. No projection is served from the single-vintage reference.
+- Next: package multi-vintage HPI history so the backtest has disjoint windows,
+  then (only if it calibrates) render the realized forward-return distribution for
+  a signal band — never a single predicted return.
 
 Not pushed / not merged / not deployed. No source activation or migration.
