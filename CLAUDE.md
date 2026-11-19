@@ -2,6 +2,11 @@
 
 @AGENTS.md
 
+Nov19 isolated map publication/green-CI/merge/API-first then frontend release
+approved. Not yet published or live. Read newest handoff; no migration, worker,
+source/schedule/access/paid authority. Historical pending-approval notes below
+do not override this scoped approval; unrelated branches remain separate.
+
 Nov17 FINAL map runtime8c47870 locallyaccepted:608frontend,142focusedbackend,
 baseline19pass20gatedskips, framing2 and builtstrictlocalCSP2 pass. Fullbackend
 3468pass+1DDL-ownerfixturefailure; separate unchangedDDLowner testpasses. Read

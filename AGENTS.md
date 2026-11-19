@@ -1,5 +1,14 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov19 owner approved this isolated map publication, green hosted CI, merge and
+staged API-first/frontend release. Remote main remains175fba6 at prepublication
+fetch; runtime8c47870 plus acceptance2add538 remain local, not live. Parent owns
+publication/watch/release; independent review is read-only. Use image-only API
+rollout, never the migration-running standard workflow. No migrations, workers,
+source/intake/schedule/access/credential/paid changes authorized. Root research,
+private collector, separate SF/Wake work and CherryHill DRAFT/UNSENT preserved.
+Historical pending-approval notes below are superseded only for this map release.
+
 Nov17 FINAL local map acceptance: runtime8c47870, frontend608/86files7.83s,
 focusedbackend142/actualnonownerPG27.70s, baselinebrowser19pass20gatedskips42.4s,
 newframingdesktop/mobile2/15.3s, builtstrictlocalCSP2/16.3s. Typecheck/build8.95s/

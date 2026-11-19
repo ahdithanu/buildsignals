@@ -1,5 +1,20 @@
 # Current Agent Handoff
 
+## November19: Scoped Map Release Approved
+
+Owner approved publication, hosted checks, merge and staged API-first/frontend
+release of this isolated branch. Fresh fetch confirms origin/main175fba6, so no
+newer-main integration is needed. Runtime8c47870/acceptance2add538 and the honest
+local receipts below remain unchanged; hosted and production acceptance are not
+yet verified. Parent owns publication, exact CI watch, image-only rollout and
+fresh Chrome desktop/mobile verification. Independent review is read-only.
+
+Do not invoke the standard API workflow: it runs migrations. Approval excludes
+migrations, worker updates, sources/intakes, schedules, credentials/access and
+paid calls. Preserve root research, private collector and separate SF/Wake work.
+Keep operational receipts ignored/internal and Cherry Hill inquiry DRAFT/UNSENT.
+Prior pending-approval notes are historical for this map release only.
+
 ## November17 Final: Local Map Acceptance Complete, Release Approval Pending
 
 Runtime checkpoint `8c47870` is local only. The follow-up changes only one browser

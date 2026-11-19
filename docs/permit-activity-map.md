@@ -86,9 +86,10 @@ database migration, permission grant or ingestion job is introduced.
 
 ## Release Gate
 
-This is local implementation and verification, not a deployed fix. Publication,
-green hosted checks, merge and a staged API-first/frontend release need fresh
-applicable approval. Release the compatible aggregate API before the frontend;
+November19: the owner approved publication, green hosted checks, merge and staged
+API-first/frontend release of this isolated fix. It is not yet deployed or
+production-verified. Use an image-only API rollout with no migrations, workers,
+source/schedule/access changes or paid calls. Release the compatible API before the frontend;
 old clients remain supported. Verify real workspace totals, national/default
 entry, selected-state density, refresh and isolation before claiming it live.
 Do not bundle the separate SF native-location or Wake qualification branches,
