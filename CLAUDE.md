@@ -2,6 +2,10 @@
 
 @AGENTS.md
 
+Nov19 PR288 stale module-recovery target corrected to explicit Filings view;
+all existing recovery/session/no-write assertions retained, local1pass8.5s.
+Fresh hosted gates required before rollout; read newest handoff.
+
 Nov19 isolated map publication/green-CI/merge/API-first then frontend release
 approved. Not yet published or live. Read newest handoff; no migration, worker,
 source/schedule/access/paid authority. Historical pending-approval notes below

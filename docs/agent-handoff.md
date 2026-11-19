@@ -1,5 +1,17 @@
 # Current Agent Handoff
 
+## November19: PR288 Hosted Recovery-Test Correction
+
+PR288 initial head637eb2f passed image/frontend/precommit/Gitleaks/Vercel, but
+hosted E2E caught a stale module-load test: `/map?state=CA` now uses the density
+map and no longer imports GeographicMap. Target the explicit Filings view for
+that same controlled download-failure test. All error, reload/new-document,
+session, one-marker and zero-business-write assertions remain unchanged.
+Corrected dedicated offline test1passed8.5s; initial local setup attempt failed
+before testing because the temporary Node directory's npm symlink was missing;
+adding the existing installed npm path resolved setup without product changes.
+Fresh hosted checks on the correction are required; no rollout has occurred.
+
 ## November19: Scoped Map Release Approved
 
 Owner approved publication, hosted checks, merge and staged API-first/frontend

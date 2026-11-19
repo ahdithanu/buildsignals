@@ -112,3 +112,9 @@ Runtime checkpoint `8c47870`, not published or live:
 The final built browser test waits for rendered geometry before measuring it;
 all51 shape, pixel and framing assertions remain. Production counts and CSP
 enforcement were not inferred from synthetic browser fixtures or local checks.
+
+PR288's first hosted browser run also exposed a stale recovery-test target:
+the old GeographicMap fault injection must use explicit Filings, not the new
+activity default. Only that target changed; existing error/reload/session and
+no-write assertions remain. Corrected dedicated offline test:1passed8.5s.
+Fresh hosted checks remain required after this test-only correction.

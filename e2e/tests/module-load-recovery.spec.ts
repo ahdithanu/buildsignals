@@ -6,7 +6,7 @@ import path from 'node:path';
 test.skip(process.env.RUN_MODULE_LOAD_E2E !== '1', 'Use the dedicated offline module-load config');
 
 test('Reload page recovers one failed map import without losing the viewer session', async ({ playwright }, info) => {
-  const web = 'http://localhost:8119', api = 'http://localhost:8687', target = `${web}/map?state=CA`;
+  const web = 'http://localhost:8119', api = 'http://localhost:8687', target = `${web}/map?view=filings&state=CA`;
   const profile = await mkdtemp(path.join(tmpdir(), 'buildsignals-module-reload-'));
   const context = await playwright.chromium.launchPersistentContext(profile, {
     channel: info.project.use.channel, headless: info.project.use.headless, serviceWorkers: 'block',

@@ -1,5 +1,9 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov19 PR288 initial637eb2f hosted E2E found stale module-failure target after
+default-map change; explicitFilings target preserves all recovery assertions.
+Dedicatedlocal1pass8.5s; freshhostedchecks required. No rollout yet. Readhandoff.
+
 Nov19 owner approved this isolated map publication, green hosted CI, merge and
 staged API-first/frontend release. Remote main remains175fba6 at prepublication
 fetch; runtime8c47870 plus acceptance2add538 remain local, not live. Parent owns
