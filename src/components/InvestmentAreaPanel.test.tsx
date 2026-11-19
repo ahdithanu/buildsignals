@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ApiError, apiClient } from '@/api/client';
-import { investmentAreasApi, type InvestmentAreaResponse } from '@/api/investmentAreas';
+import { investmentAreasApi, type InvestmentAreaResponse, type RankedMarketsResponse } from '@/api/investmentAreas';
 import { InvestmentAreaPanel } from './InvestmentAreaPanel';
 
 let auth = { organizationId: 'org-a', user: { id: 'user-a' }, role: 'viewer', isAuthenticated: true, isLoading: false };
@@ -11,6 +11,7 @@ vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 const fixture: InvestmentAreaResponse = {
   model_version: 'metro-research-v0.3', input_mode: 'release_reference', status: 'research', year: 2025,
   captured_at: '2026-11-09T12:00:00Z', snapshot_id: 'test-snapshot', cohort_size: 50,
+  icp_tier: 'emerging', icp_rationale: 'Above-cohort growth; price growth leads (momentum P80, supply P60).',
   market: { cbsa: '36100', name: 'Ocala', score: 0.7, momentum_percentile: 0.8,
     supply_percentile: 0.6, price_momentum_2yr: 0.04, supply_surge: 0.1,
     population_growth_1yr: null, net_migration_per_1000: null },
@@ -19,7 +20,27 @@ const fixture: InvestmentAreaResponse = {
     geography_match: 'declared_source_scope', is_complete_metro_inventory: false },
   investment_quality: { status: 'insufficient_data', missing: ['rent_yield', 'vacancy'] },
   provenance: [{ label: 'Public records', captured_at: '2026-11-09T12:00:00Z', period: '2025' }],
+  frontier: { status: 'disabled', parcel_candidates: { status: 'research_preview', note: 'Needs external GIS + licensed listings feed.' } },
+  appreciation: { status: 'disabled', projection: { status: 'research_preview', note: 'Withheld until backtested.' } },
   limitations: ['Research snapshot; no expected-return validation.'],
+};
+
+const rankedFixture: RankedMarketsResponse = {
+  model_version: 'metro-research-v0.3', status: 'research', year: 2025,
+  captured_at: '2026-11-09T12:00:00Z', snapshot_id: 'test-snapshot', input_mode: 'release_reference',
+  cohort_size: 360, matched: 2, offset: 0, limit: 200, local_evidence_metros: 1,
+  tier_counts: { strong: 42, emerging: 118, stable: 200 },
+  markets: [
+    { rank: 1, cbsa: '45300', name: 'Tampa, FL', score: 0.98, icp_tier: 'strong',
+      icp_rationale: 'Price growth (P99) and development (P90) both lead the cohort.',
+      momentum_percentile: 0.99, supply_percentile: 0.9,
+      price_momentum_2yr: 0.3, supply_surge: 1.1, population_growth_1yr: null, net_migration_per_1000: null, has_local_evidence: false },
+    { rank: 2, cbsa: '36100', name: 'Ocala, FL', score: 0.7, icp_tier: 'emerging',
+      icp_rationale: 'Above-cohort growth; price growth leads (momentum P80, supply P60).',
+      momentum_percentile: 0.8, supply_percentile: 0.6,
+      price_momentum_2yr: 0.04, supply_surge: 1.1, population_growth_1yr: null, net_migration_per_1000: null, has_local_evidence: true },
+  ],
+  limitations: ['Research relative growth ranking; not an expected return.'],
 };
 
 beforeEach(() => {
@@ -28,6 +49,9 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function setup() {
+  if (!vi.isMockFunction(investmentAreasApi.ranked)) {
+    vi.spyOn(investmentAreasApi, 'ranked').mockResolvedValue(rankedFixture);
+  }
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   const view = <QueryClientProvider client={client}><InvestmentAreaPanel /></QueryClientProvider>;
   return { ...render(view), client };
@@ -103,8 +127,84 @@ it('does not fetch without an authenticated workspace', () => {
   expect(screen.getByText(/Sign in to a workspace/)).toBeInTheDocument();
 });
 
+it('shows frontier hotspots and the not-live parcel preview when enabled, hidden when disabled', async () => {
+  const get = vi.spyOn(investmentAreasApi, 'get').mockResolvedValue({ ...fixture,
+    frontier: { status: 'research', model_version: 'frontier-hotspots-v0.1', reference_year: 2025, evidence_points: 12,
+      hotspots: [{ lat: 44.01, lon: -121.27, recent: 6, prior: 1, acceleration: 6, dev_share: 1, score: 42, sample_address: '27TH ST' }],
+      parcel_candidates: { status: 'research_preview', note: 'Needs external GIS + licensed listings feed.' } } });
+  setup();
+  expect(await screen.findByText('Frontier hotspots')).toBeInTheDocument();
+  expect(screen.getByText('27TH ST')).toBeInTheDocument();
+  expect(screen.getByText(/6x accel/)).toBeInTheDocument();
+  expect(screen.getByText(/Needs external GIS/)).toBeInTheDocument();
+
+  get.mockResolvedValue(fixture);           // disabled fixture
+  auth = { ...auth, organizationId: 'org-frontier-off' };
+  cleanup();
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.queryByText('Frontier hotspots')).not.toBeInTheDocument();
+});
+
+it('shows the appreciation backtest gate when enabled, without a return number, and hides it when disabled', async () => {
+  const get = vi.spyOn(investmentAreasApi, 'get').mockResolvedValue({ ...fixture,
+    appreciation: { status: 'insufficient_history', model_version: 'appreciation-backtest-v0.1',
+      calibration: { status: 'insufficient_history', observation_count: 0, horizons: [] },
+      projection: { status: 'research_preview', note: 'Withheld until backtested.' },
+      required: 'A projection needs multi-vintage HPI history to backtest.',
+      limitations: ['Last and most gated layer.'] } });
+  setup();
+  expect(await screen.findByText('Appreciation outlook')).toBeInTheDocument();
+  expect(screen.getByText('Not yet backtested')).toBeInTheDocument();
+  expect(screen.getByText(/multi-vintage HPI history/)).toBeInTheDocument();
+  expect(screen.getByText(/0 out-of-sample observation/)).toBeInTheDocument();
+
+  get.mockResolvedValue(fixture);           // disabled fixture
+  auth = { ...auth, organizationId: 'org-appr-off' };
+  cleanup();
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.queryByText('Appreciation outlook')).not.toBeInTheDocument();
+});
+
+it('surfaces the nationwide ranked cohort in the metro picker', async () => {
+  vi.spyOn(investmentAreasApi, 'get').mockResolvedValue(fixture);
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.getByText(/360 metros ranked nationwide/)).toBeInTheDocument();
+  expect(screen.getByText(/1 with local permit evidence/)).toBeInTheDocument();
+  const combo = screen.getByRole('combobox', { name: 'Metro' });
+  expect(within(combo).getByRole('option', { name: /Tampa, FL/ })).toBeInTheDocument();
+  expect(within(combo).getByRole('option', { name: /Ocala, FL/ })).toBeInTheDocument();
+});
+
+it('searches the ranked cohort by typing a metro name', async () => {
+  vi.spyOn(investmentAreasApi, 'get').mockResolvedValue(fixture);
+  const ranked = vi.spyOn(investmentAreasApi, 'ranked').mockResolvedValue(rankedFixture);
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search metros' }), { target: { value: 'Austin' } });
+  await waitFor(() => expect(ranked).toHaveBeenLastCalledWith({ q: 'Austin', limit: 200 }));
+});
+
+it('shows the selected metro ICP tier badge and rationale', async () => {
+  vi.spyOn(investmentAreasApi, 'get').mockResolvedValue(fixture);
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.getByText('ICP: Emerging')).toBeInTheDocument();
+  expect(screen.getByText(/Above-cohort growth; price growth leads/)).toBeInTheDocument();
+});
+
+it('shows the nationwide ICP tier distribution in the caption', async () => {
+  vi.spyOn(investmentAreasApi, 'get').mockResolvedValue(fixture);
+  setup();
+  await screen.findByText('Investment quality unavailable');
+  expect(screen.getByText(/42 strong · 118 emerging · 200 stable/)).toBeInTheDocument();
+});
+
 it('shows available demand context without inventing an unavailable ranking', async () => {
   vi.spyOn(investmentAreasApi, 'get').mockResolvedValue({ ...fixture, status: 'insufficient_data',
+    icp_tier: null, icp_rationale: null,
     market: { ...fixture.market, score: null, momentum_percentile: null, supply_percentile: null,
       price_momentum_2yr: null, supply_surge: null, population_growth_1yr: .03 } });
   setup();

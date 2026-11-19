@@ -1,5 +1,37 @@
 # Current Agent Handoff
 
+## November18: Nationwide ICP track (branch codex/nationwide-icp, PR #287)
+
+Branch `codex/nationwide-icp` off `main`, PR #287 (open, APPROVED, CI pending,
+NOT merged). Four stacked increments make the investment-area research panel one
+iterating surface where model and coverage grow together. See
+`docs/nationwide-icp.md` for the full per-increment record.
+
+- Increment 1 `5a03c31` — surface the nationwide ranked cohort (`ranked_markets`,
+  `GET /investment-areas/ranked`, searchable metro picker). Additive, no flag.
+- Increment 2 `92361dc` — ICP tiering (strong/emerging/stable) set only by the two
+  scored percentiles; population/migration are rationale context, never tier inputs.
+- Increment 3 `0fedc3a` — frontier hotspots, keyed by CBSA, from the tenant's own
+  geocoded permit evidence. Gated dark behind `FRONTIER_HOTSPOTS_ENABLED`; the
+  ranked-parcel step stays a `research_preview`.
+- Increment 4 (this change, uncommitted) — appreciation layer as a **backtest
+  gate** (`app/services/appreciation.py`). Pure `backtest()` +
+  `observations_from_snapshot()`; `investment_areas.appreciation()` gated off by
+  default behind `APPRECIATION_OUTLOOK_ENABLED`. The packaged 2025 reference has a
+  single HPI vintage pair, so the gate is `insufficient_history` and NO projection
+  is served. Next data task: package multi-vintage HPI history so disjoint
+  signal/realized windows exist, then render a distribution only if it calibrates.
+
+Honesty gates held throughout: relative research rank only,
+`investment_quality = insufficient_data`, no expected-return claim; tier/evidence
+flags never touch the score; hotspots and appreciation never fabricate.
+
+Verification (increment 4): `-k "investment or frontier or appreciation"` backend
+green, `ruff` clean, `tsc` clean, InvestmentAreaPanel vitest green. Local only;
+increments 1–3 pushed, increment 4 not yet committed/pushed. No source activation,
+migration, paid calls, merge or deploy. Root research/private collector untouched;
+Cherry Hill DRAFT/UNSENT.
+
 ## November16: Local Privacy And Packaging Integration
 
 Owner requested a new isolated codex/owner-only-coverage-integration worktree
