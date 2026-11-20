@@ -1,5 +1,50 @@
 # BuildSignals: Shared Agent Instructions
 
+Nov19 PR288 initial637eb2f hosted E2E found stale module-failure target after
+default-map change; explicitFilings target preserves all recovery assertions.
+Dedicatedlocal1pass8.5s; freshhostedchecks required. No rollout yet. Readhandoff.
+
+Nov19 owner approved this isolated map publication, green hosted CI, merge and
+staged API-first/frontend release. Remote main remains175fba6 at prepublication
+fetch; runtime8c47870 plus acceptance2add538 remain local, not live. Parent owns
+publication/watch/release; independent review is read-only. Use image-only API
+rollout, never the migration-running standard workflow. No migrations, workers,
+source/intake/schedule/access/credential/paid changes authorized. Root research,
+private collector, separate SF/Wake work and CherryHill DRAFT/UNSENT preserved.
+Historical pending-approval notes below are superseded only for this map release.
+
+Nov17 FINAL local map acceptance: runtime8c47870, frontend608/86files7.83s,
+focusedbackend142/actualnonownerPG27.70s, baselinebrowser19pass20gatedskips42.4s,
+newframingdesktop/mobile2/15.3s, builtstrictlocalCSP2/16.3s. Typecheck/build8.95s/
+scopedlint/Ruff/drift/harness/independentreview pass. Fullbackend3468pass+1existing
+DDL-ownerfixturefailure/91.59%/3warnings679.43s; unchangedDDLtestseparatelypasses
+freshrestrictedownerDB0.14s. Do notcalloneallgreenfullsuite. OwnedPGstopped;
+finalserversshutdownverification recordedinhandoff. Newesttestwaitpreservesall
+51geometry/pixel/framingassertions. Publication/stagedreleaseapprovalrequested,
+pending; notpushed/merged/live. No source/schedule/access/paid/collectorchange.
+
+Nov17 checkpoint preparation: default national permit activity, complete bounded
+state density, URL/nav/history/refresh/focus fixes implemented locally. Backend
+full3468pass/1existingDDL-ownerfixturefailure/zero skips/91.59%/3warnings679.43s;
+unchangedDDLtestpassed separately0.14s on freshnonbypassowner target. Mapnonowner
+targetunchanged; focusedmap142pass27.70s, ownedPGstopped/statusconfirmed.
+Frontend608pass86files; reviewaccepted. Browserdesktop/mobile/strictCSP passed
+before finalSVGheightcap; finalframing/fullbaseline runs interrupted, pending.
+Read newesthandoff for exactstates; no blanketgreen/fullsuite/live claim.
+No publication/release/source/schedule/access/paid authority. Rootpreserved.
+
+Nov16 CURRENT local map-consistency task in codex/permit-activity-heatmap on
+releasedmain175fba6. Userwantsoneconsistentdefaultall-regionpermitheatmap, then
+statefilter; ingestionisnot UIselection. ParentownsAcquisitionMap/ActivityExplorer/
+frontendcontracts/dependencies/assets/harness/browser. RussellownsdensityAPI/
+schema/service/tests; Harveyownsnewnationalchoropleth+stateDensityMap/tests.
+Onewriterperfileset. Nationalheatcountsallstoredpermitsincludingunmapped, uses
+pinnedpublicCensus51stateoutlines+D3AlbersUSA(noinventedactivity). State density
+usesboundedDBaggregates ofalllocatedpermits, notfirst100pins orparcelcounts.
+FixURLauthoritativefilters/navreset; no refreshautozoom. No new source/schedule/
+credential/IAM/migration/paid/prodtask/push/merge/release authority. PriorSF
+parcelone-shotconsumed; CherryHill DRAFT/UNSENT. Rootresearch/collector preserved.
+
 Nov16 integration: local-only codex/owner-only-coverage-integration normally merges
 privacy9e0e446 with packaging2f60682. Preserve both gates below; no new product
 changes or private operational receipts. Integration147backend/569frontend82files/

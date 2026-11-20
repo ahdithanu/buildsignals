@@ -11,6 +11,7 @@ from app.models.parcel import ParcelRecord
 from app.models.planning import PlanningRecord
 from app.services.demo_access import demo_read_only
 from app.services.map_coverage import get_map_coverage, list_map_records
+from app.services.permit_density import get_permit_density
 from tests.research_postgres_support import RUN_ID, URL, tenant_session
 from tests.snapshot_postgres_support import verified_snapshot_connection
 from tests.test_map_coverage import inventory_writer
@@ -127,3 +128,49 @@ def test_unset_database_tenant_denies_even_a_matching_app_context(inventory_tena
                                         ("parcel_records", foreign_ids["parcel"])):
                     # Table identifiers are fixed test literals, never user input.
                     assert connection.scalar(text(f"SELECT id FROM {table} WHERE id=:id"), {"id": identity}) is None
+
+
+def test_density_aggregates_all_rows_under_actual_rls_and_readonly(monkeypatch):
+    monkeypatch.setattr(config, "SF_DERIVED_LOCATIONS_ENABLED", False)
+    own, foreign = str(uuid4()), str(uuid4())
+    with tenant_session(own) as db:
+        add = inventory_writer(db, own)
+        for index in range(230):
+            add("permit", state="TX", latitude=30 + index / 1000, longitude=-97)
+        for _index in range(140):
+            add("permit", state="OH", latitude=None, longitude=None)
+        db.commit()
+    with tenant_session(foreign) as db:
+        inventory_writer(db, foreign)("permit", state="TX", latitude=32, longitude=-98)
+        db.commit()
+    with _read_only(own) as db:
+        connection = db.connection()
+        statements = []
+
+        def capture(_connection, cursor, statement, _parameters, _context, _many):
+            statements.append((statement, cursor.rowcount))
+
+        event.listen(connection, "after_cursor_execute", capture)
+        try:
+            density = get_permit_density(db)
+            texas = get_permit_density(db, state="TX")
+            ohio = get_permit_density(db, state="OH")
+        finally:
+            event.remove(connection, "after_cursor_execute", capture)
+        assert density.total_permits == 370
+        assert density.mapped_permits == sum(cell.count for cell in density.cells) == 230
+        assert density.unmapped_permits == 140
+        assert texas.total_permits == texas.mapped_permits == 230
+        assert ohio.total_permits == ohio.unmapped_permits == 140 and not ohio.cells
+        assert len(statements) == 3
+        assert all(sql.lstrip().upper().startswith("SELECT") for sql, _rows in statements)
+        assert all(0 <= rows <= 2050 for _sql, rows in statements)
+        assert all("GROUP BY" in sql.upper() and "LIMIT" in sql.upper() for sql, _rows in statements)
+        assert not db.new and not db.dirty and not db.deleted
+    with _read_only(foreign) as db:
+        assert get_permit_density(db).total_permits == 1
+    with tenant_session(own):
+        with verified_snapshot_connection(URL, RUN_ID) as connection:
+            with connection.begin():
+                connection.exec_driver_sql("SET TRANSACTION READ ONLY")
+                assert connection.scalar(text("SELECT count(*) FROM permit_records")) == 0

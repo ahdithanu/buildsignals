@@ -15,6 +15,81 @@ SF_ORG_ID = "55555555-5555-4555-8555-555555555555"
 SF_SOURCE_ID = "66666666-6666-4666-8666-666666666666"
 SF_PERMIT_ID = "88888888-8888-4888-8888-888888888888"
 RETAIL_ORG_ID = "99999999-9999-4999-8999-999999999999"
+PERMIT_ACTIVITY_ORG_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+PERMIT_ACTIVITY_USER_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+
+
+def _seed_permit_activity_fixture(db, directory):
+    """Opt-in synthetic geography; no shared fixture tenant or external acquisition."""
+    import csv
+    from datetime import datetime, timezone
+
+    from app.models.ingestion import PermitRecord
+    from app.models.organization import Organization
+    from app.models.organization_membership import MemberRole, OrganizationMembership
+    from app.models.user import User
+    from app.schemas.ingestion import IngestionSourceCreate
+    from app.services.ingestion.service import create_source, execute_source_run
+    from app.services.security import hash_password
+    from app.utils.org_scope import RequestContext, reset_current_context, set_current_context
+
+    db.add_all([
+        Organization(id=PERMIT_ACTIVITY_ORG_ID, name="SYNTHETIC permit activity workspace",
+                     slug="synthetic-permit-activity"),
+        User(id=PERMIT_ACTIVITY_USER_ID, email="synthetic-permit-map@example.com",
+             full_name="Synthetic permit map viewer", password_hash=hash_password("E2ePermitMapOnly42!"),
+             is_active=True, is_superuser=False),
+    ])
+    db.flush()
+    db.add(OrganizationMembership(organization_id=PERMIT_ACTIVITY_ORG_ID,
+                                  user_id=PERMIT_ACTIVITY_USER_ID, role=MemberRole.viewer, is_default=True))
+    db.commit()
+    # Distinct synthetic positions span each state instead of one co-located marker.
+    groups = (
+        ("TX", 164, 144, 29.5, -102.0, 12),
+        ("FL", 121, 96, 26.0, -81.8, 8),
+        ("CA", 28, 20, 34.0, -119.0, 4),
+        ("OH", 37, 0, None, None, 0),
+    )
+    mappings = {"id": "source_record_id", "address": "address", "city": "city", "state": "state",
+                "latitude": "latitude", "longitude": "longitude", "title": "project_name",
+                "filed": "filed_at", "stage": "approval_stage"}
+    token = set_current_context(RequestContext(PERMIT_ACTIVITY_ORG_ID, PERMIT_ACTIVITY_USER_ID))
+    try:
+        for state, count, mapped, latitude, longitude, positions in groups:
+            path = Path(directory) / f"synthetic-permit-activity-{state.lower()}.csv"
+            with path.open("w", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=list(mappings))
+                writer.writeheader()
+                for number in range(count):
+                    position = number % positions if positions else 0
+                    writer.writerow({
+                        "id": f"SYNTHETIC-ACTIVITY-{state}-{number:03}",
+                        "address": f"{number + 1} Synthetic Activity Street", "city": "Synthetic test locality",
+                        "state": state, "title": f"SYNTHETIC {state} permit {number:03} - not a real filing",
+                        "latitude": latitude + position * .2 if number < mapped else "",
+                        "longitude": longitude + position * .25 if number < mapped else "",
+                        "filed": datetime(2026, 1, 1, tzinfo=timezone.utc).isoformat(), "stage": "pre_approval",
+                    })
+            source = create_source(db, IngestionSourceCreate(
+                key=f"synthetic-permit-activity-{state.lower()}", name="SYNTHETIC permit activity CSV",
+                adapter="csv", record_type="permit", base_url=str(path), jurisdiction=f"Synthetic fixture, {state}",
+                settings={"synthetic_e2e_fixture": True, "schedule_mode": "manual",
+                          "schedule": {"enabled": False}, "canary_enabled": False},
+                field_mappings=[{"source_field": key, "canonical_field": value}
+                                for key, value in mappings.items()],
+            ))
+            db.commit()
+            result = execute_source_run(db, source, max_pages=2)
+            if result.status != "completed" or result.records_failed or result.records_inserted != count:
+                raise RuntimeError(f"Synthetic permit activity ingestion failed for {state}")
+        permits = db.query(PermitRecord).filter_by(organization_id=PERMIT_ACTIVITY_ORG_ID, is_active=True)
+        if permits.count() != 350 or permits.filter(PermitRecord.latitude.is_not(None)).count() != 260:
+            raise RuntimeError("Synthetic permit activity fixture totals do not reconcile")
+        if permits.filter(PermitRecord.state == "OH", PermitRecord.latitude.is_not(None)).count():
+            raise RuntimeError("Synthetic Ohio fixture must remain unmapped-only")
+    finally:
+        reset_current_context(token)
 
 
 def _seed_retail_replay_fixture(db, directory):
@@ -172,6 +247,7 @@ def _seed_sf_map_fixture(db):
 def main():
     sf_map_enabled = os.environ.get("RUN_SF_MAP_E2E") == "1"
     research_enabled = os.environ.get("RUN_RESEARCH_E2E") == "1"
+    permit_activity_enabled = os.environ.get("RUN_PERMIT_ACTIVITY_MAP_E2E") == "1"
     api_port = int(os.environ.get("E2E_API_PORT") or "8000")
     web_port = int(os.environ.get("E2E_WEB_PORT") or "8080")
     if not all(1 <= port <= 65535 for port in (api_port, web_port)):
@@ -210,7 +286,7 @@ def main():
             "DEMO_ENABLED": "true",
             "INTERNAL_OPERATIONS_USER_IDS": OPERATOR_USER_ID,
         })
-        if (sf_map_enabled or research_enabled or os.environ.get("RUN_CRITERIA_E2E") == "1"
+        if (sf_map_enabled or research_enabled or permit_activity_enabled or os.environ.get("RUN_CRITERIA_E2E") == "1"
                 or os.environ.get("RUN_PARCEL_USE_E2E") == "1"
                 or os.environ.get("RUN_COVERAGE_MAP_E2E") == "1"):
             _deny_external_sockets()
@@ -281,6 +357,8 @@ def main():
                 from e2e.coverage_map_fixture import seed_coverage_map_fixture
 
                 seed_coverage_map_fixture(db, OPERATOR_ORG_ID, OPERATOR_USER_ID, directory)
+            if permit_activity_enabled:
+                _seed_permit_activity_fixture(db, directory)
 
         try:
             uvicorn.run(app, host="127.0.0.1", port=api_port, log_level="warning")

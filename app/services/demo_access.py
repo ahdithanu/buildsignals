@@ -36,6 +36,8 @@ def demo_path_allowed(method: str, path: str) -> bool:
         "/auth/me", "/demo/summary", "/demo/parcel-references", "/demo/parcel-filings", "/demo/map",
         "/demo/graph-neighbors", "/demo/graph-hubs", "/demo/parcel-paths", "/demo/activity",
         "/ingestion/permits",
+        # Audited tenant-scoped, side-effect-free inventory aggregates only.
+        "/acquisition-map/coverage", "/acquisition-map/permit-density",
     } or bool(re.fullmatch(
         r"/(?:ingestion/permits/[a-f0-9-]{36}|graph/entities/[a-f0-9-]{36}(?:/related)?|graph/relationships/[a-f0-9-]{36})",
         path,

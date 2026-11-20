@@ -32,9 +32,9 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
         if (ownedOrigins.has(url.origin) && !refresh && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) writes.push(request.url());
       });
       const measured = page.waitForResponse(response => response.url().includes('/acquisition-map/coverage?') && response.status() === 200);
-      await page.goto('/map');
+      await page.goto('/map?view=coverage');
       const coverage = page.getByRole('region', { name: 'Inventory coverage', exact: true });
-      await expect(page.getByRole('tab', { name: 'Coverage', exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByRole('tab', { name: 'Inventory', exact: true })).toHaveAttribute('aria-selected', 'true');
       expect((await (await measured).json()).totals).toEqual({ permit_count: 145, planning_count: 2, parcel_count: 70, mapped_count: 161, unmapped_count: 56 });
       const totals = coverage.getByLabel('Inventory totals');
       for (const count of ['145', '2', '70', '161', '56']) await expect(totals.getByText(count, { exact: true })).toBeVisible();

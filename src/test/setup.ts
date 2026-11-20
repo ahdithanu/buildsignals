@@ -7,6 +7,9 @@ const storageWindow = new JSDOM('', { url: 'https://buildsignals.test' }).window
 Object.defineProperty(window, 'localStorage', { configurable: true, value: storageWindow.localStorage });
 Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storageWindow.localStorage });
 
+// JSDOM has no scrolling layout; individual navigation tests can spy on this API.
+Object.defineProperty(window, 'scrollTo', { configurable: true, writable: true, value: () => {} });
+
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({

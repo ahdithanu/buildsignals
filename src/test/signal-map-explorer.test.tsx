@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,6 +18,33 @@ function show(node = <SignalMapExplorer />) {
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter>{node}</MemoryRouter></QueryClientProvider>);
 }
 describe('independent signal map', () => {
+  it('resets pagination and selection for controlled scope changes without replacing the focused input', async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (_path, params) => ({
+      items: [{ id: `${params?.state || 'all'}-${params?.offset || 0}`, kind: 'permit', title: 'Scoped filing',
+        latitude: 40, longitude: -83, raw_record_id: 'raw-scope' }],
+      truncated_layers: ['permit'], limit_per_layer: 100, offset_per_layer: params?.offset || 0,
+      next_offset: 100, previous_offset: params?.offset ? 0 : null,
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const node = (state: string) => <QueryClientProvider client={client}><MemoryRouter><SignalMapExplorer state={state} /></MemoryRouter></QueryClientProvider>;
+    const view = render(node('CA'));
+    fireEvent.click(await screen.findByRole('button', { name: /^Next$/ }));
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/acquisition-map/signals', { limit: 100, offset: 100, state: 'CA' }));
+    await waitFor(() => expect(screen.getByRole('option', { name: /Scoped filing/ })).toHaveValue('permit:CA-100'));
+    fireEvent.change(screen.getByLabelText('Source record'), { target: { value: 'permit:CA-100' } });
+    const input = screen.getByLabelText('State abbreviation');
+    input.focus(); view.rerender(node('T'));
+    expect(screen.getByLabelText('State abbreviation')).toBe(input);
+    expect(input).toHaveFocus();
+    view.rerender(node('TX'));
+    expect(input).toHaveValue('TX'); expect(input).toHaveFocus();
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/acquisition-map/signals', { limit: 100, offset: 0, state: 'TX' }));
+    expect(await screen.findByLabelText('Source record')).toHaveValue('');
+    view.rerender(node('CA'));
+    expect(await screen.findByLabelText('Source record')).toHaveValue('');
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/acquisition-map/signals', { limit: 100, offset: 0, state: 'CA' }));
+    client.clear();
+  });
   it('labels derived precision and passes its method to the map without exposing geocoder details', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       items: [{ id: 'sf1', kind: 'permit', title: 'SF filing', latitude: 37.77, longitude: -122.42,

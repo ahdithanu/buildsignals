@@ -1,9 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter as Router, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AcquisitionMap from '@/pages/AcquisitionMap';
 import type { GeographicPoint } from '@/components/GeographicMap';
+
+// These assertions exercise the explicit inventory/parcel workspace, not the national default.
+function MemoryRouter({ children, initialEntries = ['/map?view=coverage'] }: React.ComponentProps<typeof Router>) {
+  return <Router initialEntries={initialEntries}>{children}</Router>;
+}
 
 vi.mock('@/components/CoverageMapExplorer', () => ({
   CoverageMapExplorer: ({ state, onStateChange }: { state?: string; onStateChange?: (value: string) => void }) => (
@@ -128,12 +133,12 @@ describe('<AcquisitionMap> states', () => {
   it('starts with full geographic inventory even when there are no ranked searches', () => {
     render(<MemoryRouter><AcquisitionMap /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Coverage overview' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Coverage' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Inventory' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByText('Signal geography')).not.toBeInTheDocument();
   });
   it('preserves the unknown-state coverage selection in the shared URL', () => {
     function Location() { return <output aria-label="Map location">{useLocation().search}</output>; }
-    render(<MemoryRouter initialEntries={['/map?state=__unknown__']}><AcquisitionMap /><Location /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/map?view=coverage&state=__unknown__']}><AcquisitionMap /><Location /></MemoryRouter>);
     expect(screen.getByText('Coverage state __unknown__')).toBeInTheDocument();
     expect(screen.getByLabelText('Map location')).toHaveTextContent('state=__unknown__');
     expect(screen.queryByText('No ranked parcels yet')).not.toBeInTheDocument();
@@ -144,6 +149,19 @@ describe('<AcquisitionMap> states', () => {
 
     expect(screen.getByText('No ranked parcels yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open permit review' })).toHaveAttribute('href', '/permit-review');
+  });
+
+  it('preserves the focused state text control while typing a replacement code', () => {
+    populateRadar('sf-estimate');
+    render(<MemoryRouter initialEntries={['/map?view=coverage&state=CA']}><AcquisitionMap /></MemoryRouter>);
+    const input = screen.getByLabelText('Filter acquisition map by state');
+    input.focus();
+    fireEvent.change(input, { target: { value: 'T' } });
+    expect(screen.getByLabelText('Filter acquisition map by state')).toBe(input);
+    expect(input).toHaveFocus();
+    fireEvent.change(input, { target: { value: 'TX' } });
+    expect(input).toHaveValue('TX');
+    expect(input).toHaveFocus();
   });
 
   it('gates an estimated selection even when the parcel radar is empty', () => {
@@ -332,7 +350,7 @@ describe('<AcquisitionMap> states', () => {
       },
     };
 
-    render(<MemoryRouter initialEntries={['/map?state=TX&zip3=787']}><AcquisitionMap /></MemoryRouter>);
+    render(<MemoryRouter initialEntries={['/map?view=coverage&state=TX&zip3=787']}><AcquisitionMap /></MemoryRouter>);
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Filings' }), { button: 0, ctrlKey: false });
 
     expect(screen.getByText('ZIP3 opportunity heat')).toBeInTheDocument();
@@ -345,7 +363,7 @@ describe('<AcquisitionMap> states', () => {
       '/acquisition-radar?state=TX&zip3=787',
     );
     fireEvent.click(screen.getByRole('button', { name: 'Copy map view' }));
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://app.buildsignals.ai/map?state=TX&zip3=787');
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://app.buildsignals.ai/map?view=filings&state=TX&zip3=787');
     fireEvent.click(screen.getByRole('button', { name: 'Set signal geography state' }));
     expect(screen.getByDisplayValue('TX')).toBeInTheDocument();
     expect(screen.getByText('Signal state TX')).toBeInTheDocument();

@@ -13,6 +13,7 @@ from app.models.organization_membership import MemberRole, OrganizationMembershi
 from app.models.parcel import ParcelRecord
 from app.models.planning import PlanningRecord
 from app.models.user import User
+from app.services.demo_access import DEMO_ORG_ID
 from app.services.map_coverage import get_map_coverage, list_map_records
 from app.services.map_signals import list_map_signals
 from app.services.security import create_access_token
@@ -322,9 +323,44 @@ def test_http_tenant_context_is_not_selected_by_query_parameters(client, db, rec
         assert client.get("/acquisition-map/records?" + query, headers=headers).status_code == 422
 
 
-@pytest.mark.parametrize("endpoint", ["coverage", "records"])
-def test_new_routes_remain_demo_denied(client, demo, endpoint):
-    assert client.get(f"/acquisition-map/{endpoint}", headers=demo_headers(client)).status_code == 403
+@pytest.mark.parametrize("endpoint,expected_status", [("coverage", 200), ("records", 403)])
+def test_demo_coverage_is_readonly_and_record_details_remain_denied(
+    client, db, demo, endpoint, expected_status,
+):
+    permit = inventory_writer(db, DEMO_ORG_ID)(
+        source_url="https://example.invalid/PRIVATE_SOURCE_URL",
+    )
+    db.commit()
+    headers = demo_headers(client)
+    models = (PermitRecord, RawSourceRecord, IngestionSource)
+    counts = {model: db.query(model).count() for model in models}
+    statements = []
+
+    def capture(_connection, _cursor, statement, _parameters, _context, _many):
+        statements.append(statement)
+
+    engine = db.get_bind()
+    event.listen(engine, "before_cursor_execute", capture)
+    try:
+        response = client.get(f"/acquisition-map/{endpoint}", headers=headers)
+        read_statements = len(statements)
+        for method in ("POST", "PUT", "PATCH", "DELETE"):
+            assert client.request(method, f"/acquisition-map/{endpoint}", headers=headers).status_code == 403
+        assert len(statements) == read_statements
+    finally:
+        event.remove(engine, "before_cursor_execute", capture)
+    assert response.status_code == expected_status
+    for private in ("DO_NOT_EXPOSE_RAW", "source_id", "raw_record", "source_url",
+                    "private-provider-", "PRIVATE_SOURCE_URL", permit.source_id,
+                    permit.latest_raw_record_id, permit.id):
+        assert private not in response.text
+    if endpoint == "coverage":
+        assert response.headers["cache-control"] == "no-store"
+        assert response.json()["totals"]["permit_count"] == 2
+        assert statements and all(sql.lstrip().upper().startswith("SELECT") for sql in statements)
+    else:
+        assert statements == []
+    assert {model: db.query(model).count() for model in models} == counts
 
 
 @pytest.mark.parametrize("arguments", [
