@@ -1,5 +1,30 @@
 # Current Agent Handoff
 
+## November21: Password Recovery Release Preparation
+
+This isolated branch on current main contains only the recovery repair and
+its tests/documentation. It excludes the source worktree's private operational
+history and separate ForgeOS/retail work. Recovery audits use persisted active
+membership and restore transaction/request scope. Deployed missing transport
+configuration returns uniform503; recipient-specific outcomes remain generic.
+The UI preserves input and reports retryable failures without promising email.
+Resend2.55.0 is pinned with explicit I/O timeout; refresh-cookie revocation does
+not revoke already-issued access JWTs before expiry. No migration is required.
+
+Fresh local frontend613/86files8.16s, typecheck/scopedlint/E2E TypeScript and
+build3.99s passed (existing Zod/chunk warnings). Dedicated local desktop/mobile
+browser2 passed9.9s with zero skips/retries; actual unavailable503 followed by
+explicitly simulated204 is not live mail proof. Owned servers stopped. Full
+backend acceptance, final image/hosted checks and production delivery remain
+pending; never infer them from earlier receipts. Runtime scope matches the
+previously tested recovery checkpoint; unrelated CI harness step was removed.
+
+Owner approved publication and recovery rollout after passing checks, including
+secure provider configuration. Keep exact grants, secret references, deployment
+identifiers and delivery receipts internal. Do not run the migration-running
+standard API workflow. Preserve unrelated service settings, ingestion workers,
+sources, schedules, root research and Cherry Hill inquiry DRAFT/UNSENT.
+
 ## November19: PR288 Hosted Recovery-Test Correction
 
 PR288 initial head637eb2f passed image/frontend/precommit/Gitleaks/Vercel, but

@@ -1,5 +1,13 @@
 # BuildSignals: Shared Agent Instructions
 
+November21 recovery-only release is being prepared on current main in isolated
+codex/password-recovery-release. Persisted membership scopes recovery audits;
+unconfigured deployed email returns uniform503 and the UI reports failures.
+Read newest handoff/runbooks/password-recovery.md. Local frontend613/dedicated
+browser2 passed; final backend, hosted CI and deployment remain pending.
+Keep credentials and operational receipts private. Do not include separate
+retail/ForgeOS research or run production migrations in this recovery release.
+
 Nov19 PR288 initial637eb2f hosted E2E found stale module-failure target after
 default-map change; explicitFilings target preserves all recovery assertions.
 Dedicatedlocal1pass8.5s; freshhostedchecks required. No rollout yet. Readhandoff.

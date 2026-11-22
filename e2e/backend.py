@@ -248,6 +248,7 @@ def main():
     sf_map_enabled = os.environ.get("RUN_SF_MAP_E2E") == "1"
     research_enabled = os.environ.get("RUN_RESEARCH_E2E") == "1"
     permit_activity_enabled = os.environ.get("RUN_PERMIT_ACTIVITY_MAP_E2E") == "1"
+    password_recovery_enabled = os.environ.get("RUN_PASSWORD_RECOVERY_E2E") == "1"
     api_port = int(os.environ.get("E2E_API_PORT") or "8000")
     web_port = int(os.environ.get("E2E_WEB_PORT") or "8080")
     if not all(1 <= port <= 65535 for port in (api_port, web_port)):
@@ -286,7 +287,8 @@ def main():
             "DEMO_ENABLED": "true",
             "INTERNAL_OPERATIONS_USER_IDS": OPERATOR_USER_ID,
         })
-        if (sf_map_enabled or research_enabled or permit_activity_enabled or os.environ.get("RUN_CRITERIA_E2E") == "1"
+        if (sf_map_enabled or research_enabled or permit_activity_enabled or password_recovery_enabled
+                or os.environ.get("RUN_CRITERIA_E2E") == "1"
                 or os.environ.get("RUN_PARCEL_USE_E2E") == "1"
                 or os.environ.get("RUN_COVERAGE_MAP_E2E") == "1"):
             _deny_external_sockets()
@@ -309,6 +311,11 @@ def main():
         from app.services.demo_seed import seed_demo
         from app.services.security import hash_password
         from tests.demo_fixtures import create_snapshot
+
+        if password_recovery_enabled:
+            from app.services import email_service
+
+            email_service.email_service = email_service.UnavailableEmailService()
 
         if research_enabled:
             from app.services import research_service

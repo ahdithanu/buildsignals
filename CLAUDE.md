@@ -1,5 +1,10 @@
 # BuildSignals / Claude Code
 
+November21 recovery-only release preparation: read newest handoff and password
+recovery runbook. Local acceptance and hosted/deployed states are separate.
+No credentials/operational receipts belong in public commits. Preserve other
+worktrees; do not add unrelated work or run production migrations.
+
 @AGENTS.md
 
 Nov19 PR288 stale module-recovery target corrected to explicit Filings view;
