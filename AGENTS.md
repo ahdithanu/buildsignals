@@ -4,7 +4,9 @@ November21 recovery-only release is being prepared on current main in isolated
 codex/password-recovery-release. Persisted membership scopes recovery audits;
 unconfigured deployed email returns uniform503 and the UI reports failures.
 Read newest handoff/runbooks/password-recovery.md. Local frontend613/dedicated
-browser2 passed; final backend, hosted CI and deployment remain pending.
+browser2 and fullbackend3504/zero skips/91.66% passed; hosted CI and deployment
+remain pending. Current release receipts live in the PR metadata and private
+handoff, not historical notes below.
 Keep credentials and operational receipts private. Do not include separate
 retail/ForgeOS research or run production migrations in this recovery release.
 

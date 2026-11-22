@@ -14,9 +14,13 @@ not revoke already-issued access JWTs before expiry. No migration is required.
 Fresh local frontend613/86files8.16s, typecheck/scopedlint/E2E TypeScript and
 build3.99s passed (existing Zod/chunk warnings). Dedicated local desktop/mobile
 browser2 passed9.9s with zero skips/retries; actual unavailable503 followed by
-explicitly simulated204 is not live mail proof. Owned servers stopped. Full
-backend acceptance, final image/hosted checks and production delivery remain
-pending; never infer them from earlier receipts. Runtime scope matches the
+explicitly simulated204 is not live mail proof. Owned servers stopped. Fresh
+fullbackend3504/zero skips passed896.46s, including21restrictedPG recovery tests,
+91.65918074020841% coverage and three existing geography-reflection warnings.
+Migration/drift tests ran only on fresh disposable local databases; owned
+container removed and port clear. Final image/hosted checks and production
+delivery remain pending; current release receipts belong in PR metadata and
+the private handoff. Never infer them from earlier receipts. Runtime matches the
 previously tested recovery checkpoint; unrelated CI harness step was removed.
 
 Owner approved publication and recovery rollout after passing checks, including
