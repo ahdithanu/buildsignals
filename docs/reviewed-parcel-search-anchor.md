@@ -67,8 +67,11 @@ November22 current-main local gates passed:3592backend/zero skips/91.7268%/
 cases,2synthetic desktop/mobile workflow cases and2separate recovery cases.
 Joined raw payload projection is regression-tested. One retained real ALDI filing
 passed ingestion/matching/graph/idempotent local replay; no retained real parcel
-cohort or real-record full journey is accepted. The first bounded capture stopped
-at a parcel-response gate; a fresh bounded capture decision is pending. No hosted
+cohort or real-record full journey was accepted by that earlier test run. A fresh
+approved capture now retains62distinct real parcel IDs and the real ALDI sign
+filing, with3physical GET/20,107bytes. The provider's transfer-limit flag is an
+explicit bounded-subset caveat. Fresh real-row replay/browser acceptance is in
+progress; the first consumed capture is not repeated. No hosted
 CI, production retail workflow, listing, opening or entitlement claim is implied.
 
 Focused RED/GREEN covers native precedence, incomplete/nonfinite coordinates,

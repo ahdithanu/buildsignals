@@ -1,5 +1,30 @@
 # Current Agent Handoff
 
+## November22: Fresh Real Parcel Acceptance In Progress
+
+Owner approved one fresh LOCAL capture capped at100parcel rows/6GET/2MiB,
+production unchanged. Capture completed with3physical GET/20,107response bytes:
+one real ALDI sign filing,63parcel rows received including the repeated anchor,
+62distinct nearby IDs. Provider flagged its spatial response as transfer-limited;
+this is an explicitly bounded subset, not an exhausted neighborhood population.
+Exact anchor parcel ID/street address match; publisher currentness remains unknown.
+The filing is not proof of a new store opening. No owners/contact fields retained.
+
+Task packet: existing ingestion -> retailer candidate -> analyst identity review
+-> reviewed centroid nearby search -> explicit zoning/sale unknowns -> shortlist
+-> idempotent saved opportunity on fresh restricted local PostgreSQL, plus real-
+record desktop/mobile browser proof. Parent owns capture/integration/docs; Gauss
+private replay and tests, Pascal owned local database, Averroes private browser
+acceptance. Existing runtime tests are historical receipts until a new command
+runs; no full-suite rerun is needed solely as reassurance on unchanged runtime.
+Current baselineb9b5695/maincdd7ee4. Stop on missing evidence, scope violation or
+tenant/integrity failure; no synthetic row may be relabelled real acceptance.
+
+Capture grant consumed; no source retries or extra requests. Detailed corpus,
+targets and operational receipts remain ignored/private. No production change,
+publication, source activation, paid call or Cherry Hill activity is authorized.
+Fresh local runtime and real-record acceptance are pending, not yet green.
+
 ## November22: Local Retail Integration On Current Main
 
 This isolated checkout starts from released recovery maincdd7ee4. It mechanically

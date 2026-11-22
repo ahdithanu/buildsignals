@@ -13,10 +13,13 @@
   shortlist and idempotent promotion are exercised by the synthetic workflow.
 - [x] One retained REAL filing passes existing ingestion/catalog mappings,
   ALDI candidate matching, graph linkage and idempotent local replay.
-- [ ] Real nearby-parcel corpus and real-record end-to-end acceptance. Initial
-  bounded capture failed its parcel-response gate without retaining the response;
-  no inferred truncation reason, parcel count or complete-coverage claim. Fresh
-  bounded capture approval remains pending; do not repeat the consumed attempt.
+- [x] Fresh approved local corpus retained: one real ALDI sign filing and62
+  distinct county parcel IDs;63received parcel rows include the repeated anchor.
+  Three physical GETs/20,107bytes, no owner/contact fields. Provider transfer-limit
+  flag retained as an explicit bounded-subset caveat, not complete coverage.
+- [ ] Real-record end-to-end acceptance through existing ingestion, audited
+  review, nearby search, shortlist and saved opportunity. Fresh restricted-PG
+  replay and desktop/mobile proof are in progress, not yet accepted.
 - [ ] Separately authorized publication, hosted checks and production release.
 
 See `reviewed-parcel-search-anchor.md` and the latest handoff. No new production

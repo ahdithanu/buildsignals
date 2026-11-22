@@ -11,9 +11,12 @@ An explicit reviewed parcel-centroid search bridge is locally implemented and
 tested on current main, with raw/hash/audit revalidation and stale-preview checks.
 It does not copy coordinates into source filings. See
 `reviewed-parcel-search-anchor.md` for the contract and final handoff for receipts.
-Real-permit ingestion/matching/graph replay is verified locally; the real parcel
-corpus and real-row end-to-end journey remain unverified. No release or new source
-activation follows from local tests.
+Real-permit ingestion/matching/graph replay is verified locally. The separately
+approved fresh capture retained62distinct real county parcel IDs, including one
+exact-reference/exact-street anchor for the ALDI sign filing. The response carries
+a transfer-limit flag: this is a bounded subset, not a population match-rate.
+Real-row ingestion-to-saved-opportunity acceptance is in progress, not yet verified.
+No release or new source activation follows from local tests.
 
 `GET /ingestion/permits/{permit_id}/parcel-candidates?parcel_source_id=...`
 requires authentication and a tenant-visible active permit and parcel source.

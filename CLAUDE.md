@@ -1,5 +1,10 @@
 # BuildSignals / Claude Code
 
+November22: fresh approved LOCAL capture completed (one real ALDI sign filing,
+62 distinct nearby parcel IDs,3GET/20,107bytes,explicit bounded subset). Real-row
+acceptance is in progress, not yet verified. Production and Cherry Hill untouched.
+Read newest handoff; capture is consumed, no automatic replay or retail release.
+
 November22 local retail integration: read newest handoff, ForgeOS project profile
 and delivery loop before acting. No retail publication or production release is
 authorized by local acceptance. Keep operational receipts private.

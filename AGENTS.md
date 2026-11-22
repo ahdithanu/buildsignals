@@ -1,5 +1,14 @@
 # BuildSignals: Shared Agent Instructions
 
+November22 fresh bounded LOCAL capture approved and completed: one real ALDI
+sign filing,62 distinct nearby parcel IDs,3physical GET/20,107bytes. Provider
+transfer-limit flag means bounded subset, not full neighborhood inventory.
+Current-main retail replay/browser acceptance is in progress on NEW disposable
+restricted PostgreSQL; old runtime was removed. Parent owns integration/docs,
+Gauss private replay, Pascal fresh local database, Averroes private browser proof.
+Production unchanged; no publication/release/source activation or paid authority.
+Cherry Hill DRAFT/UNSENT. Read newest handoff; do not replay consumed capture.
+
 November22 LOCAL retail integration is on codex/retail-current-main-integration,
 based on currentmaincdd7ee4. Read docs/forgeos-project-profile.md and
 docs/forgeos-delivery-loop.md, then newest handoff. Runtime is not published or
