@@ -54,7 +54,9 @@ def permit_parcel_candidates(db, permit_id: str, parcel_source_id: str) -> dict:
         return result
     # Preserve leading zeros and punctuation. Cross-source normalization requires
     # a separately qualified identifier mapping, not a fuzzy ID comparison.
-    rows = active_query(db.query(ParcelRecord, RawSourceRecord), ParcelRecord).join(
+    rows = active_query(db.query(
+        ParcelRecord, RawSourceRecord.id, RawSourceRecord.received_at, RawSourceRecord.source_updated_at,
+    ), ParcelRecord).join(
         RawSourceRecord,
         (RawSourceRecord.id == ParcelRecord.latest_raw_record_id)
         & (RawSourceRecord.organization_id == get_org_id())
@@ -66,7 +68,7 @@ def permit_parcel_candidates(db, permit_id: str, parcel_source_id: str) -> dict:
         or_(ParcelRecord.external_parcel_id == reference, ParcelRecord.parcel_group_id == reference),
     ).order_by(ParcelRecord.id).limit(21).all()
     result["truncated"] = len(rows) > 20
-    for parcel, raw in rows[:20]:
+    for parcel, raw_id, captured_at, source_updated_at in rows[:20]:
         state_check = _comparison(permit.state, parcel.state, lambda value: value.strip().upper())
         city_check = _comparison(permit.city, parcel.city, lambda value: value.strip().casefold())
         street_check = _comparison(permit.address, parcel.address, normalize_address)
@@ -88,8 +90,8 @@ def permit_parcel_candidates(db, permit_id: str, parcel_source_id: str) -> dict:
             "street_comparison": street_check, "address_comparison": address_check,
             "identity_assessment": "address_corroborated" if state_matches and address_matches else "needs_review",
             "has_valid_coordinates": coords,
-            "raw_source_record_id": raw.id, "captured_at": raw.received_at,
-            "source_updated_at": raw.source_updated_at,
+            "raw_source_record_id": raw_id, "captured_at": captured_at,
+            "source_updated_at": source_updated_at,
             "last_verified_at": parcel.last_verified_at,
         })
     if rows:
