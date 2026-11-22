@@ -2,41 +2,53 @@
 
 Security properties this module is responsible for:
 
-- **No account enumeration.** `/forgot` always returns 204, whether or
-  not the email maps to a real user. An attacker watching the response
-  cannot learn which emails are registered.
+- **No account enumeration.** Accepted `/forgot` requests return 204 whether
+  or not the email maps to a real user. Missing delivery configuration returns
+  503 before account lookup; neither response reveals registered addresses.
 - **Tokens are single-use, short-lived, and stored hashed.** The plaintext
   exists only in the outgoing email URL; the DB holds a SHA-256 hex
   digest. A read-only DB leak cannot be replayed.
 - **Per-IP and per-email rate limits** on /forgot prevent abuse of the
   send-email side-channel.
-- **Successful reset invalidates every existing session** by bumping
-  `user.token_version`, which the refresh-cookie path checks against.
+- **Successful reset invalidates existing refresh-cookie sessions** by bumping
+  `user.token_version`. Already-issued access JWTs remain valid until expiry.
 """
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import secrets
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.models.organization import Organization
+from app.models.organization_membership import OrganizationMembership
 from app.models.password_reset_token import PasswordResetToken
 from app.models.user import User
 from app.services.account_lockout import lockout
 from app.services.audit_service import log_change
 from app.services.demo_access import DEMO_USER_ID
-from app.services.email_service import get_email_service
+from app.services.email_service import email_delivery_available, get_email_service
 from app.services.password_policy import PasswordPolicyError, validate_password
 from app.services.rate_limiter import limiter
 from app.services.security import hash_password
+from app.utils.org_scope import (
+    RequestContext,
+    get_current_context,
+    reset_current_context,
+    set_current_context,
+)
 
 router = APIRouter(prefix="/auth/password", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 # ── Tunables ──────────────────────────────────────────────────────────────
@@ -85,8 +97,45 @@ def _too_many(detail: str, retry_after: int) -> JSONResponse:
     return JSONResponse(
         status_code=429,
         content={"detail": detail},
-        headers={"Retry-After": str(retry_after)},
+        headers={"Retry-After": str(retry_after), "Cache-Control": "no-store"},
     )
+
+
+def _recovery_organization_id(db: Session, user_id: str) -> str | None:
+    """Use persisted account membership, never an unauthenticated request scope."""
+    membership = (
+        db.query(OrganizationMembership.organization_id)
+        .join(Organization, Organization.id == OrganizationMembership.organization_id)
+        .filter(OrganizationMembership.user_id == user_id, Organization.is_active.is_(True))
+        .order_by(
+            OrganizationMembership.is_default.desc(),
+            OrganizationMembership.joined_at.asc(),
+            OrganizationMembership.id.asc(),
+        )
+        .first()
+    )
+    return membership.organization_id if membership else None
+
+
+@contextmanager
+def _recovery_audit_scope(db: Session, organization_id: str, user_id: str):
+    previous = get_current_context()
+    postgres = db.get_bind().dialect.name == "postgresql"
+    statement = sql_text("SELECT set_config('app.current_org', :org, true)")
+    context = set_current_context(RequestContext(organization_id, user_id))
+    try:
+        # Global account lookup may already have begun a transaction in the
+        # caller's scope. Rebind only these trusted account-owned mutations.
+        if postgres:
+            db.execute(statement, {"org": organization_id})
+        yield
+    except BaseException:
+        db.rollback()
+        raise
+    finally:
+        reset_current_context(context)
+        if postgres and db.in_transaction():
+            db.execute(statement, {"org": previous.org_id})
 
 
 def _utcnow() -> datetime:
@@ -124,7 +173,9 @@ def _render_email(reset_url: str) -> tuple[str, str]:
 # ── Endpoints ─────────────────────────────────────────────────────────────
 
 
-@router.post("/forgot", status_code=204)
+@router.post("/forgot", status_code=204, responses={
+    503: {"description": "Password recovery email transport is unavailable for all accounts."},
+})
 def forgot_password(
     payload: ForgotPasswordRequest,
     request: Request,
@@ -132,9 +183,9 @@ def forgot_password(
 ):
     """Kick off a password reset by emailing a one-time link.
 
-    Always returns 204. The response is identical whether or not the
-    email matches a known account — this is the whole point of the
-    endpoint from a security standpoint.
+    Accepted requests return 204 regardless of account existence or per-recipient
+    delivery outcome. Global missing transport configuration returns 503 before
+    account lookup, so availability errors cannot enumerate registered addresses.
     """
     ip = _client_ip(request)
     email_key = payload.email.lower()
@@ -164,43 +215,53 @@ def forgot_password(
             email_decision.retry_after,
         )
 
+    if not email_delivery_available():
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Password recovery is temporarily unavailable. Please try again later."},
+            headers={"Retry-After": "60", "Cache-Control": "no-store"},
+        )
+
     user = db.query(User).filter(User.email == payload.email).first()
 
     # Same response shape whether we send mail or not — *don't* short-circuit
     # before this point in a way an attacker can time.
     if user and user.is_active and user.id != DEMO_USER_ID:
+        organization_id = _recovery_organization_id(db, user.id)
+        if organization_id is None:
+            logger.warning("password_reset_skipped: no active account organization")
+            return Response(status_code=204, headers={"Cache-Control": "no-store"})
         plaintext = secrets.token_urlsafe(32)
+        user_id, user_email = user.id, user.email
         row = PasswordResetToken(
-            user_id=user.id,
+            user_id=user_id,
             token_hash=_hash_token(plaintext),
             expires_at=_utcnow() + TOKEN_TTL,
         )
-        db.add(row)
-
-        log_change(
-            db,
-            "user",
-            user.id,
-            "password_reset_requested",
-            actor_id=user.id,
-            new_values={"ip": ip},
-        )
-        db.commit()
+        with _recovery_audit_scope(db, organization_id, user_id):
+            db.add(row)
+            log_change(
+                db, "user", user_id, "password_reset_requested",
+                actor_id=user_id, organization_id=organization_id,
+                new_values={"ip": ip},
+            )
+            db.commit()
 
         reset_url = f"{_app_base_url()}/reset-password?token={plaintext}"
         text, html = _render_email(reset_url)
-        # Email send is fire-and-forget from the endpoint's perspective —
-        # we already committed the token row, so a transient SMTP blip
-        # doesn't strand us in a "row but no email" inconsistency that
-        # the user could recover from by re-requesting.
-        get_email_service().send(
-            to=user.email,
-            subject="Reset your BuildSignals password",
-            html=html,
-            text=text,
-        )
+        try:
+            get_email_service().send(
+                to=user_email,
+                subject="Reset your BuildSignals password",
+                html=html,
+                text=text,
+            )
+        except Exception:
+            # Recipient-specific failures must not reveal account existence.
+            # Provider exception bodies may contain credentials or reset URLs.
+            logger.warning("password_reset_delivery_failed")
 
-    return Response(status_code=204)
+    return Response(status_code=204, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/reset", status_code=204)
@@ -245,6 +306,9 @@ def reset_password(
     user = db.get(User, row.user_id)
     if user is None or not user.is_active or user.id == DEMO_USER_ID:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    organization_id = _recovery_organization_id(db, user.id)
+    if organization_id is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 
     try:
         validate_password(payload.new_password, email=user.email)
@@ -256,35 +320,31 @@ def reset_password(
     # and the same generic 400. Closes the check-then-set race (two requests
     # both seeing used_at IS NULL and both resetting / double-bumping
     # token_version).
-    claimed = (
-        db.query(PasswordResetToken)
-        .filter(
-            PasswordResetToken.token_hash == token_hash,
-            PasswordResetToken.used_at.is_(None),
+    user_email = user.email
+    with _recovery_audit_scope(db, organization_id, user.id):
+        claimed = (
+            db.query(PasswordResetToken)
+            .filter(
+                PasswordResetToken.token_hash == token_hash,
+                PasswordResetToken.used_at.is_(None),
+            )
+            .update({"used_at": _utcnow()}, synchronize_session=False)
         )
-        .update({"used_at": _utcnow()}, synchronize_session=False)
-    )
-    if claimed == 0:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        if claimed == 0:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 
-    # Commit the new password + revoke every outstanding session.
-    user.password_hash = hash_password(payload.new_password)
-    user.token_version = (user.token_version or 0) + 1
-    db.add(user)
+        user.password_hash = hash_password(payload.new_password)
+        user.token_version = (user.token_version or 0) + 1
+        db.add(user)
+        log_change(
+            db, "user", user.id, "password_reset_completed",
+            actor_id=user.id, organization_id=organization_id,
+        )
+        db.commit()
 
     # Successful reset = legitimate access proven via email. Drop any
     # lingering failed-login counter so the user isn't immediately locked
     # out when they try to sign in with their new password.
-    lockout.reset(user.email.lower())
+    lockout.reset(user_email.lower())
 
-    log_change(
-        db,
-        "user",
-        user.id,
-        "password_reset_completed",
-        actor_id=user.id,
-    )
-    db.commit()
-
-    return Response(status_code=204)
+    return Response(status_code=204, headers={"Cache-Control": "no-store"})

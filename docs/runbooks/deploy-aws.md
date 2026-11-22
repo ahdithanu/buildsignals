@@ -143,7 +143,13 @@ Create an App Runner service from the ECR image:
   | `APP_BASE_URL` | the CloudFront URL (password-reset links) |
   | `REFRESH_COOKIE_SECURE` | `true` |
   | `METRICS_TOKEN` | random (protects `/metrics`) |
-  | `RESEND_API_KEY` / `SENTRY_DSN` | optional |
+  | `RESEND_API_KEY` | managed secret; required for password recovery email |
+  | `RESEND_FROM_ADDRESS` | address at the provider-verified sending domain; required for recovery |
+  | `SENTRY_DSN` | optional |
+
+  Without email configuration, password recovery returns a uniform 503; it must
+  not silently use console transport in production. See the
+  [recovery runbook](password-recovery.md) for setup and actual delivery acceptance.
 
   Do **not** set `ALLOW_ANONYMOUS` — production forces it false and refuses to
   boot if `true`.

@@ -166,6 +166,7 @@ captured-output evaluation, metric limitations, and deployment instructions.
 | [docs/runbooks/deploy-aws.md](docs/runbooks/deploy-aws.md) | AWS deploy (App Runner + RDS + CloudFront) |
 | [docs/runbooks/deploy.md](docs/runbooks/deploy.md) | Routine deploy, smoke test, rollback |
 | [docs/runbooks/incident-response.md](docs/runbooks/incident-response.md) | Sev levels, on-call, comms, postmortem |
+| [docs/runbooks/password-recovery.md](docs/runbooks/password-recovery.md) | Private account recovery, email configuration and delivery verification |
 | [docs/backups.md](docs/backups.md) | Backup & restore, RPO/RTO, DR drills |
 | [docs/data-retention.md](docs/data-retention.md) | What we store, retention, right-to-erasure |
 | [docs/rbac.md](docs/rbac.md) | Role matrix + per-endpoint access |

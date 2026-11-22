@@ -3,12 +3,9 @@
 We deliberately keep the surface tiny — one `send()` call with html+text —
 so swapping providers (Resend → SES → Postmark) only touches this module.
 
-Provider choice is a one-time decision at import: if `RESEND_API_KEY` is
-set in the environment, we wire up the Resend SDK; otherwise we fall
-back to a console logger that just prints what would have been sent. The
-console fallback keeps local dev and tests working without any network
-calls or API keys, and the singleton can be monkey-patched in tests to
-capture outgoing mail.
+Provider choice is fixed at import. Deployed environments require a Resend
+key and explicit sender; missing configuration disables recovery, not the API.
+Local console transport never logs addresses, message bodies or reset tokens.
 """
 from __future__ import annotations
 
@@ -16,23 +13,39 @@ import logging
 import os
 from typing import Protocol
 
+from app.config import IS_DEPLOYED
+
 logger = logging.getLogger(__name__)
 
 
 class EmailService(Protocol):
+    available: bool
+
     def send(self, *, to: str, subject: str, html: str, text: str) -> None:
         ...
 
 
-class ConsoleEmailService:
-    """No-op sender that logs the message at INFO. Default in dev/tests.
+class EmailDeliveryUnavailable(RuntimeError):
+    pass
 
-    Tests monkey-patch `.send` directly on the singleton to capture calls,
-    so the body of this method is only what shows up in dev terminals.
-    """
+
+class UnavailableEmailService:
+    available = False
 
     def send(self, *, to: str, subject: str, html: str, text: str) -> None:
-        logger.info("[email] to=%s subject=%s\n%s\n", to, subject, text)
+        raise EmailDeliveryUnavailable("Email delivery is not configured")
+
+
+class ConsoleEmailService:
+    """No-op local sender; tests replace send() to capture outgoing messages.
+
+    Metadata-only logging also keeps local reset credentials out of terminals.
+    """
+
+    available = True
+
+    def send(self, *, to: str, subject: str, html: str, text: str) -> None:
+        logger.info("email_delivery_skipped: local console transport")
 
 
 class ResendEmailService:
@@ -42,10 +55,13 @@ class ResendEmailService:
     so the package is a soft dependency for local dev.
     """
 
+    available = True
+
     def __init__(self) -> None:
         import resend  # type: ignore
 
         resend.api_key = os.environ["RESEND_API_KEY"]
+        resend.default_http_client = resend.RequestsClient(timeout=5)
         self._resend = resend
         self._from = os.environ.get(
             "RESEND_FROM_ADDRESS",
@@ -65,13 +81,23 @@ class ResendEmailService:
 
 
 def _build_service() -> EmailService:
-    if os.environ.get("RESEND_API_KEY"):
+    key = os.environ.get("RESEND_API_KEY", "").strip()
+    sender = os.environ.get("RESEND_FROM_ADDRESS", "").strip()
+    if IS_DEPLOYED and (not key or not sender):
+        logger.warning("email_delivery_unavailable: provider configuration incomplete")
+        return UnavailableEmailService()
+    if key:
         return ResendEmailService()
     return ConsoleEmailService()
 
 
 # Module-level singleton. Tests swap `.send` via monkeypatch.setattr.
 email_service: EmailService = _build_service()
+
+
+def email_delivery_available() -> bool:
+    """Account-independent transport configuration check; sends no email."""
+    return email_service.available
 
 
 def get_email_service() -> EmailService:

@@ -5,7 +5,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 /**
  * Pins the password reset UI contract:
  *   - ForgotPassword submits the email to passwordResetApi.forgot and shows
- *     the generic success message.
+ *     a non-enumerating acknowledgement only after a successful request.
+ *   - ForgotPassword failures show a generic retryable alert, not false success.
  *   - ResetPassword without a ?token= renders an error and never calls the API.
  *   - ResetPassword with mismatched passwords does not submit.
  *   - ResetPassword with matching passwords calls reset() and navigates to /login.
@@ -66,9 +67,10 @@ const renderReset = (initialEntry: string) =>
 describe("<ForgotPassword>", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    forgotMock.mockReset();
   });
 
-  it("submits the email and shows the generic success message", async () => {
+  it("acknowledges a successful request without promising email delivery", async () => {
     forgotMock.mockResolvedValueOnce(undefined);
     renderForgot();
 
@@ -80,15 +82,19 @@ describe("<ForgotPassword>", () => {
     await waitFor(() => {
       expect(forgotMock).toHaveBeenCalledWith("alice@example.com");
     });
-    expect(
-      await screen.findByText(
-        /if an account with that email exists/i,
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "If an account with that email exists, a password reset has been requested. Check your inbox.",
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/we've sent a reset link/i)).not.toBeInTheDocument();
   });
 
-  it("shows the same success message even when the API errors (no enumeration)", async () => {
-    forgotMock.mockRejectedValueOnce(new ApiError("nope", 500));
+  it.each([
+    ["503", new ApiError("SMTP stack: account ghost@example.com exists", 503)],
+    ["500", new ApiError("Traceback: no account for ghost@example.com", 500)],
+    ["network", new TypeError("Network transport failed with private backend details")],
+  ])("shows a safe retryable alert, never success, after a %s failure", async (_label, error) => {
+    forgotMock.mockRejectedValueOnce(error);
     renderForgot();
 
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -96,9 +102,48 @@ describe("<ForgotPassword>", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /send reset link/i }));
 
-    expect(
-      await screen.findByText(/if an account with that email exists/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Password reset is temporarily unavailable. Please try again.",
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText(/if an account with that email exists/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(error.message)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toHaveValue("ghost@example.com");
+    expect(screen.getByRole("button", { name: /try again/i })).toBeEnabled();
+  });
+
+  it.each([503, 429])("retries a %s failure with the preserved email and acknowledges only success", async status => {
+    let resolveRetry!: () => void;
+    forgotMock.mockRejectedValueOnce(new ApiError("private backend failure", status))
+      .mockImplementationOnce(() => new Promise<void>(resolve => { resolveRetry = resolve; }));
+    renderForgot();
+    const email = screen.getByLabelText(/email/i);
+    fireEvent.change(email, { target: { value: "alice@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    await screen.findByRole("alert");
+    expect(screen.getByLabelText(/email/i)).toBe(email);
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(screen.getByLabelText(/email/i)).toHaveValue("alice@example.com");
+    expect(screen.getByRole("button", { name: /sending/i })).toBeDisabled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(forgotMock).toHaveBeenNthCalledWith(1, "alice@example.com");
+    expect(forgotMock).toHaveBeenNthCalledWith(2, "alice@example.com");
+    resolveRetry();
+    expect(await screen.findByRole("status")).toHaveTextContent("a password reset has been requested");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("preserves the 429 rate-limit message without reflecting backend details", async () => {
+    forgotMock.mockRejectedValueOnce(new ApiError("Account-specific throttle for alice@example.com", 429));
+    renderForgot();
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "alice@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /send reset link/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Too many requests, try again in a bit.");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Account-specific throttle/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toHaveValue("alice@example.com");
   });
 });
 

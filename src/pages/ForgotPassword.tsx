@@ -6,39 +6,36 @@ import { passwordResetApi } from '@/api/password_reset';
 import { ApiError } from '@/api/client';
 
 const GENERIC_SUCCESS =
-  "If an account with that email exists, we've sent a reset link. Check your inbox.";
+  'If an account with that email exists, a password reset has been requested. Check your inbox.';
 const RATE_LIMIT_MESSAGE = 'Too many requests, try again in a bit.';
+const SERVICE_UNAVAILABLE_MESSAGE = 'Password reset is temporarily unavailable. Please try again.';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showFootnote, setShowFootnote] = useState(false);
 
   useEffect(() => {
-    if (!message || isRateLimited) return;
+    if (!message) return;
     const t = setTimeout(() => setShowFootnote(true), 8000);
     return () => clearTimeout(t);
-  }, [message, isRateLimited]);
+  }, [message]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
+    setError(null);
     setShowFootnote(false);
     try {
       await passwordResetApi.forgot(email);
-      setIsRateLimited(false);
       setMessage(GENERIC_SUCCESS);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 429) {
-        setIsRateLimited(true);
-        setMessage(RATE_LIMIT_MESSAGE);
-      } else {
-        // Don't reveal whether the email was valid — same success message.
-        setIsRateLimited(false);
-        setMessage(GENERIC_SUCCESS);
-      }
+      setError(err instanceof ApiError && err.status === 429
+        ? RATE_LIMIT_MESSAGE
+        : SERVICE_UNAVAILABLE_MESSAGE);
     } finally {
       setSubmitting(false);
     }
@@ -47,7 +44,7 @@ export default function ForgotPassword() {
   function tryDifferentEmail() {
     setEmail('');
     setMessage(null);
-    setIsRateLimited(false);
+    setError(null);
     setShowFootnote(false);
   }
 
@@ -55,7 +52,7 @@ export default function ForgotPassword() {
     <AuthPageShell
       eyebrow="Account recovery"
       title="Reset your password"
-      description="Enter your work email and we'll send a reset link if the account exists."
+      description="Enter your work email to request a password reset."
       footer={<Link to="/login" className="font-semibold text-foreground hover:underline">Back to sign in</Link>}
     >
           {message ? (
@@ -94,12 +91,17 @@ export default function ForgotPassword() {
                   className="mt-1.5 h-11 w-full border-2 border-foreground bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[#1a63c7]"
                 />
               </label>
+              {error && (
+                <div role="alert" className="text-sm text-destructive">
+                  {error}
+                </div>
+              )}
               <button
                 type="submit"
                 className="flex h-11 w-full items-center justify-between bg-foreground px-4 text-xs font-semibold text-background disabled:opacity-50"
                 disabled={submitting}
               >
-                {submitting ? 'Sending...' : 'Send reset link'}
+                {submitting ? 'Sending...' : error ? 'Try again' : 'Send reset link'}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </form>
