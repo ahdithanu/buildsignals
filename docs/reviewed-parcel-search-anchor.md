@@ -62,17 +62,22 @@ interface, tenant boundaries and lock order independently before acceptance.
 
 ## Verification Gates
 
-November22 current-main local gates passed:3592backend/zero skips/91.7268%/
-3existing geography warnings,673frontend/type/build,7actualrestricted-PG anchor
-cases,2synthetic desktop/mobile workflow cases and2separate recovery cases.
-Joined raw payload projection is regression-tested. One retained real ALDI filing
-passed ingestion/matching/graph/idempotent local replay; no retained real parcel
-cohort or real-record full journey was accepted by that earlier test run. A fresh
-approved capture now retains62distinct real parcel IDs and the real ALDI sign
-filing, with3physical GET/20,107bytes. The provider's transfer-limit flag is an
-explicit bounded-subset caveat. Fresh real-row replay/browser acceptance is in
-progress; the first consumed capture is not repeated. No hosted
-CI, production retail workflow, listing, opening or entitlement claim is implied.
+Earlier implementation receipt:3592backend/zero skips/91.7268%/3existing
+geography warnings,673frontend,7restricted-PG anchor cases,2synthetic workflow
+cases and2separate recovery cases. The backend is unchanged in this continuation;
+that full-suite result is historical, not a new command receipt.
+
+The fresh approved capture retained62distinct real parcel IDs and one ALDI sign
+filing with3physical GET/20,107bytes. Its transfer-limit flag is an explicit
+bounded-subset caveat. Existing ingestion/matching/graph and retained-page replay
+passed; real-record LOCAL desktop/mobile journey2passed21.7s. Visual review found
+and corrected null-to-zero/risk defaults:697frontend/type/build and read-only
+saved-opportunity desktop/mobile2passed15.1s, plus checked-in synthetic browser
+regression2passed13.9s. The review actor is explicitly an
+agent/local test, not human-qualified ground truth. See
+real-retail-parcel-acceptance.md for exact scope and complementary receipts.
+Neither consumed capture is repeated. No hosted CI, production retail workflow,
+listing, opening or entitlement claim is implied.
 
 Focused RED/GREEN covers native precedence, incomplete/nonfinite coordinates,
 missing/forged/expired/stale/conflicting/ambiguous reviews, cross-tenant reads,

@@ -73,6 +73,16 @@ Real retail-to-parcel acceptance requires:
 
 ## Current Constraints
 
+November22 local real-record retail journey is verified on the isolated branch
+based on released recovery maincdd7ee4: one captured sign filing,62distinct parcel
+IDs in an explicitly transfer-limited subset,47nearby centroid candidates and
+saved-opportunity retries. Agent/test review inputs are not human ground truth.
+Visual acceptance caught and corrected null-to-zero/risk defaults in the deal
+view. Read real-retail-parcel-acceptance.md and the newest handoff for current
+commands and final gates. Production coverage has not been remeasured or expanded
+by this local work; publication/hosted checks/release remain separately gated.
+The adoption-time production notes below are historical, not current measurements.
+
 At adoption, PR288 is merged93435f6 and its API/frontend release has HTTP/proxy
 acceptance. Fresh signed-in visual acceptance and current main-workspace counts
 remain unverified. Last parcel receipt is838records, not838distinct lots; the

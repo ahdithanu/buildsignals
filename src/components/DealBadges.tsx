@@ -21,7 +21,7 @@ export function RiskChip({ label }: { label: string }) {
   );
 }
 
-export function StatusBadge({ status, label }: { status: string; label: string }) {
+export function StatusBadge({ status, label }: { status: string | null; label: string | null }) {
   const colors: Record<string, string> = {
     'new': 'bg-info/10 text-info',
     'qualified': 'bg-accent/15 text-accent-foreground',
@@ -39,9 +39,9 @@ export function StatusBadge({ status, label }: { status: string; label: string }
   return (
     <span className={cn(
       "inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium capitalize",
-      colors[status] || 'bg-muted text-muted-foreground',
+      colors[status ?? 'unknown'] || 'bg-muted text-muted-foreground',
     )}>
-      {label}
+      {label ?? 'Unknown'}
     </span>
   );
 }

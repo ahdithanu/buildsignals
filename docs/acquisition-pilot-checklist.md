@@ -17,12 +17,17 @@
   distinct county parcel IDs;63received parcel rows include the repeated anchor.
   Three physical GETs/20,107bytes, no owner/contact fields. Provider transfer-limit
   flag retained as an explicit bounded-subset caveat, not complete coverage.
-- [ ] Real-record end-to-end acceptance through existing ingestion, audited
-  review, nearby search, shortlist and saved opportunity. Fresh restricted-PG
-  replay and desktop/mobile proof are in progress, not yet accepted.
+- [x] Real-record LOCAL functional acceptance through existing ingestion, explicit
+  agent/test review,47candidate nearby search/map, shortlist, saved opportunity,
+  reload and idempotent promotion:2desktop/mobile cases21.7s. Source coordinates
+  unchanged; currentness, sale status and zoning/use rules remain unknown.
+- [x] Visual review found/fixed false-zero property facts and invented medium
+  risk. Final real saved-opportunity readonly desktop/mobile2passed15.1s,
+  697frontend/type/build pass; restricted-PG negative6pass/93demo write denials.
+  Checked-in synthetic browser regression2passed13.9s. Owned runtimes cleaned.
 - [ ] Separately authorized publication, hosted checks and production release.
 
-See `reviewed-parcel-search-anchor.md` and the latest handoff. No new production
+See `real-retail-parcel-acceptance.md`, `reviewed-parcel-search-anchor.md` and the latest handoff. No new production
 inventory, source activation, entitlement, listing or investment-return claim.
 Cherry Hill inquiry remains DRAFT/UNSENT.
 

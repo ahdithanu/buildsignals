@@ -15,7 +15,10 @@ Real-permit ingestion/matching/graph replay is verified locally. The separately
 approved fresh capture retained62distinct real county parcel IDs, including one
 exact-reference/exact-street anchor for the ALDI sign filing. The response carries
 a transfer-limit flag: this is a bounded subset, not a population match-rate.
-Real-row ingestion-to-saved-opportunity acceptance is in progress, not yet verified.
+Real-row ingestion-to-saved-opportunity LOCAL acceptance passed on actual restricted
+PostgreSQL and desktop/mobile browsers, using an explicit local agent/test review
+actor, not a human-qualified confidence label. See real-retail-parcel-acceptance.md
+for exact scope,47nearby candidates and complementary test/visual receipts.
 No release or new source activation follows from local tests.
 
 `GET /ingestion/permits/{permit_id}/parcel-candidates?parcel_source_id=...`

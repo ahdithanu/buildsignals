@@ -1,6 +1,48 @@
 # Current Agent Handoff
 
-## November22: Fresh Real Parcel Acceptance In Progress
+## November22 Final: Real Retail-To-Parcel Local Acceptance
+
+The approved fresh capture completed3physical GET/20,107bytes, one ALDI sign
+filing and62distinct parcel IDs (63rows including repeated anchor). The provider
+flagged transfer limitation: bounded subset, not complete coverage. Grant consumed.
+Parent integrated the critical replay after the initial delegated draft did not
+reach execution. No direct permit/parcel fixture inserts: existing connectors,
+catalog mappings, normalization, raw/company/graph code and product opportunity
+creation passed. Retained-page replay is idempotent; parcel runs correctly stay
+partial/incremental. One corroborated exact reference, zero ambiguous/unmatched/
+conflicting addresses in this one-filing audit; not a population match rate.
+
+Actual restricted-PG PostGIS47nearby candidates -> explicit agent/test identity
+review -> reviewed-centroid search/map -> zoning/sale unknowns -> shortlist ->
+saved opportunity/reload/duplicate-safe retry:real desktop/mobile2passed21.7s.
+Agent confidence0.5 is labelled uncalibrated local test input, not human ground
+truth. Raw/canonical reconciliation and native filing coordinates remain exact.
+Visual review found/fixed false-zero property facts and invented medium risk.
+RED18 -> focused45pass1.39s; fullfrontend697/86files7.83s, typecheck/build8.53s;
+existing Zod/chunk warnings and one scoped ESLint unused-disable warning retained.
+Final read-only saved/source/graph/map postcheck2passed15.1s; durable synthetic
+checked-in browser gate2passed13.9s. Expected blocked fonts/analytics/auth401 noise
+is disclosed; no uncaught page errors or forbidden business writes. The saved
+opportunity retains the source parcel/graph/promotion evidence link; its top
+signal panel remains native-permit-only, not a newly implemented parcel map.
+
+Six actual restricted-PG negative cases5.71s passed on earlier completed cohorts:
+own-read controls, cross-tenant API/direct-SQL denial, viewer/admin restrictions,
+no-store/no-write reads and93demo write denials. Final browser uses separate new
+cohorts, same immutable corpus. Backend unchanged;3592fullbackend is an earlier
+receipt, not a fresh run. Post-acceptance schema/role/drift checks passed. Owned
+container/volumes removed; database and all browser ports verified clear. Unowned
+processes/containers, root research and original retail work remain preserved.
+
+See real-retail-parcel-acceptance.md for commands, scope, remaining legacy display
+debt and distinctions. Detailed corpus/targets/operational receipts stay ignored.
+Local capture checkpoint1c87237 precedes the final null-display/test/receipt
+checkpoint. No push/PR/merge/deploy, production intake/source/schedule/access or
+paid change. Cherry Hill DRAFT/UNSENT. Next dependency is separately authorized
+publication/hosted checks and release; further source intake needs its own scope.
+Do not repeat consumed captures or manufacture inventory/work to bypass that gate.
+
+## November22 Capture Checkpoint (Superseded Above)
 
 Owner approved one fresh LOCAL capture capped at100parcel rows/6GET/2MiB,
 production unchanged. Capture completed with3physical GET/20,107response bytes:

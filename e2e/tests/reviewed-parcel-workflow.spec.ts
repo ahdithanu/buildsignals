@@ -146,7 +146,8 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await candidateRow.getByRole('button', { name: 'Promote opportunity', exact: true }).click();
       const promoted = await (await promotedResponse).json();
       expect(promoted).toMatchObject({ created: true, candidate_id: candidate.id,
-        deal: { name: '102 Synthetic Anchor Road', source: 'nearby_parcel_promotion' } });
+        deal: { name: '102 Synthetic Anchor Road', source: 'nearby_parcel_promotion',
+          asking_price: null, year_built: null, sq_ft: null, risk_level: null } });
       expect(promoted.deal.id).not.toBe(dealId);
 
       const historyReload = page.waitForResponse(response => apiResponse(response, historyPath));
@@ -168,6 +169,12 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await expect(page.getByRole('heading', { name: '102 Synthetic Anchor Road', exact: true })).toBeVisible();
       await page.reload();
       await expect(page.getByRole('heading', { name: '102 Synthetic Anchor Road', exact: true })).toBeVisible();
+      const overview = page.getByRole('heading', { name: 'Property Overview', exact: true }).locator('..');
+      for (const label of ['Year Built', 'Square Feet', 'Asking Price']) {
+        const row = overview.getByText(label, { exact: true }).locator('xpath=ancestor::div[contains(@class,"justify-between")][1]');
+        await expect(row.getByText('Unknown', { exact: true })).toBeVisible();
+      }
+      await expect(page.getByText('Risk unknown', { exact: true })).toBeVisible();
       const finalPermitResponse = page.waitForResponse(response => apiResponse(response, permitPath));
       await page.goto(`/permits/${permitId}`);
       expect((await (await finalPermitResponse).json()).permit).toEqual(before.permit);

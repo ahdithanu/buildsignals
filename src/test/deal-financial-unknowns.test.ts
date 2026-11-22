@@ -1,5 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import { mapDeal } from '@/api/deals';
+import { formatCurrency } from '@/lib/formatters';
+
+describe('recorded property facts', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity, '', '0', false, {}])('keeps missing or malformed facts unknown: %j', value => {
+    const deal = mapDeal({ asking_price: value, year_built: value, sq_ft: value, units: value });
+    expect([deal.askingPrice, deal.yearBuilt, deal.squareFeet, deal.units]).toEqual([null, null, null, null]);
+  });
+
+  it.each([0, 25_000])('preserves recorded finite values, including genuine zero: %s', value => {
+    const deal = mapDeal({ asking_price: value, year_built: value, sq_ft: value, units: value });
+    expect([deal.askingPrice, deal.yearBuilt, deal.squareFeet, deal.units]).toEqual([value, value, value, value]);
+  });
+
+  it.each([null, undefined, '', 'not-a-risk'])('does not invent medium risk for %j', risk_level => {
+    expect(mapDeal({ risk_level }).riskLevel).toBeNull();
+  });
+
+  it.each(['low', 'medium', 'high'])('preserves a recorded risk level: %s', risk_level => {
+    expect(mapDeal({ risk_level }).riskLevel).toBe(risk_level);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])('formats unavailable price as Unknown: %s', value => {
+    expect(formatCurrency(value)).toBe('Unknown');
+  });
+
+  it('keeps genuine zero price distinct from missing price', () => {
+    expect(formatCurrency(0)).toBe('$0');
+  });
+});
 
 describe('recorded underwriting outputs', () => {
   it.each([undefined, null, {}])('keeps missing outputs unknown: %j', outputs => {

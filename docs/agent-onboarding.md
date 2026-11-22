@@ -60,7 +60,7 @@ There is no need to supply an OpenRouter key for ordinary unit tests.
 | Architecture and auth | README.md, `app/main.py`, `app/middleware/auth_context.py`, `docs/rbac.md` |
 | OpenRouter and evaluation | `docs/openrouter-cleanup-integration.md`, README Model routing, `eval/`, `docs/ai-evaluation-platform.md` |
 | Public demo | `docs/read-only-demo.md`, `docs/demo-readiness.md` |
-| Acquisition / parcel workflow | `docs/acquisition-pilot-checklist.md`, `docs/parcel-reference-resolution.md`, `docs/nearby_parcel_discovery.md` |
+| Acquisition / parcel workflow | `docs/acquisition-pilot-checklist.md`, `docs/parcel-reference-resolution.md`, `docs/real-retail-parcel-acceptance.md`, `docs/nearby_parcel_discovery.md` |
 | Coverage / ingestion | `docs/measured-coverage.md`, `docs/nationwide_source_coverage.md`, `app/services/ingestion/` |
 | Deployment | `vercel.json`, `.github/workflows/deploy-aws.yml`, `docs/runbooks/deploy-aws.md`, `docs/runbooks/deploy.md` |
 | Security / recovery | SECURITY.md, `docs/security-evidence-release.md`, `docs/backups.md` |

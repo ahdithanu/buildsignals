@@ -321,7 +321,7 @@ export default function DealInbox() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <StatusBadge status={selectedDeal.status} label={stageLabels[selectedDeal.status]} />
-                    <StatusBadge status={selectedDeal.riskLevel} label={`${selectedDeal.riskLevel} risk`} />
+                    <StatusBadge status={selectedDeal.riskLevel} label={selectedDeal.riskLevel ? `${selectedDeal.riskLevel} risk` : 'Risk unknown'} />
                   </div>
                   <button
                     onClick={() => navigate(`/deal/${selectedDeal.id}`)}
