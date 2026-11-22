@@ -17,7 +17,6 @@ from app.schemas.deal import DealCreate
 from app.schemas.graph import GraphEntityCreate, GraphEvidenceCreate, GraphRelationshipCreate
 from app.services.acquisition_service import ensure_acquisition_case_for_candidate
 from app.services.audit_service import log_change
-from app.services.brand_intelligence import list_deal_brand_matches
 from app.services.deal_service import create_deal_with_defaults
 from app.services.graph_service import (
     create_relationship,
@@ -26,6 +25,7 @@ from app.services.graph_service import (
     resolve_entity,
     upsert_deal_graph_context,
 )
+from app.services.parcel_anchor import resolve_search_anchor
 from app.services.parcel_availability import AVAILABILITY_FACT_TYPES, VERIFIED_AVAILABILITY_STATUSES
 from app.services.parcel_proximity import find_nearby_parcels
 from app.services.parcel_ranking import rank_parcel_candidate, ranker_version
@@ -426,40 +426,28 @@ def create_nearby_parcel_search(
     zoning_codes: list[str],
     land_uses: list[str],
     limit: int,
+    expected_anchor: dict | None = None,
 ) -> NearbyParcelSearch:
     deal = active_query(db.query(Deal), Deal).filter(Deal.id == deal_id).first()
     if deal is None:
         raise LookupError("Deal not found")
-    matches = list_deal_brand_matches(db, deal_id, limit=100)
-    match = next((row for row in matches if row.id == anchor_brand_match_id), None)
-    if match is None:
-        raise LookupError("Permit brand match is not connected to this deal")
-    permit = match.permit
-    if match.review_status != "confirmed":
-        if not (
-            match.review_status == "candidate"
-            and permit.approval_stage == "pre_approval"
-        ):
-            raise ValueError("A confirmed or pre-approval retailer signal is required")
-    if not permit.is_active:
-        raise ValueError("The anchor permit is no longer active at its source")
-    if permit.latitude is None or permit.longitude is None:
-        raise ValueError("The confirmed retailer signal does not have verified coordinates")
-    if not -90 <= permit.latitude <= 90 or not -180 <= permit.longitude <= 180:
-        raise ValueError("The confirmed retailer signal has invalid coordinates")
+    anchor = resolve_search_anchor(db, deal_id, anchor_brand_match_id, expected_anchor)
+    reviewed = anchor["method"] == "reviewed_parcel_centroid"
 
     filters = {
         "minimum_land_area_sq_ft": minimum_land_area_sq_ft,
         "zoning_codes": zoning_codes,
         "land_uses": land_uses,
     }
+    if reviewed:
+        filters["anchor_resolution"] = dict(anchor)
     search = NearbyParcelSearch(
         organization_id=get_org_id(),
         deal_id=deal.id,
-        anchor_brand_match_id=match.id,
-        anchor_permit_id=permit.id,
-        anchor_latitude=permit.latitude,
-        anchor_longitude=permit.longitude,
+        anchor_brand_match_id=anchor_brand_match_id,
+        anchor_permit_id=anchor["permit_id"],
+        anchor_latitude=anchor["latitude"],
+        anchor_longitude=anchor["longitude"],
         radius_miles=radius_miles,
         persona=persona,
         filters=filters,
@@ -472,8 +460,8 @@ def create_nearby_parcel_search(
 
     nearby = find_nearby_parcels(
         db,
-        latitude=permit.latitude,
-        longitude=permit.longitude,
+        latitude=anchor["latitude"],
+        longitude=anchor["longitude"],
         radius_miles=radius_miles,
         minimum_land_area_sq_ft=minimum_land_area_sq_ft,
         zoning_codes=zoning_codes,
@@ -503,8 +491,9 @@ def create_nearby_parcel_search(
             score_confidence=score.confidence,
             explanation={
                 **score.explanation,
-                "anchor_brand_match_id": match.id,
-                "anchor_permit_id": permit.id,
+                "anchor_brand_match_id": anchor_brand_match_id,
+                "anchor_permit_id": anchor["permit_id"],
+                **({"anchor_resolution": dict(anchor)} if reviewed else {}),
             },
             review_status="candidate",
             ranker_version=ranker_version(persona),
@@ -520,7 +509,7 @@ def create_nearby_parcel_search(
         organization_id=get_org_id(),
         new_values={
             "deal_id": deal.id,
-            "anchor_brand_match_id": match.id,
+            "anchor_brand_match_id": anchor_brand_match_id,
             "radius_miles": radius_miles,
             "persona": persona,
             "candidate_count": len(ranked),
