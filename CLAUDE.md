@@ -1,5 +1,14 @@
 # BuildSignals / Claude Code
 
+November22 local retail integration: read newest handoff, ForgeOS project profile
+and delivery loop before acting. No retail publication or production release is
+authorized by local acceptance. Keep operational receipts private.
+Current-main local3592backend/zero skips,673frontend and4dedicatedbrowser pass;
+real parcel acceptance remains gated. No hosted or live-retail acceptance claim.
+
+@docs/forgeos-project-profile.md
+@docs/forgeos-delivery-loop.md
+
 November21 recovery-only release preparation: read newest handoff and password
 recovery runbook. Local3504backend/zero skips,613frontend/browser2 passed;
 hosted/deployed states remain separate and are recorded in PR/private receipts.

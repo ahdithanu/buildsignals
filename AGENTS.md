@@ -1,5 +1,16 @@
 # BuildSignals: Shared Agent Instructions
 
+November22 LOCAL retail integration is on codex/retail-current-main-integration,
+based on currentmaincdd7ee4. Read docs/forgeos-project-profile.md and
+docs/forgeos-delivery-loop.md, then newest handoff. Runtime is not published or
+released; real parcel corpus acceptance remains gated. Preserve released recovery
+behavior, tenant isolation, provenance, unknowns and demo write denial. Public
+data requests and publication/releases require applicable explicit authorization.
+Do not import private operational history or root research into this branch.
+Current integration:3592backend/zero skips/91.7268%/3existingwarnings,673frontend,
+type/build,retail2/recovery2syntheticbrowser and independent review pass. One real
+filing ingestion/match/graph replay passed; real parcel workflow NOT VERIFIED.
+
 November21 recovery-only release is being prepared on current main in isolated
 codex/password-recovery-release. Persisted membership scopes recovery audits;
 unconfigured deployed email returns uniform503 and the UI reports failures.

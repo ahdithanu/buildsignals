@@ -1,5 +1,50 @@
 # Current Agent Handoff
 
+## November22: Local Retail Integration On Current Main
+
+This isolated checkout starts from released recovery maincdd7ee4. It mechanically
+integrates only the local reviewed-anchor runtime/tests and ForgeOS scaffold.
+The shared browser fixture conflict retained BOTH password-recovery and reviewed-
+anchor flags, external-network denial and each dedicated fixture. No recovery
+assertion, source location, tenant predicate or demo write rule was weakened.
+The retail browser workflow now has an explicit CI step; hosted execution is
+unverified until a separately authorized PR exists. Nothing here is published.
+
+Final CURRENT-MAIN local acceptance:3592backend/zero skips/3existing geography-
+reflection warnings811.93s,91.7268110130981% coverage;7actualrestricted-PG anchor
+cases included. Runtime/test source hashes unchanged. Frontend673/86files5.79s,
+typecheck/build3.58s passed (known Zod/chunk warnings). Synthetic reviewed-anchor
+desktop/mobile2passed13.1s and password-recovery2passed6.5s, zero skips/retries;
+owned browser ports clear. These are four dedicated cases, not a new full baseline
+browser run or hosted CI. Ruff, YAML executable-step validation, OpenAPI export
+(197versioned paths; recovery preserved), harness/7source pins, diff and staged
+Gitleaks passed. Independent review found no remaining issues. Owned localPG
+post-run schema/role checks and shutdown receipt are kept privately.
+
+Original source-branch acceptance:3557backend/zero skips/3warnings816.73s,
+91.66927234555769% coverage,125focused including7actualrestricted-PG cases;
+668frontend/type/build and2synthetic desktop/mobile E2E passed. These are NOT
+current-main integration receipts; the final destination results are above.
+
+The candidate join now projects raw IDs/timestamps, not full payloads; a cold-
+session SQL regression caught the previous hydration. This is not a whole-resolver
+byte cap. One retained REAL ALDI filing separately passed existing Socrata
+ingestion/catalog mappings, company matching, graph linkage and idempotent replay
+on restricted local PostgreSQL with zero external/model calls. Native coordinates
+remain absent. Real parcel/search/shortlist acceptance is NOT VERIFIED: the first
+bounded capture failed its parcel-response gate without retaining that response;
+fresh bounded capture permission is pending. Do not invent parcel data or labels.
+
+No source activation, production intake/task, retail release, paid call or Cherry
+Hill inquiry is authorized. Cherry Hill remains DRAFT/UNSENT. Detailed operational
+and local target receipts stay ignored/private, not in public commits. Original
+dirty work and research checkout remain intact. The malformed duplicate Git ref
+in the original repository was not changed; this clean checkout avoids rewriting
+or deleting it. Next: obtain the fresh bounded real-parcel corpus approval,
+replay through existing ingestion/review/search/shortlist/promotion and verify
+actual real-record desktop/mobile behavior. Publication/release requires separate
+approval; do not treat synthetic acceptance or a local commit as production-ready.
+
 ## November21: Password Recovery Release Preparation
 
 This isolated branch on current main contains only the recovery repair and

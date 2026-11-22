@@ -1,7 +1,8 @@
 # Working With Any Coding Agent
 
-Open the repository root, not `src/`, `app/`, or a nested worktree. Durable
-context lives in Git; agent chat history and cloud logins do not transfer.
+Open the root of the product checkout or isolated worktree named in the newest
+handoff, not `src/` or `app/`. The parent research checkout is not a deployment
+source. Durable context lives in Git; chat history and cloud logins do not transfer.
 
 ## Entry Points
 
@@ -54,6 +55,7 @@ There is no need to supply an OpenRouter key for ordinary unit tests.
 
 | Work | Read first |
 |---|---|
+| ForgeOS delivery / retail workflow | `docs/forgeos-project-profile.md`, `docs/forgeos-delivery-loop.md`, `docs/reviewed-parcel-search-anchor.md`; source pins in `.forgeos/adoption.json` |
 | Coding coordination / optional research SDK | `docs/agent-orchestration.md`; keep SDK and app virtualenvs separate |
 | Architecture and auth | README.md, `app/main.py`, `app/middleware/auth_context.py`, `docs/rbac.md` |
 | OpenRouter and evaluation | `docs/openrouter-cleanup-integration.md`, README Model routing, `eval/`, `docs/ai-evaluation-platform.md` |

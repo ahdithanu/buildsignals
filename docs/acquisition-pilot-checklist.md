@@ -2,6 +2,27 @@
 
 ## Local implementation, not deployed
 
+### November22: Reviewed Retail-To-Parcel Bridge
+
+- [x] Local explicit reviewed-centroid preview and stale-state guarded nearby
+  search; native filing coordinates remain unchanged. Persist raw/hash/audit
+  provenance with search/candidate snapshots; retain tenant/demo/write-role gates.
+- [x] Current-main local integration:3592backend/zero skips,673frontend, actual
+  restricted-PG anchor cases7 and synthetic desktop/mobile retail workflow2;
+  separate recovery browser2 passes. Source-aware evidence/zoning unknowns,
+  shortlist and idempotent promotion are exercised by the synthetic workflow.
+- [x] One retained REAL filing passes existing ingestion/catalog mappings,
+  ALDI candidate matching, graph linkage and idempotent local replay.
+- [ ] Real nearby-parcel corpus and real-record end-to-end acceptance. Initial
+  bounded capture failed its parcel-response gate without retaining the response;
+  no inferred truncation reason, parcel count or complete-coverage claim. Fresh
+  bounded capture approval remains pending; do not repeat the consumed attempt.
+- [ ] Separately authorized publication, hosted checks and production release.
+
+See `reviewed-parcel-search-anchor.md` and the latest handoff. No new production
+inventory, source activation, entitlement, listing or investment-return claim.
+Cherry Hill inquiry remains DRAFT/UNSENT.
+
 ### November16: Complete Observed Geographic Inventory
 
 Local `codex/full-coverage-map` replaces the default first-page-only map with

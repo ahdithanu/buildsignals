@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "project": "BuildSignals",
+  "profile": "docs/forgeos-project-profile.md",
+  "workflow": "docs/forgeos-delivery-loop.md",
+  "source_root_hint": "../ForgeOS",
+  "reviewed_on": "2026-11-20",
+  "sources": [
+    {
+      "path": "docs/governence/engineering_constitution.md",
+      "sha256": "c028bd864e814a84007bb1aaaf2a6a4905bf47a3374fc45424b693bef97193bb"
+    },
+    {
+      "path": "docs/governence/engineering_workflow.md",
+      "sha256": "9cf69c55ca83700a80b8edf12f2084e57e61b27d9bde9a1812081e0e82aa558c"
+    },
+    {
+      "path": "docs/ai/ai_engineering_principles.md",
+      "sha256": "4c05cd1da3f195453dec92921b5e9ea1c7978cc722884ecb9a23f23abe9e67a3"
+    },
+    {
+      "path": "docs/projects/multi_agent_protocol.md",
+      "sha256": "b728278fbb169f3a7e5094b9ced03231c604c778a27e5db143264c15ce35e838"
+    },
+    {
+      "path": "docs/architecture/backendplaybook.md",
+      "sha256": "38c4a4fd56ce31c24bae01067b55927922f6ebe597c3234cd87e5e654ba39c54"
+    },
+    {
+      "path": "docs/architecture/frontendplaybook.md",
+      "sha256": "4743bf6830c9bcd9b425993f5154d3e60354f2ca28352d54d3d6add1d3415a56"
+    },
+    {
+      "path": "docs/architecture/architectureplaybook.md",
+      "sha256": "7d27823445bb6b477ae1a19263a801613d9fcd936a3206325526918b54eea107"
+    }
+  ]
+}

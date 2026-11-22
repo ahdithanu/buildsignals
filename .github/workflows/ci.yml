@@ -78,6 +78,9 @@ jobs:
           pip install -r requirements.txt
           pip install pytest httpx pip-audit pytest-cov ruff
 
+      - name: Verify shared agent and ForgeOS harness
+        run: python scripts/agent_status.py --check
+
       # Lint: a focused ruleset (pyflakes + import order) — see ruff.toml.
       # Catches real bugs (undefined names, unused imports); this is how the
       # config.py use-before-definition bug was found.
