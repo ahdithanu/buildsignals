@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Check, Download, ExternalLink, MapPinned, Search, UserCheck, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,10 +9,12 @@ import { useNearbyParcels } from '@/hooks/useNearbyParcels';
 import { useToast } from '@/hooks/use-toast';
 import { usePlanningSignals } from '@/hooks/usePlanningSignals';
 import { ApiError } from '@/api/client';
+import { parcelsApi } from '@/api/parcels';
 import { safeSourceUrl } from '@/lib/sourceUrl';
 import { ParcelMap, type ParcelMapPoint, type ParcelMapPointTone } from '@/components/ParcelMap';
 import type { Deal } from '@/types/deal';
 import type { NearbyParcelCandidate, ParcelPersona } from '@/types/parcel';
+import { nearbyParcelAnchorResolutionSchema } from '@/types/parcel';
 import type { PlanningRecord } from '@/types/planning';
 
 const PERSONAS: Array<{ value: ParcelPersona; label: string }> = [
@@ -25,6 +28,17 @@ const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', maximumFractionDigits: 0,
 });
+
+function hasCoordinates(latitude: unknown, longitude: unknown) {
+  return typeof latitude === 'number' && Number.isFinite(latitude) && Math.abs(latitude) <= 90
+    && typeof longitude === 'number' && Number.isFinite(longitude) && Math.abs(longitude) <= 180;
+}
+
+function reviewedAnchor(value: unknown) {
+  const parsed = nearbyParcelAnchorResolutionSchema.safeParse(value);
+  return parsed.success && parsed.data.status === 'ready' && parsed.data.method === 'reviewed_parcel_centroid'
+    ? parsed.data : undefined;
+}
 
 function ownershipName(candidate: NearbyParcelCandidate) {
   const value = candidate.facts.find((fact) => fact.fact_type === 'ownership')?.value;
@@ -97,6 +111,7 @@ function CandidateRow({
   }, [candidate.assigned_to_user_id, currentUserId, members]);
   const reason = candidate.explanation.reasons?.[0];
   const caution = candidate.explanation.cautions?.[0];
+  const anchorResolution = reviewedAnchor(candidate.explanation.anchor_resolution);
   const owner = ownershipName(candidate);
   const evidence = candidate.facts.find((fact) => safeSourceUrl(fact.source_url));
   const parcelFacts = [
@@ -139,6 +154,7 @@ function CandidateRow({
           )}
           {reason && <p className="mt-1 text-xs text-foreground/80">{reason}</p>}
           {caution && <p className="mt-1 text-xs text-amber-700">{caution}</p>}
+          {anchorResolution && <p className="mt-1 text-xs text-muted-foreground">Reviewed parcel centroid</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
             <span>
               {candidate.assigned_to_name
@@ -249,7 +265,7 @@ function CandidateRow({
 export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefined; deal?: Deal }) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, organizationId, role } = useAuth();
+  const { user, organizationId, role, isDemo } = useAuth();
   const { data: matches = [] } = usePermitBrandMatches(dealId);
   const dealMarket = marketParts(deal);
   const { data: planningRecords = [] } = usePlanningSignals({
@@ -269,9 +285,7 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
       (match.review_status === 'confirmed' || (
         match.review_status === 'candidate'
         && match.permit.approval_stage === 'pre_approval'
-      ))
-      && match.permit.latitude != null
-      && match.permit.longitude != null),
+      ))),
     [matches],
   );
   const planningAnchors = useMemo(
@@ -282,10 +296,11 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
     ...permitAnchors.map((match) => ({
       kind: 'permit' as const,
       id: match.id,
+      permitId: match.permit.id,
       value: `permit:${match.id}`,
       label: anchorLabel(match),
-      latitude: match.permit.latitude as number,
-      longitude: match.permit.longitude as number,
+      latitude: match.permit.latitude,
+      longitude: match.permit.longitude,
       centerLabel: match.permit.address || match.permit.application_number || 'Signal anchor',
       subtitle: match.brand.name,
     })),
@@ -309,7 +324,38 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
   const latest = search.data;
   const bestCandidate = latest?.candidates[0];
   const activeAnchor = anchors.find((anchor) => anchor.value === anchorId) || anchors[0];
+  const activePermitId = activeAnchor?.kind === 'permit' ? activeAnchor.permitId : undefined;
+  const hasNativeCoordinates = hasCoordinates(activeAnchor?.latitude, activeAnchor?.longitude);
+  const needsResolution = activeAnchor?.kind === 'permit' && !hasNativeCoordinates;
+  const anchorResolution = useQuery({
+    queryKey: ['nearby-parcel-anchor', organizationId, user?.id, role, dealId, activeAnchor?.id],
+    queryFn: () => parcelsApi.resolveAnchor(dealId!, activeAnchor!.id, activePermitId!),
+    enabled: !!organizationId && !!user?.id && !!role && !!dealId && needsResolution,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const resolvedAnchor = needsResolution && !anchorResolution.isFetching && !anchorResolution.isError
+    && anchorResolution.data?.status === 'ready' ? anchorResolution.data : undefined;
+  const anchorReady = hasNativeCoordinates || !!resolvedAnchor;
+  const activeCenter = activeAnchor && anchorReady ? {
+    label: activeAnchor.centerLabel,
+    latitude: resolvedAnchor?.latitude ?? activeAnchor.latitude!,
+    longitude: resolvedAnchor?.longitude ?? activeAnchor.longitude!,
+    subtitle: resolvedAnchor?.method === 'reviewed_parcel_centroid' ? 'Reviewed parcel centroid' : activeAnchor.subtitle,
+  } : undefined;
   const savedAnchor = matches.find(match => match.id === latest?.anchor_brand_match_id);
+  const savedResolution = reviewedAnchor(latest?.filters?.anchor_resolution);
+  const savedReviewedAnchor = savedResolution && savedResolution.deal_id === dealId
+    && savedResolution.anchor_brand_match_id === latest?.anchor_brand_match_id
+    && savedResolution.permit_id === latest?.anchor_permit_id ? savedResolution : undefined;
+  const savedCenter = latest && hasCoordinates(latest.anchor_latitude, latest.anchor_longitude) ? {
+    label: savedAnchor?.permit.address || 'Saved search anchor',
+    latitude: latest.anchor_latitude,
+    longitude: latest.anchor_longitude,
+    subtitle: savedReviewedAnchor ? 'Reviewed parcel centroid' : savedAnchor?.brand.name,
+  } : undefined;
+  const mapCenter = latest ? savedCenter ?? (latest.filters?.anchor_resolution ? undefined : activeCenter) : activeCenter;
   const mapPoints: ParcelMapPoint[] = latest?.candidates.map((candidate, index) => ({
     id: candidate.id,
     label: candidate.parcel.address || candidate.parcel.external_parcel_id,
@@ -322,7 +368,7 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
   })) ?? [];
   const isLoading = history.isLoading || (!!history.data?.length && search.isLoading);
   const error = create.error || createFromPlanning.error || history.error || search.error;
-  const canManage = role === 'admin' || role === 'editor';
+  const canManage = !isDemo && (role === 'admin' || role === 'editor');
   const canExport = canManage && !!latest && latest.candidates.length > 0;
   const parseDelimitedList = (value: string) =>
     value
@@ -398,7 +444,7 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
   const searchPending = create.isPending || createFromPlanning.isPending;
 
   function handleSearch() {
-    if (!activeAnchor) return;
+    if (!canManage || !activeAnchor || !anchorReady || searchPending) return;
     if (activeAnchor.kind === 'planning') {
       createFromPlanning.mutate({
         planningRecordId: activeAnchor.id,
@@ -408,6 +454,7 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
     }
     create.mutate({
       anchor_brand_match_id: activeAnchor.id,
+      ...(resolvedAnchor?.method === 'reviewed_parcel_centroid' ? { expected_anchor: resolvedAnchor } : {}),
       ...parcelSearchPayload,
     });
   }
@@ -438,7 +485,7 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
         </div>
       </div>
 
-      {anchors.length > 0 && (
+      {(anchors.length > 0 || !!latest) && (
         <div className="mb-4 space-y-3">
           <fieldset className="min-w-0">
             <legend className="text-xs text-muted-foreground">Buyer lens</legend>
@@ -491,7 +538,7 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
             type="button"
             title="Search nearby parcels"
             aria-label="Search nearby parcels"
-            disabled={!canManage || !activeAnchor || searchPending}
+            disabled={!canManage || !activeAnchor || !anchorReady || searchPending}
             onClick={handleSearch}
             className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground transition-opacity disabled:opacity-50"
           >
@@ -547,28 +594,42 @@ export function NearbyParcelsPanel({ dealId, deal }: { dealId: string | undefine
           <p className="text-[11px] text-muted-foreground">
             Filters stay on the official parcel record and do not change the retailer signal itself.
           </p>
-          {activeAnchor && (
+          {needsResolution && !resolvedAnchor && (
+            <div role="status" className="text-xs text-muted-foreground">
+              {anchorResolution.isPending && !anchorResolution.isError
+                ? 'Resolving parcel search anchor...'
+                : `Anchor unavailable${anchorResolution.data?.reason ? `: ${anchorResolution.data.reason.replace(/_/g, ' ')}` : '. Location evidence needs review.'}`}
+              {' '}
+              <Link className="text-primary hover:underline" to={`/permits/${encodeURIComponent(activeAnchor.permitId)}`}>
+                Review permit
+              </Link>
+            </div>
+          )}
+          {mapCenter && (
             <ParcelMap
               title="Search Map"
               subtitle={latest ? `Saved search · Radius ${latest.radius_miles.toFixed(2)} mi · ${latest.persona} lens` : `Radius ${radius.toFixed(2)} mi · ${persona} lens`}
-              center={{
-                label: latest ? (savedAnchor?.permit.address || 'Saved search anchor') : activeAnchor.centerLabel,
-                latitude: latest?.anchor_latitude ?? activeAnchor.latitude,
-                longitude: latest?.anchor_longitude ?? activeAnchor.longitude,
-                subtitle: latest ? savedAnchor?.brand.name : activeAnchor.subtitle,
-              }}
+              center={mapCenter}
               radiusMiles={latest?.radius_miles ?? radius}
               points={mapPoints}
               emptyLabel="Run a search to plot nearby parcels."
             />
+          )}
+          {savedReviewedAnchor && (
+            <div className="flex flex-wrap gap-3 text-xs text-primary">
+              <Link to={`/permits/${encodeURIComponent(savedReviewedAnchor.permit_id)}`}>Review anchor permit</Link>
+              {savedReviewedAnchor.parcel_id && (
+                <Link to={`/parcels/${encodeURIComponent(savedReviewedAnchor.parcel_id)}`}>Open anchor parcel</Link>
+              )}
+            </div>
           )}
         </div>
       )}
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading parcel context...</p>}
       {error && <p className="text-sm text-destructive">Parcel search is unavailable.</p>}
-      {!isLoading && !error && anchors.length === 0 && (
-        <p className="text-sm text-muted-foreground">Pick a geocoded permit, pre-approval, or planning signal to search nearby parcels.</p>
+      {!isLoading && !error && anchors.length === 0 && !latest && (
+        <p className="text-sm text-muted-foreground">Pick a confirmed permit, pre-approval, or geocoded planning signal to search nearby parcels.</p>
       )}
       {!isLoading && !error && anchors.length > 0 && !latest && (
         <p className="text-sm text-muted-foreground">No parcel search has been run for this opportunity.</p>

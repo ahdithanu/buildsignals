@@ -1,5 +1,51 @@
 import type { Deal } from './deal';
 import type { GraphEntity, GraphRelatedEntity } from './graph';
+import { z } from 'zod';
+
+const parcelAnchorId = z.string().min(1).max(100);
+const parcelAnchorNormalizationHash = z.string().regex(/^[a-f0-9]{64}$/);
+const nearbyParcelAnchorFields = z.strictObject({
+  deal_id: parcelAnchorId,
+  anchor_brand_match_id: parcelAnchorId,
+  permit_id: parcelAnchorId,
+  reason: z.string().max(500).nullable(),
+  parcel_id: parcelAnchorId.nullable(),
+  relationship_id: parcelAnchorId.nullable(),
+  permit_raw_record_id: parcelAnchorId.nullable(),
+  parcel_raw_record_id: parcelAnchorId.nullable(),
+  permit_normalization_hash: parcelAnchorNormalizationHash.nullable(),
+  parcel_normalization_hash: parcelAnchorNormalizationHash.nullable(),
+});
+
+export const nearbyParcelAnchorResolutionSchema = z.discriminatedUnion('status', [
+  nearbyParcelAnchorFields.extend({
+    status: z.literal('ready'),
+    latitude: z.number().finite().min(-90).max(90),
+    longitude: z.number().finite().min(-180).max(180),
+    method: z.enum(['source_coordinate', 'reviewed_parcel_centroid']),
+  }).superRefine((anchor, context) => {
+    if (anchor.method !== 'reviewed_parcel_centroid') return;
+    const evidenceFields = [
+      'parcel_id', 'relationship_id', 'permit_raw_record_id', 'parcel_raw_record_id',
+      'permit_normalization_hash', 'parcel_normalization_hash',
+    ] as const;
+    for (const field of evidenceFields) {
+      if (anchor[field] === null) {
+        context.addIssue({ code: 'custom', path: [field], message: 'Reviewed anchors require current parcel and review evidence' });
+      }
+    }
+  }),
+  nearbyParcelAnchorFields.extend({
+    status: z.literal('unavailable'),
+    reason: z.string().min(1).max(500),
+    latitude: z.null(),
+    longitude: z.null(),
+    method: z.null(),
+  }),
+]);
+
+export type NearbyParcelAnchorResolution = z.infer<typeof nearbyParcelAnchorResolutionSchema>;
+export type ReadyNearbyParcelAnchor = Extract<NearbyParcelAnchorResolution, { status: 'ready' }>;
 
 export type ParcelReviewStatus = 'candidate' | 'shortlisted' | 'dismissed';
 export type AcquisitionCaseStatus = ParcelReviewStatus | 'contacted' | 'promoted';
@@ -108,6 +154,7 @@ export interface NearbyParcelCandidate {
   explanation: {
     reasons?: string[];
     cautions?: string[];
+    anchor_resolution?: NearbyParcelAnchorResolution;
     [key: string]: unknown;
   };
   review_status: ParcelReviewStatus;
@@ -130,7 +177,7 @@ export interface NearbyParcelSearchSummary {
   anchor_longitude: number;
   radius_miles: number;
   persona: ParcelPersona;
-  filters?: Record<string, unknown> | null;
+  filters?: (Record<string, unknown> & { anchor_resolution?: NearbyParcelAnchorResolution }) | null;
   result_limit: number;
   as_of: string;
   ranker_version: string;
@@ -143,6 +190,7 @@ export interface NearbyParcelSearch extends NearbyParcelSearchSummary {
 
 export interface NearbyParcelSearchCreate {
   anchor_brand_match_id: string;
+  expected_anchor?: ReadyNearbyParcelAnchor;
   radius_miles: number;
   persona: ParcelPersona;
   limit?: number;
