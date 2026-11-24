@@ -150,6 +150,10 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
           asking_price: null, year_built: null, sq_ft: null, risk_level: null } });
       expect(promoted.deal.id).not.toBe(dealId);
 
+      // Promotion navigates after its query invalidations; finish that before reloading.
+      await expect(page).toHaveURL(`${webOrigin}/deal/${promoted.deal.id}`);
+      await page.goto(`/deal/${dealId}`);
+      await expect(candidateRow.getByRole('button', { name: 'Promote opportunity', exact: true })).toBeEnabled();
       const historyReload = page.waitForResponse(response => apiResponse(response, historyPath));
       const searchReload = page.waitForResponse(response => apiResponse(response, `/nearby-parcel-searches/${search.id}`));
       await page.reload();
@@ -163,6 +167,8 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await candidateRow.getByRole('button', { name: 'Promote opportunity', exact: true }).click();
       const repeated = await (await repeatedResponse).json();
       expect(repeated).toMatchObject({ created: false, deal: { id: promoted.deal.id } });
+      await expect(page).toHaveURL(`${webOrigin}/deal/${promoted.deal.id}`);
+      await expect(page.getByRole('heading', { name: '102 Synthetic Anchor Road', exact: true })).toBeVisible();
       const savedDealResponse = page.waitForResponse(response => apiResponse(response, `/deals/${promoted.deal.id}`));
       await page.goto(`/deal/${promoted.deal.id}`);
       expect(await (await savedDealResponse).json()).toMatchObject({ id: promoted.deal.id, source: 'nearby_parcel_promotion' });
