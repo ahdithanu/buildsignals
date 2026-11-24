@@ -6,6 +6,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.deal import DealDetailResponse
+from app.schemas.parcel_anchor import NearbyParcelAnchorResponse
 
 
 class NearbyParcelSearchCreate(BaseModel):
@@ -16,6 +17,7 @@ class NearbyParcelSearchCreate(BaseModel):
     zoning_codes: list[str] = Field(default_factory=list, max_length=50)
     land_uses: list[str] = Field(default_factory=list, max_length=50)
     limit: int = Field(default=50, ge=1, le=100)
+    expected_anchor: NearbyParcelAnchorResponse | None = None
 
 
 class PlanningNearbyParcelSearchCreate(BaseModel):

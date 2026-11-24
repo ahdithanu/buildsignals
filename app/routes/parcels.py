@@ -37,6 +37,7 @@ from app.schemas.parcel import (
     ParcelSearchHitResponse,
     PlanningNearbyParcelSearchCreate,
 )
+from app.schemas.parcel_anchor import NearbyParcelAnchorResponse
 from app.schemas.parcel_use_context import ParcelUseContextResponse
 from app.schemas.permit_density import PermitDensityResponse
 from app.services.acquisition_service import (
@@ -49,6 +50,7 @@ from app.services.graph_service import relationships_for_entity
 from app.services.map_coverage import get_map_coverage, list_map_records
 from app.services.map_readiness import map_readiness
 from app.services.map_signals import list_map_signals
+from app.services.parcel_anchor import get_deal_parcel_anchor
 from app.services.parcel_availability_ingestion import (
     create_availability_evidence,
     import_availability_evidence,
@@ -419,6 +421,27 @@ def get_parcel(parcel_id: str, db: Session = Depends(get_db)):
     )
 
 
+@router.get(
+    "/deals/{deal_id}/nearby-parcel-anchors/{brand_match_id}",
+    response_model=NearbyParcelAnchorResponse,
+    dependencies=[Depends(get_current_user)],
+)
+def parcel_search_anchor(
+    deal_id: str,
+    brand_match_id: str,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        with db.no_autoflush:
+            return get_deal_parcel_anchor(db, deal_id=deal_id, brand_match_id=brand_match_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
+
+
 @router.post(
     "/deals/{deal_id}/nearby-parcel-searches",
     response_model=NearbyParcelSearchResponse,
@@ -441,6 +464,7 @@ def create_search(
             zoning_codes=payload.zoning_codes,
             land_uses=payload.land_uses,
             limit=payload.limit,
+            expected_anchor=payload.expected_anchor.model_dump() if payload.expected_anchor else None,
         )
         db.commit()
         return get_nearby_parcel_search(db, search.id)

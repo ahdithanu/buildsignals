@@ -137,6 +137,16 @@ jobs:
           REDIS_URL: ""
         run: node node_modules/@playwright/test/cli.js test -c e2e/password-recovery.playwright.config.ts
 
+      - name: Run offline reviewed retail parcel workflow E2E
+        env:
+          RUN_REVIEWED_ANCHOR_E2E: "1"
+          RUN_PASSWORD_RECOVERY_E2E: "0"
+          RESEND_API_KEY: ""
+          RESEND_FROM_ADDRESS: ""
+          OPENROUTER_API_KEY: ""
+          REDIS_URL: ""
+        run: node node_modules/@playwright/test/cli.js test -c e2e/reviewed-anchor.playwright.config.ts
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

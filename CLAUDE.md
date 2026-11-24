@@ -1,5 +1,22 @@
 # BuildSignals / Claude Code
 
+November22 real-row LOCAL journey verified: ALDI sign -> reviewed centroid ->
+47nearby candidates -> saved opportunity/retry;62distinct captured parcel IDs,
+explicit bounded subset. Actual browser2/21.7s, readonly display/source/graph2/15.1s,
+synthetic gate2/13.9s,697frontend/type/build and6PGnegative/93demo write denials
+passed. Null facts/risk stay unknown. Owned local runtimes cleaned. Read newest
+handoff/real-retail-parcel-acceptance.md. Not published/deployed/new live coverage;
+capture consumed, no automatic repeat. Production/Cherry Hill DRAFT untouched.
+
+November22 local retail integration: read newest handoff, ForgeOS project profile
+and delivery loop before acting. No retail publication or production release is
+authorized by local acceptance. Keep operational receipts private.
+Current-main local3592backend/zero skips,673frontend and4dedicatedbrowser pass;
+real parcel acceptance remains gated. No hosted or live-retail acceptance claim.
+
+@docs/forgeos-project-profile.md
+@docs/forgeos-delivery-loop.md
+
 November21 recovery-only release preparation: read newest handoff and password
 recovery runbook. Local3504backend/zero skips,613frontend/browser2 passed;
 hosted/deployed states remain separate and are recorded in PR/private receipts.

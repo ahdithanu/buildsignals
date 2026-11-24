@@ -1,5 +1,28 @@
 # BuildSignals: Shared Agent Instructions
 
+November22 real-record LOCAL retail acceptance passed: one ALDI sign filing,
+62distinct captured parcel IDs,47nearby centroid candidates, audited agent/test
+review -> search/map -> shortlist -> saved opportunity/reload/idempotent retry.
+Real desktop/mobile2passed21.7s; final readonly unknowns/source/graph2passed15.1s;
+synthetic checked-in regression2passed13.9s. False-zero facts/medium-risk default
+fixed locally:697frontend/type/build passed. Six restricted-PG negative cases
+passed/93demo write denials. Fullbackend3592 is historical; backend unchanged.
+Owned PG/volumes removed and browser ports clear. Read newest handoff and
+real-retail-parcel-acceptance.md. Capture consumed; bounded subset is not new
+production coverage or human-qualified confidence. No release/publication/paid
+authority. Production untouched; Cherry Hill DRAFT/UNSENT.
+
+November22 LOCAL retail integration is on codex/retail-current-main-integration,
+based on currentmaincdd7ee4. Read docs/forgeos-project-profile.md and
+docs/forgeos-delivery-loop.md, then newest handoff. Runtime is not published or
+released; real parcel corpus acceptance remains gated. Preserve released recovery
+behavior, tenant isolation, provenance, unknowns and demo write denial. Public
+data requests and publication/releases require applicable explicit authorization.
+Do not import private operational history or root research into this branch.
+Current integration:3592backend/zero skips/91.7268%/3existingwarnings,673frontend,
+type/build,retail2/recovery2syntheticbrowser and independent review pass. One real
+filing ingestion/match/graph replay passed; real parcel workflow NOT VERIFIED.
+
 November21 recovery-only release is being prepared on current main in isolated
 codex/password-recovery-release. Persisted membership scopes recovery audits;
 unconfigured deployed email returns uniform503 and the UI reports failures.

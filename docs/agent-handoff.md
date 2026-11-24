@@ -1,5 +1,117 @@
 # Current Agent Handoff
 
+## November22 Final: Real Retail-To-Parcel Local Acceptance
+
+The approved fresh capture completed3physical GET/20,107bytes, one ALDI sign
+filing and62distinct parcel IDs (63rows including repeated anchor). The provider
+flagged transfer limitation: bounded subset, not complete coverage. Grant consumed.
+Parent integrated the critical replay after the initial delegated draft did not
+reach execution. No direct permit/parcel fixture inserts: existing connectors,
+catalog mappings, normalization, raw/company/graph code and product opportunity
+creation passed. Retained-page replay is idempotent; parcel runs correctly stay
+partial/incremental. One corroborated exact reference, zero ambiguous/unmatched/
+conflicting addresses in this one-filing audit; not a population match rate.
+
+Actual restricted-PG PostGIS47nearby candidates -> explicit agent/test identity
+review -> reviewed-centroid search/map -> zoning/sale unknowns -> shortlist ->
+saved opportunity/reload/duplicate-safe retry:real desktop/mobile2passed21.7s.
+Agent confidence0.5 is labelled uncalibrated local test input, not human ground
+truth. Raw/canonical reconciliation and native filing coordinates remain exact.
+Visual review found/fixed false-zero property facts and invented medium risk.
+RED18 -> focused45pass1.39s; fullfrontend697/86files7.83s, typecheck/build8.53s;
+existing Zod/chunk warnings and one scoped ESLint unused-disable warning retained.
+Final read-only saved/source/graph/map postcheck2passed15.1s; durable synthetic
+checked-in browser gate2passed13.9s. Expected blocked fonts/analytics/auth401 noise
+is disclosed; no uncaught page errors or forbidden business writes. The saved
+opportunity retains the source parcel/graph/promotion evidence link; its top
+signal panel remains native-permit-only, not a newly implemented parcel map.
+
+Six actual restricted-PG negative cases5.71s passed on earlier completed cohorts:
+own-read controls, cross-tenant API/direct-SQL denial, viewer/admin restrictions,
+no-store/no-write reads and93demo write denials. Final browser uses separate new
+cohorts, same immutable corpus. Backend unchanged;3592fullbackend is an earlier
+receipt, not a fresh run. Post-acceptance schema/role/drift checks passed. Owned
+container/volumes removed; database and all browser ports verified clear. Unowned
+processes/containers, root research and original retail work remain preserved.
+
+See real-retail-parcel-acceptance.md for commands, scope, remaining legacy display
+debt and distinctions. Detailed corpus/targets/operational receipts stay ignored.
+Local capture checkpoint1c87237 precedes the final null-display/test/receipt
+checkpoint. No push/PR/merge/deploy, production intake/source/schedule/access or
+paid change. Cherry Hill DRAFT/UNSENT. Next dependency is separately authorized
+publication/hosted checks and release; further source intake needs its own scope.
+Do not repeat consumed captures or manufacture inventory/work to bypass that gate.
+
+## November22 Capture Checkpoint (Superseded Above)
+
+Owner approved one fresh LOCAL capture capped at100parcel rows/6GET/2MiB,
+production unchanged. Capture completed with3physical GET/20,107response bytes:
+one real ALDI sign filing,63parcel rows received including the repeated anchor,
+62distinct nearby IDs. Provider flagged its spatial response as transfer-limited;
+this is an explicitly bounded subset, not an exhausted neighborhood population.
+Exact anchor parcel ID/street address match; publisher currentness remains unknown.
+The filing is not proof of a new store opening. No owners/contact fields retained.
+
+Task packet: existing ingestion -> retailer candidate -> analyst identity review
+-> reviewed centroid nearby search -> explicit zoning/sale unknowns -> shortlist
+-> idempotent saved opportunity on fresh restricted local PostgreSQL, plus real-
+record desktop/mobile browser proof. Parent owns capture/integration/docs; Gauss
+private replay and tests, Pascal owned local database, Averroes private browser
+acceptance. Existing runtime tests are historical receipts until a new command
+runs; no full-suite rerun is needed solely as reassurance on unchanged runtime.
+Current baselineb9b5695/maincdd7ee4. Stop on missing evidence, scope violation or
+tenant/integrity failure; no synthetic row may be relabelled real acceptance.
+
+Capture grant consumed; no source retries or extra requests. Detailed corpus,
+targets and operational receipts remain ignored/private. No production change,
+publication, source activation, paid call or Cherry Hill activity is authorized.
+Fresh local runtime and real-record acceptance are pending, not yet green.
+
+## November22: Local Retail Integration On Current Main
+
+This isolated checkout starts from released recovery maincdd7ee4. It mechanically
+integrates only the local reviewed-anchor runtime/tests and ForgeOS scaffold.
+The shared browser fixture conflict retained BOTH password-recovery and reviewed-
+anchor flags, external-network denial and each dedicated fixture. No recovery
+assertion, source location, tenant predicate or demo write rule was weakened.
+The retail browser workflow now has an explicit CI step; hosted execution is
+unverified until a separately authorized PR exists. Nothing here is published.
+
+Final CURRENT-MAIN local acceptance:3592backend/zero skips/3existing geography-
+reflection warnings811.93s,91.7268110130981% coverage;7actualrestricted-PG anchor
+cases included. Runtime/test source hashes unchanged. Frontend673/86files5.79s,
+typecheck/build3.58s passed (known Zod/chunk warnings). Synthetic reviewed-anchor
+desktop/mobile2passed13.1s and password-recovery2passed6.5s, zero skips/retries;
+owned browser ports clear. These are four dedicated cases, not a new full baseline
+browser run or hosted CI. Ruff, YAML executable-step validation, OpenAPI export
+(197versioned paths; recovery preserved), harness/7source pins, diff and staged
+Gitleaks passed. Independent review found no remaining issues. Owned localPG
+post-run schema/role checks and shutdown receipt are kept privately.
+
+Original source-branch acceptance:3557backend/zero skips/3warnings816.73s,
+91.66927234555769% coverage,125focused including7actualrestricted-PG cases;
+668frontend/type/build and2synthetic desktop/mobile E2E passed. These are NOT
+current-main integration receipts; the final destination results are above.
+
+The candidate join now projects raw IDs/timestamps, not full payloads; a cold-
+session SQL regression caught the previous hydration. This is not a whole-resolver
+byte cap. One retained REAL ALDI filing separately passed existing Socrata
+ingestion/catalog mappings, company matching, graph linkage and idempotent replay
+on restricted local PostgreSQL with zero external/model calls. Native coordinates
+remain absent. Real parcel/search/shortlist acceptance is NOT VERIFIED: the first
+bounded capture failed its parcel-response gate without retaining that response;
+fresh bounded capture permission is pending. Do not invent parcel data or labels.
+
+No source activation, production intake/task, retail release, paid call or Cherry
+Hill inquiry is authorized. Cherry Hill remains DRAFT/UNSENT. Detailed operational
+and local target receipts stay ignored/private, not in public commits. Original
+dirty work and research checkout remain intact. The malformed duplicate Git ref
+in the original repository was not changed; this clean checkout avoids rewriting
+or deleting it. Next: obtain the fresh bounded real-parcel corpus approval,
+replay through existing ingestion/review/search/shortlist/promotion and verify
+actual real-record desktop/mobile behavior. Publication/release requires separate
+approval; do not treat synthetic acceptance or a local commit as production-ready.
+
 ## November21: Password Recovery Release Preparation
 
 This isolated branch on current main contains only the recovery repair and

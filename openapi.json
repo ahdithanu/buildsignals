@@ -10794,6 +10794,174 @@
         "title": "NationalParcelStateCoverage",
         "type": "object"
       },
+      "NearbyParcelAnchorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_brand_match_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Anchor Brand Match Id",
+            "type": "string"
+          },
+          "deal_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Deal Id",
+            "type": "string"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "maximum": 90.0,
+                "minimum": -90.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "enum": [
+                  "source_coordinate",
+                  "reviewed_parcel_centroid"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "parcel_id": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel Id"
+          },
+          "parcel_normalization_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel Normalization Hash"
+          },
+          "parcel_raw_record_id": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel Raw Record Id"
+          },
+          "permit_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Permit Id",
+            "type": "string"
+          },
+          "permit_normalization_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Normalization Hash"
+          },
+          "permit_raw_record_id": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit Raw Record Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "relationship_id": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship Id"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deal_id",
+          "anchor_brand_match_id",
+          "permit_id",
+          "status"
+        ],
+        "title": "NearbyParcelAnchorResponse",
+        "type": "object"
+      },
       "NearbyParcelCandidateAssignment": {
         "properties": {
           "assigned_to_user_id": {
@@ -10977,6 +11145,16 @@
           "anchor_brand_match_id": {
             "title": "Anchor Brand Match Id",
             "type": "string"
+          },
+          "expected_anchor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NearbyParcelAnchorResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "land_uses": {
             "items": {
@@ -24576,6 +24754,73 @@
         "summary": "Move Stage",
         "tags": [
           "pipeline"
+        ]
+      }
+    },
+    "/v1/deals/{deal_id}/nearby-parcel-anchors/{brand_match_id}": {
+      "get": {
+        "operationId": "parcel_search_anchor_v1_deals__deal_id__nearby_parcel_anchors__brand_match_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "brand_match_id",
+            "required": true,
+            "schema": {
+              "title": "Brand Match Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyParcelAnchorResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Parcel Search Anchor",
+        "tags": [
+          "nearby parcels"
         ]
       }
     },

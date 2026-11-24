@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import { parcelUseContextSchema } from '@/types/parcelUseContext';
+import { nearbyParcelAnchorResolutionSchema } from '@/types/parcel';
 import type {
   ParcelDetail,
   NearbyParcelCandidate,
@@ -25,6 +26,15 @@ import type {
 } from '@/types/parcel';
 
 export const parcelsApi = {
+  resolveAnchor: async (dealId: string, brandMatchId: string, permitId: string) => {
+    const data = nearbyParcelAnchorResolutionSchema.parse(await apiClient.get(
+      `/deals/${encodeURIComponent(dealId)}/nearby-parcel-anchors/${encodeURIComponent(brandMatchId)}`,
+    ));
+    if (data.deal_id !== dealId || data.anchor_brand_match_id !== brandMatchId || data.permit_id !== permitId) {
+      throw new Error('Parcel anchor scope mismatch');
+    }
+    return data;
+  },
   useContext: async (parcelId: string) => {
     const data = parcelUseContextSchema.parse(
       await apiClient.get(`/parcels/${encodeURIComponent(parcelId)}/use-context`),

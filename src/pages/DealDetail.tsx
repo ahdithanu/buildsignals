@@ -63,7 +63,7 @@ export default function DealDetail() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <StatusBadge status={deal.status} label={stageLabels[deal.status] ?? deal.status} />
-            <StatusBadge status={deal.riskLevel} label={`${deal.riskLevel} risk`} />
+            <StatusBadge status={deal.riskLevel} label={deal.riskLevel ? `${deal.riskLevel} risk` : 'Risk unknown'} />
           </div>
         </motion.div>
 
@@ -75,12 +75,12 @@ export default function DealDetail() {
               <h3 className="text-sm font-semibold text-foreground mb-4">Property Overview</h3>
               <div className="space-y-3">
                 {[
-                  { icon: <MapPin className="h-3.5 w-3.5" />, label: 'Market', value: deal.market },
-                  { icon: <Building2 className="h-3.5 w-3.5" />, label: 'Asset Type', value: deal.assetClass },
-                  { icon: <Calendar className="h-3.5 w-3.5" />, label: 'Year Built', value: String(deal.yearBuilt ?? '—') },
-                  { icon: <Ruler className="h-3.5 w-3.5" />, label: (deal.units ?? 0) > 0 ? 'Units' : 'Square Feet', value: (deal.units ?? 0) > 0 ? `${deal.units} units` : `${(deal.squareFeet ?? 0).toLocaleString()} SF` },
-                  { icon: <User className="h-3.5 w-3.5" />, label: 'Broker', value: deal.broker ?? '—' },
-                  { icon: <FileText className="h-3.5 w-3.5" />, label: 'Source', value: deal.source ?? '—' },
+                  { icon: <MapPin className="h-3.5 w-3.5" />, label: 'Market', value: deal.market || 'Unknown' },
+                  { icon: <Building2 className="h-3.5 w-3.5" />, label: 'Asset Type', value: deal.assetClass || 'Unknown' },
+                  { icon: <Calendar className="h-3.5 w-3.5" />, label: 'Year Built', value: deal.yearBuilt == null ? 'Unknown' : String(deal.yearBuilt) },
+                  { icon: <Ruler className="h-3.5 w-3.5" />, label: (deal.units ?? 0) > 0 ? 'Units' : 'Square Feet', value: (deal.units ?? 0) > 0 ? `${deal.units} units` : deal.squareFeet == null ? 'Unknown' : `${deal.squareFeet.toLocaleString()} SF` },
+                  { icon: <User className="h-3.5 w-3.5" />, label: 'Broker', value: deal.broker || 'Unknown' },
+                  { icon: <FileText className="h-3.5 w-3.5" />, label: 'Source', value: deal.source || 'Unknown' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-muted-foreground">

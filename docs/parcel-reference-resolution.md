@@ -1,5 +1,26 @@
 # Parcel Reference Review
 
+## November22 Local Reviewed-Anchor Integration
+
+Candidate lookup now projects only joined raw IDs and timestamps, not complete
+raw payloads. A cold-session SQL-projection regression covers that join; existing
+tenant/source/type, ambiguity and address checks are unchanged. This is not a
+whole-resolver memory/byte bound.
+
+An explicit reviewed parcel-centroid search bridge is locally implemented and
+tested on current main, with raw/hash/audit revalidation and stale-preview checks.
+It does not copy coordinates into source filings. See
+`reviewed-parcel-search-anchor.md` for the contract and final handoff for receipts.
+Real-permit ingestion/matching/graph replay is verified locally. The separately
+approved fresh capture retained62distinct real county parcel IDs, including one
+exact-reference/exact-street anchor for the ALDI sign filing. The response carries
+a transfer-limit flag: this is a bounded subset, not a population match-rate.
+Real-row ingestion-to-saved-opportunity LOCAL acceptance passed on actual restricted
+PostgreSQL and desktop/mobile browsers, using an explicit local agent/test review
+actor, not a human-qualified confidence label. See real-retail-parcel-acceptance.md
+for exact scope,47nearby candidates and complementary test/visual receipts.
+No release or new source activation follows from local tests.
+
 `GET /ingestion/permits/{permit_id}/parcel-candidates?parcel_source_id=...`
 requires authentication and a tenant-visible active permit and parcel source.
 It is a read-only candidate lookup, not an automatic identity merge.

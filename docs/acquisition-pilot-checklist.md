@@ -2,6 +2,35 @@
 
 ## Local implementation, not deployed
 
+### November22: Reviewed Retail-To-Parcel Bridge
+
+- [x] Local explicit reviewed-centroid preview and stale-state guarded nearby
+  search; native filing coordinates remain unchanged. Persist raw/hash/audit
+  provenance with search/candidate snapshots; retain tenant/demo/write-role gates.
+- [x] Current-main local integration:3592backend/zero skips,673frontend, actual
+  restricted-PG anchor cases7 and synthetic desktop/mobile retail workflow2;
+  separate recovery browser2 passes. Source-aware evidence/zoning unknowns,
+  shortlist and idempotent promotion are exercised by the synthetic workflow.
+- [x] One retained REAL filing passes existing ingestion/catalog mappings,
+  ALDI candidate matching, graph linkage and idempotent local replay.
+- [x] Fresh approved local corpus retained: one real ALDI sign filing and62
+  distinct county parcel IDs;63received parcel rows include the repeated anchor.
+  Three physical GETs/20,107bytes, no owner/contact fields. Provider transfer-limit
+  flag retained as an explicit bounded-subset caveat, not complete coverage.
+- [x] Real-record LOCAL functional acceptance through existing ingestion, explicit
+  agent/test review,47candidate nearby search/map, shortlist, saved opportunity,
+  reload and idempotent promotion:2desktop/mobile cases21.7s. Source coordinates
+  unchanged; currentness, sale status and zoning/use rules remain unknown.
+- [x] Visual review found/fixed false-zero property facts and invented medium
+  risk. Final real saved-opportunity readonly desktop/mobile2passed15.1s,
+  697frontend/type/build pass; restricted-PG negative6pass/93demo write denials.
+  Checked-in synthetic browser regression2passed13.9s. Owned runtimes cleaned.
+- [ ] Separately authorized publication, hosted checks and production release.
+
+See `real-retail-parcel-acceptance.md`, `reviewed-parcel-search-anchor.md` and the latest handoff. No new production
+inventory, source activation, entitlement, listing or investment-return claim.
+Cherry Hill inquiry remains DRAFT/UNSENT.
+
 ### November16: Complete Observed Geographic Inventory
 
 Local `codex/full-coverage-map` replaces the default first-page-only map with

@@ -249,6 +249,7 @@ def main():
     research_enabled = os.environ.get("RUN_RESEARCH_E2E") == "1"
     permit_activity_enabled = os.environ.get("RUN_PERMIT_ACTIVITY_MAP_E2E") == "1"
     password_recovery_enabled = os.environ.get("RUN_PASSWORD_RECOVERY_E2E") == "1"
+    reviewed_anchor_enabled = os.environ.get("RUN_REVIEWED_ANCHOR_E2E") == "1"
     api_port = int(os.environ.get("E2E_API_PORT") or "8000")
     web_port = int(os.environ.get("E2E_WEB_PORT") or "8080")
     if not all(1 <= port <= 65535 for port in (api_port, web_port)):
@@ -288,6 +289,7 @@ def main():
             "INTERNAL_OPERATIONS_USER_IDS": OPERATOR_USER_ID,
         })
         if (sf_map_enabled or research_enabled or permit_activity_enabled or password_recovery_enabled
+                or reviewed_anchor_enabled
                 or os.environ.get("RUN_CRITERIA_E2E") == "1"
                 or os.environ.get("RUN_PARCEL_USE_E2E") == "1"
                 or os.environ.get("RUN_COVERAGE_MAP_E2E") == "1"):
@@ -366,6 +368,10 @@ def main():
                 seed_coverage_map_fixture(db, OPERATOR_ORG_ID, OPERATOR_USER_ID, directory)
             if permit_activity_enabled:
                 _seed_permit_activity_fixture(db, directory)
+            if reviewed_anchor_enabled:
+                from e2e.reviewed_anchor_fixture import seed_reviewed_anchor_fixture
+
+                seed_reviewed_anchor_fixture(db, directory)
 
         try:
             uvicorn.run(app, host="127.0.0.1", port=api_port, log_level="warning")
